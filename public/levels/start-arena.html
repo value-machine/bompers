@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Start Arena — Bompers level</title>
+    <link rel="stylesheet" href="https://bompers.tom-fab.workers.dev/level-kit/v1/preview.css" />
+    <script src="https://bompers.tom-fab.workers.dev/level-kit/v1/preview.js" defer></script>
+  </head>
+  <body>
+    <svg
+      id="level"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 1920 1440"
+      data-level-format="1"
+      data-level-id="start-arena"
+      data-title="Start Arena"
+      data-author="Bompers team"
+      data-agent="claude"
+      data-description="The start map: one floating main platform with two thin plateaus and a top perch above it, open side edges, no hazards. Dirt crusts, edges and plateaus blast away; a stone core always stays."
+      data-cell-size="8"
+      data-gravity="1"
+      style="display: block; width: 100%; height: auto; background: #cfeaf7"
+    >
+      <title>Start Arena</title>
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#8fd6ff" />
+          <stop offset="1" stop-color="#fff1cf" />
+        </linearGradient>
+      </defs>
+      <!-- Decoration only (no data-role): sky, sun. -->
+      <rect x="0" y="0" width="1920" height="1440" fill="url(#sky)" />
+      <circle cx="1600" cy="240" r="96" fill="#fff6a8" />
+
+      <!-- In-bounds area: 448+ units beside the main platform, 704 above the top perch, 224 below the keel. -->
+      <rect
+        id="bounds"
+        data-role="bounds"
+        x="32"
+        y="32"
+        width="1856"
+        height="1376"
+        fill="none"
+        stroke="#d24b3a"
+        stroke-width="4"
+        stroke-dasharray="16 8"
+      />
+
+      <!-- Terrain. Cell 8; plum = stone (indestructible), honey = dirt (destructible). Platform wins where shapes overlap. -->
+      <g id="terrain" stroke="#2b1d3a" stroke-width="5" stroke-linejoin="round">
+        <!-- Main platform: stone core under every spawn, dirt everywhere a blast should bite. -->
+        <rect
+          id="main-core"
+          data-role="platform"
+          data-material="stone"
+          data-label="Main core"
+          x="576"
+          y="992"
+          width="768"
+          height="64"
+          fill="#5a3f7a"
+        />
+        <polygon
+          id="main-underside"
+          data-role="platform"
+          data-material="stone"
+          points="576,1056 1344,1056 1216,1120 704,1120"
+          fill="#5a3f7a"
+        />
+        <rect
+          id="main-crust"
+          data-role="destructible"
+          data-material="dirt"
+          data-label="Main crust"
+          x="480"
+          y="960"
+          width="960"
+          height="32"
+          fill="#f4ad55"
+        />
+        <polygon
+          id="main-edge-left"
+          data-role="destructible"
+          data-material="dirt"
+          data-label="Left edge"
+          points="480,992 576,992 576,1072 520,1040"
+          fill="#f4ad55"
+        />
+        <polygon
+          id="main-edge-right"
+          data-role="destructible"
+          data-material="dirt"
+          data-label="Right edge"
+          points="1344,992 1440,992 1400,1040 1344,1072"
+          fill="#f4ad55"
+        />
+        <polygon
+          id="main-keel"
+          data-role="destructible"
+          data-material="dirt"
+          data-label="Keel"
+          points="704,1120 1216,1120 1056,1184 864,1184"
+          fill="#f4ad55"
+        />
+
+        <!-- Tier 1: two thin dirt plateaus, 112 above the main surface. -->
+        <rect
+          id="plateau-left"
+          data-role="destructible"
+          data-material="dirt"
+          data-label="Left plateau"
+          x="640"
+          y="848"
+          width="192"
+          height="16"
+          fill="#f4ad55"
+        />
+        <rect
+          id="plateau-right"
+          data-role="destructible"
+          data-material="dirt"
+          data-label="Right plateau"
+          x="1088"
+          y="848"
+          width="192"
+          height="16"
+          fill="#f4ad55"
+        />
+
+        <!-- Tier 2: the top perch, 112 above tier 1: dirt wings around a stone heart. -->
+        <rect
+          id="perch-wings"
+          data-role="destructible"
+          data-material="dirt"
+          data-label="Top perch"
+          x="864"
+          y="736"
+          width="192"
+          height="16"
+          fill="#f4ad55"
+        />
+        <rect
+          id="perch-heart"
+          data-role="platform"
+          data-material="stone"
+          x="912"
+          y="736"
+          width="96"
+          height="16"
+          fill="#5a3f7a"
+        />
+      </g>
+
+      <!-- Spawns: centre 24 above the surface, each above the stone core (never over a void, even when the dirt is gone). -->
+      <g id="spawns" stroke="#2b1d3a" stroke-width="3">
+        <circle
+          id="spawn-main-left"
+          data-role="spawn"
+          data-label="Main left"
+          cx="608"
+          cy="936"
+          r="14"
+          fill="#3f8f5f"
+        />
+        <circle
+          id="spawn-main-right"
+          data-role="spawn"
+          data-label="Main right"
+          cx="1312"
+          cy="936"
+          r="14"
+          fill="#3f8f5f"
+        />
+        <circle
+          id="spawn-plateau-left"
+          data-role="spawn"
+          data-label="Plateau left"
+          cx="736"
+          cy="824"
+          r="14"
+          fill="#3f8f5f"
+        />
+        <circle
+          id="spawn-plateau-right"
+          data-role="spawn"
+          data-label="Plateau right"
+          cx="1184"
+          cy="824"
+          r="14"
+          fill="#3f8f5f"
+        />
+      </g>
+
+      <!-- Sky drops for weapons and power-ups: over each landing zone; the outer two land on the breakable edges. -->
+      <g id="drops" stroke="#2b1d3a" stroke-width="3">
+        <circle
+          id="drop-edge-left"
+          data-role="drop"
+          data-items="rocket-launcher"
+          cx="528"
+          cy="160"
+          r="12"
+          fill="#c94f7c"
+        />
+        <circle
+          id="drop-plateau-left"
+          data-role="drop"
+          data-items="rocket-launcher"
+          cx="736"
+          cy="160"
+          r="12"
+          fill="#c94f7c"
+        />
+        <circle
+          id="drop-centre"
+          data-role="drop"
+          data-items="rocket-launcher"
+          cx="960"
+          cy="160"
+          r="12"
+          fill="#c94f7c"
+        />
+        <circle
+          id="drop-plateau-right"
+          data-role="drop"
+          data-items="rocket-launcher"
+          cx="1184"
+          cy="160"
+          r="12"
+          fill="#c94f7c"
+        />
+        <circle
+          id="drop-edge-right"
+          data-role="drop"
+          data-items="rocket-launcher"
+          cx="1392"
+          cy="160"
+          r="12"
+          fill="#c94f7c"
+        />
+      </g>
+
+      <!-- Collectibles: one safe, the rest a risk (high above the perch, off the edges, under the keel). -->
+      <g id="collectibles" stroke="#2b1d3a" stroke-width="3">
+        <circle
+          id="orb-sheltered"
+          data-role="collectible"
+          data-item="point-orb"
+          cx="960"
+          cy="936"
+          r="10"
+          fill="#e0b62c"
+        />
+        <circle
+          id="orb-perch-high"
+          data-role="collectible"
+          data-item="point-orb"
+          cx="960"
+          cy="616"
+          r="10"
+          fill="#e0b62c"
+        />
+        <circle
+          id="orb-off-left"
+          data-role="collectible"
+          data-item="point-orb"
+          cx="400"
+          cy="856"
+          r="10"
+          fill="#e0b62c"
+        />
+        <circle
+          id="orb-off-right"
+          data-role="collectible"
+          data-item="point-orb"
+          cx="1520"
+          cy="856"
+          r="10"
+          fill="#e0b62c"
+        />
+        <circle
+          id="orb-under-keel"
+          data-role="collectible"
+          data-item="point-orb"
+          cx="960"
+          cy="1248"
+          r="10"
+          fill="#e0b62c"
+        />
+      </g>
+    </svg>
+  </body>
+</html>
