@@ -123,5 +123,10 @@
     "title": "Level importer in the game",
     "description": "Depends on: Game engine foundation, Level file format and preview kit. Parse an imported level HTML file into LevelDefinition (rasterise SVG shapes into terrain cells), validate with readable errors, resolve unknown IDs to safe defaults with warnings, run format-version migrations, and offer import by file pick and drag-and-drop. Lives in features/level-file (file I/O) on top of features/level (domain model). Built-in levels are real files in public/levels/. Generate the kit's catalog.json and reference tables from the content catalog in code during the build, with a drift check in CI so the kit stays in sync as the game grows. Also swaps the kit's preview colours to the Gumdrop Pop palette. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md § Levels. ",
     "status": "done"
+  },
+  {
+    "title": "Starting arena and destructible terrain",
+    "description": "Depends on: Game engine foundation, Level importer in the game. Author the start map as the first HTML level file (floating main platform, raised plateaus, open side edges, no hazards; destructible sections, spawn points, drop locations, out-of-bounds bounds) and load it through the importer, proving the format end to end. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md § Levels. ",
+    "status": "done"
   }
 ]

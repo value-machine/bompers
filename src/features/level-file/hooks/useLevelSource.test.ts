@@ -5,10 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHookWithProviders } from "tests/test-utils";
 import { useLevelSource } from "@/features/level-file/hooks/useLevelSource";
 
-const BUILT_IN = readFileSync(
-  path.join(process.cwd(), "public/levels/floating-garden.html"),
-  "utf8"
-);
+const BUILT_IN = readFileSync(path.join(process.cwd(), "public/levels/start-arena.html"), "utf8");
 const levelFile = (text: string, name = "my-level.html"): File =>
   new File([text], name, { type: "text/html" });
 
@@ -23,15 +20,15 @@ describe("useLevelSource", () => {
 
   it("should play the built-in level file when nothing was imported", async () => {
     const { result } = renderHookWithProviders(() => useLevelSource(), { withRouter: false });
-    await waitFor(() => expect(result.current.level?.meta.levelId).toBe("floating-garden"));
-    expect(fetch).toHaveBeenCalledWith("/levels/floating-garden.html");
+    await waitFor(() => expect(result.current.level?.meta.levelId).toBe("start-arena"));
+    expect(fetch).toHaveBeenCalledWith("/levels/start-arena.html");
   });
 
   it("should switch to a new level object when a valid file is imported (even the same file)", async () => {
     const { result } = renderHookWithProviders(() => useLevelSource(), { withRouter: false });
     await waitFor(() => expect(result.current.level).not.toBeNull());
     const builtIn = result.current.level;
-    const renamed = BUILT_IN.replace('data-title="Floating Garden"', 'data-title="Mine"');
+    const renamed = BUILT_IN.replace('data-title="Start Arena"', 'data-title="Mine"');
     await act(() => result.current.importFile(levelFile(renamed)));
     const first = result.current.level;
     expect(first?.meta.title).toBe("Mine");

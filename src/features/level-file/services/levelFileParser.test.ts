@@ -11,7 +11,10 @@ import type { LevelIssue } from "@/features/level-file/types/levelFile.types";
 // Ground truth: the kit files shipped with the format spec (documentation/game/LEVEL_FORMAT.md).
 const readRepoFile = (rel: string): string => readFileSync(path.join(process.cwd(), rel), "utf8");
 const EXAMPLE = readRepoFile("public/level-kit/v1/example-level.html");
-const BUILT_IN = readRepoFile("public/levels/floating-garden.html");
+const BUILT_INS = ["start-arena", "floating-garden"].map((id) => ({
+  id,
+  text: readRepoFile(`public/levels/${id}.html`),
+}));
 const AUTHORING_EXAMPLES = [
   ...readRepoFile("public/level-kit/v1/AUTHORING.md").matchAll(/```html\n([\s\S]*?)```/g),
 ]
@@ -92,10 +95,19 @@ describe("parseLevelFile — kit files", () => {
     });
   });
 
-  it("should import the built-in level the game loads by default", () => {
-    const result = okLevel(parseLevelFile(BUILT_IN));
-    expect(result.warnings).toEqual([]);
-    expect(result.level.meta.levelId).toBe("floating-garden");
+  it("should import every built-in level without warnings when shipped in public/levels", () => {
+    for (const { id, text } of BUILT_INS) {
+      const result = okLevel(parseLevelFile(text));
+      expect(result.warnings).toEqual([]);
+      expect(result.level.meta.levelId).toBe(id);
+    }
+  });
+
+  it("should give the default start arena 4 spawns, 5 drops and 5 collectibles when imported", () => {
+    const { level: def } = okLevel(parseLevelFile(BUILT_INS[0]!.text));
+    expect(def.spawns).toHaveLength(4);
+    expect(def.drops).toHaveLength(5);
+    expect(def.collectibles).toHaveLength(5);
   });
 
   it("should import both AUTHORING.md examples without errors", () => {

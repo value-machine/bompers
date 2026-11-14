@@ -5,11 +5,6 @@
     "status": "to-do"
   },
   {
-    "title": "Starting arena and destructible terrain",
-    "description": "Depends on: Game engine foundation, Level importer in the game. Author the start map as the first HTML level file (floating main platform, raised plateaus, open side edges, no hazards; destructible sections, spawn points, drop locations, out-of-bounds bounds) and load it through the importer, proving the format end to end. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md § Levels. ",
-    "status": "to-do"
-  },
-  {
     "title": "Dive headbutt: unarmed attack",
     "description": "Owner priority before rockets. Firing unarmed makes the blob dive headfirst in the aim direction (a dive headbutt, 'bomp'): a hit knocks off health and bounces the target away. Physics-like and intuitive: blob-vs-blob collision reflects equal blobs equally on a symmetric hit; hits in the back deal double damage (tunable, so 'front bounces only, back hurts 1 or 4' stays a configuration). Phase 1: three playable designs (Fable 5.2) for the owner to pick; phase 2: build the pick and wire it into combat's hit API. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
