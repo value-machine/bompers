@@ -41,5 +41,14 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       breathSeconds: 1.6,
     },
   },
-  camera: { padding: 32 },
+  camera: {
+    padding: 96,
+    minViewHeight: 400,
+    deadzone: 0.08,
+    zoomInDeadband: 0.04,
+    followRate: 6,
+    zoomInRate: 2.5,
+    zoomOutRate: 8,
+    edgeMargin: 24,
+  },
 };

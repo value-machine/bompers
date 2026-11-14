@@ -10,11 +10,6 @@
     "status": "to-do"
   },
   {
-    "title": "Multi-target camera",
-    "description": "Depends on: Game engine foundation. Pure-math camera that frames all active players with zoom limits, smoothing and a central deadzone; applied to the render container. Unit tests. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Level importer in the game",
     "description": "Depends on: Game engine foundation, Level file format and preview kit. Parse an imported level HTML file into LevelDefinition (rasterise SVG shapes into terrain cells), validate with readable errors, resolve unknown IDs to safe defaults with warnings, run format-version migrations, and offer import by file pick and drag-and-drop. Lives in features/level-file (file I/O) on top of features/level (domain model). Built-in levels are real files in public/levels/. Generate the kit's catalog.json and reference tables from the content catalog in code during the build, with a drift check in CI so the kit stays in sync as the game grows. Also swaps the kit's preview colours to the Gumdrop Pop palette. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md § Levels. ",
     "status": "to-do"
@@ -25,8 +20,13 @@
     "status": "to-do"
   },
   {
-    "title": "Combat: bash, rocket launcher and explosions",
-    "description": "Depends on: Player movement and blob feel, Starting arena and destructible terrain. 4-chunk health; unarmed bash on the fire button (1 chunk + knockback); rocket launcher pickup dropping from the sky; rockets from the helmet in aim direction; explosions remove 1 chunk from hit opponents, push everyone (rocket jumps, no self-damage) and clear terrain cells. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "title": "Dive headbutt: unarmed attack",
+    "description": "Owner priority before rockets. Firing unarmed makes the blob dive headfirst in the aim direction (a dive headbutt, 'bomp'): a hit knocks off health and bounces the target away. Physics-like and intuitive: blob-vs-blob collision reflects equal blobs equally on a symmetric hit; hits in the back deal double damage (tunable, so 'front bounces only, back hurts 1 or 4' stays a configuration). Phase 1: three playable designs (Fable 5.2) for the owner to pick; phase 2: build the pick and wire it into combat's hit API. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "to-do"
+  },
+  {
+    "title": "Combat: health, hit API, rocket launcher and explosions",
+    "description": "Depends on: Player movement and blob feel, Starting arena and destructible terrain. 4-chunk health; a zone-aware hit API (front/back damage from tunables, default 1/2) shared by every attack; rocket launcher pickup dropping from the sky; rockets from the helmet in aim direction; explosions remove 1 chunk from hit opponents, push everyone (rocket jumps, no self-damage) and clear terrain cells. The unarmed attack is the separate dive headbutt task. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
   },
   {
