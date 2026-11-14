@@ -1,7 +1,9 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { Rect } from "@/shared/types/gameGeometry.types";
 import type { LevelCollectible } from "@/features/level/api/levelApi";
-import { playerBody, type PlayerState } from "@/features/player/api/playerApi";
+import type { PlayerState } from "@/features/player/api/playerApi";
+import { fallSpeed, firstToucher, tickDropTimer } from "@/features/collectibles/services/skyDrops";
+import { createWeaponCratesState } from "@/features/collectibles/services/weaponCrates";
 import type {
   CollectiblesState,
   OrbCollected,
@@ -9,7 +11,8 @@ import type {
 } from "@/features/collectibles/types/collectibles.types";
 
 /**
- * Point-orb system. Deterministic schedule (no randomness in the sim, like combat D6): after
+ * Point-orb system (weapon crates: `weaponCrates.ts`; shared drop mechanics: `skyDrops.ts`).
+ * Deterministic schedule (no randomness in the sim, like combat D6): after
  * `firstDelaySeconds`, then every `intervalSeconds` while fewer than `maxActive` orbs exist,
  * the next free `point-orb` collectible point (round-robin) gets an orb `dropHeight` above it.
  * The orb falls with the match gravity onto its authored point and hovers there (no terrain
@@ -23,6 +26,7 @@ export function createCollectiblesState(tunables: GameTunables): CollectiblesSta
     spawnTimer: tunables.collectibles.firstDelaySeconds,
     nextPointIndex: 0,
     nextId: 1,
+    crates: createWeaponCratesState(tunables),
   };
 }
 
@@ -66,15 +70,15 @@ function spawnOrb(args: StepCollectiblesArgs): void {
 
 function stepSchedule(args: StepCollectiblesArgs): void {
   const { collectibles: state, tunables, dt } = args;
-  state.spawnTimer -= dt;
-  if (state.spawnTimer > 0) return;
-  state.spawnTimer = tunables.collectibles.intervalSeconds;
-  if (state.orbs.length < tunables.collectibles.maxActive) spawnOrb(args);
+  const schedule = tunables.collectibles;
+  const tick = tickDropTimer(state.spawnTimer, { schedule, active: state.orbs.length, dt });
+  state.spawnTimer = tick.timer;
+  if (tick.due) spawnOrb(args);
 }
 
 function fall(orb: PointOrb, tunables: GameTunables, dt: number): void {
   if (orb.y >= orb.restY) return;
-  orb.vy = Math.min(tunables.world.maxFallSpeed, orb.vy + tunables.world.gravity * dt);
+  orb.vy = fallSpeed(orb.vy, tunables.world, dt);
   orb.y = Math.min(orb.restY, orb.y + orb.vy * dt);
   if (orb.y === orb.restY) orb.vy = 0;
 }
@@ -86,17 +90,14 @@ export const orbBox = (orb: PointOrb, size: number): Rect => ({
   h: size,
 });
 
-// Second copy of combat's `rectsOverlap` (features/combat/services/combatGeometry.ts); a third
-// copy extracts both to src/shared/utils (code-style F2).
-const overlaps = (a: Rect, b: Rect): boolean =>
-  a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-
 function collector(orb: PointOrb, args: StepCollectiblesArgs): PlayerState | undefined {
-  const box = orbBox(orb, args.tunables.collectibles.size);
-  return args.players.find((player) => overlaps(box, playerBody(player)));
+  return firstToucher(orbBox(orb, args.tunables.collectibles.size), args.players);
 }
 
-/** Advances spawns, falls and pickups one step. Returns the orbs taken this step. */
+/**
+ * Advances point-orb spawns, falls and pickups one step. Returns the orbs taken this step.
+ * Weapon crates step separately (`stepWeaponCrates`), at combat's point in the step order.
+ */
 export function stepCollectibles(args: StepCollectiblesArgs): OrbCollected[] {
   stepSchedule(args);
   const collected: OrbCollected[] = [];

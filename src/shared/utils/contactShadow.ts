@@ -1,7 +1,7 @@
 /**
  * Flat contact shadow under airborne things (DESIGN_LANGUAGE § 4): an ink ellipse on the first
  * surface below, shrinking and fading with height; none beyond 240 units.
- * Used by the player (`blobShadow`) and combat (pickups, rockets) layers.
+ * Used by the player (`blobShadow`) layer and the prop shadow layers (`contactShadowLayer`).
  */
 export const CONTACT_SHADOW_RANGE = 240;
 const HEIGHT = 12;

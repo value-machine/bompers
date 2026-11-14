@@ -48,7 +48,7 @@ const createSim = (starts: number[], tunables: GameTunables = T) => {
   const terrain = buildTerrainFromLevel(level);
   const players = starts.map((x, slot) => createPlayer(slot, { x, y: FLOOR_Y }, tunables));
   const dive = createDiveState();
-  const combat = createCombatState(tunables);
+  const combat = createCombatState();
   const hits: DiveHit[] = [];
   let timeSeconds = 0;
   const step = (patches: InputPatch[] = [], steps = 1): void => {
@@ -65,7 +65,6 @@ const createSim = (starts: number[], tunables: GameTunables = T) => {
         players,
         inputs,
         terrain,
-        drops: [],
         bounds: level.bounds,
         tunables,
         timeSeconds,

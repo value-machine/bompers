@@ -7,10 +7,16 @@ import {
   type LevelDefinition,
   type LevelSettings,
 } from "@/features/level/api/levelApi";
-import { createCombatState, stepCombat, type CombatState } from "@/features/combat/api/combatApi";
+import {
+  createCombatState,
+  stepCombat,
+  takeWeaponPickups,
+  type CombatState,
+} from "@/features/combat/api/combatApi";
 import {
   createCollectiblesState,
   stepCollectibles,
+  stepWeaponCrates,
   type CollectiblesState,
 } from "@/features/collectibles/api/collectiblesApi";
 import {
@@ -42,8 +48,10 @@ import {
  *   1. joinSlots       — a connected input slot without a player gets one
  *   2. stepPlayers     — player feature: controller + terrain collision
  *   2b. bodyContacts   — player feature: blob-vs-blob bounce; the contacts feed step 3b
- *   3. stepCombat      — combat feature: rockets, blasts (damage, impulse, clearCircle), pickups;
+ *   3. stepCombat      — combat feature: rockets, blasts (damage, impulse, clearCircle);
  *                        unarmed fire goes through its `unarmedAttack` hook to the dive
+ *   3a. stepWeaponCrates — collectibles feature: weapon crates drop, fall, land and get taken;
+ *                        combat's `takeWeaponPickups` arms the collector
  *   3b. stepDives      — dive feature: the unarmed attack; its hits go through combat's `applyHit`
  *   4. stepCollectibles — collectibles feature: point orbs fall from the sky; touching one scores
  *   5. stepMatchRules  — out of bounds → elimination; scoring; eliminated players wait
@@ -80,11 +88,11 @@ export interface GameState {
   /** What normalising the level corrected (unknown IDs etc.); empty for a clean level. */
   levelWarnings: string[];
   players: PlayerState[];
-  /** Health, weapons, rockets, pickups and the combat event log (keyed by player id). */
+  /** Health, weapons, rockets and the combat event log (keyed by player id). */
   combat: CombatState;
   /** Unarmed attack (dive headbutt) state; `dive.hits` holds the last step's hits. */
   dive: DiveState;
-  /** Point orbs falling onto the level's collectible points. */
+  /** Sky drops: point orbs falling onto the collectible points, weapon crates from the drop points. */
   collectibles: CollectiblesState;
   /** Scores and the respawn queue. */
   rules: MatchRulesState;
@@ -120,7 +128,7 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
     arena: createArenaState(normalized.level),
     levelWarnings: normalized.warnings,
     players: [],
-    combat: createCombatState(matchTunables),
+    combat: createCombatState(),
     dive: createDiveState(),
     collectibles: createCollectiblesState(matchTunables),
     rules: createMatchRulesState(matchTunables.match.maxPlayers),
@@ -164,6 +172,23 @@ function roundTimer(state: GameState, dt: number): void {
   round.winners = roundWinners(state.rules.scores, slots);
 }
 
+/** Step 3a: right after combat, so a player eliminated by a rocket this step cannot collect. */
+function stepCratePickups(state: GameState, dt: number): void {
+  const { tunables, timeSeconds } = state;
+  const { level, terrain } = state.arena;
+  const players = playersInPlay(state);
+  const pickups = stepWeaponCrates({
+    crates: state.collectibles.crates,
+    drops: level.drops,
+    players,
+    terrain,
+    bounds: level.bounds,
+    tunables,
+    dt,
+  });
+  takeWeaponPickups({ combat: state.combat, players, tunables, timeSeconds }, pickups);
+}
+
 function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
   const { tunables, timeSeconds } = state;
   const { level, terrain } = state.arena;
@@ -176,13 +201,13 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
     players,
     inputs,
     terrain,
-    drops: level.drops,
     bounds: level.bounds,
     tunables,
     timeSeconds,
     dt,
     unarmedAttack: ({ attacker }) => requestDive(state.dive, attacker, tunables),
   });
+  stepCratePickups(state, dt);
   // The same in-play list as the contacts: a blob eliminated by a rocket this step still
   // finishes its bounce, and `applyHit` refuses damage on it.
   stepDives({

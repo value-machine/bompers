@@ -22,22 +22,19 @@ export interface CombatContext {
   combat: CombatState;
   players: PlayerState[];
   terrain: TerrainGrid;
-  /** The level's in-bounds area: rockets explode and pickups vanish outside it. */
+  /** The level's in-bounds area: rockets explode outside it. */
   bounds: Rect;
   tunables: GameTunables;
   timeSeconds: number;
 }
 
-export function createCombatState(tunables: GameTunables): CombatState {
+export function createCombatState(): CombatState {
   return {
     fighters: new Map(),
     rockets: [],
-    pickups: [],
     events: [],
     nextSeq: 1,
     nextEntityId: 1,
-    dropTimer: tunables.combat.drops.firstDelaySeconds,
-    nextDropIndex: 0,
   };
 }
 

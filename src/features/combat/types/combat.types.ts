@@ -2,7 +2,7 @@ import type { Vec2 } from "@/shared/types/gameGeometry.types";
 
 /**
  * Combat slice of the game state (GDD § 3): per-player fighter state keyed by player `id`,
- * rockets in flight, weapon pickups, and the sim event log other systems read (sound, match
+ * rockets in flight, and the sim event log other systems read (sound, match
  * rules, render). Pure data; the combat sim mutates it in place.
  */
 
@@ -41,16 +41,6 @@ export interface RocketState {
   dirY: number;
   /** Seconds in flight. */
   age: number;
-}
-
-export interface PickupState {
-  id: number;
-  itemId: "rocket-launcher";
-  /** Bottom-centre of the pickup box (like the player feet point). */
-  x: number;
-  y: number;
-  vy: number;
-  grounded: boolean;
 }
 
 /** What dealt a hit. The dive lap owns "dive"; new attacks add their source here. */
@@ -121,12 +111,8 @@ export interface CombatState {
   /** Keyed by player id. */
   fighters: Map<string, FighterState>;
   rockets: RocketState[];
-  pickups: PickupState[];
   /** Recent events, oldest first; pruned after `combat.eventRetentionSeconds`. */
   events: CombatEvent[];
   nextSeq: number;
   nextEntityId: number;
-  /** Sim seconds until the next drop attempt, and the next drop point index (round-robin). */
-  dropTimer: number;
-  nextDropIndex: number;
 }

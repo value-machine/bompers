@@ -1,32 +1,32 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
-import { contactShadow, CONTACT_SHADOW_RANGE } from "@/shared/utils/contactShadow";
+import {
+  createContactShadowLayer,
+  syncContactShadows,
+  type ContactShadowLayer,
+} from "@/shared/utils/contactShadowLayer";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 import { DESIGN_SCALE, outlineWidth } from "@/shared/utils/outlineWidth";
 import { surfaceBelow, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
-import type { CombatState, PickupState, RocketState } from "@/features/combat/types/combat.types";
+import type { CombatState, RocketState } from "@/features/combat/types/combat.types";
 
 /**
  * Combat render layers (DESIGN_LANGUAGE § 1 Effects, § 4 shadows, § 5 draw order). The match
- * renderer places them: shadows (4, contact shadows of airborne pickups and rockets) → pickups
- * (5) → [effects (6), the `effects` feature] → rockets (7, with smoke trail) → players (8, which
- * wear the rocket tube while armed) → overlay (health chunks above each player). Effects therefore
- * never cover a player outline. Shapes follow mockup variant E at `DESIGN_SCALE`; outlines use
- * the zoom-clamped prop width. Sprites are drawn once (pickups are keyed by the
- * outline step, so they rebuild only when the width step changes); per frame only transforms
- * change, except the health pips, which redraw when a player's health changes.
+ * renderer places them: shadows (4, contact shadows of rockets) → [weapon crates (5), the
+ * `collectibles` feature] → [effects (6), the `effects` feature] → rockets (7, with smoke trail)
+ * → players (8, which wear the rocket tube while armed) → overlay (health chunks above each
+ * player). Effects therefore never cover a player outline. Shapes follow mockup variant E at
+ * `DESIGN_SCALE`; outlines use the zoom-clamped prop width. Sprites are drawn once; per frame
+ * only transforms change, except the health pips, which redraw when a player's health changes.
  *
  * Not yet: hit flash, screen shake (motion polish follow-up).
  */
 export interface CombatView {
-  shadows: Container;
-  pickups: Container;
+  shadows: ContactShadowLayer;
   rockets: Container;
   overlay: Container;
-  pickupSprites: Map<string, Container>;
   rocketSprites: Map<number, Container>;
-  shadowSprites: Map<string, Container>;
   health: Map<string, { pips: Graphics; shown: number }>;
 }
 
@@ -43,13 +43,10 @@ const slotColor = (slot: number): number =>
 
 export function createCombatView(): CombatView {
   return {
-    shadows: new Container({ label: "contact-shadows" }),
-    pickups: new Container({ label: "pickups" }),
+    shadows: createContactShadowLayer("contact-shadows"),
     rockets: new Container({ label: "rockets" }),
     overlay: new Container({ label: "combat-overlay" }),
-    pickupSprites: new Map(),
     rocketSprites: new Map(),
-    shadowSprites: new Map(),
     health: new Map(),
   };
 }
@@ -103,19 +100,6 @@ function placeRocket(sprite: Container, rocket: RocketState): void {
   });
 }
 
-/** Cream crate with a sky ring and a rocket mark; origin bottom-centre. */
-function drawPickup(size: number, width: number): Container {
-  const half = size / 2;
-  return new Graphics()
-    .roundRect(-half, -size, size, size, size * 0.24)
-    .fill(GAME_PALETTE.pickupCrate)
-    .stroke(ink(width))
-    .circle(0, -half, half * 0.62)
-    .stroke({ width: size * 0.1, color: GAME_PALETTE.pickupRing })
-    .roundRect(-half * 0.45, -half - size * 0.09, half * 0.9, size * 0.18, size * 0.09)
-    .fill(GAME_PALETTE.ink);
-}
-
 interface PipsLook {
   health: number;
   slot: number;
@@ -152,40 +136,16 @@ function syncPlayerExtras(view: CombatView, frame: CombatFrame): void {
   }
 }
 
-interface ShadowCaster {
-  key: string;
-  x: number;
-  /** Bottom of the object (world y). */
-  y: number;
-  width: number;
-}
-
-/** Airborne pickups and rockets cast a contact shadow on the first surface below (§ 4). */
-function shadowCasters(combat: CombatState, pickupSize: number): ShadowCaster[] {
-  const casters: ShadowCaster[] = combat.pickups
-    .filter((pickup) => !pickup.grounded)
-    .map((pickup) => ({ key: `p${pickup.id}`, x: pickup.x, y: pickup.y, width: pickupSize }));
-  for (const rocket of combat.rockets) {
-    casters.push({ key: `r${rocket.id}`, x: rocket.x, y: rocket.y, width: ROCKET_LENGTH });
-  }
-  return casters;
-}
-
+/** Rockets cast a contact shadow on the first surface below (§ 4). */
 function syncShadows(view: CombatView, frame: CombatFrame): void {
-  syncDisplayById(view.shadowSprites, view.shadows, {
-    list: shadowCasters(frame.combat, frame.pickupSize),
-    key: (caster) => caster.key,
-    create: () => new Graphics().ellipse(0, 0, 1, 1).fill(GAME_PALETTE.ink),
-    place: (sprite, caster) => {
-      const span = { x: caster.x - 2, y: caster.y, w: 4, range: CONTACT_SHADOW_RANGE };
-      const ground = surfaceBelow(frame.terrain, span);
-      const shadow = ground === null ? null : contactShadow(ground - caster.y, caster.width);
-      sprite.visible = shadow !== null;
-      if (!shadow || ground === null) return;
-      sprite.position.set(caster.x, ground);
-      sprite.scale.set(shadow.width / 2, shadow.height / 2);
-      sprite.alpha = shadow.alpha;
-    },
+  syncContactShadows(view.shadows, {
+    casters: frame.combat.rockets.map((rocket) => ({
+      key: `r${rocket.id}`,
+      x: rocket.x,
+      y: rocket.y,
+      width: ROCKET_LENGTH,
+    })),
+    groundBelow: (span) => surfaceBelow(frame.terrain, span),
   });
 }
 
@@ -195,7 +155,6 @@ export interface CombatFrame {
   /** Sim time of the state being drawn, seconds. */
   timeSeconds: number;
   maxHealth: number;
-  pickupSize: number;
   /** Terrain the contact shadows fall on. */
   terrain: TerrainGrid;
   /** Camera zoom (screen px per world unit) for the outline width clamp. */
@@ -204,14 +163,8 @@ export interface CombatFrame {
 
 /** Matches the combat layers to the state. Call once per rendered frame. */
 export function syncCombatView(view: CombatView, frame: CombatFrame): void {
-  const { combat, pickupSize, zoom } = frame;
+  const { combat, zoom } = frame;
   const width = outlineWidth("prop", zoom);
-  syncDisplayById(view.pickupSprites, view.pickups, {
-    list: combat.pickups,
-    key: (pickup: PickupState) => `${pickup.id}:${width.step}`,
-    create: () => drawPickup(pickupSize, width.width),
-    place: (sprite, pickup) => sprite.position.set(pickup.x, pickup.y),
-  });
   syncDisplayById(view.rocketSprites, view.rockets, {
     list: combat.rockets,
     key: (rocket) => rocket.id,

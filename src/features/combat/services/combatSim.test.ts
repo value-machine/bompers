@@ -3,7 +3,7 @@ import { DEFAULT_GAME_TUNABLES, type GameTunables } from "@/shared/config/gameTu
 import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import type { PlayerInput } from "@/shared/types/gameInput.types";
 import { buildTerrainFromLevel, getCellInfo } from "@/features/arena/api/arenaApi";
-import type { LevelDefinition, LevelDrop } from "@/features/level/api/levelApi";
+import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { createPlayer, stepPlayers, type PlayerState } from "@/features/player/api/playerApi";
 import { stepCombat } from "@/features/combat/services/combatSim";
 import {
@@ -70,13 +70,12 @@ interface World {
 interface WorldOptions {
   at: { x: number; y: number }[];
   tunables?: GameTunables;
-  drops?: LevelDrop[];
 }
 
-function createWorld({ at, tunables = DEFAULT_GAME_TUNABLES, drops = [] }: WorldOptions): World {
+function createWorld({ at, tunables = DEFAULT_GAME_TUNABLES }: WorldOptions): World {
   const terrain = buildTerrainFromLevel(level);
   const players = at.map((point, slot) => createPlayer(slot, point, tunables));
-  const combat = createCombatState(tunables);
+  const combat = createCombatState();
   const seen: CombatEvent[] = [];
   let time = 0;
   let lastSeq = 0;
@@ -101,7 +100,6 @@ function createWorld({ at, tunables = DEFAULT_GAME_TUNABLES, drops = [] }: World
         players,
         inputs,
         terrain,
-        drops,
         bounds: level.bounds,
         tunables,
         timeSeconds: time,
@@ -391,38 +389,6 @@ describe("combat — unarmed fire", () => {
     expect(health(world, 1)).toBe(C.maxHealth);
     expect(world.players[1]!.x).toBe(before.x);
     expect(world.seen).toEqual([]);
-  });
-});
-
-describe("combat — pickups", () => {
-  const drops: LevelDrop[] = [{ at: { x: 1000, y: -40 }, itemIds: ["rocket-launcher"] }];
-
-  it("should drop a launcher that falls and lands on the terrain when the first drop is due", () => {
-    const world = createWorld({ at: [{ x: 100, y: FLOOR_Y }], drops });
-    world.step([], Math.ceil((C.drops.firstDelaySeconds + 2) / dt));
-    const [pickup] = world.combat.pickups;
-    expect(eventsOf(world, "pickupSpawned")).toHaveLength(1);
-    expect(pickup).toMatchObject({ x: 1000, y: FLOOR_Y, grounded: true });
-  });
-
-  it("should arm the player who touches it and drop the launcher when the ammo runs out", () => {
-    const world = createWorld({ at: [{ x: 1000, y: FLOOR_Y }], drops });
-    world.step([], Math.ceil((C.drops.firstDelaySeconds + 2) / dt));
-    expect(world.combat.pickups).toHaveLength(0);
-    expect(world.combat.fighters.get("p0")!.weapon?.ammo).toBe(C.rocket.ammo);
-    for (let i = 0; i < C.rocket.ammo; i += 1) {
-      shoot(world, { aimX: -1 }, Math.ceil(C.rocket.fireCooldown / dt) + 1);
-    }
-    expect(eventsOf(world, "rocketFired")).toHaveLength(C.rocket.ammo);
-    expect(world.combat.fighters.get("p0")!.weapon).toBeNull();
-    shoot(world, { aimX: -1 }, Math.ceil(C.rocket.fireCooldown / dt) + 1);
-    expect(eventsOf(world, "rocketFired")).toHaveLength(C.rocket.ammo);
-  });
-
-  it("should not drop more than maxActive pickups when nobody collects them", () => {
-    const world = createWorld({ at: [{ x: 100, y: FLOOR_Y }], drops });
-    world.step([], Math.ceil((C.drops.firstDelaySeconds + C.drops.intervalSeconds * 5) / dt));
-    expect(world.combat.pickups.length).toBe(C.drops.maxActive);
   });
 });
 
