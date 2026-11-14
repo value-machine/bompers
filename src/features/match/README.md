@@ -9,16 +9,16 @@ One round of the game, and the composition root of the game features: the `GameS
 | Layer      | Path                       | Purpose                                                                                                                                                                            |
 | ---------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Services   | `services/gameSim.ts`      | `GameState`, `createGameState({ level, tunables })`, `stepGame(state, inputs, dt)` — pure, no DOM; mutates and returns `state`                                                     |
-| Services   | `services/gameRenderer.ts` | Scene graph per DESIGN_LANGUAGE § 5: `world` (camera transform: terrain → shadows, pickups, effects, rockets (reserved) → players) and `hud` (round timer); `renderGame` per frame |
-| Hooks      | `hooks/useGameSession.ts`  | Per Pixi ticker frame: sample input → `advanceFixedStep` → N × `stepGame` → `renderGame`; full teardown in cleanup                                                                 |
+| Services   | `services/gameRenderer.ts` | Scene graph per DESIGN_LANGUAGE § 5: `world` (camera transform: terrain → shadows, pickups (reserved) → effects (dive impact rings) → players) and `hud` (round timer, prototype dive overlay); `renderGame` per frame |
+| Hooks      | `hooks/useGameSession.ts`  | Per Pixi ticker frame: sample input → `advanceFixedStep` → N × `stepGame` → `renderGame`; full teardown in cleanup. Phase-1 prototype: Digit1–3 pick the dive option (`selectDiveOption`)                                                                |
 | Components | `components/GameView.tsx`  | Canvas host (`usePixiApp`) + controls hint                                                                                                                                         |
 | API        | `api/matchApi.ts`          | Simulation entry for other consumers (lobby, tests)                                                                                                                                |
 
 Systems order in `stepGame` (new concepts slot into their number):
 
 1. `joinSlots` — a connected input slot without a player gets one (the lobby lap replaces this with explicit joining)
-2. `stepPlayers` — player feature
-3. _(reserved: combat — projectiles, blasts → `clearCircle`, damage, bash)_
+2. `stepPlayers` — player feature; 2b. `resolveBodyContacts` — player feature (blob-vs-blob bounce; its contacts feed 3a)
+3. 3a. `stepDives` — dive feature (unarmed attack; this step's `DiveHit`s are in `state.dive.hits`); 3b. _(reserved: combat — projectiles, blasts → `clearCircle`, health; its `applyHit` consumes the hits from 3a)_
 4. `outOfBounds` — leaving `level.bounds` respawns (elimination credit + scoring later)
 5. `roundTimer` — at 0 the round ends and steps 1–4 stop
 
@@ -26,7 +26,7 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 
 ## Dependencies
 
-- `level`, `arena`, `player`, `camera` through their `api/` files.
+- `level`, `arena`, `player`, `dive`, `camera` through their `api/` files.
 - Shared engine: `gameLoop`, `gameInputService`, `usePixiApp`, `gameTunables`, `gamePalette`, `gameInput.types`.
 - Mounted by `src/pages/GamePage.tsx` at `/`.
 

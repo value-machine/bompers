@@ -26,6 +26,9 @@ export const GAME_PALETTE = {
   playerTints: [0xff9e93, 0x8dadff, 0xffe793, 0x8ce5cb],
   sky: { top: 0x8fd6ff, bottom: 0xfff1cf },
   timerWarning: 0xff8a1f,
+  /** Hit feedback (DESIGN_LANGUAGE § 1 Effects): hit flash, and the explosion mid star for strong hits. */
+  hitFlash: 0xffffff,
+  hitStrong: 0xffe14d,
   /** Keyed by a catalog material's `lookToken`. */
   materialLooks: {
     stone: { fill: 0x5a3f7a, accent: 0x7d5fa6 },

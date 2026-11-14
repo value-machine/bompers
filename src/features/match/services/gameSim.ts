@@ -10,9 +10,11 @@ import {
 import {
   createPlayer,
   placePlayer,
+  resolveBodyContacts,
   stepPlayers,
   type PlayerState,
 } from "@/features/player/api/playerApi";
+import { createDiveState, stepDives, type DiveState } from "@/features/dive/api/diveApi";
 
 /**
  * The simulation: `stepGame(state, inputs, dt)` advances one fixed step. Pure TS, no DOM, no
@@ -21,7 +23,10 @@ import {
  * Systems order (each later concept slots into its numbered place):
  *   1. joinSlots       — a connected input slot without a player gets one
  *   2. stepPlayers     — player feature: controller + terrain collision
- *   3. (combat)        — reserved: projectiles, blasts → arena clearCircle, damage, bash
+ *   2b. bodyContacts   — player feature: blob-vs-blob bounce; the contacts feed step 3a
+ *   3a. stepDives      — dive feature: the unarmed attack; returns this step's `DiveHit`s
+ *   3b. (combat)       — reserved: projectiles, blasts → arena clearCircle, health. Its
+ *                        `applyHit` consumes the hits from 3a (zone-aware damage)
  *   4. outOfBounds     — leaving level.bounds respawns (elimination + scoring: match/combat)
  *   5. roundTimer      — counts down; at 0 the round ends and systems 1–4 stop
  */
@@ -47,6 +52,8 @@ export interface GameState {
   /** What normalising the level corrected (unknown IDs etc.); empty for a clean level. */
   levelWarnings: string[];
   players: PlayerState[];
+  /** Unarmed attack state; `dive.hits` holds the last step's hit events. */
+  dive: DiveState;
   round: MatchRoundState;
 }
 
@@ -79,6 +86,7 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
     arena: createArenaState(normalized.level),
     levelWarnings: normalized.warnings,
     players: [],
+    dive: createDiveState(),
     round: { phase: "playing", remainingSeconds: matchTunables.match.durationSeconds },
   };
 }
@@ -126,6 +134,21 @@ export function stepGame(state: GameState, inputs: PlayerInputs, dt: number): Ga
       players: state.players,
       inputs,
       terrain: state.arena.terrain,
+      tunables: state.tunables,
+      dt,
+    });
+    const contacts = resolveBodyContacts({
+      players: state.players,
+      terrain: state.arena.terrain,
+      tunables: state.tunables,
+    });
+    // Combat seam: these hits (attacker, victim, zone, damage, impulse) go to combat's
+    // `applyHit` once that feature lands; until then the dive only tallies them.
+    stepDives({
+      dive: state.dive,
+      players: state.players,
+      inputs,
+      contacts,
       tunables: state.tunables,
       dt,
     });

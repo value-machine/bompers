@@ -36,6 +36,17 @@ export interface BlobPose {
   shadow: BlobShadow | null;
 }
 
+/**
+ * Extra pose an ability system (the dive) lays over the movement pose for one frame: the whole
+ * blob turns by `rotation` (radians, clockwise, around the body centre; 0 = upright) and the
+ * body scale is multiplied by `sx` / `sy`.
+ */
+export interface BlobPoseOverlay {
+  rotation: number;
+  sx: number;
+  sy: number;
+}
+
 /** Feet lag the body by about two display frames (DESIGN_LANGUAGE § 6). */
 export const FEET_LAG_MS = 33;
 /** Feet squash this much harder than the body. */

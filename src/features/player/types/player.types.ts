@@ -37,6 +37,23 @@ export interface PlayerState {
   wallCoyoteTimer: number;
   /** Seconds left of reduced steering after a wall-jump. */
   wallJumpLockTimer: number;
+  /**
+   * Motion modifiers, written by ability systems (the dive; later stuns or recoil) and read by
+   * the controller on the next step. Defaults 1 / 1 / false = plain movement.
+   */
+  /** Scales input steering and braking: 0 keeps the current horizontal velocity untouched. */
+  steerScale: number;
+  gravityScale: number;
+  /** A buffered jump does not fire while set. */
+  jumpLocked: boolean;
+  /**
+   * Terrain hit on this step, per axis: direction of the blocked move (-1 / 1, 0 = none) and the
+   * speed it had before the controller zeroed it. Lets ability systems bounce or stun.
+   */
+  terrainHitX: -1 | 0 | 1;
+  terrainHitY: -1 | 0 | 1;
+  terrainHitSpeedX: number;
+  terrainHitSpeedY: number;
   /** Top of the first surface below the feet within shadow range, or null (contact shadow). */
   groundBelowY: number | null;
   /**

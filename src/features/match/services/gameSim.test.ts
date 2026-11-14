@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { mapPlayerInputs } from "@/shared/utils/gameInputMapping";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
+import { selectDiveOption } from "@/features/dive/api/diveApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
 
 const level: LevelDefinition = {
@@ -90,4 +91,39 @@ describe("gameSim", () => {
     for (let i = 0; i < 120; i += 1) stepGame(state, keys(), dt);
     expect(state.players[0]?.grounded).toBe(true);
   });
+
+  // Acceptance test of the dive-headbutt lap (BRIEF.md § Success check).
+  it.each(DEFAULT_GAME_TUNABLES.dive.options.map((option, index) => [option.name, index] as const))(
+    "should land one typed hit with the %s dive and knock the opponent away when player 1 fires toward them",
+    (_name, index) => {
+      const state = createGameState({
+        level: {
+          ...level,
+          spawns: [
+            { x: 300, y: 320 },
+            { x: 360, y: 320 },
+          ],
+        },
+        tunables: DEFAULT_GAME_TUNABLES,
+      });
+      stepGame(state, keys(), dt);
+      selectDiveOption(state.dive, index, state.tunables);
+      const hits = [];
+      for (let i = 0; i < 90; i += 1) {
+        // Fire + right for the first steps only (one press), then hands off.
+        stepGame(state, i < 3 ? keys("KeyF", "KeyD") : keys(), dt);
+        hits.push(...state.dive.hits);
+      }
+      expect(hits).toHaveLength(1);
+      // Player 2 spawns facing right, away from the attacker: a back hit.
+      expect(hits[0]).toMatchObject({
+        attackerId: "p0",
+        victimId: "p1",
+        zone: "back",
+        damage: DEFAULT_GAME_TUNABLES.dive.backHitDamage,
+      });
+      expect(hits[0]!.impulse.x).toBeGreaterThan(0);
+      expect(state.players[1]!.x).toBeGreaterThan(360 + 40);
+    }
+  );
 });

@@ -4,6 +4,7 @@ import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { advanceFixedStep, createFixedStepClock } from "@/shared/services/gameLoop";
 import { createGameInputReader } from "@/shared/services/gameInputService";
 import { PLACEHOLDER_LEVEL } from "@/features/level/api/levelApi";
+import { selectDiveOption } from "@/features/dive/api/diveApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
 import { createGameRenderer, renderGame } from "@/features/match/services/gameRenderer";
 
@@ -28,6 +29,13 @@ export function useGameSession(app: Application | null): void {
     const renderer = createGameRenderer(app, state);
     let clock = createFixedStepClock();
 
+    // Phase-1 prototype switch: Digit1 / Digit2 / Digit3 pick the dive option being played.
+    const onOptionKey = (event: KeyboardEvent): void => {
+      const match = /^Digit([1-9])$/.exec(event.code);
+      if (match) selectDiveOption(state.dive, Number(match[1]) - 1, state.tunables);
+    };
+    window.addEventListener("keydown", onOptionKey);
+
     const onFrame = (ticker: Ticker): void => {
       const frameSeconds = ticker.deltaMS / 1000;
       const advance = advanceFixedStep(clock, frameSeconds, {
@@ -42,6 +50,7 @@ export function useGameSession(app: Application | null): void {
 
     app.ticker.add(onFrame);
     return () => {
+      window.removeEventListener("keydown", onOptionKey);
       input.dispose();
       // usePixiApp's cleanup runs first on unmount and destroys the app (ticker, stage, children);
       // only a still-live app (a session restart on the same app) needs manual teardown.
