@@ -15,5 +15,14 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   world: { gravity: 2200, maxFallSpeed: 1400 },
   match: { durationSeconds: 180, maxPlayers: 4 },
   player: { width: 28, height: 28, runSpeed: 320, jumpSpeed: 820 },
-  camera: { padding: 32 },
+  camera: {
+    padding: 96,
+    minViewHeight: 400,
+    deadzone: 0.08,
+    zoomInDeadband: 0.04,
+    followRate: 6,
+    zoomInRate: 2.5,
+    zoomOutRate: 8,
+    edgeMargin: 24,
+  },
 };
