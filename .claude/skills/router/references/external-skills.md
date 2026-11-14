@@ -2,6 +2,17 @@
 
 User-level and plugin skills the loop may hand to. Read by [`../SKILL.md`](../SKILL.md) when a request belongs to a stack tool, not to a loop stage. Moved from `router` § Skill index (v0.42.0). In Claude Code, `~/.cursor/skills-cursor/*` isn't available: skip those rows.
 
+### Claude Code built-ins
+
+Skills that ship with Claude Code. Loop skills call them as **backing steps only**: each one runs inside a loop stage, and no loop gate, owner stop or repo rule is replaced by it. Cursor has no equivalent: skip these rows there. Context-cost audit R12.
+
+| Built-in | Called from | Overlap |
+|---|---|---|
+| `/code-review` (correctness bugs on a diff) | `loop-check` step 2, as one of the size-M lenses | Backs the lens review; rule audits, tooling gates and plan compliance stay |
+| `/simplify` (reuse / simplification cleanups, applies fixes) | `loop-build` step 7; `spec-optimize-performance` at the complexity level | Backs the cleanup pass; fixes stay inside the brief and re-pass the phase gates |
+| `/loop` (re-run a prompt on an interval) | not called | No overlap with `loop-orchestrate`: it repeats one prompt, it doesn't run owner-gated laps |
+| `/batch` (one mechanical change fanned out) | not called | No overlap with `loop-orchestrate`: it has no backlog, briefs, Stop 2 or merge-after-Pass |
+
 ### User-level Cursor skills (`~/.cursor/skills-cursor/`)
 
 | Situation | Skill |

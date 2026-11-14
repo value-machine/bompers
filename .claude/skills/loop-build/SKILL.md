@@ -21,7 +21,7 @@ When this skill is done, every planned phase is executed and gated, the acceptan
 |---|---|
 | In | Plan (`BRIEF.md` § Plan or `DEVELOPMENT_PLAN.md`), acceptance test, lap `DECISIONS.md`, rules ([`loop-plan/references/rules-registry.md`](../loop-plan/references/rules-registry.md)) |
 | Out | Code and tests; plan phase status, **Notes during development**, **Decisions made**; updated feature READMEs / vision / rules carrying the lap's decisions |
-| Calls | if a test or runtime fails unexpectedly → [`spec-debug-runtime`](../spec-debug-runtime/SKILL.md) · if a new package seems needed → [`spec-reuse-package`](../spec-reuse-package/SKILL.md), then owner stop (new dependency) · if the diff starts to look like a workaround (`architecture` rule § Layer consistency) → [`spec-check-layer`](../spec-check-layer/SKILL.md) · if a phase removes a feature → [`loop-plan/references/remove-feature.md`](../loop-plan/references/remove-feature.md) § Phase 4 · when all phases pass → [`loop-check`](../loop-check/SKILL.md) |
+| Calls | if a test or runtime fails unexpectedly → [`spec-debug-runtime`](../spec-debug-runtime/SKILL.md) · if a new package seems needed → [`spec-reuse-package`](../spec-reuse-package/SKILL.md), then owner stop (new dependency) · if the diff starts to look like a workaround (`architecture` rule § Layer consistency) → [`spec-check-layer`](../spec-check-layer/SKILL.md) · if a phase removes a feature → [`loop-plan/references/remove-feature.md`](../loop-plan/references/remove-feature.md) § Phase 4 · before hand-off, Claude Code only → built-in `/simplify` on the lap diff ([`router/references/external-skills.md`](../router/references/external-skills.md) § Claude Code built-ins) · when all phases pass → [`loop-check`](../loop-check/SKILL.md) |
 | Called by | [`router`](../router/SKILL.md), [`loop-plan`](../loop-plan/SKILL.md), [`loop-check`](../loop-check/SKILL.md) |
 | Next | [`loop-check`](../loop-check/SKILL.md) |
 | Owner stops | Stop list ([`agent-behavior` rule § When to ask](../../../.claude/rules/agent-behavior.md)); edge overrun (skill-loop D51); protected-file edits ([`agent-behavior` § Protected Files](../../../.claude/rules/agent-behavior.md)) |
@@ -37,7 +37,7 @@ When this skill is done, every planned phase is executed and gated, the acceptan
 4. **Unplanned obstacles.** Note them. If the way around one is a patch on top instead of the structural fix, that's a stop-list item. Otherwise decide, record it in **Decisions made**, and continue.
 5. **Staged-test infrastructure.** When adding or renaming `scripts/*staged*`, `scripts/*validator*`, `scripts/change-classify.cjs` or `scripts/test-staged.cjs`, update `TEST_INFRA_EXACT` / `TEST_INFRA_PREFIXES` in the same lap and run `pnpm test:classify`.
 6. **Fold decisions into their homes (skill-loop D48).** For each Closed lap decision that governs future work, write one line into the feature `README.md` it concerns, or into the vision or a rule. Cite the decision, not the lap: `- <decision> (owner, v<version>)`. Update `ARCHITECTURE.md` after structural changes.
-7. **Finish.** The acceptance test passes and every phase is `Done`. Hand to [`loop-check`](../loop-check/SKILL.md).
+7. **Finish.** The acceptance test passes and every phase is `Done`. In Claude Code, run the built-in `/simplify` once on the lap diff; keep only fixes that stay inside the brief, then re-run the phase gates they touch (Cursor: skip). It backs this step, it doesn't replace any gate. Hand to [`loop-check`](../loop-check/SKILL.md).
 
 ## Examples
 
