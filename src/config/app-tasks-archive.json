@@ -53,5 +53,10 @@
     "title": "Context-cost audit: slim always-on rules",
     "description": "meta-audit-harness context-cost lens (R1-R9): moved Model A/B promote and PR procedures from git-workflow.md into loop-ship references, cut Related Rules footers (DOC_RULES_INDEX is SSOT), moved Windows-only shell text to documentation/DOC_WINDOWS_SHELL.md, and trimmed testing, agent-behavior, code-style and architecture to pointers. Always-on context about 17.6k to 14.5k tokens (-18%), no information lost (ledger in the lap folder). Follow-ups R10-R12 are separate backlog tasks. From the Claude Code video-lessons review.",
     "status": "done"
+  },
+  {
+    "title": "Define app vision",
+    "description": "Collaborate with the coding agent to fill documentation/DOC_APP_VISION.md (problem, persona, app role). Replace placeholder bullets with real prose and change Vision status from DRAFT to ACTIVE when complete. Agent gate: .agents/skills/loop-backlog/references/onboarding.md § App vision & goals gate.",
+    "status": "done"
   }
 ]
