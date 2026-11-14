@@ -6,6 +6,17 @@ History of the decisions jobs made: what was chosen, what was rejected, and why.
 - **Cite with the job key:** `(skill-loop D53)`. Ids restart at D1 in every job, so a bare `D53` is ambiguous.
 - **Who writes it:** `loop-ship` appends the lap's closed rows from its scratch `DECISIONS.md` in the ship commit ([`loop-ship`](../.agents/skills/loop-ship/SKILL.md)). Earlier job logs were deleted in #16; only the ones still cited are restored below from `a920c0d^`.
 
+## game-orchestration — claude/affectionate-ramanujan-np2wwq
+
+Orchestrator calls for the game run (run tag `run:bompers-game-1`): engine, design direction, level files and the owner's delegation of architecture calls.
+
+| id | topic | status | choice | source | notes |
+|----|-------|--------|--------|--------|-------|
+| D1 | Engine | closed | PixiJS v8 renders; the simulation is our own pure-TS fixed-step code, no physics engine | orchestrator | Under the owner's "make your own call against the GDD". Rejected: Phaser 4 (logic bound to scenes, hard to test headless), PixiJS + Rapier2D (1.3 MB WASM, fights platformer feel), matter-js (unmaintained). Details: DOC_APP_VISION.md § Engine |
+| D2 | Visual direction | closed | A · Gumdrop Pop (ink outlines, candy palette, toy-pop audio) plus a flat contact shadow borrowed from C | orchestrator | Readability of 4 players in explosions at any zoom, LocoRoco/Fall Guys feel, cheapest to draw. Rejected: B Afterglow (bloom drowns players, filter cost), C Soft Clay (calmest, least chaotic) |
+| D3 | Level files | closed | One self-contained HTML file with inline SVG; content referenced by catalog ID; internal LevelDefinition seam; kit generated from the code catalog with a CI drift check | owner + orchestrator | Owner asked for files any AI agent can write and any browser can show. Rejected: JSON (not viewable), a custom binary or Tiled format (agents can't write or preview it reliably) |
+| D4 | Architecture authority | closed | The owner delegates repo-architecture and protected-file calls (e.g. `projectStructure.config.cjs`) to the orchestrator, which decides with the relevant skills and records each call | owner | 2026-11-14, in chat. First use: whitelist `public/level-kit/v*/` for the level kit |
+
 ## ci-cost — claude/epic-babbage-2wjwwf
 
 CI cost cuts: related tests per PR with a weekly full run, no duplicate CI after merge, one release job, job timeouts, and fewer orchestrator branch updates.
