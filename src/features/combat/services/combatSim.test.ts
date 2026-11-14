@@ -1,0 +1,421 @@
+import { describe, expect, it } from "vitest";
+import { DEFAULT_GAME_TUNABLES, type GameTunables } from "@/shared/config/gameTunables";
+import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
+import type { PlayerInput } from "@/shared/types/gameInput.types";
+import { buildTerrainFromLevel, getCellInfo } from "@/features/arena/api/arenaApi";
+import type { LevelDefinition, LevelDrop } from "@/features/level/api/levelApi";
+import { createPlayer, stepPlayers, type PlayerState } from "@/features/player/api/playerApi";
+import { stepCombat } from "@/features/combat/services/combatSim";
+import {
+  createCombatState,
+  eliminateFighter,
+  fighterFor,
+  type CombatContext,
+} from "@/features/combat/services/combatState";
+import { explode } from "@/features/combat/services/explosions";
+import type { CombatEvent, CombatState } from "@/features/combat/types/combat.types";
+
+// Cell size 8. Stone floor top y = 320 (x 0–1200). Thin stone wall x 800–808 (y 0–320).
+// Dirt plateau x 400–560, y 160–184 resting on nothing (stone strip under it at y 184–192).
+const level: LevelDefinition = {
+  formatVersion: 1,
+  meta: { levelId: "combat", title: "Combat" },
+  settings: { cellSize: 8, gravity: 1 },
+  worldSize: { w: 1200, h: 400 },
+  terrain: [
+    {
+      shape: { type: "rect", x: 0, y: 320, w: 1200, h: 32 },
+      role: "platform",
+      materialId: "stone",
+    },
+    { shape: { type: "rect", x: 800, y: 0, w: 8, h: 320 }, role: "platform", materialId: "stone" },
+    {
+      shape: { type: "rect", x: 400, y: 160, w: 160, h: 24 },
+      role: "destructible",
+      materialId: "dirt",
+    },
+    {
+      shape: { type: "rect", x: 400, y: 184, w: 160, h: 8 },
+      role: "platform",
+      materialId: "stone",
+    },
+  ],
+  spawns: [],
+  drops: [],
+  collectibles: [],
+  bounds: { x: 0, y: -400, w: 1200, h: 800 },
+};
+
+const FLOOR_Y = 320;
+const dt = 1 / 120;
+const C = DEFAULT_GAME_TUNABLES.combat;
+const P = DEFAULT_GAME_TUNABLES.player;
+const G = DEFAULT_GAME_TUNABLES.world.gravity;
+
+type InputPatch = Partial<PlayerInput>;
+
+interface World {
+  players: PlayerState[];
+  combat: CombatState;
+  ctx: () => CombatContext;
+  /** Steps the players and combat; `inputs[i]` patches player i's input. */
+  step: (inputs?: InputPatch[], steps?: number) => void;
+  /** Every event seen since the world was created (the live log is pruned). */
+  seen: CombatEvent[];
+  time: () => number;
+}
+
+interface WorldOptions {
+  at: { x: number; y: number }[];
+  tunables?: GameTunables;
+  drops?: LevelDrop[];
+}
+
+function createWorld({ at, tunables = DEFAULT_GAME_TUNABLES, drops = [] }: WorldOptions): World {
+  const terrain = buildTerrainFromLevel(level);
+  const players = at.map((point, slot) => createPlayer(slot, point, tunables));
+  const combat = createCombatState(tunables);
+  const seen: CombatEvent[] = [];
+  let time = 0;
+  let lastSeq = 0;
+  const ctx = (): CombatContext => ({
+    combat,
+    players,
+    terrain,
+    bounds: level.bounds,
+    tunables,
+    timeSeconds: time,
+  });
+  const step = (patches: InputPatch[] = [], steps = 1): void => {
+    for (let i = 0; i < steps; i += 1) {
+      const inputs = players.map((_, slot) => ({
+        ...EMPTY_PLAYER_INPUT,
+        connected: true,
+        ...patches[slot],
+      }));
+      stepPlayers({ players, inputs, terrain, tunables, dt });
+      stepCombat({
+        combat,
+        players,
+        inputs,
+        terrain,
+        drops,
+        bounds: level.bounds,
+        tunables,
+        timeSeconds: time,
+        dt,
+      });
+      for (const event of combat.events) if (event.seq > lastSeq) seen.push(event);
+      lastSeq = combat.nextSeq - 1;
+      time += dt;
+    }
+  };
+  step([], 60); // settle on the floor
+  for (const player of players) fighterFor(combat, player, tunables);
+  return { players, combat, ctx, step, seen, time: () => time };
+}
+
+const arm = (world: World, slot: number): void => {
+  const fighter = world.combat.fighters.get(`p${slot}`)!;
+  fighter.weapon = { itemId: "rocket-launcher", ammo: C.rocket.ammo };
+};
+
+const health = (world: World, slot: number): number =>
+  world.combat.fighters.get(`p${slot}`)!.health;
+
+const eventsOf = <T extends CombatEvent["type"]>(world: World, type: T) =>
+  world.seen.filter((event): event is Extract<CombatEvent, { type: T }> => event.type === type);
+
+/** Player 0 presses fire for one step (aiming), then holds the aim for `after` steps. */
+const shoot = (world: World, aim: InputPatch, after = 120): void => {
+  world.step([{ ...aim, fire: true }]);
+  world.step([aim], after);
+};
+
+describe("combat — rockets and explosions", () => {
+  it("should remove exactly one chunk from the target and none from the shooter when a rocket hits", () => {
+    const world = createWorld({
+      at: [
+        { x: 200, y: FLOOR_Y },
+        { x: 320, y: FLOOR_Y },
+      ],
+    });
+    arm(world, 0);
+    shoot(world, { aimX: 1 });
+    expect(health(world, 1)).toBe(C.maxHealth - 1);
+    expect(health(world, 0)).toBe(C.maxHealth);
+    expect(eventsOf(world, "explosion")).toHaveLength(1);
+  });
+
+  it("should remove exactly one chunk from every other player in range when one blast hits several", () => {
+    const world = createWorld({
+      at: [
+        { x: 100, y: FLOOR_Y },
+        { x: 300, y: FLOOR_Y },
+        { x: 330, y: FLOOR_Y },
+      ],
+    });
+    explode(world.ctx(), { at: { x: 315, y: FLOOR_Y - 10 }, ownerSlot: 0, ownerId: "p0" });
+    expect(health(world, 1)).toBe(C.maxHealth - 1);
+    expect(health(world, 2)).toBe(C.maxHealth - 1);
+    expect(health(world, 0)).toBe(C.maxHealth);
+  });
+
+  it("should never damage the shooter when the shooter stands in their own blast", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    explode(world.ctx(), { at: { x: 200, y: FLOOR_Y }, ownerSlot: 0, ownerId: "p0" });
+    expect(health(world, 0)).toBe(C.maxHealth);
+    expect(world.players[0]!.vy).toBeLessThan(0);
+  });
+
+  it("should push away from the blast and weaker with distance when players are in range", () => {
+    const near = createWorld({
+      at: [
+        { x: 100, y: FLOOR_Y },
+        { x: 300, y: FLOOR_Y },
+      ],
+    });
+    const far = createWorld({
+      at: [
+        { x: 100, y: FLOOR_Y },
+        { x: 300, y: FLOOR_Y },
+      ],
+    });
+    const outside = createWorld({
+      at: [
+        { x: 100, y: FLOOR_Y },
+        { x: 300, y: FLOOR_Y },
+      ],
+    });
+    const blastY = FLOOR_Y - P.height / 2;
+    explode(near.ctx(), { at: { x: 270, y: blastY }, ownerSlot: 0, ownerId: "p0" });
+    explode(far.ctx(), { at: { x: 240, y: blastY }, ownerSlot: 0, ownerId: "p0" });
+    explode(outside.ctx(), {
+      at: { x: 286 - C.explosion.radius - 1, y: blastY },
+      ownerSlot: 0,
+      ownerId: "p0",
+    });
+    const nearVx = near.players[1]!.vx;
+    const farVx = far.players[1]!.vx;
+    expect(nearVx).toBeGreaterThan(0);
+    expect(farVx).toBeGreaterThan(0);
+    expect(nearVx).toBeGreaterThan(farVx);
+    expect(Math.abs(near.players[1]!.vy)).toBeLessThan(1e-9);
+    expect(outside.players[1]!.vx).toBe(0);
+    expect(health(outside, 1)).toBe(C.maxHealth);
+  });
+});
+
+describe("combat — rockets", () => {
+  it("should lift the shooter higher than a full jump when firing straight down from standing", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    arm(world, 0);
+    const press: InputPatch[] = [{ aimY: 1, aimX: 0, fire: true }];
+    world.step(press);
+    let minY = world.players[0]!.y;
+    for (let i = 0; i < 120; i += 1) {
+      world.step([{ aimY: 1, aimX: 0 }]);
+      minY = Math.min(minY, world.players[0]!.y);
+    }
+    const jumpApex = (P.jumpSpeed * P.jumpSpeed) / (2 * G);
+    expect(FLOOR_Y - minY).toBeGreaterThan(jumpApex * 1.3);
+    expect(health(world, 0)).toBe(C.maxHealth);
+  });
+
+  it("should explode at a one-cell wall and not pass through it when the rocket flies at max speed", () => {
+    const tunables: GameTunables = {
+      ...DEFAULT_GAME_TUNABLES,
+      combat: { ...C, rocket: { ...C.rocket, speed: 30000 } },
+    };
+    const world = createWorld({
+      at: [
+        { x: 700, y: FLOOR_Y },
+        { x: 900, y: FLOOR_Y },
+      ],
+      tunables,
+    });
+    arm(world, 0);
+    shoot(world, { aimX: 1 }, 10);
+    const [blast] = eventsOf(world, "explosion");
+    expect(blast).toBeDefined();
+    expect(blast!.x).toBeGreaterThanOrEqual(800);
+    expect(blast!.x).toBeLessThanOrEqual(808);
+    expect(health(world, 1)).toBe(C.maxHealth);
+    expect(getCellInfo(world.ctx().terrain, 100, 20)?.materialId).toBe("stone");
+  });
+
+  it("should explode on a player and not pass through when the rocket flies at max speed", () => {
+    const tunables: GameTunables = {
+      ...DEFAULT_GAME_TUNABLES,
+      combat: { ...C, rocket: { ...C.rocket, speed: 30000 } },
+    };
+    const world = createWorld({
+      at: [
+        { x: 200, y: FLOOR_Y },
+        { x: 600, y: FLOOR_Y },
+      ],
+      tunables,
+    });
+    arm(world, 0);
+    shoot(world, { aimX: 1 }, 10);
+    const [blast] = eventsOf(world, "explosion");
+    expect(blast!.x).toBeGreaterThanOrEqual(600 - P.width / 2 - C.rocket.radius);
+    expect(blast!.x).toBeLessThanOrEqual(600);
+    expect(health(world, 1)).toBe(C.maxHealth - 1);
+  });
+
+  it("should clear only destructible cells and emit the material's effect and sound when a blast hits mixed terrain", () => {
+    const world = createWorld({ at: [{ x: 100, y: FLOOR_Y }] });
+    const terrain = world.ctx().terrain;
+    explode(world.ctx(), { at: { x: 480, y: 184 }, ownerSlot: 0, ownerId: "p0" });
+    // Dirt cell at (480, 176) is gone; the stone strip at y 184–192 stays.
+    expect(getCellInfo(terrain, 60, 22)).toBeNull();
+    expect(getCellInfo(terrain, 60, 23)?.materialId).toBe("stone");
+    const destroyed = eventsOfLive(world.combat, "terrainDestroyed");
+    expect(destroyed).toHaveLength(1);
+    expect(destroyed[0]).toMatchObject({
+      materialId: "dirt",
+      effectId: "dust-burst",
+      soundId: "crumble",
+    });
+    expect(destroyed[0]!.cells).toBeGreaterThan(0);
+  });
+
+  it("should flag the victim eliminated with credit to the shooter when the last chunk is lost", () => {
+    const world = createWorld({
+      at: [
+        { x: 200, y: FLOOR_Y },
+        { x: 320, y: FLOOR_Y },
+      ],
+    });
+    world.combat.fighters.get("p1")!.health = 1;
+    arm(world, 0);
+    shoot(world, { aimX: 1 }, 30);
+    expect(world.combat.fighters.get("p1")!.eliminated).toBe(true);
+    expect(eventsOf(world, "playerEliminated")).toEqual([
+      expect.objectContaining({ victimSlot: 1, byPlayerSlot: 0, cause: "rocket" }),
+    ]);
+  });
+
+  it("should take no damage but still be pushed when the player is spawn-protected", () => {
+    const world = createWorld({
+      at: [
+        { x: 100, y: FLOOR_Y },
+        { x: 300, y: FLOOR_Y },
+      ],
+    });
+    world.combat.fighters.get("p1")!.invulnerableUntil = world.time() + 5;
+    explode(world.ctx(), { at: { x: 280, y: FLOOR_Y - 14 }, ownerSlot: 0, ownerId: "p0" });
+    expect(health(world, 1)).toBe(C.maxHealth);
+    expect(world.players[1]!.vx).toBeGreaterThan(0);
+  });
+});
+
+describe("combat — bash", () => {
+  it("should remove one chunk and knock the target away when bashing within range", () => {
+    const world = createWorld({
+      at: [
+        { x: 200, y: FLOOR_Y },
+        { x: 236, y: FLOOR_Y },
+      ],
+    });
+    world.step([{ aimX: 1, fire: true }]);
+    expect(health(world, 1)).toBe(C.maxHealth - 1);
+    expect(world.players[1]!.vx).toBeGreaterThan(0);
+    expect(world.players[1]!.vy).toBeLessThan(0);
+    expect(eventsOf(world, "bash")[0]?.hit).toBe(true);
+  });
+
+  it("should miss when the target is behind the aim or out of range", () => {
+    const behind = createWorld({
+      at: [
+        { x: 200, y: FLOOR_Y },
+        { x: 170, y: FLOOR_Y },
+      ],
+    });
+    behind.step([{ aimX: 1, fire: true }]);
+    expect(health(behind, 1)).toBe(C.maxHealth);
+    const far = createWorld({
+      at: [
+        { x: 200, y: FLOOR_Y },
+        { x: 200 + C.bash.range + 10, y: FLOOR_Y },
+      ],
+    });
+    far.step([{ aimX: 1, fire: true }]);
+    expect(health(far, 1)).toBe(C.maxHealth);
+    expect(eventsOf(far, "bash")[0]?.hit).toBe(false);
+  });
+
+  it("should bash once per press and respect the cooldown when fire is pressed repeatedly", () => {
+    const world = createWorld({
+      at: [
+        { x: 200, y: FLOOR_Y },
+        { x: 236, y: FLOOR_Y },
+      ],
+    });
+    world.step([{ aimX: 1, fire: true }], 10); // held: one bash
+    world.step([{ aimX: 1 }]);
+    world.step([{ aimX: 1, fire: true }]); // inside cooldown: ignored
+    expect(eventsOf(world, "bash")).toHaveLength(1);
+  });
+});
+
+describe("combat — pickups", () => {
+  const drops: LevelDrop[] = [{ at: { x: 1000, y: -40 }, itemIds: ["rocket-launcher"] }];
+
+  it("should drop a launcher that falls and lands on the terrain when the first drop is due", () => {
+    const world = createWorld({ at: [{ x: 100, y: FLOOR_Y }], drops });
+    world.step([], Math.ceil((C.drops.firstDelaySeconds + 2) / dt));
+    const [pickup] = world.combat.pickups;
+    expect(eventsOf(world, "pickupSpawned")).toHaveLength(1);
+    expect(pickup).toMatchObject({ x: 1000, y: FLOOR_Y, grounded: true });
+  });
+
+  it("should arm the player who touches it and drop the launcher when the ammo runs out", () => {
+    const world = createWorld({ at: [{ x: 1000, y: FLOOR_Y }], drops });
+    world.step([], Math.ceil((C.drops.firstDelaySeconds + 2) / dt));
+    expect(world.combat.pickups).toHaveLength(0);
+    expect(world.combat.fighters.get("p0")!.weapon?.ammo).toBe(C.rocket.ammo);
+    for (let i = 0; i < C.rocket.ammo; i += 1) {
+      shoot(world, { aimX: -1 }, Math.ceil(C.rocket.fireCooldown / dt) + 1);
+    }
+    expect(eventsOf(world, "rocketFired")).toHaveLength(C.rocket.ammo);
+    expect(world.combat.fighters.get("p0")!.weapon).toBeNull();
+    shoot(world, { aimX: -1 }, 2);
+    expect(eventsOf(world, "bash")).toHaveLength(1);
+  });
+
+  it("should not drop more than maxActive pickups when nobody collects them", () => {
+    const world = createWorld({ at: [{ x: 100, y: FLOOR_Y }], drops });
+    world.step([], Math.ceil((C.drops.firstDelaySeconds + C.drops.intervalSeconds * 5) / dt));
+    expect(world.combat.pickups.length).toBe(C.drops.maxActive);
+  });
+});
+
+describe("combat — out of bounds", () => {
+  it("should credit the last hitter when a player falls out soon after being hit", () => {
+    const world = createWorld({
+      at: [
+        { x: 200, y: FLOOR_Y },
+        { x: 236, y: FLOOR_Y },
+      ],
+    });
+    world.step([{ aimX: 1, fire: true }]);
+    eliminateFighter({
+      combat: world.combat,
+      player: world.players[1]!,
+      cause: "out-of-bounds",
+      tunables: DEFAULT_GAME_TUNABLES,
+      timeSeconds: world.time() + 1,
+    });
+    expect(eventsOfLive(world.combat, "playerEliminated")).toEqual([
+      expect.objectContaining({ victimSlot: 1, byPlayerSlot: 0, cause: "out-of-bounds" }),
+    ]);
+  });
+});
+
+function eventsOfLive<T extends CombatEvent["type"]>(combat: CombatState, type: T) {
+  return combat.events.filter(
+    (event): event is Extract<CombatEvent, { type: T }> => event.type === type
+  );
+}

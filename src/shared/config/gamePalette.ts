@@ -22,6 +22,13 @@ export const GAME_PALETTE = {
   playerShades: [0xae3c3a, 0x2e4cb4, 0xae8e3b, 0x2d8c79],
   /** Gloss / UI fills: body mixed 45 % toward white. */
   playerTints: [0xff9e93, 0x8dadff, 0xffe793, 0x8ce5cb],
+  /** Effects (DESIGN_LANGUAGE § 1 Effects). Rocket fins use the shooter's body colour. */
+  explosion: { outer: 0xff8a1f, mid: 0xffe14d, core: 0xffffff },
+  rocket: { body: 0xfff4e2, nose: 0x2b1d3a, flame: 0xffb21a, tubeCap: 0xd9c7ae },
+  pickupCrate: 0xfff4e2,
+  pickupRing: 0x8fd6ff,
+  /** Lost health chunk (DESIGN_LANGUAGE § 7). */
+  healthLost: 0xe9dfd0,
   sky: { top: 0x8fd6ff, bottom: 0xfff1cf },
   timerWarning: 0xff8a1f,
   /** Keyed by a catalog material's `lookToken`. */

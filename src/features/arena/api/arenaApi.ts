@@ -11,6 +11,7 @@ export { EMPTY_CELL } from "@/features/arena/types/arena.types";
 export {
   clearCircle,
   getCellInfo,
+  type ClearedCells,
   isSolidAt,
   rectHitsSolid,
 } from "@/features/arena/services/terrainGrid";

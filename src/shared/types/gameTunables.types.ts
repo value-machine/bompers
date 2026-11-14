@@ -63,6 +63,59 @@ export interface GameTunables {
       breathSeconds: number;
     };
   };
+  /** Health, bash, rocket launcher, explosions and weapon drops (GDD § 3). */
+  combat: {
+    /** Health chunks per player; 0 eliminates. */
+    maxHealth: number;
+    /** Seconds after a hit in which falling out still credits the hitter. */
+    killCreditSeconds: number;
+    /** Seconds sim events stay readable in `combat.events`. */
+    eventRetentionSeconds: number;
+    /** Unarmed attack on the fire button. */
+    bash: {
+      /** Max distance between body centres, world units. */
+      range: number;
+      /** Min cosine between aim and the direction to the target (0.5 = 60° each side). */
+      coneCos: number;
+      /** Seconds between bashes. */
+      cooldown: number;
+      /** Knockback speed along the hit direction, units / s, plus an upward lift. */
+      knockbackSpeed: number;
+      knockbackLift: number;
+    };
+    rocket: {
+      /** Flight speed, units / s (straight line, no gravity). */
+      speed: number;
+      /** Collision radius, world units. */
+      radius: number;
+      /** Rockets per launcher pickup; the launcher is dropped when empty. */
+      ammo: number;
+      /** Seconds between shots. */
+      fireCooldown: number;
+      /** Spawn distance from the helmet centre along the aim. */
+      muzzleOffset: number;
+      /** Seconds before a rocket that hit nothing explodes in the air. */
+      maxLifetime: number;
+    };
+    explosion: {
+      /** Players within this distance of the blast (nearest body point) are hit and pushed. */
+      radius: number;
+      /** Destructible cells within this radius are cleared. */
+      craterRadius: number;
+      /** Speed added at the blast centre, units / s; falls off linearly to `minFalloff` at the edge. */
+      impulse: number;
+      minFalloff: number;
+    };
+    /** Weapon pickups dropping from the level's drop points. */
+    drops: {
+      firstDelaySeconds: number;
+      intervalSeconds: number;
+      /** No new drop while this many pickups lie in the arena. */
+      maxActive: number;
+      /** Square pickup box, world units. */
+      size: number;
+    };
+  };
   /** Camera framing. Placeholder until the camera lap. */
   camera: {
     /** World units of margin kept around the framed area. */

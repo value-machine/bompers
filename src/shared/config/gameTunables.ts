@@ -41,5 +41,23 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       breathSeconds: 1.6,
     },
   },
+  combat: {
+    maxHealth: 4,
+    killCreditSeconds: 4,
+    eventRetentionSeconds: 1,
+    bash: { range: 46, coneCos: 0.35, cooldown: 0.4, knockbackSpeed: 700, knockbackLift: 380 },
+    // 6 rockets, no time limit: the count stays legible without a HUD timer (combat D5).
+    rocket: {
+      speed: 950,
+      radius: 3,
+      ammo: 6,
+      fireCooldown: 0.4,
+      muzzleOffset: 6,
+      maxLifetime: 4,
+    },
+    // Rocket jump from standing: ≈ 1350² / 4400 ≈ 410 units, well above a full jump (≈ 250).
+    explosion: { radius: 64, craterRadius: 34, impulse: 1350, minFalloff: 0.35 },
+    drops: { firstDelaySeconds: 3, intervalSeconds: 7, maxActive: 2, size: 22 },
+  },
   camera: { padding: 32 },
 };

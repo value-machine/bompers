@@ -44,8 +44,9 @@ describe("terrainGrid", () => {
 
   it("should remove destructible cells but keep platform cells when a circle is blasted", () => {
     const grid = buildTerrainFromLevel(level);
-    const removed = clearCircle(grid, { x: 200, y: 115, radius: 25 });
-    expect(removed).toBeGreaterThan(0);
+    const cleared = clearCircle(grid, { x: 200, y: 115, radius: 25 });
+    expect(cleared.removed).toBeGreaterThan(0);
+    expect(cleared.byMaterial).toEqual({ dirt: cleared.removed });
     expect(getCellInfo(grid, 20, 11)).toBeNull();
     expect(getCellInfo(grid, 20, 12)?.materialId).toBe("stone");
   });
@@ -61,7 +62,7 @@ describe("terrainGrid", () => {
         },
       ],
     });
-    expect(clearCircle(grid, { x: 20, y: 105, radius: 30 })).toBe(0);
+    expect(clearCircle(grid, { x: 20, y: 105, radius: 30 }).removed).toBe(0);
   });
 
   it("should mark only the touched chunks dirty when a circle is blasted", () => {

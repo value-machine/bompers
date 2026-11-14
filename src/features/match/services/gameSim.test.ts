@@ -54,6 +54,42 @@ describe("gameSim", () => {
     expect(player.y).toBeLessThan(250);
   });
 
+  it("should report the fall as an elimination and refill health when a player leaves the zone", () => {
+    const state = stepGame(newGame(), keys(), dt);
+    const fighter = state.combat.fighters.get("p0")!;
+    fighter.health = 2;
+    state.players[0]!.y = 2000;
+    stepGame(state, keys(), dt);
+    expect(state.combat.events).toContainEqual(
+      expect.objectContaining({ type: "playerEliminated", victimSlot: 0, cause: "out-of-bounds" })
+    );
+    expect(fighter).toMatchObject({
+      health: DEFAULT_GAME_TUNABLES.combat.maxHealth,
+      eliminated: false,
+    });
+  });
+
+  it("should respawn a player whose last health chunk was bashed off", () => {
+    const state = stepGame(newGame(), keys(), dt);
+    const [attacker, victim] = state.players;
+    attacker!.x = 300;
+    victim!.x = 336;
+    victim!.y = attacker!.y = 320;
+    state.combat.fighters.get("p1")!.health = 1;
+    // Keyboard-1 fire is KeyF; aim defaults to facing right.
+    stepGame(state, keys("KeyF"), dt);
+    expect(state.combat.events).toContainEqual(
+      expect.objectContaining({
+        type: "playerEliminated",
+        victimSlot: 1,
+        byPlayerSlot: 0,
+        cause: "bash",
+      })
+    );
+    expect(victim!.x).toBe(600);
+    expect(state.combat.fighters.get("p1")!.health).toBe(DEFAULT_GAME_TUNABLES.combat.maxHealth);
+  });
+
   it("should end the round and freeze players when the timer runs out", () => {
     const state = newGame(1);
     for (let i = 0; i < 130; i += 1) stepGame(state, keys(), dt);

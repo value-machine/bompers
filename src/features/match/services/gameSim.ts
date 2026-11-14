@@ -8,6 +8,14 @@ import {
   type LevelSettings,
 } from "@/features/level/api/levelApi";
 import {
+  createCombatState,
+  eliminateFighter,
+  isFighterEliminated,
+  respawnFighter,
+  stepCombat,
+  type CombatState,
+} from "@/features/combat/api/combatApi";
+import {
   createPlayer,
   placePlayer,
   stepPlayers,
@@ -21,8 +29,9 @@ import {
  * Systems order (each later concept slots into its numbered place):
  *   1. joinSlots       — a connected input slot without a player gets one
  *   2. stepPlayers     — player feature: controller + terrain collision
- *   3. (combat)        — reserved: projectiles, blasts → arena clearCircle, damage, bash
- *   4. outOfBounds     — leaving level.bounds respawns (elimination + scoring: match/combat)
+ *   3. stepCombat      — combat feature: bash / rockets, blasts (damage, impulse, clearCircle), pickups
+ *   4. respawnPlayers  — out of bounds or eliminated by combat → back to a spawn point, full health
+ *                        (spawn choice, protection and scoring: match-rules lap)
  *   5. roundTimer      — counts down; at 0 the round ends and systems 1–4 stop
  */
 /** Round progress (GDD § 5: points within a timed round). */
@@ -47,6 +56,8 @@ export interface GameState {
   /** What normalising the level corrected (unknown IDs etc.); empty for a clean level. */
   levelWarnings: string[];
   players: PlayerState[];
+  /** Health, weapons, rockets, pickups and the combat event log (keyed by player id). */
+  combat: CombatState;
   round: MatchRoundState;
 }
 
@@ -79,6 +90,7 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
     arena: createArenaState(normalized.level),
     levelWarnings: normalized.warnings,
     players: [],
+    combat: createCombatState(matchTunables),
     round: { phase: "playing", remainingSeconds: matchTunables.match.durationSeconds },
   };
 }
@@ -107,9 +119,15 @@ const isOutOfBounds = (player: PlayerState, state: GameState): boolean => {
   );
 };
 
-function outOfBounds(state: GameState): void {
+function respawnPlayers(state: GameState): void {
+  const { combat, tunables, timeSeconds } = state;
   for (const player of state.players) {
-    if (isOutOfBounds(player, state)) placePlayer(player, spawnPointFor(state, player.slot));
+    if (isOutOfBounds(player, state)) {
+      eliminateFighter({ combat, player, cause: "out-of-bounds", tunables, timeSeconds });
+    }
+    if (!isFighterEliminated(combat, player.id)) continue;
+    placePlayer(player, spawnPointFor(state, player.slot));
+    respawnFighter(combat, player, tunables);
   }
 }
 
@@ -129,7 +147,18 @@ export function stepGame(state: GameState, inputs: PlayerInputs, dt: number): Ga
       tunables: state.tunables,
       dt,
     });
-    outOfBounds(state);
+    stepCombat({
+      combat: state.combat,
+      players: state.players,
+      inputs,
+      terrain: state.arena.terrain,
+      drops: state.arena.level.drops,
+      bounds: state.arena.level.bounds,
+      tunables: state.tunables,
+      timeSeconds: state.timeSeconds,
+      dt,
+    });
+    respawnPlayers(state);
     roundTimer(state, dt);
   }
   state.tick += 1;
