@@ -1,33 +1,16 @@
 {
   "features": [
     {
-      "key": "auth",
-      "inboundCount": 12,
-      "wiringCount": 9,
+      "key": "harness-overview",
+      "inboundCount": 2,
+      "wiringCount": 2,
       "inbound": [
-        "src/layouts/ProfileMenu/ProfileChips.tsx",
-        "src/layouts/ProfileMenu/ProfileInfo.tsx",
-        "src/layouts/ProfileMenu/ProfileMenu.tsx",
-        "src/layouts/ProfileMenu/ProfileMenuContent.tsx",
-        "src/layouts/ProfileMenu/ProfileMenuTrigger.tsx",
-        "src/pages/AuthCallbackPage.tsx",
-        "src/pages/HomePage.tsx",
-        "src/pages/LoginPage.tsx",
-        "src/pages/ResetPasswordPage.tsx",
-        "src/shared/context/AuthContext.tsx",
-        "src/shared/utils/profileHelpers.ts",
-        "src/shared/utils/userUtils.ts"
+        "src/pages/HarnessOverviewPage.tsx",
+        "src/pages/HomePage.tsx"
       ],
       "wiring": [
-        "src/layouts/ProfileMenu/ProfileChips.tsx",
-        "src/layouts/ProfileMenu/ProfileInfo.tsx",
-        "src/layouts/ProfileMenu/ProfileMenu.tsx",
-        "src/layouts/ProfileMenu/ProfileMenuContent.tsx",
-        "src/layouts/ProfileMenu/ProfileMenuTrigger.tsx",
-        "src/pages/AuthCallbackPage.tsx",
-        "src/pages/HomePage.tsx",
-        "src/pages/LoginPage.tsx",
-        "src/pages/ResetPasswordPage.tsx"
+        "src/pages/HarnessOverviewPage.tsx",
+        "src/pages/HomePage.tsx"
       ],
       "outboundFeatures": [],
       "outboundStack": []
@@ -66,11 +49,9 @@
     },
     {
       "id": "Supabase",
-      "fileCount": 1,
-      "busywork": "low",
-      "files": [
-        "src/shared/services/supabaseService.ts"
-      ]
+      "fileCount": 0,
+      "busywork": "none",
+      "files": []
     }
   ]
 }

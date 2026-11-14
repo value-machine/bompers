@@ -50,7 +50,6 @@
       "Bash(git ls-files:*)",
       "WebFetch(domain:react.dev)",
       "WebFetch(domain:ui.shadcn.com)",
-      "WebFetch(domain:supabase.com)",
       "WebFetch(domain:tanstack.com)",
       "WebFetch(domain:vitejs.dev)",
       "WebFetch(domain:vitest.dev)",
@@ -81,8 +80,7 @@
       "Bash(pnpm exec:*)",
       "Bash(pnpm run:*)",
       "Bash(pnpm validate:*)",
-      "Bash(pnpm tokens:build)",
-      "mcp__supabase__*"
+      "Bash(pnpm tokens:build)"
     ],
     "ask": [
       "Bash(pnpm install:*)",
