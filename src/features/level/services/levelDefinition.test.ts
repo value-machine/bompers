@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LevelDefinition } from "@/features/level/types/levelDefinition.types";
 import { normalizeLevelDefinition } from "@/features/level/services/levelDefinition";
-import { PLACEHOLDER_LEVEL } from "@/features/level/services/placeholderLevel";
 
 const base: LevelDefinition = {
   formatVersion: 1,
@@ -21,10 +20,6 @@ const base: LevelDefinition = {
 const rect = { type: "rect" as const, x: 0, y: 0, w: 8, h: 8 };
 
 describe("levelDefinition", () => {
-  it("should report no warnings when the placeholder level is normalized", () => {
-    expect(normalizeLevelDefinition(PLACEHOLDER_LEVEL).warnings).toEqual([]);
-  });
-
   it("should replace an unknown material with the role default and warn", () => {
     const { level, warnings } = normalizeLevelDefinition({
       ...base,

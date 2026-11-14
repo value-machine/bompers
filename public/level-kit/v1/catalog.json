@@ -1,0 +1,80 @@
+{
+  "$comment": "GENERATED from the content catalog in the game code by `pnpm level-kit:sync`. Do not edit. Spec: documentation/game/LEVEL_FORMAT.md.",
+  "formatVersion": 1,
+  "defaults": {
+    "cellSize": 8,
+    "gravity": 1,
+    "matchDuration": 180,
+    "material": {
+      "platform": "stone",
+      "destructible": "dirt"
+    },
+    "items": {
+      "drop": [
+        "rocket-launcher"
+      ],
+      "collectible": "point-orb"
+    }
+  },
+  "material": [
+    {
+      "id": "stone",
+      "label": "Stone",
+      "destructible": false,
+      "durability": 0,
+      "friction": 1,
+      "bounce": 0,
+      "lookToken": "stone",
+      "effect": "none",
+      "sound": "thud"
+    },
+    {
+      "id": "dirt",
+      "label": "Dirt",
+      "destructible": true,
+      "durability": 1,
+      "friction": 1,
+      "bounce": 0,
+      "lookToken": "dirt",
+      "effect": "dust-burst",
+      "sound": "crumble"
+    }
+  ],
+  "effect": [
+    {
+      "id": "none",
+      "label": "No effect"
+    },
+    {
+      "id": "dust-burst",
+      "label": "Dust burst"
+    }
+  ],
+  "sound": [
+    {
+      "id": "none",
+      "label": "Silent"
+    },
+    {
+      "id": "thud",
+      "label": "Thud"
+    },
+    {
+      "id": "crumble",
+      "label": "Crumble"
+    }
+  ],
+  "behavior": [],
+  "item": [
+    {
+      "id": "rocket-launcher",
+      "label": "Rocket launcher",
+      "use": "drop"
+    },
+    {
+      "id": "point-orb",
+      "label": "Point orb",
+      "use": "collectible"
+    }
+  ]
+}

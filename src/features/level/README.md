@@ -2,16 +2,15 @@
 
 ## Purpose
 
-The level model the engine runs on: `LevelDefinition` (geometry, spawns, drops, collectibles, bounds, per-level settings) and its normalisation against the content catalog. It maps 1:1 onto the level file format (one self-contained HTML file with inline SVG, `documentation/game/LEVEL_FORMAT.md`). The HTML importer is a later lap and will live here; the engine never reads a file format.
+The level model the engine runs on: `LevelDefinition` (geometry, spawns, drops, collectibles, bounds, per-level settings) and its normalisation against the content catalog. It maps 1:1 onto the level file format (one self-contained HTML file with inline SVG, `documentation/game/LEVEL_FORMAT.md`). The HTML importer lives in `level-file`; the engine never reads a file format.
 
 ## Structure
 
-| Layer | Path | Purpose |
-|-------|------|---------|
-| Types | `types/levelDefinition.types.ts` | `LevelDefinition` `{ formatVersion, meta{levelId, title, author?, agent?, description?}, settings{cellSize, gravity, matchDurationS?}, worldSize{w,h}, terrain[{shape: rect\|polygon\|circle, role: platform\|destructible, materialId, effectId?, soundId?, behaviorId?}], spawns[], drops[{at, itemIds}], collectibles[{at, itemId}], bounds{x,y,w,h} }` |
-| Services | `services/levelDefinition.ts` | `LEVEL_FORMAT_VERSION`, `DEFAULT_LEVEL_SETTINGS` (from the catalog defaults), `normalizeLevelDefinition(level)` → `{ level, warnings }` |
-| Services | `services/placeholderLevel.ts` | Placeholder start map as a TS `LevelDefinition` |
-| API | `api/levelApi.ts` | Public seam |
+| Layer    | Path                             | Purpose                                                                                                                                                                                                                                                                                                                                                    |
+| -------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Types    | `types/levelDefinition.types.ts` | `LevelDefinition` `{ formatVersion, meta{levelId, title, author?, agent?, description?}, settings{cellSize, gravity, matchDurationS?}, worldSize{w,h}, terrain[{shape: rect\|polygon\|circle, role: platform\|destructible, materialId, effectId?, soundId?, behaviorId?}], spawns[], drops[{at, itemIds}], collectibles[{at, itemId}], bounds{x,y,w,h} }` |
+| Services | `services/levelDefinition.ts`    | `LEVEL_FORMAT_VERSION`, `DEFAULT_LEVEL_SETTINGS` (from the catalog defaults), `normalizeLevelDefinition(level)` → `{ level, warnings }`                                                                                                                                                                                                                    |
+| API      | `api/levelApi.ts`                | Public seam                                                                                                                                                                                                                                                                                                                                                |
 
 Units: 1 world unit = 1 SVG unit, origin top-left, y down. Spawn points are feet points (bottom-centre of a player). `bounds` is the in-bounds area; leaving it eliminates. `settings.gravity` multiplies the engine default.
 
@@ -25,13 +24,13 @@ Normalisation applies the format's warnings that make sense on a parsed level an
 The structural errors E1–E8 belong to the importer.
 
 Seams for later work:
-- **Level importer lap:** HTML/SVG → `LevelDefinition` in `services/`, then `normalizeLevelDefinition`.
-- **Starting-arena lap:** replaces `PLACEHOLDER_LEVEL` with the first level and points `features/match/hooks/useGameSession.ts` at it.
+
+- **Starting-arena lap:** adds `public/levels/start-arena.html` and points `BUILT_IN_LEVEL_URL` (`level-file`) at it.
 
 ## Dependencies
 
-- `content-catalog` through `api/contentCatalogApi.ts` (IDs, defaults). `src/shared/types/gameGeometry.types.ts`.
-- Consumed by `arena` (rasterising) and `match` (`createGameState` normalises and applies settings).
+- `content-catalog` through `api/contentCatalogApi.ts` (IDs, defaults). `src/shared/types/gameGeometry.types.ts` (`TerrainShape` is `Shape2D`).
+- Consumed by `level-file` (importer), `arena` (rasterising) and `match` (`createGameState` normalises and applies settings).
 
 ## Decisions
 

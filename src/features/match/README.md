@@ -9,10 +9,10 @@ One round of the game, and the composition root of the game features: the `GameS
 | Layer      | Path                       | Purpose                                                                                                                                                                            |
 | ---------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Services   | `services/gameSim.ts`      | `GameState`, `createGameState({ level, tunables })`, `stepGame(state, inputs, dt)` — pure, no DOM; mutates and returns `state`                                                     |
-| Services   | `services/gameRenderer.ts` | Scene graph per DESIGN_LANGUAGE § 5: `world` (camera transform: terrain → shadows, pickups (reserved) → effects (dive impact pops) → players) and `hud` (round timer); `renderGame` per frame (camera framing uses `state.tunables.camera`) |
-| Hooks      | `hooks/useGameSession.ts`  | Per Pixi ticker frame: sample input → `advanceFixedStep` → N × `stepGame` → `renderGame`; full teardown in cleanup                                                                |
-| Components | `components/GameView.tsx`  | Canvas host (`usePixiApp`) + controls hint                                                                                                                                         |
-| API        | `api/matchApi.ts`          | Simulation entry for other consumers (lobby, tests)                                                                                                                                |
+| Services   | `services/gameRenderer.ts` | Scene graph per DESIGN_LANGUAGE § 5: `world` (camera transform: terrain → shadows, pickups (reserved) → effects (dive impact pops) → players) and `hud` (round timer); `renderGame` per frame frames the camera with `computeCameraView` (`settings: state.tunables.camera`) |
+| Hooks      | `hooks/useGameSession.ts`  | `useGameSession(app, level)`: a new level object restarts the match. Per Pixi ticker frame: sample input → `advanceFixedStep` → N × `stepGame` → `renderGame`; full teardown in cleanup                |
+| Components | `components/GameView.tsx`  | Canvas host (`usePixiApp`), the level from `level-file`'s `useLevelSource` + "Load level" control, drop a level file anywhere on the game (`useFileDrop`), controls hint                                                                                        |
+| API        | `api/matchApi.ts`          | Simulation entry for other consumers (lobby, tests)                                                                               |
 
 Systems order in `stepGame` (new concepts slot into their number):
 
@@ -26,7 +26,7 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 
 ## Dependencies
 
-- `level`, `arena`, `player`, `dive`, `camera` through their `api/` files.
+- `level`, `level-file`, `arena`, `player`, `dive`, `camera` through their `api/` files.
 - Shared engine: `gameLoop`, `gameInputService`, `usePixiApp`, `gameTunables`, `gamePalette`, `gameInput.types`.
 - Mounted by `src/pages/GamePage.tsx` at `/`.
 
