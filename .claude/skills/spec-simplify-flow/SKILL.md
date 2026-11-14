@@ -1,13 +1,11 @@
 ---
 name: spec-simplify-flow
 description: >-
-  Simplifies one concrete user flow or feature — fewer steps, clicks, states and code — and
-  checks it against common product practice: maps the current flow and code surface, audits
-  both, decides whether aligning with industry standards is worth it, and proposes progressive
-  options from trim to reframe. Use when a request or plan grows a flow, when a flow feels
-  overbuilt or unlike other apps, or when the owner asks "simplify this", "is this overbuilt",
-  "should we align with how others do it". Not for cross-feature code duplication (loop-plan
-  deepen-modules) or performance (use spec-optimize-performance).
+  Simplifies one concrete user flow or feature — fewer steps, clicks, states and code — against
+  common product practice, proposing options from trim to reframe. Use when a request or plan grows
+  a flow, a flow feels overbuilt or unlike other apps, or the owner asks "simplify this", "is this
+  overbuilt", "should we align with how others do it". Not for cross-feature code duplication
+  (loop-plan deepen-modules) or performance (use spec-optimize-performance).
 ---
 
 # spec-simplify-flow

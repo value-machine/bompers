@@ -24,6 +24,12 @@ const level: LevelDefinition = {
 
 const dt = 1 / 120;
 const keys = (...codes: string[]) => mapPlayerInputs({ heldKeys: new Set(codes), gamepads: [] });
+const respawnDelay = DEFAULT_GAME_TUNABLES.match.respawnDelaySeconds;
+/** Steps the game for `seconds` of sim time with the given inputs. */
+const stepFor = (state: ReturnType<typeof createGameState>, seconds: number, inputs = keys()) => {
+  for (let t = 0; t < seconds; t += dt) stepGame(state, inputs, dt);
+  return state;
+};
 const newGame = (matchDurationS?: number) =>
   createGameState({
     level: { ...level, settings: { ...level.settings, matchDurationS } },
@@ -51,7 +57,7 @@ describe("gameSim", () => {
     const state = stepGame(newGame(), keys(), dt);
     const player = state.players[0]!;
     player.y = 2000;
-    stepGame(state, keys(), dt);
+    stepFor(state, respawnDelay + 0.05);
     expect(player.y).toBeLessThan(250);
   });
 
@@ -64,6 +70,7 @@ describe("gameSim", () => {
     expect(state.combat.events).toContainEqual(
       expect.objectContaining({ type: "playerEliminated", victimSlot: 0, cause: "out-of-bounds" })
     );
+    stepFor(state, respawnDelay);
     expect(fighter).toMatchObject({
       health: DEFAULT_GAME_TUNABLES.combat.maxHealth,
       eliminated: false,
@@ -95,19 +102,22 @@ describe("gameSim", () => {
         cause: "dive",
       })
     );
-    expect(victim.x).toBe(600);
+    stepFor(state, respawnDelay);
+    expect(victim.x).toBe(600); // farthest from the opponent at x = 100
     expect(state.combat.fighters.get("p1")!.health).toBe(DEFAULT_GAME_TUNABLES.combat.maxHealth);
   });
 
   it("should end the round and freeze players when the timer runs out", () => {
     const state = newGame(1);
     for (let i = 0; i < 130; i += 1) stepGame(state, keys(), dt);
-    expect(state.round).toEqual({ phase: "ended", remainingSeconds: 0 });
+    expect(state.round).toMatchObject({ phase: "ended", remainingSeconds: 0 });
     const frozenX = state.players[0]!.x;
     stepGame(state, keys("KeyD"), dt);
     expect(state.players[0]!.x).toBe(frozenX);
   });
+});
 
+describe("gameSim level settings", () => {
   it("should scale gravity and override the round length from the level settings", () => {
     const state = createGameState({
       level: { ...level, settings: { cellSize: 8, gravity: 0.5, matchDurationS: 60 } },
@@ -174,5 +184,56 @@ describe("gameSim — dive headbutt", () => {
     );
     expect(hits[0]!.impulse.x).toBeGreaterThan(0);
     expect(victimFarthestX).toBeGreaterThan(360 + 100);
+  });
+
+  const closeSpawns = () => {
+    const state = createGameState({
+      level: {
+        ...level,
+        spawns: [
+          { x: 300, y: 320 },
+          { x: 360, y: 320 },
+        ],
+      },
+      tunables: DEFAULT_GAME_TUNABLES,
+    });
+    stepGame(state, keys(), dt);
+    return state;
+  };
+  /** Player 1 presses fire + right once, then the sim runs until the dive hits (or gives up). */
+  const diveUntilHit = (state: ReturnType<typeof createGameState>): void => {
+    for (let i = 0; i < 90 && (i < 3 || state.dive.hits.length === 0); i += 1) {
+      stepGame(state, i < 3 ? keys("KeyF", "KeyD") : keys(), dt);
+    }
+  };
+
+  it("should score the kill and give the victim a fresh dive and no tumble when a dive takes the last chunk", () => {
+    const state = closeSpawns();
+    const victim = state.players[1]!;
+    state.combat.fighters.get(victim.id)!.health = 1;
+    diveUntilHit(state);
+    expect(state.dive.hits).toHaveLength(1);
+    expect(state.rules.scores[0]).toBe(DEFAULT_GAME_TUNABLES.match.scoring.kill);
+    expect(state.rules.respawnAt.has(victim.id)).toBe(true);
+    stepFor(state, respawnDelay + 0.05);
+    expect(state.rules.respawnAt.has(victim.id)).toBe(false);
+    expect(victim.tumbleSeconds).toBe(0);
+    expect(state.dive.motions[victim.id]).toMatchObject({ phase: "idle", stagger: 0, cooldown: 0 });
+    expect(state.combat.fighters.get(victim.id)!.invulnerableUntil).toBeGreaterThan(
+      state.timeSeconds
+    );
+  });
+
+  it("should not bump or hit a player who is waiting to respawn", () => {
+    const state = closeSpawns();
+    const waiting = state.players[1]!;
+    state.rules.respawnAt.set(waiting.id, state.timeSeconds + 10);
+    const before = { x: waiting.x, y: waiting.y };
+    for (let i = 0; i < 90; i += 1) {
+      stepGame(state, i < 3 ? keys("KeyF", "KeyD") : keys(), dt);
+      expect(state.dive.hits).toHaveLength(0);
+    }
+    expect({ x: waiting.x, y: waiting.y }).toEqual(before);
+    expect(state.players[0]!.x).toBeGreaterThan(360);
   });
 });

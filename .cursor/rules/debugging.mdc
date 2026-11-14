@@ -12,24 +12,9 @@ alwaysApply: true
     - `if (import.meta.env.VITE_DEBUG_API) { console.log(...) }`
   - So logs can be disabled in production.
 
-## API Troubleshooting
+## API troubleshooting and pagination
 
-- For request errors:
-  - Log the request configuration before sending:
-    - Method
-    - URL
-    - Query params
-    - Headers (excluding auth)
-    - Body (redacted when needed)
-- For data processing issues:
-  - Log the full raw response object, with tokens and obvious PII redacted.
-- Ask the user to provide these logs during debugging.
-
-## Filtering and Pagination
-
-- If API responses always contain a round number of records (25, 50, 100, …) regardless of filters:
-  - Suspect pagination limits first.
-  - Only then dig into filter logic.
+Request/response logging and the round-number pagination check: `.claude/rules/app-code.md` § API Troubleshooting and § Filtering and Pagination (loads with `src/**`).
 
 ## Debugging Strategy
 
@@ -52,4 +37,4 @@ When asking the user to test something, give the next step for **both** outcomes
 
 **Pattern library SSOT:** `.agents/skills/spec-debug-runtime/references/patterns.md` — updated from `loop-ship` (cleanup step) or `meta-learn-lessons` when a reusable bug class is proved.
 
-Do not duplicate the debugging procedure in this rule. This file owns **logging**, **API troubleshooting**, **filtering / pagination**, the **reductive strategy** (an always-on correction, also for features) and **user test instructions** above.
+Do not duplicate the debugging procedure in this rule. This file owns **logging**, the **reductive strategy** (an always-on correction, also for features) and **user test instructions** above; API troubleshooting and pagination live in `.claude/rules/app-code.md`.

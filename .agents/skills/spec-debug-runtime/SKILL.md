@@ -2,12 +2,10 @@
 name: spec-debug-runtime
 description: >-
   Scientific debugging for runtime bugs, regressions, flaky behavior, failing tests and red CI:
-  reconstructs the event chain, proposes falsifiable hypotheses (including a configuration
-  cause), adds targeted logging, and narrows with one unified list of checks until the cause is
-  proven; switches to pre-registered hypothesis mode after a failed naive fix. Use when a bug is
-  reported, a test or CI check fails unexpectedly, behavior is inconsistent, or the owner says
-  "debug", "why is this broken", "it fails on X". Not for planning the fix scope (use loop-refine)
-  or performance tuning (use spec-optimize-performance).
+  event chain, falsifiable hypotheses, targeted logging, narrowing until the cause is proven. Use
+  when a bug is reported, a test or CI check fails unexpectedly, behavior is inconsistent, or the
+  owner says "debug", "why is this broken", "it fails on X". Not for scoping the fix (use
+  loop-refine) or performance tuning (use spec-optimize-performance).
 ---
 
 # spec-debug-runtime

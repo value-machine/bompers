@@ -35,6 +35,8 @@ interface BlobSprite {
   eyes: [Container, Container];
   pupils: [Graphics, Graphics];
   shadow: Graphics;
+  /** Dashed spawn-protection ring (DESIGN_LANGUAGE § 6), hidden unless protected. */
+  ring: Graphics;
   anim: BlobAnim;
   /** Body radius R, world units. */
   radius: number;
@@ -44,6 +46,8 @@ export interface SyncPlayersOptions {
   /** Animation clock, ms. Defaults to `performance.now()`. */
   nowMs?: number;
   squash?: SquashTunables;
+  /** Players under spawn protection: they blink and wear the dashed ring (GDD § 6). */
+  protectedIds?: ReadonlySet<string>;
   /** Ability poses by player id (e.g. the dive's headfirst turn), laid over the movement pose. */
   overlays?: ReadonlyMap<string, BlobPoseOverlay>;
 }
@@ -160,6 +164,34 @@ function drawEye(r: number): { eye: Container; pupil: Graphics } {
   return { eye, pupil };
 }
 
+/** Dashed ink ring of radius 1.5 R around the torso (12 dashes). */
+function drawProtectionRing(r: number): Graphics {
+  const ring = new Graphics();
+  const radius = 1.5 * r;
+  const dashes = 12;
+  for (let i = 0; i < dashes; i += 1) {
+    const start = (i / dashes) * Math.PI * 2;
+    ring.moveTo(Math.cos(start) * radius, Math.sin(start) * radius);
+    ring.arc(0, 0, radius, start, start + (Math.PI / dashes) * 1.1);
+  }
+  ring.stroke({ width: STROKE_SMALL, color: GAME_PALETTE.ink, cap: "round" });
+  ring.position.set(0, -1.12 * r);
+  ring.visible = false;
+  return ring;
+}
+
+/** Blink between full and 45 % alpha at 8 Hz while protected (DESIGN_LANGUAGE § 6). */
+const BLINK = { hz: 8, lowAlpha: 0.45 };
+
+function applyProtection(sprite: BlobSprite, isProtected: boolean, nowMs: number): void {
+  sprite.ring.visible = isProtected;
+  const low = Math.floor((nowMs / 1000) * BLINK.hz * 2) % 2 === 1;
+  sprite.body.alpha = isProtected && low ? BLINK.lowAlpha : 1;
+  sprite.feet.forEach((foot) => {
+    foot.alpha = sprite.body.alpha;
+  });
+}
+
 function createBlobSprite(player: PlayerState): BlobSprite {
   const r = player.height * RADIUS_PER_HEIGHT;
   const feet: [Graphics, Graphics] = [drawFoot(player.slot, r), drawFoot(player.slot, r)];
@@ -172,7 +204,8 @@ function createBlobSprite(player: PlayerState): BlobSprite {
   torso.addChild(drawBody(player.slot, r), left.eye, right.eye, drawHelmet(player.slot, r));
   body.addChild(torso);
   const root = new Container({ label: player.id });
-  root.addChild(...feet, body);
+  const ring = drawProtectionRing(r);
+  root.addChild(ring, ...feet, body);
   const shadow = new Graphics().ellipse(0, 0, 1, 1).fill(GAME_PALETTE.ink);
   return {
     root,
@@ -181,6 +214,7 @@ function createBlobSprite(player: PlayerState): BlobSprite {
     eyes: [left.eye, right.eye],
     pupils: [left.pupil, right.pupil],
     shadow,
+    ring,
     anim: createBlobAnim(player),
     radius: r,
   };
@@ -197,14 +231,15 @@ function footLift(player: PlayerState, r: number): [number, number] {
 const tumbleRoll = (player: PlayerState, r: number): number =>
   player.tumbleSeconds > 0 ? (player.x / (1.6 * r)) % (Math.PI * 2) : 0;
 
-/** Places and scales the blob. The root turns around the body centre (overlay rotation). */
-function placeBlob(
-  sprite: BlobSprite,
-  player: PlayerState,
-  frame: { pose: BlobPose; overlay: BlobPoseOverlay | undefined }
-): void {
+interface PoseFrame {
+  pose: BlobPose;
+  overlay: BlobPoseOverlay | undefined;
+}
+
+/** Places and scales the blob. The root turns around the body centre (overlay rotation, roll). */
+function placeBlob(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): void {
   const { pose, overlay } = frame;
-  // With no overlay this is the plain feet-point placement.
+  // With no overlay and no roll this is the plain feet-point placement.
   const centerY = player.height / 2;
   sprite.root.pivot.set(0, -centerY);
   sprite.root.position.set(player.x, player.y - centerY);
@@ -213,11 +248,7 @@ function placeBlob(
   sprite.body.rotation = overlay ? 0 : Math.max(-0.15, Math.min(0.15, player.vx / 2400));
 }
 
-function applyPose(
-  sprite: BlobSprite,
-  player: PlayerState,
-  frame: { pose: BlobPose; overlay: BlobPoseOverlay | undefined }
-): void {
+function applyPose(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): void {
   const { pose } = frame;
   const r = sprite.radius;
   placeBlob(sprite, player, frame);
@@ -275,6 +306,7 @@ export function syncPlayersView(
     noteBlobEvents(sprite.anim, { player, squash, nowMs });
     const pose = blobPose(sprite.anim, { player, squash, nowMs });
     applyPose(sprite, player, { pose, overlay: options.overlays?.get(player.id) });
+    applyProtection(sprite, options.protectedIds?.has(player.id) === true, nowMs);
   }
   pruneSprites(view, new Set(players.map((player) => player.id)));
 }

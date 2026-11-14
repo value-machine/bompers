@@ -7,17 +7,14 @@ import {
   type LevelDefinition,
   type LevelSettings,
 } from "@/features/level/api/levelApi";
+import { createCombatState, stepCombat, type CombatState } from "@/features/combat/api/combatApi";
 import {
-  createCombatState,
-  eliminateFighter,
-  isFighterEliminated,
-  respawnFighter,
-  stepCombat,
-  type CombatState,
-} from "@/features/combat/api/combatApi";
+  createCollectiblesState,
+  stepCollectibles,
+  type CollectiblesState,
+} from "@/features/collectibles/api/collectiblesApi";
 import {
   createPlayer,
-  placePlayer,
   resolveBodyContacts,
   stepPlayers,
   type PlayerState,
@@ -25,10 +22,17 @@ import {
 import {
   createDiveState,
   requestDive,
-  resetDive,
   stepDives,
   type DiveState,
 } from "@/features/dive/api/diveApi";
+import {
+  awardOrbs,
+  createMatchRulesState,
+  isInPlay,
+  roundWinners,
+  stepMatchRules,
+  type MatchRulesState,
+} from "@/features/match/services/matchRules";
 
 /**
  * The simulation: `stepGame(state, inputs, dt)` advances one fixed step. Pure TS, no DOM, no
@@ -41,14 +45,23 @@ import {
  *   3. stepCombat      — combat feature: rockets, blasts (damage, impulse, clearCircle), pickups;
  *                        unarmed fire goes through its `unarmedAttack` hook to the dive
  *   3b. stepDives      — dive feature: the unarmed attack; its hits go through combat's `applyHit`
- *   4. respawnPlayers  — out of bounds or eliminated by combat → back to a spawn point, full health
- *                        (spawn choice, protection and scoring: match-rules lap)
- *   5. roundTimer      — counts down; at 0 the round ends and systems 1–4 stop
+ *   4. stepCollectibles — collectibles feature: point orbs fall from the sky; touching one scores
+ *   5. stepMatchRules  — out of bounds → elimination; scoring; eliminated players wait
+ *                        `respawnDelaySeconds`, then respawn at the spawn farthest from opponents
+ *                        with spawn protection and a fresh dive
+ *   6. roundTimer      — counts down; at 0 the round ends (winners fixed) and systems 1–5 stop
+ *
+ * Steps 2–4 receive only the players in play: a player waiting to respawn is not moved, bumped,
+ * hit or able to collect.
  */
 /** Round progress (GDD § 5: points within a timed round). */
 export interface MatchRoundState {
   phase: "playing" | "ended";
   remainingSeconds: number;
+  /** Sim time the round ended, or null while playing. */
+  endedAt: number | null;
+  /** Slots with the top score at the end (several = a draw); empty while playing. */
+  winners: number[];
 }
 
 /**
@@ -71,6 +84,10 @@ export interface GameState {
   combat: CombatState;
   /** Unarmed attack (dive headbutt) state; `dive.hits` holds the last step's hits. */
   dive: DiveState;
+  /** Point orbs falling onto the level's collectible points. */
+  collectibles: CollectiblesState;
+  /** Scores and the respawn queue. */
+  rules: MatchRulesState;
   round: MatchRoundState;
 }
 
@@ -105,7 +122,14 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
     players: [],
     combat: createCombatState(matchTunables),
     dive: createDiveState(),
-    round: { phase: "playing", remainingSeconds: matchTunables.match.durationSeconds },
+    collectibles: createCollectiblesState(matchTunables),
+    rules: createMatchRulesState(matchTunables.match.maxPlayers),
+    round: {
+      phase: "playing",
+      remainingSeconds: matchTunables.match.durationSeconds,
+      endedAt: null,
+      winners: [],
+    },
   };
 }
 
@@ -123,74 +147,78 @@ function joinSlots(state: GameState, inputs: PlayerInputs): void {
   }
 }
 
-const isOutOfBounds = (player: PlayerState, state: GameState): boolean => {
-  const zone = state.arena.level.bounds;
-  return (
-    player.x < zone.x ||
-    player.x > zone.x + zone.w ||
-    player.y < zone.y ||
-    player.y > zone.y + zone.h
+/** Players in play: not waiting to respawn and not eliminated earlier in this step. */
+export const playersInPlay = (state: GameState): PlayerState[] =>
+  state.players.filter(
+    (player) =>
+      isInPlay(state.rules, player) && state.combat.fighters.get(player.id)?.eliminated !== true
   );
-};
-
-function respawnPlayers(state: GameState): void {
-  const { combat, tunables, timeSeconds } = state;
-  for (const player of state.players) {
-    if (isOutOfBounds(player, state)) {
-      eliminateFighter({ combat, player, cause: "out-of-bounds", tunables, timeSeconds });
-    }
-    if (!isFighterEliminated(combat, player.id)) continue;
-    placePlayer(player, spawnPointFor(state, player.slot));
-    respawnFighter(combat, player, tunables);
-    resetDive(state.dive, player);
-  }
-}
 
 function roundTimer(state: GameState, dt: number): void {
-  state.round.remainingSeconds = Math.max(0, state.round.remainingSeconds - dt);
-  if (state.round.remainingSeconds === 0) state.round.phase = "ended";
+  const { round } = state;
+  round.remainingSeconds = Math.max(0, round.remainingSeconds - dt);
+  if (round.remainingSeconds > 0) return;
+  round.phase = "ended";
+  round.endedAt = state.timeSeconds + dt;
+  const slots = state.players.map((player) => player.slot);
+  round.winners = roundWinners(state.rules.scores, slots);
+}
+
+function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
+  const { tunables, timeSeconds } = state;
+  const { level, terrain } = state.arena;
+  joinSlots(state, inputs);
+  const players = playersInPlay(state);
+  stepPlayers({ players, inputs, terrain, tunables, dt });
+  const contacts = resolveBodyContacts({ players, terrain, tunables });
+  stepCombat({
+    combat: state.combat,
+    players,
+    inputs,
+    terrain,
+    drops: level.drops,
+    bounds: level.bounds,
+    tunables,
+    timeSeconds,
+    dt,
+    unarmedAttack: ({ attacker }) => requestDive(state.dive, attacker, tunables),
+  });
+  // The same in-play list as the contacts: a blob eliminated by a rocket this step still
+  // finishes its bounce, and `applyHit` refuses damage on it.
+  stepDives({
+    dive: state.dive,
+    players,
+    combat: state.combat,
+    contacts,
+    tunables,
+    timeSeconds,
+    dt,
+  });
+  const collected = stepCollectibles({
+    collectibles: state.collectibles,
+    points: level.collectibles,
+    // Re-read: a player eliminated in step 3 cannot collect in the same step.
+    players: playersInPlay(state),
+    tunables,
+    dt,
+  });
+  awardOrbs(state.rules, collected, tunables.match.scoring);
+  stepMatchRules({
+    rules: state.rules,
+    combat: state.combat,
+    dive: state.dive,
+    players: state.players,
+    spawns: level.spawns,
+    bounds: level.bounds,
+    tunables,
+    timeSeconds,
+  });
+  roundTimer(state, dt);
 }
 
 /** Advances the game one fixed step of `dt` seconds. */
 export function stepGame(state: GameState, inputs: PlayerInputs, dt: number): GameState {
-  if (state.round.phase === "playing") {
-    joinSlots(state, inputs);
-    stepPlayers({
-      players: state.players,
-      inputs,
-      terrain: state.arena.terrain,
-      tunables: state.tunables,
-      dt,
-    });
-    const contacts = resolveBodyContacts({
-      players: state.players,
-      terrain: state.arena.terrain,
-      tunables: state.tunables,
-    });
-    stepCombat({
-      combat: state.combat,
-      players: state.players,
-      inputs,
-      terrain: state.arena.terrain,
-      drops: state.arena.level.drops,
-      bounds: state.arena.level.bounds,
-      tunables: state.tunables,
-      timeSeconds: state.timeSeconds,
-      dt,
-      unarmedAttack: ({ attacker }) => requestDive(state.dive, attacker, state.tunables),
-    });
-    stepDives({
-      dive: state.dive,
-      players: state.players,
-      combat: state.combat,
-      contacts,
-      tunables: state.tunables,
-      timeSeconds: state.timeSeconds,
-      dt,
-    });
-    respawnPlayers(state);
-    roundTimer(state, dt);
-  }
+  if (state.round.phase === "playing") stepPlay(state, inputs, dt);
   state.tick += 1;
   state.timeSeconds += dt;
   return state;

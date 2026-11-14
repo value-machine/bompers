@@ -3,11 +3,11 @@
     "$type": "fontFamily",
     "$description": "Font stacks. CSS: --<name>.",
     "body-font": {
-      "$value": ["Inter", "sans-serif"]
+      "$value": ["Fredoka", "ui-rounded", "system-ui", "sans-serif"]
     },
     "heading-font": {
-      "$value": ["Cinzel", "serif"],
-      "$description": "Engraved Roman capitals for headings."
+      "$value": ["Fredoka", "ui-rounded", "system-ui", "sans-serif"],
+      "$description": "Rounded toy-like face for headings and HUD (documentation/game/DESIGN_LANGUAGE.md)."
     },
     "mono-font": {
       "$value": [
@@ -25,14 +25,17 @@
     "$description": "Corner radii. card-radius / input-radius are optional overrides derived in src/index.css (@theme inline).",
     "radius": {
       "$value": {
-        "value": 0.25,
+        "value": 0.75,
         "unit": "rem"
       },
       "$description": "Base radius; Tailwind rounded-sm/md/lg/xl derive from it."
     },
     "button-radius": {
-      "$value": "{shape.radius}",
-      "$description": "Plate buttons: follow the base radius."
+      "$value": {
+        "value": 9999,
+        "unit": "px"
+      },
+      "$description": "Pill buttons (sticker style)."
     }
   },
   "spacing": {

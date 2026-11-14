@@ -1,5 +1,4 @@
-import { Container, Text, type Application } from "pixi.js";
-import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import { Container, type Application } from "pixi.js";
 import {
   createTerrainView,
   syncTerrainView,
@@ -17,23 +16,32 @@ import {
 } from "@/features/camera/api/cameraApi";
 import { createCombatView, syncCombatView, type CombatView } from "@/features/combat/api/combatApi";
 import {
+  createCollectiblesView,
+  syncCollectiblesView,
+  type CollectiblesView,
+} from "@/features/collectibles/api/collectiblesApi";
+import {
   createDiveView,
   diveBlobPoses,
   syncDiveView,
   type DiveView,
 } from "@/features/dive/api/diveApi";
-import type { GameState } from "@/features/match/services/gameSim";
+import { playersInPlay, type GameState } from "@/features/match/services/gameSim";
+import { createHudView, syncHudView, type HudView } from "@/features/match/services/hudRenderer";
 
 /**
  * Composes the render layers. Scene graph:
  *   stage
  *   ├─ world   (camera transform; world units)
  *   │  ├─ terrain   (arena)
- *   │  ├─ pickups, effects (explosions), rockets (+ rocket tubes)   (combat)
+ *   │  ├─ pickups (combat), point orbs (collectibles)
+ *   │  ├─ effects (explosions), rockets (+ rocket tubes)   (combat)
  *   │  ├─ dive effects (impact pops)   (dive)
- *   │  ├─ players   (player; above effects so they never cover a player outline)
+ *   │  ├─ players   (player; above effects so they never cover a player outline; protected
+ *   │  │             players blink inside a dashed ring)
  *   │  └─ combat overlay (health chunks above each player)
- *   └─ hud     (screen units: round timer)
+ *   └─ hud     (screen units: timer card, player cards, round-result banner — hudRenderer)
+ * Players waiting to respawn are not drawn and not framed by the camera.
  * Order follows DESIGN_LANGUAGE.md § 5. Each feature owns its layer's create/sync pair; this
  * file only orders and drives them. Sky / parallax backgrounds come with the visual pass.
  */
@@ -42,8 +50,9 @@ export interface GameRenderer {
   terrain: TerrainView;
   players: PlayersView;
   combat: CombatView;
+  collectibles: CollectiblesView;
   dive: DiveView;
-  timer: Text;
+  hud: HudView;
   camera: CameraView | null;
 }
 
@@ -52,10 +61,12 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const terrain = createTerrainView(state.arena.terrain);
   const players = createPlayersView();
   const combat = createCombatView();
+  const collectibles = createCollectiblesView();
   const dive = createDiveView();
   world.addChild(
     terrain.container,
     combat.pickups,
+    collectibles.container,
     combat.effects,
     combat.rockets,
     dive.effects,
@@ -63,18 +74,18 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     combat.overlay
   );
 
-  const hud = new Container({ label: "hud" });
-  const timer = new Text({ text: "", style: { fill: GAME_PALETTE.ink, fontSize: 28 } });
-  timer.anchor.set(0.5, 0);
-  hud.addChild(timer);
-
-  app.stage.addChild(world, hud);
-  return { world, terrain, players, combat, dive, timer, camera: null };
+  const hud = createHudView();
+  app.stage.addChild(world, hud.root);
+  return { world, terrain, players, combat, collectibles, dive, hud, camera: null };
 }
 
-const formatClock = (seconds: number): string => {
-  const whole = Math.ceil(seconds);
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+/** Ids of players whose spawn protection is still running. */
+const protectedIds = (state: GameState): Set<string> => {
+  const ids = new Set<string>();
+  for (const [id, fighter] of state.combat.fighters) {
+    if (fighter.invulnerableUntil > state.timeSeconds) ids.add(id);
+  }
+  return ids;
 };
 
 /** Draws the latest state (no interpolation, lap D6). Call once per rendered frame. */
@@ -86,21 +97,30 @@ export function renderGame(
   const viewport = { width: app.screen.width, height: app.screen.height };
   const { level } = state.arena;
 
+  const inPlay = playersInPlay(state);
+  const nowMs = performance.now();
   syncTerrainView(renderer.terrain, state.arena.terrain);
-  syncPlayersView(renderer.players, state.players, {
+  syncPlayersView(renderer.players, inPlay, {
+    nowMs,
+    protectedIds: protectedIds(state),
     overlays: diveBlobPoses(state.dive, state.tunables),
   });
   syncDiveView(renderer.dive, state.dive);
+  syncCollectiblesView(renderer.collectibles, {
+    collectibles: state.collectibles,
+    size: state.tunables.collectibles.size,
+    nowMs,
+  });
   syncCombatView(renderer.combat, {
     combat: state.combat,
-    players: state.players,
+    players: inPlay,
     timeSeconds: state.timeSeconds,
     maxHealth: state.tunables.combat.maxHealth,
     pickupSize: state.tunables.combat.drops.size,
   });
 
   renderer.camera = computeCameraView({
-    targets: state.players.map((player) => ({ x: player.x, y: player.y })),
+    targets: inPlay.map((player) => ({ x: player.x, y: player.y })),
     bounds: { x: 0, y: 0, w: level.worldSize.w, h: level.worldSize.h },
     viewport,
     previous: renderer.camera,
@@ -109,8 +129,5 @@ export function renderGame(
     settings: state.tunables.camera,
   });
   applyCameraView(renderer.world, renderer.camera, viewport);
-
-  renderer.timer.text =
-    state.round.phase === "ended" ? "Time!" : formatClock(state.round.remainingSeconds);
-  renderer.timer.position.set(viewport.width / 2, 12);
+  syncHudView(renderer.hud, { state, viewport });
 }

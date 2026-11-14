@@ -2,13 +2,11 @@
 name: meta-learn-lessons
 description: >-
   Turns what just went wrong — a non-Pass verdict, repeated failed attempts, a critical CI fix,
-  owner corrections — into durable guidance: traces the cause back to existing rules and skills
-  (removal-first), applies a blank-model test so nothing a capable model already knows is
-  persisted, picks one home per lesson and commits it to the same PR. Use when loop-verdict gets
-  Change or Drop, when the owner runs /learn or asks for a retrospective or to sharpen rules, or
-  after a multi-turn struggle is resolved. A manual /learn runs in the same turn, before any
-  commit, even beside red CI. Not for active debugging (use spec-debug-runtime) or a
-  harness-wide audit (use meta-audit-harness).
+  owner corrections — into durable guidance, removal first, one home per lesson, committed to the
+  same PR. Use when loop-verdict gets Change or Drop, when the owner runs /learn or asks for a
+  retrospective or sharper rules, or after a multi-turn struggle is resolved; a manual /learn runs
+  in the same turn, before any commit, even beside red CI. Not for active debugging (use
+  spec-debug-runtime) or a harness-wide audit (use meta-audit-harness).
 ---
 
 # meta-learn-lessons

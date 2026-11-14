@@ -1,13 +1,11 @@
 ---
 name: loop-orchestrate
 description: >-
-  Runs several laps of the product-owner loop at once: owns the backlog, starts one session per
-  independent task, settles or relays thread questions, and merges each thread's PR after the
-  owner's Pass. The owner talks only to the orchestrator. Use when two or more ready tasks touch
-  different feature areas and the owner accepts the parallel run offered at Stop 1, when sessions
-  of an earlier run are still active, or when the owner says "orchestrate", "run these in
-  parallel", "work the backlog". Not for a single task (router runs the plain loop) or one lap's
-  stage work (each loop-* skill).
+  Runs several loop laps at once: one session per independent task, relays thread questions, merges
+  each PR after the owner's Pass; the owner talks only to the orchestrator. Use when two or more
+  ready tasks touch different feature areas and the owner accepts the parallel run offered at Stop
+  1, when sessions of an earlier run are still active, or on "orchestrate", "run these in parallel",
+  "work the backlog". Not for a single task (router runs the plain loop) or one lap's stage work.
 ---
 
 # loop-orchestrate

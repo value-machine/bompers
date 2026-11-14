@@ -1,13 +1,11 @@
 ---
 name: loop-plan
 description: >-
-  Writes the build plan for the lap at a depth set by the brief's size: first the failing
-  acceptance test from the success check, then a short plan in BRIEF.md (XS/S) or a full
-  DEVELOPMENT_PLAN.md with one merged parallel review (M). Researches reuse, external APIs,
-  industry precedent and foundation cleanup (deep modules, duplication, placement, feature
-  removal) so every step complies with the repo rules. No owner sign-off. Use when loop-refine has
-  finished, or whenever a scoped brief needs a build plan — "plan this", "how do we build it", "/plan".
-  Not for scoping or asking what to build (use loop-refine), nor for writing the code (use loop-build).
+  Writes the lap's build plan at the depth its size sets: the failing acceptance test first, then a
+  short plan in BRIEF.md (XS/S) or a DEVELOPMENT_PLAN.md with one merged parallel review (M);
+  researches reuse, APIs, precedent and cleanup. Use when loop-refine has finished or a scoped brief
+  needs a build plan — "plan this", "how do we build it", "/plan". Not for scoping (use loop-refine)
+  or writing the code (use loop-build).
 ---
 
 # loop-plan

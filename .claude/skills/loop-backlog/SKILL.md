@@ -1,13 +1,11 @@
 ---
 name: loop-backlog
 description: >-
-  Opens Stop 1 of the product-owner loop. Puts anything the owner points at on top of the
-  backlog and starts it; otherwise catches up src/config/app-tasks.json against landed work,
-  proposes a ranked order (blockers such as untested previews and onboarding tasks first, then
-  value per size), and asks the owner to confirm the top item. Runs the seeded onboarding gates
-  on a fresh fork. Use when a session starts, after a Pass or Drop verdict, when there is no
-  clear objective, or when the owner says "what's next", "reprioritize", "do X now", "/tasks".
-  Not for scoping the chosen task (use loop-refine).
+  Opens Stop 1: puts what the owner points at on top of the backlog, or catches up
+  src/config/app-tasks.json against landed work, ranks it (blockers and onboarding first, then value
+  per size) and asks the owner to confirm the top item; runs the onboarding gates on a fresh fork.
+  Use when a session starts, after a Pass or Drop verdict, with no clear objective, or on "what's
+  next", "reprioritize", "do X now", "/tasks". Not for scoping the chosen task (use loop-refine).
 ---
 
 # loop-backlog

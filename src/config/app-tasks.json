@@ -1,20 +1,5 @@
 [
   {
-    "title": "Design language for the game",
-    "description": "Not blocked by code. Propose 2–3 visual directions for characters (round blob body, two round feet, helmet), arena, UI and effects, plus an audio identity, then the orchestrator picks one. Deliver documentation/game/DESIGN_LANGUAGE.md (palette, shapes, line/shading, motion, UI type, sound direction) and the UI color tokens. ElevenLabs image generation allowed for moodboards within the budget the orchestrator sets. Does not touch game code. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
-    "title": "Dive headbutt: unarmed attack",
-    "description": "Owner priority before rockets. Firing unarmed makes the blob dive headfirst in the aim direction (a dive headbutt, 'bomp'): a hit knocks off health and bounces the target away. Physics-like and intuitive: blob-vs-blob collision reflects equal blobs equally on a symmetric hit; hits in the back deal double damage (tunable, so 'front bounces only, back hurts 1 or 4' stays a configuration). Phase 1: three playable designs (Fable 5.2) for the owner to pick; phase 2: build the pick and wire it into combat's hit API. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
-    "title": "Match rules, scoring and respawn",
-    "description": "Depends on: Combat. Timed round, points for kills (incl. knock-offs out of bounds) and collectibles falling from the sky, winner screen, respawn at the safe spawn point farthest from opponents with blinking invulnerability and full freedom of action. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Lobby and match settings",
     "description": "Depends on: Match rules. Join screen where 1–4 players claim a slot with any keyboard half or gamepad, settings for match duration and gravity, start/restart flow. Replaces the remaining template UI (absorbs the template 'Make the interface yours' work for the game). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
@@ -26,22 +11,22 @@
   },
   {
     "title": "Apply the design language in game",
-    "description": "Depends on: Design language for the game, Player movement and blob feel, Starting arena and destructible terrain. Characters, arena, pickups, effects and HUD drawn in the chosen style. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "description": "Depends on: Design language for the game, Player movement and blob feel, Starting arena and destructible terrain. Characters, arena, pickups, effects and HUD drawn in the chosen style. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md.  Owner picked line style E (silhouette outline only, softer egg-shaped blobs, body gradient + gloss; DESIGN_LANGUAGE.md). Also: fix the PixiJS deprecation (addChild on Graphics in features/player playerRenderer.ts) and load Fredoka before drawing canvas text.",
+    "status": "to-do"
+  },
+  {
+    "title": "Gamepad support and verification",
+    "description": "The owner has only verified keyboard play. Make up to 4 gamepads work end to end: join, move, aim (stick), jump, fire/dive, hot-plug and disconnect, sensible deadzones; then the owner verifies with real controllers. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "to-do"
+  },
+  {
+    "title": "Level picker",
+    "description": "Let players choose the level before a round: the built-in levels in public/levels/ (start-arena, floating-garden) plus imported ones from the session. Fits the lobby flow. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
   },
   {
     "title": "Make the interface yours",
     "description": "Everything visible still shows the template. Your coding agent renames the app (browser tab title in index.html, top bar in src/layouts/Topbar/Topbar.tsx), walks through the home page and top bar with you (keep or change each), and removes the harness overview card (src/features/harness-overview/, src/pages/HarnessOverviewPage.tsx and its test, the /harness route in src/App.tsx, the card in src/pages/HomePage.tsx, public/harness-overview.png, plus its README.md image and documentation/DOC_INDEX.md row). Then restyle via the design token files in src/shared/theme/tokens/ and run pnpm tokens:build (documentation/DOC_THEMING.md); verify both modes with the theme icon in the profile menu. It also replaces the template icon and adds your app icons, theme color and link-preview card (title, description, image) in public/ and index.html; you supply a logo or approve a drawn one, and paste your preview link into a chat app to check the card. Agent gate: .agents/skills/loop-backlog/references/onboarding.md § Configuration tasks gate (Interface).",
-    "status": "to-do"
-  },
-  {
-    "title": "Path-scope src-only guidance into its own rule",
-    "description": "Context-cost audit follow-up (R10): move src-only guidance (architecture code placement and edge-case placement, code-style TypeScript and styling, debugging API troubleshooting) out of always-on rules into a rule with paths: [\"src/**\"], saving about 1.7k tokens on non-src tasks. Keep the folder meanings in architecture.md § Folder structure. Protected files: owner consent per edit.",
-    "status": "to-do"
-  },
-  {
-    "title": "Trim skill descriptions with trigger tests",
-    "description": "Context-cost audit follow-up (R11): shorten the .agents/skills/*/SKILL.md descriptions that are listed in every session (about 3.5k tokens; target about -0.8k) and verify with meta-write-skill trigger tests that the right skill still triggers. Protected files: owner consent.",
     "status": "to-do"
   },
   {

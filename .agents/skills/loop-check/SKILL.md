@@ -1,12 +1,11 @@
 ---
 name: loop-check
 description: >-
-  Audits the lap's built change before it ships: the acceptance test, the full tooling gate list,
-  one read-only subagent per relevant rule, a plan-compliance pass, a UI component lens and, at
-  size M, the parallel lens review. Fixes contract findings by handing blockers back to
-  loop-build, then writes the check summary that Stop 2 shows the owner. Use when loop-build has
-  finished, before any commit or PR of loop work, or when the owner asks to "check", "validate" or "audit"
-  a diff. Not for plan critique (loop-plan runs that) or for shipping (use loop-ship).
+  Audits the built lap before it ships: acceptance test, full tooling gates, one read-only subagent
+  per relevant rule, plan compliance, a UI component lens and, at size M, the parallel lens review;
+  hands blockers back to loop-build and writes the check summary for Stop 2. Use when loop-build has
+  finished, before any commit or PR of loop work, or when the owner asks to "check", "validate" or
+  "audit" a diff. Not for plan critique (loop-plan) or shipping (use loop-ship).
 ---
 
 # loop-check

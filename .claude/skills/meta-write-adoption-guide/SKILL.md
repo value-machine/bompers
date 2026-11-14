@@ -1,12 +1,11 @@
 ---
 name: meta-write-adoption-guide
 description: >-
-  Writes a cross-repo adoption guide (<SLUG>_ADOPTION_GUIDE.md) for a capability or harness
-  change that landed here: what it is and is not, the portable substance, one illustrative
-  example, porting steps, a target-repo checklist and, for harness changes, the rename map forks
-  apply with meta-intake-harness. Use when the owner wants an adoption guide, a playbook for
-  other repos, a fork porting note, or to document how to replicate a capability elsewhere. Not
-  for a session handoff to the next agent or a change only this repo needs.
+  Writes a cross-repo adoption guide (<SLUG>_ADOPTION_GUIDE.md) for a capability or harness change
+  that landed here: portable substance, example, porting steps, checklist and, for harness changes,
+  the rename map. Use when the owner wants an adoption guide, a playbook for other repos, a fork
+  porting note, or how to replicate a capability elsewhere. Not for a session handoff or a change
+  only this repo needs.
 ---
 
 # meta-write-adoption-guide

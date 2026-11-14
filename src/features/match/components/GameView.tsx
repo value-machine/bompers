@@ -5,6 +5,14 @@ import { usePixiApp } from "@/shared/hooks/usePixiApp";
 import { LevelImportControl, useLevelSource } from "@/features/level-file/api/levelFileApi";
 import { useGameSession } from "@/features/match/hooks/useGameSession";
 
+/** Canvas colours as CSS: the hint sits on the canvas, which looks the same in either UI mode. */
+const toCss = (color: number): string => `#${color.toString(16).padStart(6, "0")}`;
+/** Ink on the HUD card cream, so the hint reads over sky and dark terrain alike. */
+const HINT_STYLE = {
+  color: toCss(GAME_PALETTE.ink),
+  backgroundColor: toCss(GAME_PALETTE.hud.card),
+};
+
 const CONTROLS_HINT =
   "P1: A/D move · W/Space jump · S aim down · F bomp — P2: ←/→ · ↑ · ↓ · / or Enter bomp — gamepads join slots 3–4";
 
@@ -23,7 +31,8 @@ export const GameView = () => {
   return (
     <div className="relative h-full w-full overflow-hidden" {...dropHandlers}>
       <div ref={hostRef} className="absolute inset-0" data-testid="game-canvas-host" />
-      <div className="absolute top-2 right-2">
+      {/* Below the HUD card row (at most 82 px tall), so it never covers the P3 / P4 cards. */}
+      <div className="absolute top-24 right-2">
         <LevelImportControl
           report={levelSource.report}
           onFile={onFile}
@@ -40,8 +49,10 @@ export const GameView = () => {
           Drop a level file to play it
         </div>
       )}
-      <p className="pointer-events-none absolute bottom-2 left-0 w-full text-center text-xs text-muted-foreground">
-        {CONTROLS_HINT}
+      <p className="pointer-events-none absolute bottom-2 left-0 w-full text-center text-xs">
+        <span className="rounded-full px-3 py-1" style={HINT_STYLE}>
+          {CONTROLS_HINT}
+        </span>
       </p>
     </div>
   );

@@ -1,13 +1,12 @@
 ---
 name: meta-intake-harness
 description: >-
-  Takes external harness content dropped in .agents/harness-inbox/ — skills, rules, docs, and
-  fork adoption notes with rename maps — into this repo: secret scan, inventory, classification,
-  read-only analysis per item, one batched disposition report with provenance and license, and
-  apply only after the owner confirms; prefers merging into existing files over new ones. Use
-  when the owner drops files in the inbox, says "update the harness", "ingest this skill",
-  "port this from MILA", or applies an adoption guide from another repo. Not for in-repo drift
-  (use meta-audit-harness) or authoring one skill from scratch (use meta-write-skill).
+  Takes external harness content dropped in .agents/harness-inbox/ (skills, rules, docs, adoption
+  notes with rename maps): secret scan, one batched disposition report with provenance and license,
+  applied after the owner confirms. Use when the owner drops files in the inbox, says "update the
+  harness", "ingest this skill", "port this from MILA", or applies another repo's adoption guide.
+  Not for in-repo drift (use meta-audit-harness) or authoring one skill from scratch (use
+  meta-write-skill).
 ---
 
 # meta-intake-harness

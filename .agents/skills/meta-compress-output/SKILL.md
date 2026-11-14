@@ -1,11 +1,10 @@
 ---
 name: meta-compress-output
 description: >-
-  Ultra-compressed reply mode: drops filler, articles, pleasantries and hedging while keeping
-  every technical fact, code block and error exact, and stays on until the owner turns it off.
-  Use when the owner says "caveman mode", "talk like caveman", "use caveman", "less tokens",
-  "be brief", or invokes /caveman. Not for shortening files or the harness (use
-  meta-audit-harness).
+  Ultra-compressed reply mode: drops filler, articles and hedging, keeps every technical fact, code
+  block and error exact, and stays on until the owner turns it off. Use when the owner says "caveman
+  mode", "talk like caveman", "use caveman", "less tokens", "be brief", or invokes /caveman. Not for
+  shortening files or the harness (use meta-audit-harness).
 ---
 
 # meta-compress-output

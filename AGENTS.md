@@ -51,7 +51,7 @@ The pre-commit hook rebuilds both mirrors from staged sources (`agent-sync.confi
 | `.claude/rules/code-style.md` | Global code style and formatting standards for all projects |
 | `.claude/rules/agent-behavior.md` | When to ask the owner (choice definition + stop list), success reporting, and protected-file consent |
 | `.claude/rules/testing.md` | Testing standards, patterns, and quality requirements |
-| `.claude/rules/debugging.md` | Logging, API troubleshooting, reductive strategy, and user test instructions (debugging procedure: spec-debug-runtime) |
+| `.claude/rules/debugging.md` | Logging, reductive strategy, and user test instructions (debugging procedure: spec-debug-runtime) |
 | `.claude/rules/security.md` | Security best practices and vulnerability prevention |
 | `.claude/rules/git-workflow.md` | Git branch models (Model A / B / C), PRs, and production promotion |
 | `.claude/rules/platform.md` | Shell trigger (Windows PowerShell / Git Bash → `documentation/DOC_WINDOWS_SHELL.md`) and local environment configuration |
@@ -60,6 +60,7 @@ The pre-commit hook rebuilds both mirrors from staged sources (`agent-sync.confi
 
 | Path | Description |
 |------|-------------|
+| `.claude/rules/app-code.md` | App source standards: code and edge-case placement, TypeScript, styling scope, API troubleshooting, pagination · `paths: ["src/**"]` |
 | `.claude/rules/api-integration.md` | Principles for researching an external API, vendor, or backend before writing integration code (MCP-first, doc-freshness, POC-before-code) · `paths: ["**/services/**", "**/lib/**", "cloud-functions/**"]` |
 
 ## Where things live
@@ -71,7 +72,7 @@ The pre-commit hook rebuilds both mirrors from staged sources (`agent-sync.confi
 | Semver, changelog, commit format | same table → **version source** (A/B: `.agents/skills/loop-ship/SKILL.md`; C: release-please) |
 | Protected files, when to ask the owner, success reporting | `.claude/rules/agent-behavior.md` |
 | Shell rules, env vars | `.claude/rules/platform.md` |
-| Architecture, code placement | `.claude/rules/architecture.md`; whitelist `projectStructure.config.cjs`; layers `.dependency-cruiser.cjs` |
+| Architecture, code placement | `.claude/rules/architecture.md` + `.claude/rules/app-code.md`; whitelist `projectStructure.config.cjs`; layers `.dependency-cruiser.cjs` |
 | Reductive strategy, debugging | `.claude/rules/debugging.md` |
 | API / vendor research | `.claude/rules/api-integration.md` |
 | Dev task backlog / onboarding | `src/config/app-tasks.json` + `src/features/tasks/README.md` |
