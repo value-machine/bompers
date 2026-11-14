@@ -11,7 +11,6 @@ Two scores, never blended. The **graph** is dependency-cruiser. The **gate** is 
 | Slot | Adapter path(s) |
 |------|-----------------|
 | MUI | `src/components/common/**`, `src/shared/theme/**` |
-| Supabase | `src/shared/services/supabaseService.ts` |
 | Airtable | `src/shared/services/airtableService.ts` |
 | Vite | none — not gated (`import.meta.env` is app-wide) |
 
@@ -20,7 +19,7 @@ Two scores, never blended. The **graph** is dependency-cruiser. The **gate** is 
 | | Measure (report) | Gate (`pnpm arch:check`) |
 |--|------------------|--------------------------|
 | **Score A features** | Inbound / outbound / wiring file counts | Existing `no-cross-feature-internals` only |
-| **Score B stack** | Raw files that import the vendor | **New** edges from `src/features`, `src/pages`, `src/layouts` to MUI/Supabase/Airtable except adapters. Existing edges in `.dependency-cruiser-baseline.json` |
+| **Score B stack** | Raw files that import the vendor | **New** edges from `src/features`, `src/pages`, `src/layouts` to MUI/Airtable except adapters. Existing edges in `.dependency-cruiser-baseline.json` |
 | **Vite** | Qualitative note if visible | **Not gated** |
 
 Grandfather means: today’s violating files stay until someone unwraps them. A **new** file or a **new** import of the vendor from a gated layer fails.
@@ -36,14 +35,13 @@ Discover keys with `discoverFeatureRoots` (nested folders that contain a layer d
 
 - **Inbound:** modules *outside* the feature that depend on a module *inside* it, excluding `*.test.*`.
 - **Wiring:** inbound whose source is under `src/pages/`, `src/layouts/`, or `src/routes/` — listed separately; expected mount points.
-- **Outbound:** modules *inside* the feature that depend on another feature or a stack package (`@mui/`, `@supabase/`, `airtable`).
+- **Outbound:** modules *inside* the feature that depend on another feature or a stack package (`@mui/`, `airtable`).
 
 ## Score B — stack
 
 Count unique `src/` modules (not tests) whose dependencies resolve to:
 
 - MUI: `node_modules/@mui/` or specifier `@mui/`
-- Supabase: `@supabase/`
 - Airtable: package `airtable`
 - Vite: not inferred from the graph; report footer only
 

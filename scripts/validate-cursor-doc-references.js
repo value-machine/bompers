@@ -93,7 +93,6 @@ function looksLikeRepoPath(value) {
     "src/",
     "documentation/",
     "scripts/",
-    "supabase/",
     "cloud-functions/",
     "migrations/",
     "public/",
@@ -135,7 +134,7 @@ function resolveCandidatePath(refPath, sourceFilePath) {
   ) {
     return path.join(ROOT, refPath);
   }
-  if (refPath.startsWith("scripts/") || refPath.startsWith("supabase/") || refPath.startsWith("cloud-functions/")) {
+  if (refPath.startsWith("scripts/") || refPath.startsWith("cloud-functions/")) {
     return path.join(ROOT, refPath);
   }
   if (refPath.startsWith("migrations/") || refPath.startsWith("public/") || refPath.startsWith("tests/")) {

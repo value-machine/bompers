@@ -3,13 +3,13 @@
  * Toolbar height comes from the `--app-toolbar-height` token in `src/index.css`.
  */
 
-/** Shared max width for centered form surfaces (sign-in, home, reset password). */
+/** Shared max width for centered form surfaces (home, harness overview). */
 export const formContentWidthClassName = "w-full max-w-[420px]";
 
-/** Centered form column width for stacked auth-style surfaces. */
+/** Centered form column width for stacked form surfaces. */
 export const centeredFormSurfaceClassName = `mx-auto ${formContentWidthClassName}`;
 
-/** Full viewport column below the app toolbar (shell layouts and auth pages). */
+/** Full viewport column below the app toolbar (shell layouts and pages). */
 export const appViewportClassName =
   "box-border flex max-h-[calc(100dvh-var(--app-toolbar-height))] min-h-[calc(100dvh-var(--app-toolbar-height))] flex-col overflow-hidden";
 
@@ -24,5 +24,5 @@ export const formStackSpacing = {
   divider: "my-2 sm:my-3",
 } as const;
 
-/** Inline form alerts (errors, success) shared across sign-in surfaces. */
+/** Inline form alerts (errors, success) shared across form surfaces. */
 export const formInlineAlertClassName = `${formStackSpacing.sectionBelow} py-1 sm:py-2`;

@@ -12,16 +12,7 @@ TanStack Query manages server state with caching, deduplication, and stale-while
 
 ### Shared keys (cross-cutting)
 
-`src/shared/utils/queryKeys.ts`:
-
-```typescript
-export const sharedQueryKeys = {
-  user: {
-    all: ["user"] as const,
-    profile: (userId: string) => ["user", "profile", userId] as const,
-  },
-} as const;
-```
+None yet. Add `src/shared/utils/queryKeys.ts` when two or more features share a resource.
 
 ### Feature-based keys
 
@@ -54,25 +45,23 @@ Only invalidate directly related keys. Avoid broad `invalidateQueries({ queryKey
 | Create project      | `projectKeys.lists()`                           | Detail (not yet existing) |
 | Update project      | `projectKeys.detail(id)`, `projectKeys.lists()` | Other features            |
 | Delete project      | `projectKeys.detail(id)`, `projectKeys.lists()` | User, config              |
-| Update user profile | Merge via `setQueryData` on mutation result | Same profile key on happy path |
+| Update project (canonical) | Merge via `setQueryData` on mutation result | Same detail key on happy path |
 
 ### Example mutation
 
-Pattern only (not shipped). Add a service function such as `updateUserProfile(userId, data)` that returns the canonical row.
+Pattern only (not shipped). Add a service function such as `updateProject(id, data)` that returns the canonical row.
 
 ```typescript
-// features/auth/hooks/useUpdateUserProfile.ts (example)
-type UserProfileUpdate = Partial<Omit<UserProfile, "id">>;
+// features/projects/hooks/useUpdateProject.ts (example)
+type ProjectUpdate = Partial<Omit<Project, "id">>;
 
-export const useUpdateUserProfile = (userId: string | null) => {
+export const useUpdateProject = (id: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: UserProfileUpdate) => updateUserProfile(userId!, data),
+    mutationFn: (data: ProjectUpdate) => updateProject(id, data),
     onSuccess: (result) => {
-      if (userId && result) {
-        queryClient.setQueryData(sharedQueryKeys.user.profile(userId), result);
-      }
+      queryClient.setQueryData(projectKeys.detail(id), result);
     },
   });
 };
@@ -141,18 +130,6 @@ onError: (_err, _vars, context) => {
 - **Divergent data shapes** between optimistic updates and server normalizers (different sort keys, computed fields, `null` vs. `[]`, missing timestamps).  
 - Clearing “saving” state before the cache reflects the server response while a refetch is still the planned source of truth.
 
-## Auth Boundary
-
-On logout: `queryClient.clear()` in `authService.logout`, before `signOut()`. Prevents user A's data from being visible after user B logs in.
-
-## User-Specific Data (RLS + Cache)
-
-Supabase uses Row Level Security (RLS). Always include `userId` in the query key for user-specific data. Otherwise the cache may incorrectly treat User A's data as valid for User B.
-
-- **Rule:** `userId` must be part of the query key for any RLS-protected data.
-- **Example:** `sharedQueryKeys.user.profile(userId)` – already correct.
-- **Cache clear on logout** (Auth Boundary) handles switching users; correct keys prevent cache collisions.
-
 ## Stale/gc Times
 
 - Defaults: 5 min stale, 30 min gc (in `queryClient.ts`)
@@ -160,7 +137,6 @@ Supabase uses Row Level Security (RLS). Always include `userId` in the query key
 
 | Data type             | staleTime       | gcTime           | Notes                              |
 | --------------------- | --------------- | ---------------- | ---------------------------------- |
-| User profile          | 5 min (default) | 30 min (default) | Merge via `setQueryData` on update |
 | Lists (e.g. projects) | 5 min           | 30 min           | Invalidate on create/update/delete |
 | Detail (e.g. project) | 2–5 min         | 30 min           | Invalidate on update/delete        |
 | Realtime data         | 0               | 5 min            | Polling or websocket-driven        |
@@ -181,28 +157,27 @@ Supabase uses Row Level Security (RLS). Always include `userId` in the query key
 ```tsx
 import { render, screen } from "@testing-library/react";
 import { createQueryClientWrapper } from "@/../tests/test-utils";
-import { ProfileMenu } from "../ProfileMenu";
+import { ItemList } from "../ItemList";
 
 // When testing components that use useQuery/useMutation without mocking:
-render(<ProfileMenu />, {
+render(<ItemList />, {
   wrapper: createQueryClientWrapper(),
 });
 ```
 
 ### When to use
 
-- **Use wrapper:** When rendering components that call `useUserProfileQuery` or other query hooks without mocking them
-- **Mock instead:** When you want to control the returned data (e.g. `vi.mock("@/features/auth/hooks/useUserProfileQuery")`)
+- **Use wrapper:** When rendering components that call query hooks without mocking them
+- **Mock instead:** When you want to control the returned data (e.g. `vi.mock("@/features/projects/hooks/useProjectList")`)
 
 ### Service tests
 
-Mock `queryClient` in service tests when the service uses it (e.g. invalidation on logout).
+Mock `queryClient` in service tests when the service uses it.
 
 ### Not covered by automated tests
 
 Unit tests cover hooks and services. The following require **manual verification**:
 
-- Login/logout flow and cache clear on logout
 - Cached data when navigating back
 
 ## Lazy loading + Suspense
@@ -210,19 +185,6 @@ Unit tests cover hooks and services. The following require **manual verification
 - Lazy load heavy pages: `lazy(() => import("@/pages/tasks/TasksPage"))`
 - Wrap routes in `<Suspense fallback={<PageLoadingState />}>`
 - Cached query data + code splitting = fast navigation on return visits
-
-## Supabase Realtime (Optional)
-
-When using Supabase Realtime (INSERT/UPDATE broadcasts via WebSockets), TanStack Query cache does not update automatically. Add a listener that calls `queryClient.invalidateQueries()` when the channel receives a change:
-
-```typescript
-// Example: features/projects/hooks/useProjectsRealtime.ts
-supabase.channel('projects').on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
-  queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-}).subscribe();
-```
-
-Place this in a hook or effect that runs when the relevant data is in scope.
 
 ## Error Boundary
 
@@ -239,8 +201,6 @@ Configured in `queryClient.ts`:
 - **Queries:** Retry up to 2 times, exponential backoff (1s, 2s, max 30s). No retry on 404.
 - **Mutations:** No retry (default).
 - **Tests:** `createTestQueryClient()` uses `retry: false` for deterministic tests.
-
-**Supabase:** When using Supabase, use `PostgrestError` from `@supabase/supabase-js` for type-safe error handling. Check `error.code` (e.g. `PGRST116` for 404, `23503` for foreign key violations) instead of generic `"status" in error`. Improves retry logic and QueryErrorBoundary handling.
 
 ## Migration Strategy for New Features
 
@@ -334,5 +294,4 @@ This repo uses **TanStack Query** for server state (`@tanstack/react-query`). Th
 
 - Mutation pattern: § Example mutation above (not shipped; mutations get their own category name in the owning feature). Prefer `setQueryData` from the mutation result over invalidation for the same key.
 - `src/shared/utils/queryClient.ts` — shared `QueryClient` defaults (`createQueryClient`, app singleton).
-- `src/shared/utils/queryKeys.ts` — shared key helpers; per-feature keys follow the factory pattern above (e.g. `features/<feature>/api/keys.ts` when a feature adds queries).
-- `src/features/auth/services/userProfileService.ts` — example of a **canonical return**: `updateUserProfile` uses `.select(...)` so the caller can patch cache without an extra round-trip.
+- Per-feature keys follow the factory pattern above (e.g. `features/<feature>/api/keys.ts` when a feature adds queries).

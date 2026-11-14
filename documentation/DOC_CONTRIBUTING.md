@@ -73,7 +73,7 @@ No automated migrator. Manual steps:
 1. Sweep stranded work: commit or shelve local changes on `develop`; retarget or close PRs based on `develop` (`gh pr list --base develop`); list unmerged `feature/*` branches.
 2. Promote `develop` to `main` one last time (A/B flow).
 3. **Before any C merge:** set the `main` ruleset per the table (PR + required `test` and `pr-title`, no bypass, no required approvals), squash-only merges with PR title as commit message, auto-delete head branches, allow auto-merge, and allow GitHub Actions to create pull requests.
-4. Cloudflare: production branch `main`; previews on all branches; `develop` no longer staging. Check the Supabase redirect wildcard covers previews.
+4. Cloudflare: production branch `main`; previews on all branches; `develop` no longer staging.
 5. On a branch off `main`: fold `CHANGELOG.md` `[Unreleased]` into the next version, bump `package.json` to match, set `"mode": "model-c"`, open a `feat:` PR. This one PR to `main` while the config still says A/B is allowed once, for the cutover.
 6. After merge, **the user** tags that commit (`vX.Y.Z`) and creates a GitHub release so release-please has a baseline.
 7. Wait at least a week, then remove the `develop` ruleset and delete `develop`.

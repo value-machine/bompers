@@ -3,7 +3,6 @@ import { render, renderHook, type RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
-import type { AuthContextValue } from "@/features/auth/types/auth.types";
 import { ColorModeProvider } from "@/shared/context/ColorModeContext";
 
 /**
@@ -97,7 +96,7 @@ export function renderWithProviders(ui: ReactElement, options: ProviderRenderOpt
  * Renders a hook with Router and QueryClient wrappers (both on by default).
  *
  * @example
- * const { result } = renderHookWithProviders(() => useAuthRedirect());
+ * const { result } = renderHookWithProviders(() => useColorMode());
  */
 export function renderHookWithProviders<TResult, TProps>(
   hook: (props: TProps) => TResult,
@@ -113,28 +112,6 @@ export function renderHookWithProviders<TResult, TProps>(
       </AllProviders>
     ),
   });
-}
-
-/**
- * Default AuthContext mock shape for component tests that mock useAuthContext.
- */
-export function createDefaultAuthContextValue(
-  overrides: Partial<AuthContextValue> = {}
-): AuthContextValue {
-  return {
-    user: null,
-    loading: false,
-    error: null,
-    login: vi.fn(),
-    signUp: vi.fn(),
-    logout: vi.fn(),
-    signInWithGoogle: vi.fn(),
-    requestPasswordReset: vi.fn(),
-    updatePassword: vi.fn(),
-    clearAuthError: vi.fn(),
-    setAuthError: vi.fn(),
-    ...overrides,
-  };
 }
 
 /** Controls the `prefers-color-scheme` result of the window.matchMedia test double. */

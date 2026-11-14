@@ -51,4 +51,4 @@ Sort what's missing into **external** (schema, keys, vendor docs, response forma
 
 ## Risk and impact
 
-Note breaking changes, impact on existing functionality, and how it can be tested (PR preview, staging Supabase project). High-risk items that are data or irreversible are stop-list items. The rest are recorded in the brief and sized into the estimate.
+Note breaking changes, impact on existing functionality, and how it can be tested (PR preview). High-risk items that are data or irreversible are stop-list items. The rest are recorded in the brief and sized into the estimate.

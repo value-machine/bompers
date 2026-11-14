@@ -566,66 +566,6 @@ module.exports = {
         },
       ],
     },
-    // Supabase
-    {
-      name: "supabase",
-      children: [
-        { name: "*.toml" },
-        { name: "*.md" },
-        { name: "*.ps1" },
-        { name: ".gitignore" },
-        {
-          name: "backups",
-          children: [
-            {
-              name: "*",
-              children: [{ name: "*.sql" }, { name: "*.md" }],
-            },
-          ],
-        },
-        {
-          name: "functions",
-          children: [
-            { name: "*.ts" },
-            { name: "*.md" },
-            {
-              name: "*",
-              children: [{ name: "*.ts" }, { name: "*.md" }, { name: "index.ts" }],
-            },
-            {
-              name: "_backups",
-              children: [
-                {
-                  name: "*",
-                  children: [
-                    { name: "*.ts" },
-                    { name: "*.md" },
-                    { name: "*" }, // Allow any files in backup subdirectories
-                  ],
-                },
-              ],
-            },
-            {
-              name: "_shared",
-              children: [
-                { name: "*.ts" },
-                {
-                  name: "*",
-                  children: [
-                    { name: "*.ts" },
-                    { name: "*" }, // Allow any files in _shared subdirectories
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-        {
-          name: "migrations",
-          children: [{ name: "*.sql" }],
-        },
-      ],
-    },
     // Cloud functions - allow all files for flexibility (helper scripts, configs, etc.)
     {
       name: "cloud-functions",

@@ -25,7 +25,7 @@ Friends sitting together want a quick, chaotic, physical party game to play on o
 
 - **In one sentence, this app:** is a fast, physics- and chaos-driven 2D arena shooter for 2–4 local players (1 for testing), where squishy blob characters fire rockets from their helmets, rocket-jump, and blow up the arena while scoring points within a timed round.
 - **It is not:** an online multiplayer game (MVP is same-screen local play), a progression/meta game with accounts, unlocks or stores, or a top-down shooter (the starting map is side-view platform action).
-- **Integrates with / assumes:** a static browser build (Cloudflare hosting for previews and production). No backend is needed for MVP; Supabase stays unused until a feature asks for it.
+- **Integrates with / assumes:** a static browser build (Cloudflare hosting for previews and production). No backend is needed for MVP; Supabase, sign-in and error reporting were removed (hosting lap) and come back only if a feature needs them.
 
 ---
 

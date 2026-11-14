@@ -1,5 +1,5 @@
 import { Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
-import { DropdownMenuItem } from "@/components/common/DropdownMenu";
+import { Button } from "@/components/common/Button";
 import { Tooltip } from "@/components/common/Tooltip";
 import { useColorMode } from "@/shared/context/ColorModeContext";
 import type { ColorMode } from "@/shared/theme/colorMode";
@@ -11,8 +11,8 @@ const MODE_UI: Record<ColorMode, { label: string; icon: LucideIcon; next: ColorM
 };
 
 /**
- * Icon-only menu item that cycles Light → Dark → System; hover text names the current
- * and next mode. Keeps the menu open so the change is visible.
+ * Icon button that cycles Light → Dark → System; hover text names the current
+ * and next mode.
  */
 export const ColorModeToggle = () => {
   const { mode, setMode } = useColorMode();
@@ -20,17 +20,10 @@ export const ColorModeToggle = () => {
   const title = `Theme: ${label} (click for ${MODE_UI[next].label})`;
 
   return (
-    <Tooltip title={title} side="left">
-      <DropdownMenuItem
-        aria-label={title}
-        onSelect={(event) => {
-          event.preventDefault();
-          setMode(next);
-        }}
-        className="size-8 justify-center p-0"
-      >
+    <Tooltip title={title} side="bottom">
+      <Button variant="ghost" size="icon" aria-label={title} onClick={() => setMode(next)}>
         <Icon />
-      </DropdownMenuItem>
+      </Button>
     </Tooltip>
   );
 };

@@ -2,7 +2,6 @@
 paths:
   - "**/services/**"
   - "**/lib/**"
-  - "**/supabase/functions/**"
   - "cloud-functions/**"
 ---
 
@@ -31,12 +30,5 @@ Do not run integration research from this rule alone — the procedure lives ent
 **When modifying this rule, check these rules for consistency:**
 
 - `.claude/rules/architecture.md` — where integration code lives once researched (`features/*/services/`, `shared/services/`)
-- `.claude/rules/security.md` — database schema verification, secrets management
-- `.claude/rules/database.md` — migrations for the configured backend
-- `.claude/rules/cloud-functions.md` — server-only capabilities requiring secrets (third-party API calls)
-- `.claude/rules/project-specific.md` — external API costs and rate limiting
+- `.claude/rules/security.md` — secrets management
 
-**Rules that reference this rule:**
-
-- `.claude/rules/security.md` — § Database Verification points here for the general MCP-first principle
-- `.claude/rules/database.md`, `.claude/rules/cloud-functions.md` — point here when researching a new/unfamiliar vendor

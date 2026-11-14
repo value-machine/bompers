@@ -18,21 +18,7 @@ const STACK_SLOTS = [
     test: (spec, resolved) =>
       spec === "radix-ui" || /node_modules\/radix-ui(?:\/|$)/.test(resolved),
   },
-  {
-    id: "Supabase",
-    test: (spec, resolved) => matchesHay(spec, resolved, /@supabase\//),
-  },
 ];
-
-/**
- * @param {string} spec
- * @param {string} resolved
- * @param {RegExp} re
- * @returns {boolean}
- */
-function matchesHay(spec, resolved, re) {
-  return re.test(spec) || re.test(resolved);
-}
 
 /**
  * @param {string} filePath

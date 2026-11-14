@@ -76,31 +76,9 @@ Quick reference guide to all rules and their relationships.
 ### Platform (`.claude/rules/platform.md`)
 - Which shell rules apply (read the platform; Windows PowerShell / Git Bash vs plain bash)
 - Trigger to read `documentation/DOC_WINDOWS_SHELL.md` (PowerShell command rules, `$LASTEXITCODE` handling, Git Bash)
-- Environment variable catalog (`VITE_*`, Supabase, Edge secrets)
+- Environment variable catalog (`VITE_*`, server-side secrets)
 
 **Related to:** git-workflow, security
-
----
-
-### Cloud Functions (`.claude/rules/cloud-functions.md`)
-- **When to use Edge Functions** vs frontend logic (decision framework)
-- Function organization by business capability
-- Deployment model and fragility considerations
-- Testing strategy and migration paths
-
-**Related to:** architecture, security
-
----
-
-### Database (`.claude/rules/database.md`)
-- **SQL migrations only** (`supabase/migrations/`) — not client queries or TanStack
-- Safe migration patterns (idempotent, handles fresh/existing databases)
-- New-table checklist (RLS, indexes, type generation)
-- Layer boundaries (pointers to `.claude/rules/architecture.md`, `DOC_TANSTACK_QUERY.md`)
-- Testing migrations (fresh database and incremental updates)
-- Error handling and logging patterns
-
-**Related to:** security, architecture
 
 ---
 
@@ -112,7 +90,7 @@ Quick reference guide to all rules and their relationships.
 - Pointer to `.agents/skills/loop-plan/references/research-api.md` for the full procedure (MCP fallback decision tree, schema→sample discipline, vendor worked examples)
 - Absorbs the former workflow rule § Documentation Lookup
 
-**Related to:** security, database, cloud-functions, project-specific
+**Related to:** security
 
 ---
 
@@ -122,15 +100,6 @@ Quick reference guide to all rules and their relationships.
 - Reductive strategy for bugs and new features
 
 **Related to:** testing, architecture
-
----
-
-### Project-Specific (`.claude/rules/project-specific.md`)
-- Rate limiting patterns for Edge Functions
-- Project-specific security implementations
-- Implementation examples and checklists
-
-**Related to:** security, cloud-functions, database
 
 ---
 
@@ -153,17 +122,14 @@ When modifying a rule, check these related rules and skills (SSOT — always-on 
 | Rule | Check These Rules |
 |------|-------------------|
 | `code-style` | architecture, testing, spec-optimize-performance + spec-check-layer skills |
-| `architecture` | code-style, testing, security, cloud-functions, database, spec-optimize-performance skill (refactors respect placements) |
-| `testing` | code-style, architecture, debugging, cloud-functions (Edge Function testing) |
-| `security` | architecture, code-style, cloud-functions, database, project-specific, api-integration (MCP-first principle) |
-| `git-workflow` | agent-behavior, platform, cloud-functions, testing |
+| `architecture` | code-style, testing, security, spec-optimize-performance skill (refactors respect placements) |
+| `testing` | code-style, architecture, debugging |
+| `security` | architecture, code-style, api-integration (MCP-first principle) |
+| `git-workflow` | agent-behavior, platform, testing |
 | `agent-behavior` | git-workflow, debugging, architecture (layer-consistency stop), loop-build + loop-ship + loop-verdict skills |
 | `platform` | git-workflow, security, `DOC_WINDOWS_SHELL.md`, spec-debug-runtime patterns (platform command SSOT) |
-| `cloud-functions` | architecture, security, project-specific |
-| `database` | security, architecture |
-| `api-integration` | security, database, cloud-functions, project-specific |
+| `api-integration` | security |
 | `debugging` | testing, architecture, agent-behavior, spec-debug-runtime skill |
-| `project-specific` | security, cloud-functions, database |
 | `file-placement` | architecture |
 
 ## Adding a New Rule

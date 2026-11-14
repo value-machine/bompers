@@ -42,7 +42,7 @@ The guide explains a **portable learning**. The home repo is one instance, not t
 ## Section 4 — portable substance
 
 - **No** home-repo name, **no** repo-specific paths (except generic placeholders: port **N**, `DOC_*`).
-- IdP/stack hints stay generic ("Supabase-style", "Vite dev server") unless essential.
+- IdP/stack hints stay generic ("OAuth-style", "Vite dev server") unless essential.
 
 ---
 

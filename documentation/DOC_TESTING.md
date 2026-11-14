@@ -42,7 +42,7 @@ Is the file under src/** or tests/** (except scripts)?
 
 | What | Where | Example |
 |------|--------|---------|
-| Unit test (default) | **Colocated** beside source | `authService.ts` → `authService.test.ts` |
+| Unit test (default) | **Colocated** beside source | `cn.ts` → `cn.test.ts` |
 | Shared test helpers | `tests/test-utils.tsx` | `renderWithProviders` |
 | Global Vitest setup | `tests/setup.ts` | RTL cleanup |
 | Integration tests (future) | `tests/integration/` | — |
@@ -70,10 +70,10 @@ describe("moduleOrComponentName", () => {
 
 | Layer | Test type | Tools | Example in repo |
 |-------|-----------|-------|-----------------|
-| `shared/utils`, domain pure functions | Unit | `describe` / `it`, no render | `src/shared/utils/redirectUtils.test.ts` |
-| Feature `services/` | Unit + mocks | `vi.mock` for Supabase / APIs | `src/features/auth/services/authService.test.ts` |
-| Feature `hooks/` | Hook | `renderHookWithProviders` | `src/features/auth/hooks/useAuthRedirect.test.tsx` |
-| `components/`, `layouts/` | Component | `renderWithProviders` or plain `render` | `src/layouts/ProfileMenu/ProfileMenu.test.tsx` |
+| `shared/utils`, domain pure functions | Unit | `describe` / `it`, no render | `src/shared/utils/cn.test.ts` |
+| Feature `services/` | Unit + mocks | `vi.mock` for APIs | — (no feature services yet) |
+| Feature `hooks/` | Hook | `renderHookWithProviders` | `src/shared/context/ColorModeContext.test.tsx` |
+| `components/`, `layouts/` | Component | `renderWithProviders` or plain `render` | `src/pages/HomePage.test.tsx` |
 | `scripts/` (tooling) | Unit | `node:test` + `assert` | `scripts/change-classify.test.cjs` |
 
 ---
@@ -83,16 +83,15 @@ describe("moduleOrComponentName", () => {
 Import via the Vitest alias:
 
 ```typescript
-import { renderWithProviders, renderHookWithProviders, createDefaultAuthContextValue } from "tests/test-utils";
+import { renderWithProviders, renderHookWithProviders } from "tests/test-utils";
 ```
 
 | Helper | When to use |
 |--------|-------------|
 | `renderWithProviders(ui)` | Component needs Router and/or QueryClient (default: both on) |
 | `renderHookWithProviders(hook)` | Hook needs Router and/or QueryClient |
-| `createDefaultAuthContextValue(overrides?)` | Mock `useAuthContext` return shape in component tests |
 | `createTestQueryClient()` | Custom QueryClient when you need specific cache behavior |
-| Plain `render()` from RTL | Component has no router/query deps (e.g. `SignInPanel` with mocked hooks only) |
+| Plain `render()` from RTL | Component has no router/query deps (e.g. a presentational component with mocked hooks only) |
 
 Options: `{ withRouter: false }`, `{ withQueryClient: false }`, `{ initialEntries: ["/dashboard"] }`.
 
@@ -112,7 +111,6 @@ Options: `{ withRouter: false }`, `{ withQueryClient: false }`, `{ initialEntrie
 | Area | Approach |
 |------|----------|
 | Full E2E / browser flows | Manual or add Playwright later — not in this harness |
-| Supabase Edge Functions | Manual deploy + test — see `.claude/rules/cloud-functions.md` |
 | UI layout polish | DevTools / device — the owner's Stop 2 test on the preview (`loop-verdict`) |
 
 ---

@@ -108,8 +108,7 @@ Pick **one primary** location. Cross-link elsewhere in one line if needed — ne
 | Layer / harness coupling | `documentation/DOC_AGENT_WORKFLOW_LAYERS.md` |
 | Architecture overview (human) | `ARCHITECTURE.md` — link to `.claude/rules/architecture.md` |
 | Subagent brief duplication | Owning skill's `references/subagent-briefs.md` |
-| Postgres migrations, Supabase schema, RLS, idempotent migrations | `.claude/rules/database.md` |
-| Local dev URLs, `pnpm dev`, env wiring, Supabase setup | `.claude/rules/platform.md` and/or `README.md` Quick Start |
+| Local dev URLs, `pnpm dev`, env wiring | `.claude/rules/platform.md` and/or `README.md` Quick Start |
 | Auth, secrets, validation | `.claude/rules/security.md` |
 | Folder placement, imports, layers, path aliases | `.claude/rules/architecture.md` or `.claude/rules/file-placement.md` |
 | Vitest, coverage, test layout | `.claude/rules/testing.md` |
@@ -118,7 +117,6 @@ Pick **one primary** location. Cross-link elsewhere in one line if needed — ne
 | Dev process, loop stages | `.agents/skills/router/references/loop-map.md` + the `loop-*` skills |
 | Changelog, version, commit / PR flow | `.agents/skills/loop-ship/SKILL.md` |
 | Known symptom → fix pattern (repeatable) | `.agents/skills/spec-debug-runtime/references/patterns.md` |
-| Edge Functions vs frontend | `.claude/rules/cloud-functions.md` |
 | TanStack Query, server state | `ARCHITECTURE.md`, `documentation/DOC_TANSTACK_QUERY.md`, or feature `api/` keys patterns (one primary) |
 | Long procedural workflow | Relevant `.agents/skills/<name>/SKILL.md` |
 | **Product problem, persona, app role (fillable template)** | `documentation/DOC_APP_VISION.md` (onboarding: `.agents/skills/loop-backlog/SKILL.md`) |

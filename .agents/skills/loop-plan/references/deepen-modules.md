@@ -58,7 +58,7 @@ To compare alternative interfaces for a deepened module, see [`interface-design.
 
 When the change adds a `src/features/` folder or a new UI or data vendor:
 
-1. `pnpm arch:check` runs the stack-port ratchet (`stack-port-radix`, `stack-port-supabase`). Existing leaks are baselined.
+1. `pnpm arch:check` runs the stack-port ratchet (`stack-port-radix`). Existing leaks are baselined.
 2. `pnpm modularity:report` prints Score A (features) and Score B (stack file counts). Definitions: [`modularity-scores.md`](modularity-scores.md). Report both tables and never blend them.
 3. A new npm UI or data client with no port rule: plan a `forbidden` row in `.dependency-cruiser.cjs`. It's a protected file, so it needs the owner (stop list: protected-file consent).
 4. Don't unwrap `radix-ui`, swap Vite, or rewrite baselines (`pnpm arch:baseline`, `--write-baseline`) unless the lap is about that.
