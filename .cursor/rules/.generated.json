@@ -5,6 +5,7 @@
   "files": [
     "agent-behavior.mdc",
     "api-integration.mdc",
+    "app-code.mdc",
     "architecture.mdc",
     "code-style.mdc",
     "debugging.mdc",

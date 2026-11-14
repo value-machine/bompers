@@ -34,16 +34,7 @@ Run [`.agents/skills/spec-check-layer/SKILL.md`](../../.agents/skills/spec-check
 
 ## Code placement
 
-If code doesn't meet a layer's criteria, move it down a layer.
-
-- **Components:** JSX, handlers that call other functions, local UI state only. No data fetching, business logic, or complex math.
-- **Hooks:** logic that needs React lifecycle (`useEffect`, `useState`, `useContext`).
-- **Services / utils:** everything else, in plain `.ts` — testable without a DOM.
-- **Imports go downward only:** `pages → components → hooks → services → utils → types` (dependency-cruiser enforces it).
-- **Barrels:** none in `pages/`; never import your own module's `index.ts` from inside the module (cycles).
-- **Helper extraction from a service:** shared types live in a `types/` file; helpers import types from there and never import runtime code from the service they support (prevents cycles while reducing complexity).
-
-**Decision order:** pure calculation → `features/*/services/` (or `shared/utils/` with 2+ consumers) · data/API access → `features/*/services/` (or `shared/services/`) · React state/effects → `features/*/hooks/` (or `shared/hooks/`) · generic UI → `components/common/` · connects features or defines a URL → `pages/`.
+Layer placement, import direction, barrels and the placement decision order: `.claude/rules/app-code.md` § Code placement (loads with `src/**`).
 
 ## Folder structure
 
@@ -60,21 +51,7 @@ Backend runtimes (if ever added) live in `cloud-functions/<service>/`.
 
 ### Edge-case placement
 
-Name any new symbol per `.claude/rules/code-style.md` § Naming.
-
-- Layout state hooks (sidebar, scroll) → `shared/hooks/`; layouts consume, not own, them.
-- A page that needs its own hooks/services → promote it to a feature; pages stay thin.
-- Validation schemas → `features/*/types/*.schema.ts`; generic validators → `shared/utils/validation/`.
-- State: feature slices `features/*/store/`, composition `store/index.ts`, cross-feature `shared/context/`.
-- Route guards (if accounts are ever added) → `routes/guards/`, using the auth feature's hook (no second auth hook in `shared/hooks/`).
-- Notifications/toasts → one `features/notifications/`, not split across common + shared.
-- Error boundaries → `components/common/ErrorBoundary/`; reporting service → `shared/services/`.
-- Keyboard shortcuts: global → one hook in `shared/hooks/`; feature → `features/*/hooks/`.
-- Cross-feature transforms: the consumer owns it; 2+ consumers → `shared/utils/transformers/`.
-- API normalizers: with the API call in `features/*/services/`; only truly shared ones in `shared/services/`.
-- App-wide feature context: provider in `features/*/context/`, exported via the feature barrel, composed in `App.tsx`.
-- Drag & drop: infrastructure in `shared/context/` + `shared/hooks/`; domain actions in the feature's hooks.
-- Shared dimensions/positions: one source of truth (usually the parent, via props; context when widely shared) — no duplicated magic numbers.
+Edge-case placement (layout hooks, schemas, state, guards, toasts, …): `.claude/rules/app-code.md` § Edge-case placement.
 
 ## Feature granularity / bounded context
 

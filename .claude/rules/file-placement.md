@@ -1,6 +1,6 @@
 # File Placement Validation Rule
 
-Every file and folder must be allowed by the whitelist in `projectStructure.config.cjs` (enforced: `pnpm validate:structure`, staged in pre-commit, full in CI). Layer placement follows `.claude/rules/architecture.md` § Code placement and § Edge-case placement.
+Every file and folder must be allowed by the whitelist in `projectStructure.config.cjs` (enforced: `pnpm validate:structure`, staged in pre-commit, full in CI). Layer placement follows `.claude/rules/app-code.md` § Code placement and § Edge-case placement.
 
 ## Before creating a file
 
