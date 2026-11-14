@@ -130,6 +130,11 @@
     "status": "done"
   },
   {
+    "title": "Combat: health, hit API, rocket launcher and explosions",
+    "description": "Depends on: Player movement and blob feel, Starting arena and destructible terrain. 4-chunk health; a zone-aware hit API (front/back damage from tunables, default 1/2) shared by every attack; rocket launcher pickup dropping from the sky; rockets from the helmet in aim direction; explosions remove 1 chunk from hit opponents, push everyone (rocket jumps, no self-damage) and clear terrain cells. The unarmed attack is the separate dive headbutt task. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. Result: PR #10 (features/combat, applyHit + classifyHitZone, unarmedAttack hook for the dive task).",
+    "status": "done"
+  },
+  {
     "title": "Design language for the game",
     "description": "Not blocked by code. Propose 2–3 visual directions for characters (round blob body, two round feet, helmet), arena, UI and effects, plus an audio identity, then the orchestrator picks one. Deliver documentation/game/DESIGN_LANGUAGE.md (palette, shapes, line/shading, motion, UI type, sound direction) and the UI color tokens. ElevenLabs image generation allowed for moodboards within the budget the orchestrator sets. Does not touch game code. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "done"
