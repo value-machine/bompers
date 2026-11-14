@@ -8,10 +8,7 @@ import { GamePage } from "./GamePage";
 // Pixi needs WebGL/WebGPU, which jsdom lacks; the page test checks the shell only.
 vi.mock("@/shared/hooks/usePixiApp", () => ({ usePixiApp: () => null }));
 
-const BUILT_IN = readFileSync(
-  path.join(process.cwd(), "public/levels/floating-garden.html"),
-  "utf8"
-);
+const BUILT_IN = readFileSync(path.join(process.cwd(), "public/levels/start-arena.html"), "utf8");
 
 describe("GamePage", () => {
   beforeEach(() => {

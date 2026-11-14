@@ -32,7 +32,7 @@
       <rect x="0" y="0" width="1920" height="1440" fill="url(#sky)" />
       <circle cx="1600" cy="240" r="96" fill="#fff6a8" />
 
-      <!-- In-bounds area: 448+ units beside the main platform, 704 above the top perch, 224 below the keel. -->
+      <!-- In-bounds area: 448+ units beside the main platform, 640 above the top perch, 192 below the keel. -->
       <rect
         id="bounds"
         data-role="bounds"
@@ -48,7 +48,7 @@
 
       <!-- Terrain. Cell 8; plum = stone (indestructible), honey = dirt (destructible). Platform wins where shapes overlap. -->
       <g id="terrain" stroke="#2b1d3a" stroke-width="5" stroke-linejoin="round">
-        <!-- Main platform: stone core under every spawn, dirt everywhere a blast should bite. -->
+        <!-- Main platform: stone core under every spawn, dirt everywhere a blast should bite. The dirt edges have a 128-unit vertical outer face: the wall-jump spot for recovering from a fall. -->
         <rect
           id="main-core"
           data-role="platform"
@@ -57,14 +57,14 @@
           x="576"
           y="992"
           width="768"
-          height="64"
+          height="96"
           fill="#5a3f7a"
         />
         <polygon
           id="main-underside"
           data-role="platform"
           data-material="stone"
-          points="576,1056 1344,1056 1216,1120 704,1120"
+          points="576,1088 1344,1088 1216,1152 704,1152"
           fill="#5a3f7a"
         />
         <rect
@@ -83,7 +83,7 @@
           data-role="destructible"
           data-material="dirt"
           data-label="Left edge"
-          points="480,992 576,992 576,1072 520,1040"
+          points="480,992 576,992 576,1136 480,1088"
           fill="#f4ad55"
         />
         <polygon
@@ -91,7 +91,7 @@
           data-role="destructible"
           data-material="dirt"
           data-label="Right edge"
-          points="1344,992 1440,992 1400,1040 1344,1072"
+          points="1344,992 1440,992 1440,1088 1344,1136"
           fill="#f4ad55"
         />
         <polygon
@@ -99,18 +99,18 @@
           data-role="destructible"
           data-material="dirt"
           data-label="Keel"
-          points="704,1120 1216,1120 1056,1184 864,1184"
+          points="704,1152 1216,1152 1056,1216 864,1216"
           fill="#f4ad55"
         />
 
-        <!-- Tier 1: two thin dirt plateaus, 112 above the main surface. -->
+        <!-- Tier 1: two thin dirt plateaus, 144 above the main surface (one jump; apex ≈ 250). -->
         <rect
           id="plateau-left"
           data-role="destructible"
           data-material="dirt"
           data-label="Left plateau"
           x="640"
-          y="848"
+          y="816"
           width="192"
           height="16"
           fill="#f4ad55"
@@ -121,20 +121,20 @@
           data-material="dirt"
           data-label="Right plateau"
           x="1088"
-          y="848"
+          y="816"
           width="192"
           height="16"
           fill="#f4ad55"
         />
 
-        <!-- Tier 2: the top perch, 112 above tier 1: dirt wings around a stone heart. -->
+        <!-- Tier 2: the top perch, 144 above tier 1 (288 above the main surface: climb a plateau, wall-jump or rocket-jump): dirt wings around a stone heart. -->
         <rect
           id="perch-wings"
           data-role="destructible"
           data-material="dirt"
           data-label="Top perch"
           x="864"
-          y="736"
+          y="672"
           width="192"
           height="16"
           fill="#f4ad55"
@@ -144,7 +144,7 @@
           data-role="platform"
           data-material="stone"
           x="912"
-          y="736"
+          y="672"
           width="96"
           height="16"
           fill="#5a3f7a"
@@ -176,7 +176,7 @@
           data-role="spawn"
           data-label="Plateau left"
           cx="736"
-          cy="824"
+          cy="792"
           r="14"
           fill="#3f8f5f"
         />
@@ -185,7 +185,7 @@
           data-role="spawn"
           data-label="Plateau right"
           cx="1184"
-          cy="824"
+          cy="792"
           r="14"
           fill="#3f8f5f"
         />
@@ -256,7 +256,7 @@
           data-role="collectible"
           data-item="point-orb"
           cx="960"
-          cy="616"
+          cy="552"
           r="10"
           fill="#e0b62c"
         />
@@ -265,7 +265,7 @@
           data-role="collectible"
           data-item="point-orb"
           cx="400"
-          cy="856"
+          cy="824"
           r="10"
           fill="#e0b62c"
         />
@@ -274,7 +274,7 @@
           data-role="collectible"
           data-item="point-orb"
           cx="1520"
-          cy="856"
+          cy="824"
           r="10"
           fill="#e0b62c"
         />
@@ -283,7 +283,7 @@
           data-role="collectible"
           data-item="point-orb"
           cx="960"
-          cy="1248"
+          cy="1280"
           r="10"
           fill="#e0b62c"
         />

@@ -6,7 +6,7 @@ import type { LevelIssue } from "@/features/level-file/types/levelFile.types";
  * Where level file text comes from: a built-in level served from `public/levels/` (real level
  * files, the same format players import), or a file the player picks or drops.
  */
-export const BUILT_IN_LEVEL_URL = "/levels/floating-garden.html";
+export const BUILT_IN_LEVEL_URL = "/levels/start-arena.html";
 
 export interface LoadedLevel {
   level: LevelDefinition;
