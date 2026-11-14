@@ -3,41 +3,41 @@
  * Loaded by a level file opened in a browser; the game never reads it.
  * Spec: documentation/game/LEVEL_FORMAT.md
  *
- * Palette: neutral placeholders as custom properties. The design-language
- * work replaces these values (one place); selectors stay the same.
+ * Palette: Gumdrop Pop (documentation/game/DESIGN_LANGUAGE.md § 1) as custom
+ * properties; selectors stay the same when the palette changes. The level
+ * picture always uses the daytime world colours; dark mode only changes the
+ * page around it (dusk UI tokens).
  */
 :root {
-  --lk-bg: #f4f1ea;
-  --lk-ink: #26232b;
-  --lk-muted: #6f6a75;
+  --lk-bg: #fff6e6;
+  --lk-ink: #2b1d3a;
+  --lk-muted: #6b5a7d;
   --lk-panel: #ffffff;
-  --lk-line: #d9d4cc;
-  --lk-grid: rgba(38, 35, 43, 0.08);
-  --lk-grid-major: rgba(38, 35, 43, 0.18);
-  --lk-sky: #dfe9f2;
-  --lk-platform: #7d7a85;
-  --lk-platform-edge: #4d4a55;
-  --lk-destructible: #c08a5b;
-  --lk-destructible-edge: #8a5a33;
-  --lk-spawn: #3f8f5f;
-  --lk-drop: #c94f7c;
-  --lk-collectible: #e0b62c;
-  --lk-bounds: #d24b3a;
-  --lk-warn: #b4471f;
+  --lk-line: rgba(43, 29, 58, 0.16);
+  --lk-grid: rgba(43, 29, 58, 0.08);
+  --lk-grid-major: rgba(43, 29, 58, 0.18);
+  --lk-sky: linear-gradient(#8fd6ff, #fff1cf);
+  --lk-outline: #2b1d3a;
+  --lk-platform: #5a3f7a;
+  --lk-platform-edge: #2b1d3a;
+  --lk-destructible: #f4ad55;
+  --lk-destructible-edge: #b9722a;
+  --lk-spawn: #2ed0a0;
+  --lk-drop: #ff8a1f;
+  --lk-collectible: #ff8fc8;
+  --lk-bounds: #ff4f3a;
+  --lk-warn: #a8580a;
   --lk-font: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --lk-bg: #1c1b20;
-    --lk-ink: #eeeaf2;
-    --lk-muted: #a7a1ad;
-    --lk-panel: #26252b;
-    --lk-line: #3a3841;
-    --lk-grid: rgba(238, 234, 242, 0.07);
-    --lk-grid-major: rgba(238, 234, 242, 0.16);
-    --lk-sky: #24303b;
-    --lk-warn: #ff9a6b;
+    --lk-bg: #1d1428;
+    --lk-ink: #fff6e6;
+    --lk-muted: #c4b6d6;
+    --lk-panel: #2b1d3a;
+    --lk-line: rgba(255, 246, 230, 0.14);
+    --lk-warn: #ffc15e;
   }
 }
 
@@ -60,7 +60,8 @@ svg[data-level-format] {
   width: 100%;
   height: auto;
   max-height: calc(100vh - 32px);
-  background: var(--lk-sky);
+  /* !important: the kit look wins over the file's own inline background, like the role fills. */
+  background: var(--lk-sky) !important;
   border-radius: 8px;
 }
 
@@ -79,17 +80,17 @@ svg[data-level-format] [data-role='destructible'] {
 }
 svg[data-level-format] [data-role='spawn'] {
   fill: var(--lk-spawn);
-  stroke: #fff;
+  stroke: var(--lk-outline);
   stroke-width: 2;
 }
 svg[data-level-format] [data-role='drop'] {
   fill: var(--lk-drop);
-  stroke: #fff;
+  stroke: var(--lk-outline);
   stroke-width: 2;
 }
 svg[data-level-format] [data-role='collectible'] {
   fill: var(--lk-collectible);
-  stroke: #fff;
+  stroke: var(--lk-outline);
   stroke-width: 2;
 }
 svg[data-level-format] [data-role='bounds'] {
@@ -111,9 +112,9 @@ svg[data-level-format] [data-role='bounds'] {
 }
 .lk-label {
   font: 600 14px var(--lk-font);
-  fill: var(--lk-ink);
+  fill: #2b1d3a;
   paint-order: stroke;
-  stroke: var(--lk-bg);
+  stroke: #fff6e6;
   stroke-width: 4px;
   stroke-linejoin: round;
   pointer-events: none;

@@ -9,7 +9,7 @@ import { MainLayout } from "@/layouts/MainLayout/MainLayout";
 import { PageLoadingState } from "@/components/common/PageLoadingState";
 import { QueryErrorBoundary } from "@/components/common/QueryErrorBoundary";
 
-const HomePage = lazy(() => import("@/pages/HomePage").then((m) => ({ default: m.HomePage })));
+const GamePage = lazy(() => import("@/pages/GamePage").then((m) => ({ default: m.GamePage })));
 const HarnessOverviewPage = lazy(() =>
   import("@/pages/HarnessOverviewPage").then((m) => ({ default: m.HarnessOverviewPage }))
 );
@@ -28,8 +28,8 @@ function AppContent() {
         <QueryErrorBoundary>
           <Suspense fallback={<PageLoadingState />}>
             <Routes>
+              <Route path="/" element={<GamePage />} />
               <Route element={<MainLayout />}>
-                <Route path="/" element={<HomePage />} />
                 <Route path="/harness" element={<HarnessOverviewPage />} />
               </Route>
               <Route path="/tasks" element={<TasksPage />} />
