@@ -1,7 +1,7 @@
 const { describe, test } = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("path");
-const { findLintRoot, resolveEditedFile, run } = require("./lint-edited-file.cjs");
+const { findLintRoot, resolveEditedFile, run, runSafe } = require("./lint-edited-file.cjs");
 
 const ROOT = path.resolve("/repo");
 const FILE = path.join(ROOT, "src", "a.ts");
@@ -117,5 +117,26 @@ describe("lint-edited-file (Cursor postToolUse)", () => {
 
   test("should read a top-level file_path when the input has no tool_input", () => {
     assert.equal(resolveEditedFile({ file_path: FILE }), FILE);
+  });
+
+  test("should exit 0 with a skipped note when the lint run throws in Cursor", async () => {
+    const res = await runSafe(cursorInput({ tool_input: { file_path: FILE } }), {
+      findRoot: () => ROOT,
+      lint: async () => {
+        throw new Error("eslint missing");
+      },
+    });
+    assert.equal(res.exitCode, 0);
+    assert.match(JSON.parse(res.stdout).additional_context, /Lint hook skipped.*eslint missing/);
+  });
+
+  test("should exit 0 silently when the lint run throws in Claude Code", async () => {
+    const res = await runSafe(hookInput(FILE), {
+      findRoot: () => ROOT,
+      lint: async () => {
+        throw new Error("boom");
+      },
+    });
+    assert.deepEqual(res, { exitCode: 0 });
   });
 });

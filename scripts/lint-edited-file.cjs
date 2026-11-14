@@ -129,9 +129,27 @@ async function run(raw, deps = {}) {
   };
 }
 
+/**
+ * Fail-safe wrapper: an internal error never blocks the agent. Cursor gets exit 0 plus a note
+ * (so the agent knows lint didn't run); Claude Code gets a silent exit 0.
+ * @param {string} raw stdin text
+ * @param {Parameters<typeof run>[1]} [deps]
+ * @returns {Promise<{exitCode: number, stderr?: string, stdout?: string}>}
+ */
+async function runSafe(raw, deps) {
+  try {
+    return await run(raw, deps);
+  } catch (err) {
+    if (!isCursorInput(parseHookInput(raw))) return { exitCode: 0 };
+    const reason = err instanceof Error ? err.message : String(err);
+    const note = `Lint hook skipped (internal error: ${reason}); run \`pnpm lint\` before pushing.`;
+    return { exitCode: 0, stdout: JSON.stringify({ additional_context: note }) };
+  }
+}
+
 if (require.main === module) {
   void readStdin()
-    .then((raw) => run(raw))
+    .then((raw) => runSafe(raw))
     .catch(() => ({ exitCode: 0 }))
     .then((result) => {
       if (result.stderr) process.stderr.write(result.stderr);
@@ -140,4 +158,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { findLintRoot, resolveEditedFile, formatErrors, run };
+module.exports = { findLintRoot, resolveEditedFile, formatErrors, run, runSafe };

@@ -100,6 +100,7 @@ Copy `meta-write-adoption-guide/` to other projects and adjust the skill **Confi
 - `afterFileEdit` can't send anything back to the agent, so the port uses `postToolUse`; Cursor doesn't document the `Write` tool's `tool_input` fields, so the script accepts `file_path`, `path` and a top-level `file_path`. Unverified in a live Cursor session until someone runs it there.
 - The type-check result arrives as a follow-up user message (a new turn), not as a blocked stop inside the same turn.
 - Cursor documents these events for the desktop app and cloud agents; CLI support isn't documented.
+- Fail-safe: both hooks never block the Cursor agent. The lint script exits 0 and returns a "Lint hook skipped" note on an internal error; the stop script exits 0 and stays silent (a note there would start a new turn); a missing `node` or a crash outside the scripts falls under `failClosed: false` (Cursor logs it and lets the action through).
 - Not ported: the SessionStart dependency install (`sessionStart` doesn't run in Cursor cloud agents) and the deny-git-write-on-main guard (`beforeShellExecution` could carry it; separate task if wanted).
 
 **Agent commands:** `pnpm test:staged` (preview after `git add`); `PRECOMMIT_TEST_FULL=1 pnpm test:staged` (force full preview); `pnpm test:classify && pnpm test:run` (CI parity).
