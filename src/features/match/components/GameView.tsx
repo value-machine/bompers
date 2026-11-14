@@ -10,7 +10,7 @@ const HINT_STYLE = {
 };
 
 const CONTROLS_HINT =
-  "Left keys: A/D move · W/Space jump · S aim down · F bomp — Right keys: ←/→ · ↑ · ↓ · / or Enter bomp — pads: stick · A · RT";
+  "Left keys: A/D move · W/Space jump · S aim down · F bomp — Right keys: ←/→ · ↑ · ↓ · / or Enter bomp — pads: stick · A · RT — M sound on/off";
 
 export interface GameViewProps {
   /** One object per start from the lobby (a new object starts a new match). */

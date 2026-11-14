@@ -12,6 +12,7 @@ import {
   type GameRenderer,
 } from "@/features/match/services/gameRenderer";
 import { isPastRestartLock, isRestartPress } from "@/features/match/services/matchRules";
+import { createMatchSound } from "@/features/match/services/matchSound";
 
 // Pixi nulls these on destroy although the types say they are always set.
 const isAppAlive = (app: Application): boolean =>
@@ -68,12 +69,15 @@ export function useGameSession(
     if (!app) return undefined;
     const { level, tunables, inputSources } = setup;
     const stepSeconds = 1 / tunables.sim.stepHz;
+    const sound = createMatchSound(window);
+    /** A fresh round on the same level and settings; its first frame cues the round start. */
     const startRound = (): { state: GameState; renderer: GameRenderer } => {
       const state = createGameState({ level, tunables });
+      warnAboutLevel(state);
+      sound.newRound();
       return { state, renderer: createGameRenderer(app, state) };
     };
     let round = startRound();
-    warnAboutLevel(round.state);
     const input = createGameInputReader(window, inputSources);
     let clock = createFixedStepClock();
     let previousInputs: PlayerInputs = [];
@@ -115,12 +119,14 @@ export function useGameSession(
       previousInputs = inputs;
       if (restarted) return;
       for (let i = 0; i < advance.steps; i += 1) stepGame(round.state, inputs, stepSeconds);
+      sound.hear(round.state);
       renderGame(round.renderer, { state: round.state, app, dt: frameSeconds });
     };
 
     app.ticker.add(onFrame);
     return () => {
       input.dispose();
+      sound.dispose();
       // usePixiApp's cleanup runs first on unmount and destroys the app (ticker, stage, children);
       // only a still-live app (a session restart on the same app) needs manual teardown.
       if (!isAppAlive(app)) return;

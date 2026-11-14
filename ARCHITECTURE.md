@@ -22,6 +22,7 @@ src/
 │   ├── level-file/      # Game: level file importer (HTML/SVG → LevelDefinition), Load level control, kit export
 │   ├── match/           # Game: GameState, stepGame systems order, render composition, GameView
 │   ├── player/          # Game: player state, controller system, player render layer
+│   ├── sound/           # Game: sim frame → sound cues, Web Audio player (takes, pitch, ducking, M mute)
 │   └── tasks/           # Dev-only task backlog (/tasks)
 ├── layouts/             # App shell: wires features into page chrome
 │   └── Topbar/          # Top bar hosting the color mode toggle
@@ -60,6 +61,7 @@ The game (`/`) is a PixiJS v8 canvas driven by our own pure-TS simulation (DOC_A
 | `features/match`                                                                                     | `GameState`, `stepGame` systems order, match rules (scoring, respawn, protection, round end, restart), render composition + HUD, `GameView`                                                                                                    | `matchApi`: `createGameState`, `stepGame`, `GameState`                                                                                                                                                                                                                                                                                                                            |
 | `features/lobby` | Join screen: slots 1–4 from any device, shared settings menu (level, load file, duration, gravity, start), device indicators; lobby state kept across rounds | `lobbyApi`: `useLobby(levels)` → `{ state, view, dispatch, matchSetup() }`, `LobbyScreen` |
 | `features/collectibles` | Point orbs: schedule, fall onto the level's `point-orb` points, touch to collect, orb layer | `collectiblesApi`: `createCollectiblesState`, `stepCollectibles(…)` → `OrbCollected[]`, collectibles view |
+| `features/sound` | Game sound effects: reads each frame (combat events by `seq`, player counters, dive phase, respawns, round phase) and plays catalog sound IDs through Web Audio | `soundApi`: `readSoundCues(cursor, frame)`, `createSoundPlayer(window)`, `SOUND_FILES`, `PLAYER_PITCH_SEMITONES` |
 | `features/combat`                                                                                    | Health chunks, hit / damage API (front / back zones), unarmed-attack hook, rocket launcher pickups, rockets, explosions, spawn-protection hook, combat sim events        | `combatApi`: `stepCombat` (sim step 3; optional `unarmedAttack` hook), `applyHit` / `classifyHitZone`, `CombatState` (`fighters` by player id, `rockets`, `pickups`, `events` by `seq`), `eliminateFighter` / `respawnFighter` / `isFighterEliminated` (step 4), combat view (pickups, effects, rockets, overlay layers); `CombatContext` is exported for the unarmed-attack hook |
 | `features/dive` | Unarmed attack (dive headbutt): dive phases, strike and ricochet; damage through combat's `applyHit` | `diveApi`: `stepDives({ dive, players, combat, contacts, tunables, timeSeconds, dt })` → `DiveHit[]`, `requestDive` (for combat's `unarmedAttack` hook), `resetDive`, `DiveState`, dive view |
 
@@ -86,7 +88,7 @@ The game (`/`) is a PixiJS v8 canvas driven by our own pure-TS simulation (DOC_A
 | Unarmed dive ("bomp") | `features/dive` (`services/diveSim.ts`; tunables `dive`); starts from combat's `unarmedAttack` hook (`requestDive`), hits through `applyHit` (`kind: "contact"`, `source: "dive"`) |
 | Match rules (scoring, respawn, protection) | `features/match/services/matchRules.ts` (step 5) + `spawnChoice.ts`; tunables `match` section; HUD in `hudRenderer.ts` |
 | Lobby, match settings, level picker | `features/lobby` (slots, menu reducer, settings → tunables); the page `pages/GamePage.tsx` switches lobby ⇄ `GameView`; rematch / back in `features/match/hooks/useGameSession.ts` |
-| Sound                                      | read `state.combat.events` by `seq` per frame: event `type` → SFX, `terrainDestroyed.soundId` → material sound                                                      |
+| Sound                                      | `features/sound`: cue rules in `services/soundCues.ts`, files and mix in `services/soundBank.ts` (new SFX = a catalog ID + files in `public/audio/sfx/` + a bank line); the match feeds it per frame through `services/matchSound.ts` |
 | Hurt reaction (tumble) | `features/player/services/tumble.ts` (`reactToHit`; tunables `tumble`), called by the dive's strike and by combat explosions |
 
 ## Server State Management (TanStack Query)
