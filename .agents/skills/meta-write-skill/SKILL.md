@@ -1,13 +1,12 @@
 ---
 name: meta-write-skill
 description: >-
-  The one path for adding or changing a project skill under .agents/skills/: captures intent,
-  drafts SKILL.md from the recurring template (name prefix, Edges, Steps, Examples, Output,
-  Not for), writes the port map when the skill replaces v0.42.0 skills, adds the catalog row,
-  optionally tests on realistic prompts and tunes the description so it triggers. Use when the
-  owner runs /create-skill or /write-skill, asks to create, edit, rename, merge or optimize a
-  skill, or whenever an agent is about to edit a SKILL.md. Not for a whole-harness audit (use
-  meta-audit-harness) or grading one rule file (use meta-grade-rule).
+  The one path for adding or changing a project skill under .agents/skills/: drafts SKILL.md from
+  the template, writes the port map and catalog row, and optionally tests on realistic prompts and
+  tunes the description so it triggers. Use when the owner runs /create-skill or /write-skill, asks
+  to create, edit, rename, merge or optimize a skill, or whenever an agent is about to edit a
+  SKILL.md. Not for a whole-harness audit (use meta-audit-harness) or grading one rule file (use
+  meta-grade-rule).
 ---
 
 # meta-write-skill

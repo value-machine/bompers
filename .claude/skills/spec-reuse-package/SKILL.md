@@ -1,13 +1,12 @@
 ---
 name: spec-reuse-package
 description: >-
-  Checks whether a well-maintained package or a proven public pattern should replace custom code
-  for a generic subsystem (auth, webhooks, parsing, queues, rate limits, validation, protocol
-  clients, caching, complex widgets): checks current dependencies first, searches broadly,
-  shortlists 2-3 candidates, checks license fit, and recommends without installing. Use when the
-  architecture rule's "Don't reinvent the wheel" trigger fires, before planning or writing a
-  nontrivial generic subsystem, or when the owner asks "is there a library for this". Not for
-  small bespoke business logic, or for industry design precedent (loop-plan review-precedent).
+  Checks whether a well-maintained package or proven public pattern should replace custom code for a
+  generic subsystem (auth, webhooks, parsing, queues, rate limits, protocol clients, complex
+  widgets); recommends 2-3 candidates without installing. Use when the architecture rule's "Don't
+  reinvent the wheel" trigger fires, before planning or writing a nontrivial generic subsystem, or
+  when the owner asks "is there a library for this". Not for small bespoke business logic or
+  industry design precedent (loop-plan review-precedent).
 ---
 
 # spec-reuse-package

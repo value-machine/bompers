@@ -1,11 +1,10 @@
 ---
 name: spec-load-context
 description: >-
-  Loads repo context for a new or unfamiliar session: structure and placement whitelist,
-  governing rules, enforced boundaries (layers, ports, budgets), git mode, and open laps
-  (branches, PRs, lap folders, backlog). Use when a new chat starts, when the repo or branch is
-  unfamiliar, before a larger refactor, or when the owner asks to "prime", "load context" or
-  "get oriented". Not for scoping a task (use loop-refine) or human first-time setup
+  Loads repo context: structure and placement whitelist, governing rules, enforced boundaries, git
+  mode, and open laps (branches, PRs, lap folders, backlog). Use when a new chat starts, the repo or
+  branch is unfamiliar, before a larger refactor, or when the owner asks to "prime", "load context"
+  or "get oriented". Not for scoping a task (use loop-refine) or human first-time setup
   (loop-backlog onboarding gates).
 ---
 

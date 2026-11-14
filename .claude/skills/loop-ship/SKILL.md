@@ -1,12 +1,11 @@
 ---
 name: loop-ship
 description: >-
-  Ships the checked lap without asking: cleans up debug leftovers, commits with the repo's
-  message and version rules, pushes the lap branch, opens the PR with its preview link per the
-  git-workflow mode, and drives CI to green. Never merges or promotes on its own; on the owner's
-  Pass it performs the merge (Model C) or promotion (Model A/B). Use when loop-check has passed, when the
-  owner says "ship it", "commit and push", "open the PR", "/finish", "/push", or asks to land
-  everything on one checkout (bundle mode). Not for testing or judging the result (use loop-verdict).
+  Ships the checked lap without asking: cleanup, commit per the repo's message and version rules,
+  push, PR with its preview link per the git-workflow mode, CI to green. Never merges on its own; on
+  the owner's Pass it merges (Model C) or promotes (Model A/B). Use when loop-check has passed, on
+  "ship it", "commit and push", "open the PR", "/finish", "/push", or to land everything on one
+  checkout (bundle mode). Not for testing or judging the result (use loop-verdict).
 ---
 
 # loop-ship

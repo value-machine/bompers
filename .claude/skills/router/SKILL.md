@@ -1,12 +1,12 @@
 ---
 name: router
 description: >-
-  Single entry point of the product-owner loop. Finds where the current work stands — a request
-  to start, a parked question, a preview waiting at Stop 2, red CI, a half-built lap, a brief
-  without a plan, or nothing in progress — and runs that loop stage in the same turn. Answers
-  questions that need no repo change directly. Use when a new chat starts, on bare "/router", "next",
-  "continue", "what now", "initialize the repo", "set up", "get started", after an interruption or restart, or whenever it's unclear which skill
-  applies. Not for doing a stage's work itself (each loop-* skill owns its stage).
+  Single entry point of the product-owner loop: finds where the work stands (request, parked
+  question, Stop 2 preview, red CI, half-built lap, unplanned brief, idle) and runs that stage in
+  the same turn; answers questions that need no repo change directly. Use when a new chat starts, on
+  bare "/router", "next", "continue", "what now", "initialize the repo", "set up", "get started",
+  after an interruption or restart, or whenever it's unclear which skill applies. Not for a stage's
+  own work (each loop-* skill).
 ---
 
 # router

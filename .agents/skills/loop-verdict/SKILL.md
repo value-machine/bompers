@@ -1,13 +1,11 @@
 ---
 name: loop-verdict
 description: >-
-  Stop 2 of the product-owner loop. Hands the owner the preview link, test steps, the check
-  summary, the recorded-decision lines and rule changes the PR carries, then asks one question:
-  Pass, Change or Drop. Pass merges or promotes (the owner merging the PR counts as a Pass); Change runs lessons on the
-  same PR and turns the feedback into the next top request; Drop closes the PR. Use when a lap's
-  PR is green with a preview, when the owner reports test results ("looks good", "ship it",
-  "this is wrong", "drop it"), or asks what is waiting for them. Not for shipping steps
-  (use loop-ship) or picking the next task (use loop-backlog).
+  Stop 2 of the loop: hands the owner the preview link, test steps, check summary, decisions and
+  rule changes, then asks Pass, Change or Drop; merging the PR counts as Pass. Use when a lap's PR
+  is green with a preview, when the owner reports test results ("looks good", "ship it", "this is
+  wrong", "drop it"), or asks what is waiting for them. Not for shipping steps (use loop-ship) or
+  picking the next task (use loop-backlog).
 ---
 
 # loop-verdict

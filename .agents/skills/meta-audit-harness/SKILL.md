@@ -1,15 +1,12 @@
 ---
 name: meta-audit-harness
 description: >-
-  One harness audit with two lenses — coherence (SSOT, conflicts, overlap, handoffs, catalog
-  drift, orphans, port maps) and context cost (what loads when, cut / merge / relocate / enforce
-  with a ledger) — over AGENTS.md, CLAUDE.md, rules, skills, INDEX, the layers doc and subagent
-  briefs. Runs harness_scan for facts, parallel read-only lenses, a tiered issue table, an owner
-  gate and a no-information-loss pass. Use when the harness drifts, after an intake or a skill
-  rename, for a periodic health check, or when the owner says "align the harness", "audit the
-  rules", "tighten", "slim", "prune", "de-bloat", "token-optimize" or asks why the context fills
-  up before work starts. Not for external drops (use meta-intake-harness), one skill (use
-  meta-write-skill) or app code (loop-plan deepen-modules).
+  Audits the whole harness (AGENTS.md, CLAUDE.md, rules, skills, layer docs) through two lenses —
+  coherence (SSOT, conflicts, drift, orphans) and context cost (what loads when). Use when the
+  harness drifts, after an intake or a skill rename, for a periodic health check, or on "align the
+  harness", "audit the rules", "tighten", "slim", "prune", "de-bloat", "token-optimize", or why the
+  context fills up before work starts. Not for external drops (use meta-intake-harness), one skill
+  (use meta-write-skill) or app code (loop-plan deepen-modules).
 ---
 
 # meta-audit-harness

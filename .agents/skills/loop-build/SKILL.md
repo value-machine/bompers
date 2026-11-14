@@ -1,14 +1,12 @@
 ---
 name: loop-build
 description: >-
-  Builds the lap's plan phase by phase until the acceptance test passes: runs each phase's
-  gate, updates plan progress and notes, folds the lap's decisions into the feature READMEs,
-  vision or rules they govern, and executes planned cleanups and removals. Stops for the owner
-  only on the stop list (new dependency, patch-on-top instead of the structural fix, data or
-  irreversible change, cost) or when the diff touches a feature area outside the brief's edges.
-  Use when loop-plan has finished, when a Change verdict needs a fix round, or whenever a written plan
-  should be executed — "build it", "implement the plan", "continue the job".
-  Not for planning (use loop-plan) or the final audit (use loop-check).
+  Builds the lap's plan phase by phase until the acceptance test passes: runs each phase gate, folds
+  the lap's decisions into the READMEs, vision or rules they govern, and does the planned cleanups.
+  Stops only for the owner stop list or a diff outside the brief's edges. Use when loop-plan has
+  finished, a Change verdict needs a fix round, or a written plan should be executed — "build it",
+  "implement the plan", "continue the job". Not for planning (use loop-plan) or the final audit (use
+  loop-check).
 ---
 
 # loop-build

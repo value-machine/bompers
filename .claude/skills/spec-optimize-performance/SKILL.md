@@ -1,13 +1,11 @@
 ---
 name: spec-optimize-performance
 description: >-
-  Finds and fixes performance and complexity hotspots at the right level — design (should this
-  exist), approach (rewrite), efficiency (queries, renders, bundles) or complexity (refactor) —
-  with stack-native React / Vite / TanStack Query patterns. Use when the architecture rule's
-  performance-cost trigger fires (N+1 queries, unbounded selects, big lists, heavy renders,
-  oversized bundles), when a plan or diff touches a hot path, or when the owner says "this is
-  slow", "optimize", "reduce complexity". Not for runtime bugs (use spec-debug-runtime) or
-  cross-feature duplication (loop-plan deepen-modules).
+  Finds and fixes performance and complexity hotspots at the right level (design, approach,
+  efficiency, complexity). Use when the architecture rule's performance-cost trigger fires (N+1
+  queries, unbounded selects, big lists, heavy renders, oversized bundles), when a plan or diff
+  touches a hot path, or on "this is slow", "optimize", "reduce complexity". Not for runtime bugs
+  (use spec-debug-runtime) or cross-feature duplication (loop-plan deepen-modules).
 ---
 
 # spec-optimize-performance
