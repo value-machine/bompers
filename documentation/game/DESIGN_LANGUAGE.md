@@ -2,9 +2,11 @@
 
 SSOT for how Bompers looks and sounds. The visual pass, HUD and sound tasks follow it. Gameplay rules stay in [`GAME_DESIGN_DOCUMENT.md`](GAME_DESIGN_DOCUMENT.md); when the two disagree on a mechanic, the GDD wins.
 
-**Direction:** A · Gumdrop Pop, with one borrow from direction C (flat contact shadow). Picked by the orchestrator on 2026-11-14 over "Afterglow" (neon night) and "Soft Clay" (matte, no outlines). Why: in a four-player pile-up under a zoomed-out multi-target camera, ink outlines keep every blob readable; flat fills and strokes keep the 60 fps goal safe in PixiJS; the candy-toy feel fits the squishy blob characters.
+**Direction:** Gumdrop Pop (candy palette, sunny sky) with **line style E: silhouette outline only**, plus the flat contact shadow from "Soft Clay".
+- The orchestrator picked Gumdrop Pop on 2026-11-14 over "Afterglow" (neon night) and "Soft Clay" (matte, no outlines). In a four-player pile-up under a zoomed-out multi-target camera, a dark edge keeps every blob readable. Flat fills, simple gradients and strokes keep the 60 fps goal safe in PixiJS.
+- The owner then chose line style E on 2026-11-14 from six line treatments (thick ink, thin ink, coloured outline, no outline, silhouette only, soft palette). The first version had a thick ink line on every shape. It read well but felt less blob-like. E keeps one crisp edge around the whole character and leaves the inside soft.
 
-**One-line brief:** sticker-bright candy toys under a sunny sky. Thick ink outline, flat colour, one darker crescent, one white gloss. Everything round.
+**One-line brief:** sticker-bright candy toys under a sunny sky. One dark line around each character's silhouette, no lines inside, a soft body gradient and one white gloss. Everything round.
 
 **Originality:** the look is our own. Do not trace or imitate characters, materials, UI or sounds from LittleBigPlanet, LocoRoco, Fall Guys or any other game. They inspire the feel (bouncy, physical, playful), nothing more.
 
@@ -16,7 +18,7 @@ All values are sRGB hex. Code reads them from one palette module (owned by the g
 
 ### Players
 
-| Player | Body colour | Helmet emblem | Darker crescent (body shade) | Light tint (gloss, UI fills) |
+| Player | Body colour | Helmet emblem | Shade (gradient edge, feet) | Tint (gradient centre, UI fills) |
 |--------|-------------|---------------|------------------------------|------------------------------|
 | P1 | `#ff4f3a` tomato | ● circle | `#ae3c3a` | `#ff9e93` |
 | P2 | `#3069ff` cobalt | ▲ triangle | `#2e4cb4` | `#8dadff` |
@@ -25,7 +27,7 @@ All values are sRGB hex. Code reads them from one palette module (owned by the g
 
 Rules:
 
-- **Two cues, always.** A player is told apart by body colour **and** by the helmet emblem. The emblem is drawn in the player colour on the cream helmet, outlined in ink. The same emblem appears on that player's HUD chip, so no one needs colour vision to find themselves.
+- **Two cues, always.** A player is told apart by body colour **and** by the helmet emblem. The emblem is drawn in the player colour on the cream helmet, with no outline (§ 3). The same emblem appears on that player's HUD chip, so no one needs colour vision to find themselves.
 - **Colour-blind check.** Pairwise CIEDE2000 distance between the four body colours after Machado (2009) simulation at full severity: minimum 17.7 (deuteranopia, P1–P3); normal vision min 37.2; protanopia min 19.4; tritanopia min 23.7. Any change to a player colour must keep every pair ≥ 15 in all four views.
 - **Player hues are reserved.** No arena surface, background or pickup uses a player body colour. Effects may borrow them only for that player's own feedback (their rocket fins, their elimination droplets).
 - Shade = body mixed 38 % toward ink `#2b1d3a`. Tint = body mixed 45 % toward white. Use these formulas for any new shade.
@@ -34,7 +36,7 @@ Rules:
 
 | Role | Hex | Notes |
 |------|-----|-------|
-| Ink (outline, pupils, HUD text) | `#2b1d3a` | The only outline colour. Never pure black. |
+| Ink (silhouette outline, pupils, HUD text) | `#2b1d3a` | The only outline colour. Never pure black. |
 | Sky top → bottom | `#8fd6ff` → `#fff1cf` | Vertical linear gradient behind everything. |
 | Sun | `#fff6a8` | Flat disc, no outline. |
 | Clouds | `#ffffff` with `#bfe3f5` 4-unit edge | Far layer: soft edge colour instead of ink, so it reads as background. |
@@ -65,7 +67,9 @@ Rules:
 ## 2. Shape language
 
 - Everything is built from circles, ellipses and rounded rectangles. The only sharp shape is the explosion star.
-- **Blob:** body circle of radius R (the reference size; 34 world units in the mockup). Two feet: ellipses 0.41 R × 0.24 R, centred 0.48 R left and right of centre, filled with the body shade. Helmet: a dome over the top 45 % of the body, 4 units wider than the body, cream with a white gloss stroke and the emblem in the middle. Rocket tube: a rounded rect (0.76 R × 0.47 R) on the helmet, pivoting toward the aim direction. Eyes sit under the helmet rim and look toward the aim direction.
+- **Blob:** a soft egg, not a perfect circle.
+  - Body: half-width R and height 1.94 R (the reference size; R = 30 world units in the style mockup). The widest point sits slightly below the middle, so the bottom is a little fuller and flatter than the top. Build it from four cubic curves (top, two sides, bottom), so squash and stretch deform one smooth shape.
+  - Feet: two ellipses 0.4 R × 0.25 R, centred 0.45 R left and right of centre. The body overlaps the top half of each foot, so the feet look tucked under. Fill them with the body shade. Helmet: a dome over the top 45 % of the body, 4 units wider than the body, cream with a white gloss stroke and the emblem in the middle. Rocket tube: a rounded rect (0.76 R × 0.47 R) on the helmet, pivoting toward the aim direction. Eyes sit under the helmet rim and look toward the aim direction.
 - **Terrain:** solid pieces are big rounded slabs (corner radius 14 units) with a lighter lip on top. Destructible pieces are square cells on the engine's destruction grid (28 units in the mockup) with 6-unit corners.
 - **Props and pickups:** chunky and short; nothing thinner than 0.2 R.
 
@@ -84,12 +88,31 @@ Never give a destructible cell a plum tone or an indestructible slab a grid, eve
 
 ---
 
-## 3. Line and shading
+## 3. Line and shading (style E: silhouette outline only)
 
-- **Outline:** ink `#2b1d3a`, round joins and caps, on characters, rockets, pickups, terrain and HUD cards. Background layers (sky, sun, hills, clouds) have no ink outline.
-- **Width in world units:** characters and terrain 5, small props (rocket, debris, emblem) 3, effect stars 5 (outer) / 3 (inner).
-- **Zoom rule:** the on-screen stroke is `clamp(worldWidth × zoom, minPx, maxPx)` with `minPx` 2.5 / `maxPx` 6 for the 5-unit stroke and 1.5 / 4 for the 3-unit stroke. Convert back to world width per frame (`screenWidth / zoom`) when drawing. When the camera zooms far out, lines stay readable instead of shrinking to hairlines; zoomed in, they don't turn into thick borders.
-- **Shading:** flat fill, then one darker crescent (body shade) along the lower right, clipped to the body, then one small white gloss oval at 75 % alpha on the upper left. No gradients on gameplay objects. The sky is the only gradient.
+- **Silhouette outline.** Each character gets one ink `#2b1d3a` line around its whole outer shape (body, feet, helmet and rocket tube together), with round joins. There are no lines between the parts inside the silhouette: the helmet meets the body, and the feet meet the body, by colour alone.
+- **How to draw it (Pixi):**
+  - First draw every part of the character in ink, each part stroked in ink at twice the outline width.
+  - Then draw the coloured parts on top with no stroke.
+  - Only the outer half of the ink stroke stays visible, which is the silhouette line. That is two passes of the same shapes and no filters.
+  - Cache the shape geometry per pose if needed.
+- **Width in world units (visible part):** characters 3.5, solid terrain slab 3.5, rockets and pickups 2, effect stars 3. Destructible cells have no ink outline. They use their own grid line (`#b9722a`, 1.6 units) so they stay distinct from solid terrain (§ 2 rule).
+- **Zoom rule:** the on-screen line is `clamp(worldWidth × zoom, minPx, maxPx)`. Convert back to world width per frame (`screenWidth / zoom`) when drawing. When the camera zooms far out, the line stays readable instead of shrinking to a hairline; zoomed in, it doesn't turn into a thick border.
+
+  | Line | world width | minPx | maxPx |
+  |------|-------------|-------|-------|
+  | Characters, solid terrain | 3.5 | 2 | 4.5 |
+  | Rockets, pickups | 2 | 1.2 | 3 |
+  | Effect stars | 3 | 1.5 | 4 |
+
+- **Inner details** (eyes, pupils, the emblem, the helmet gloss stroke) are drawn without outlines, on top of the fills. The emblem is the player colour with no stroke, on the cream helmet.
+- **Body shading:**
+  - Fill the body with a radial gradient centred at 36 % / 30 % of the body's bounding box (upper left), with radius 0.8 of the box.
+  - Stops: tint at 0, body colour at 0.55, shade at 1. Use the tint and shade from the § 1 player table.
+  - Cache one gradient per player and reuse it every frame.
+  - Add one white gloss oval at 70 % alpha on the upper left of the body: 0.13 R × 0.22 R, tilted 18°.
+- **Helmet shading:** vertical linear gradient from `#ffffff` (top) to the helmet shell `#fff4e2` mixed 10 % toward ink (`#eadfd1`, bottom), plus a white gloss stroke along the top of the dome.
+- **No gradients elsewhere** on gameplay objects (terrain, rockets, pickups and effects stay flat), apart from the sky.
 
 ---
 
@@ -116,11 +139,11 @@ Back to front:
 5. Pickups and collectibles
 6. **Effects:** smoke, rocket trails, explosions, debris
 7. Rockets
-8. **Players** (each with its full outline)
+8. **Players** (each with its silhouette outline)
 9. Hit flash and respawn ring (on the player, inside its own outline)
 10. HUD
 
-**Effects never cover a player outline:** explosions and debris draw under the players (layer 6 is below layer 8). A blob inside an explosion still reads as a clean outlined shape on top of the blast. Only the player's own hit flash draws over it, and that flash keeps the ink outline.
+**Effects never cover a player outline:** explosions and debris draw under the players (layer 6 is below layer 8). A blob inside an explosion still reads as a clean outlined silhouette on top of the blast. Only the player's own hit flash draws over it, and that flash keeps the silhouette outline.
 
 ---
 
@@ -139,8 +162,8 @@ Squash and stretch keep area roughly constant (`sx × sy` between 0.94 and 1.0).
 - Feet lag the body by 2 frames (about 33 ms) and squash flatter than the body.
 - The helmet sits on its own spring (it wobbles after landings and shots).
 - Rocket fire: the body recoils 4 units away from the aim, tube kicks back 3 units.
-- **Hit:** 3 frames (50 ms) of white body fill, outline unchanged, 3 px screen shake for 80 ms.
-- **Explosion:** pops in at full size on frame 1 (no fade-in), shrinks and clears in 250 ms; 6 px screen shake for 120 ms. Debris: 5–8 cell-coloured squares, outlined, spinning outward.
+- **Hit:** 3 frames (50 ms) of white body fill, silhouette outline unchanged, 3 px screen shake for 80 ms.
+- **Explosion:** pops in at full size on frame 1 (no fade-in), shrinks and clears in 250 ms; 6 px screen shake for 120 ms. Debris: 5–8 cell-coloured squares with the cell grid-line colour as a thin edge, spinning outward.
 - **Elimination:** blob pops into 6 droplets of its body colour plus a small confetti burst, 300 ms.
 - **Respawn protection:** body alpha blinks between 100 % and 45 % at 8 Hz, inside a dashed ink ring (radius 1.5 R); the blob is fully playable meanwhile (GDD § 6).
 - Reduced motion (OS setting): drop screen shake and idle breathing; keep squash (it carries gameplay information).
@@ -152,7 +175,7 @@ Squash and stretch keep area roughly constant (`sx × sy` between 0.94 and 1.0).
 - **Typeface:** Fredoka (OFL), weights 400–700, used for menus, HUD and in-game text.
 - **Loading:** one Google Fonts link in `index.html` (`family=Fredoka:wght@400..700&display=swap`), the way the app already loads fonts. Pixi `Text` uses the browser's fonts, so the game waits for `document.fonts.load("700 20px Fredoka")` before creating text objects, or the first labels render in the fallback face. Self-hosting would need a font package (a new dependency); not worth it until offline play matters.
 - **Layout (at 1280 × 720, scale with the viewport):** four player cards across the top, two at each side; timer centred between them.
-- **Player card:** 228 × 70, white `#fffaf0` fill, 4 px ink outline, 18 px corners, tilted ±1.5° (alternating). Inside: a 50 × 50 chip in the player colour with the emblem in ink; `P1`…`P4` label (Fredoka 700, 20 px); four health chunks (22 × 20 pills, 7 px corners, 2.5 px ink outline); score (Fredoka 700, 30 px) with a small `PTS` caption (600, 11 px, letter-spacing 0.12 em, `#8a7a99`).
+- **Player card:** 228 × 70, white `#fffaf0` fill, one 3 px ink outline around the card (same silhouette idea as the characters), 18 px corners, tilted ±1.5° (alternating). Inside: a 50 × 50 chip in the player colour with the emblem in ink; `P1`…`P4` label (Fredoka 700, 20 px); four health chunks (22 × 20 pills, 7 px corners, no outline); score (Fredoka 700, 30 px) with a small `PTS` caption (600, 11 px, letter-spacing 0.12 em, `#8a7a99`).
 - **Health chunks:** full = player colour; lost = pale `#e9dfd0`. A chunk that is lost pops out (scale 1.3 → 0, 150 ms) before the empty pill shows.
 - **Timer:** 140 × 70 ink `#2b1d3a` card, lemon `#ffd43b` numerals (Fredoka 700, 42 px). Last 10 seconds: numerals turn `#ff8a1f` and pulse once per second.
 - **Menus and app chrome** use the theme tokens below, so buttons, cards and dialogs match the HUD.
@@ -201,6 +224,6 @@ Light mode is the daytime arena; dark mode is the same world at dusk (plum night
 
 ---
 
-## Reference mockup
+## Reference mockups
 
-The four-player scene used to pick this direction (blobs in idle, jump stretch, landing squash and respawn blink; a rocket into a destructible block; HUD) was built as a throwaway HTML/SVG mockup during the design-language lap and is not part of the repo. The numbers above are the spec; where the mockup and this file differ, this file wins.
+The three direction mockups and the six line-style variants (A–F, with 40 %-zoom thumbnails) were throwaway HTML/SVG pages built during the design-language lap and are not part of the repo. The owner picked variant E from the line-style page. The numbers above are the spec; where a mockup and this file differ, this file wins.
