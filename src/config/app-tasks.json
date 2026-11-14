@@ -20,11 +20,6 @@
     "status": "to-do"
   },
   {
-    "title": "Multi-target camera",
-    "description": "Depends on: Game engine foundation. Pure-math camera that frames all active players with zoom limits, smoothing and a central deadzone; applied to the render container. Unit tests. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Starting arena and destructible terrain",
     "description": "Depends on: Game engine foundation. Build the start map (floating main platform, raised plateaus, open side edges, no hazards) in the level format, with destructible sections, spawn points, drop locations and out-of-bounds bounds. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
