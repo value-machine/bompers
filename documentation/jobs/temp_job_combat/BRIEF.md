@@ -1,6 +1,6 @@
 # Brief — Combat: hit API, rocket launcher and explosions
 
-Task: Combat: bash, rocket launcher and explosions (bash replaced by the owner's scope change, see D10–D11) · Lap: temp_job_combat · Harness: v0.44.0
+Task: Combat health, hit API, rocket launcher and explosions (renamed after the owner's scope change, D10–D11) · Lap: temp_job_combat · Harness: v0.44.0
 
 ## Problem
 

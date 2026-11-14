@@ -1,4 +1,8 @@
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
+import type { GameTunables } from "@/shared/types/gameTunables.types";
+
+/** Camera tuning knobs (SSOT: the `camera` section of the game tunables). */
+export type CameraSettings = GameTunables["camera"];
 
 /** What the camera shows: the world point at the viewport center, and the zoom (1 = 1:1). */
 export interface CameraView {
@@ -24,4 +28,6 @@ export interface CameraFrameArgs {
   padding: number;
   /** Seconds since the previous frame. */
   dt: number;
+  /** Tuning; defaults to `DEFAULT_GAME_TUNABLES.camera` (its `padding` is overridden by `padding`). */
+  settings?: CameraSettings;
 }

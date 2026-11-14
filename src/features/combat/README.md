@@ -44,4 +44,4 @@ Seams for later work:
 - Blast push radius and crater radius are separate tunables; distance is measured to the nearest point of the body box (combat D7, D8).
 - Knockback and impulses still apply during spawn protection; only damage is blocked.
 - Every attack deals damage through `applyHit`; how much is the `combat.hitDamage` table by hit kind (`contact`, `blast`) and zone (`front`, `back`), never per-attack code. Defaults: contact 1 / 2, blast 1 / 1 (combat D10, owner scope change).
-- No unarmed bash: the unarmed attack is the dive lap's, plugged in through the `unarmedAttack` hook (combat D11, owner scope change).
+- Combat has no unarmed attack of its own: the dive lap provides it, plugged in through the `unarmedAttack` hook (combat D11, owner scope change).

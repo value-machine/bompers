@@ -60,5 +60,14 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     explosion: { radius: 64, craterRadius: 34, impulse: 1350, minFalloff: 0.35 },
     drops: { firstDelaySeconds: 3, intervalSeconds: 7, maxActive: 2, size: 22 },
   },
-  camera: { padding: 32 },
+  camera: {
+    padding: 96,
+    minViewHeight: 400,
+    deadzone: 0.08,
+    zoomInDeadband: 0.04,
+    followRate: 6,
+    zoomInRate: 2.5,
+    zoomOutRate: 8,
+    edgeMargin: 24,
+  },
 };

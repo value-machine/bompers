@@ -93,6 +93,7 @@ export function renderGame(
     previous: renderer.camera,
     padding: state.tunables.camera.padding,
     dt,
+    settings: state.tunables.camera,
   });
   applyCameraView(renderer.world, renderer.camera, viewport);
 

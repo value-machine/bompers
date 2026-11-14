@@ -3,15 +3,16 @@ import { DEFAULT_GAME_TUNABLES, type GameTunables } from "@/shared/config/gameTu
 import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import type { PlayerInput } from "@/shared/types/gameInput.types";
 import { buildTerrainFromLevel } from "@/features/arena/api/arenaApi";
+import type { Rect } from "@/shared/types/gameGeometry.types";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { createPlayer, stepPlayers } from "@/features/player/services/playerController";
 import type { PlayerState } from "@/features/player/types/player.types";
 
 // Cell size 8. Floor top at y = 320 (x 300 has only the floor below and open sky above). Short wall x 480–496 (y 240–320). Tall wall x 640–656
 // (y 0–320). Ledge platform x 80–240, top y = 160.
-const stone = (x: number, y: number, w: number, h: number): LevelDefinition["terrain"][number] => ({
-  shape: { type: "rect", x, y, w, h },
-  role: "platform",
+const stone = (rect: Rect) => ({
+  shape: { type: "rect" as const, ...rect },
+  role: "platform" as const,
   materialId: "stone",
 });
 
@@ -21,10 +22,10 @@ const level: LevelDefinition = {
   settings: { cellSize: 8, gravity: 1 },
   worldSize: { w: 800, h: 400 },
   terrain: [
-    stone(0, 320, 800, 32),
-    stone(480, 240, 16, 80),
-    stone(640, 0, 16, 320),
-    stone(80, 160, 160, 16),
+    stone({ x: 0, y: 320, w: 800, h: 32 }),
+    stone({ x: 480, y: 240, w: 16, h: 80 }),
+    stone({ x: 640, y: 0, w: 16, h: 320 }),
+    stone({ x: 80, y: 160, w: 160, h: 16 }),
   ],
   spawns: [],
   drops: [],
