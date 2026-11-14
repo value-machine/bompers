@@ -220,7 +220,22 @@ Light mode is the daytime arena; dark mode is the same world at dusk (plum night
 | Elimination | Balloon "pop" followed by a falling slide-whistle and a tiny sad kazoo. |
 | Respawn | Bubble "bloop" pop-in with a short sparkle shimmer. |
 | Round start | Three wood-block countdown ticks, then a ukulele strum and a whistle "go". |
-| Round end | Party horn plus a short marimba fanfare (winner) / descending kazoo (time up). |
+| Round end | Short solo-marimba fanfare (the owner dropped the party horn and kazoo on 2026-11-14). |
+
+### Sound palette (the owner's brief, 2026-11-14)
+
+Every SFX prompt is built from one template: **material + action + palette words + "close-mic, dry, cartoon toy sound effect"**, with an explicit `duration_seconds` (the generator's floor is 0.5 s; shorter targets are trimmed after generation) and `prompt_influence` 0.6. The palette below is the source of the words and materials; the SFX table above says what each sound does.
+
+| Family | Sounds | Words | Materials | Space · pitch | Target lengths |
+|--------|--------|-------|-----------|---------------|----------------|
+| Body | jump, land, tumble | squishy, bouncy, plump | rubber ball, gel / jelly | dry (10/100) · mid | jump 0.45 s, land 0.45 s, tumble 0.5 s |
+| Impacts | dive launch, dive impact, hit, elimination | bonky, squishy | rubber mallet, felt | dry (20/100) · mid | launch 0.3 s, impact 0.4 s, hit 0.35 s, elimination 0.55 s |
+| Weapon | rocket fire, explosion | poppy, fizzy, crackly, soft-edged | cork, paper bag, soda fizz | dry (20/100) · mid | rocket fire 0.4 s, explosion 0.85 s |
+| Round & UI | pickup, respawn, round start, round end | bright, magical, plinky, bubble, spray | marimba, bubble | dry (10/100) · mid | pickup 0.4 s, respawn 0.6 s, round start 2 s, round end 2 s |
+
+**Anchors** (kept takes from the first batch, "more like this"): jump take 3, tumble-bounce take 3, explosion takes 2 and 3, respawn take 2. Kept but not steering: rocket-fire take 3, explosion take 4, pickup takes 1 and 2.
+
+**Post-processing** for every file: trim leading and trailing silence, cut to the target length with a short fade-out, loudness-normalise to −16 LUFS, mono, short mp3.
 
 ---
 
