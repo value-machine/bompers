@@ -130,9 +130,12 @@ function joinSlots(state: GameState, inputs: PlayerInputs): void {
   }
 }
 
-/** Players in play this step (not waiting to respawn). */
+/** Players in play: not waiting to respawn and not eliminated earlier in this step. */
 export const playersInPlay = (state: GameState): PlayerState[] =>
-  state.players.filter((player) => isInPlay(state.rules, player));
+  state.players.filter(
+    (player) =>
+      isInPlay(state.rules, player) && state.combat.fighters.get(player.id)?.eliminated !== true
+  );
 
 function roundTimer(state: GameState, dt: number): void {
   const { round } = state;
@@ -164,7 +167,8 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
   const collected = stepCollectibles({
     collectibles: state.collectibles,
     points: level.collectibles,
-    players,
+    // Re-read: a player eliminated in step 3 cannot collect in the same step.
+    players: playersInPlay(state),
     tunables,
     dt,
   });

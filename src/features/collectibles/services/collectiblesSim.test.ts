@@ -30,7 +30,7 @@ function run(
 }
 
 describe("collectiblesSim", () => {
-  it("should spawn the first orb above the first point after the first delay", () => {
+  it("should spawn the first orb above the first point when the first delay passes", () => {
     const state = createCollectiblesState(tunables);
     run(state, schedule.firstDelaySeconds - 0.05);
     expect(state.orbs).toHaveLength(0);
@@ -40,7 +40,7 @@ describe("collectiblesSim", () => {
     expect(state.orbs[0]!.y).toBeLessThan(200);
   });
 
-  it("should land an orb exactly on its authored point and keep it there", () => {
+  it("should keep an orb on its authored point when it has landed", () => {
     const state = createCollectiblesState(tunables);
     run(state, schedule.firstDelaySeconds + 2);
     expect(state.orbs[0]).toMatchObject({ y: 200, vy: 0 });

@@ -87,7 +87,7 @@ describe("scoreEvent", () => {
     expect(scores).toEqual([0, -scoring.fallPenalty]);
   });
 
-  it("should ignore events other than eliminations", () => {
+  it("should leave scores unchanged when the event is not an elimination", () => {
     const scores = [0];
     scoreEvent(
       scores,
@@ -107,7 +107,7 @@ describe("match rules in the sim", () => {
     expect(state.rules.scores.slice(0, 2)).toEqual([scoring.kill, 0]);
   });
 
-  it("should credit a knock-off to the last hitter within the credit window", () => {
+  it("should credit the last hitter when a player falls out within the credit window", () => {
     const state = newGame();
     hit(state, 1, 0);
     stepFor(state, tunables.combat.killCreditSeconds - 1);
@@ -116,7 +116,7 @@ describe("match rules in the sim", () => {
     expect(state.rules.scores.slice(0, 2)).toEqual([scoring.kill, 0]);
   });
 
-  it("should treat a fall after the credit window as a self-elimination", () => {
+  it("should take the fall penalty when a player falls out after the credit window", () => {
     const state = newGame();
     hit(state, 1, 0);
     stepFor(state, tunables.combat.killCreditSeconds + 0.5);
@@ -125,7 +125,7 @@ describe("match rules in the sim", () => {
     expect(state.rules.scores.slice(0, 2)).toEqual([0, -scoring.fallPenalty]);
   });
 
-  it("should keep an eliminated player out of play until the respawn delay passes", () => {
+  it("should keep a player out of play when the respawn delay has not passed", () => {
     const state = newGame();
     const victim = state.players[1]!;
     victim.y = 2000;
@@ -138,7 +138,7 @@ describe("match rules in the sim", () => {
     expect(playersInPlay(state).map((p) => p.slot)).toEqual([0, 1]);
   });
 
-  it("should respawn at the spawn farthest from the opponents in play", () => {
+  it("should respawn at the spawn farthest from the opponents when the delay passes", () => {
     const state = newGame();
     state.players[0]!.x = 650;
     state.players[1]!.y = 2000;
@@ -146,7 +146,7 @@ describe("match rules in the sim", () => {
     expect(state.players[1]!.x).toBe(100);
   });
 
-  it("should protect a respawned player from damage for the protection time only", () => {
+  it("should block damage only when the hit lands inside the protection time", () => {
     const state = newGame();
     state.players[1]!.y = 2000;
     stepFor(state, respawnDelaySeconds + 0.05);
@@ -159,7 +159,7 @@ describe("match rules in the sim", () => {
     expect(fighter.health).toBe(tunables.combat.maxHealth - 1);
   });
 
-  it("should let a protected player move freely", () => {
+  it("should let a player move freely when spawn protection is running", () => {
     const state = newGame();
     state.players[0]!.x = 650;
     state.players[0]!.y = 320;
@@ -171,7 +171,7 @@ describe("match rules in the sim", () => {
     expect(state.players[1]!.x).toBeGreaterThan(startX + 50);
   });
 
-  it("should give orb points to the player who touches an orb", () => {
+  it("should give orb points when a player touches an orb", () => {
     const state = newGame();
     state.players[0]!.x = 250;
     stepFor(state, tunables.collectibles.firstDelaySeconds + 1);
@@ -186,12 +186,26 @@ describe("match rules in the sim", () => {
   });
 });
 
+describe("respawn without spawns", () => {
+  it("should respawn in the middle of the bounds when the level has no spawns", () => {
+    const state = stepGame(
+      createGameState({ level: { ...level, spawns: [] }, tunables }),
+      keys(),
+      dt
+    );
+    state.players[1]!.y = 2000;
+    stepFor(state, respawnDelaySeconds + 0.05);
+    expect(state.players[1]).toMatchObject({ x: 400, y: expect.any(Number) });
+    expect(state.rules.scores[1]).toBe(-scoring.fallPenalty);
+  });
+});
+
 describe("roundWinners", () => {
   it("should list every top scorer when scores tie", () => {
     expect(roundWinners([2, 1, 2, 0], [0, 1, 2, 3])).toEqual([0, 2]);
   });
 
-  it("should ignore slots that never joined", () => {
+  it("should ignore scores when their slot never joined", () => {
     expect(roundWinners([0, 0, 5], [0, 1])).toEqual([0, 1]);
   });
 
@@ -204,7 +218,7 @@ describe("isRestartPress", () => {
   const jumping = keys("KeyW");
   const idle = keys();
 
-  it("should restart on a fresh jump press once the lock has passed", () => {
+  it("should restart when jump is freshly pressed after the lock", () => {
     expect(
       isRestartPress({
         phase: "ended",
@@ -216,7 +230,7 @@ describe("isRestartPress", () => {
     ).toBe(true);
   });
 
-  it("should not restart during the lock, while playing or on a held jump", () => {
+  it("should not restart when locked, playing or jump is held", () => {
     const base = { phase: "ended" as const, secondsSinceEnd: 3, lockSeconds: 2, inputs: jumping };
     expect(isRestartPress({ ...base, secondsSinceEnd: 1, previous: idle })).toBe(false);
     expect(isRestartPress({ ...base, phase: "playing", previous: idle })).toBe(false);

@@ -23,10 +23,10 @@ Systems order in `stepGame` (new concepts slot into their number):
 2. `stepPlayers` — player feature
 3. `stepCombat` — combat feature: rockets (unarmed fire: hook for the dive lap), blasts (damage, impulse, `clearCircle`), pickups
 4. `stepCollectibles` — collectibles feature: point orbs; each orb collected scores `match.scoring.orb`
-5. `stepMatchRules` — leaving `level.bounds` emits `playerEliminated` (cause `out-of-bounds`, credit to the last hitter within `combat.killCreditSeconds`); new eliminations score; eliminated players wait `respawnDelaySeconds` out of play, then respawn at the spawn farthest from the opponents in play with `invulnerableUntil = now + spawnProtectionSeconds`
+5. `stepMatchRules` — leaving `level.bounds` emits `playerEliminated` (cause `out-of-bounds`, credit to the last hitter within `combat.killCreditSeconds`); new eliminations score; eliminated players wait `respawnDelaySeconds` out of play, then respawn at the spawn farthest from the opponents in play (a level without spawns: the middle of its bounds) with `invulnerableUntil = now + spawnProtectionSeconds`
 6. `roundTimer` — at 0 the round ends, `winners` is fixed and steps 1–5 stop
 
-Steps 2–4 receive only the players in play (`playersInPlay`): a player waiting to respawn is not moved, hit or able to collect.
+Steps 2–4 receive only the players in play (`playersInPlay`): a player waiting to respawn, or eliminated earlier in the same step, is not moved, hit or able to collect.
 
 Adding a concept: add its slice to `GameState`, its system call at its number in `stepGame`, and its render layer (create + sync pair from its feature api) in `gameRenderer.ts`.
 
@@ -45,5 +45,5 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 - Eliminated players are out of play for the respawn delay: not stepped, hit, drawn or framed (match-rules D3).
 - Respawn at the spawn maximising the distance to the nearest opponent in play; ties → lowest index; level spawns are the author's safe points (match-rules D4).
 - Spawn protection only blocks damage (combat), the player moves and fires freely; blink + dashed ring per DESIGN_LANGUAGE § 6 (match-rules D5).
-- Round end: every top scorer wins (a draw lists them); restart by a jump press after `restartLockSeconds` (match-rules D6).
+- Round end: every top scorer wins (a draw lists them); restart by a jump press after `restartLockSeconds`; that press is consumed, so nobody jumps on the first frame of the new round (match-rules D6).
 - HUD drawn on the canvas with fixed canvas colours, never theme tokens (match-rules D7).

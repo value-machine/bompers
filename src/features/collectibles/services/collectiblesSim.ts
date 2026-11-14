@@ -86,6 +86,8 @@ export const orbBox = (orb: PointOrb, size: number): Rect => ({
   h: size,
 });
 
+// Second copy of combat's `rectsOverlap` (features/combat/services/combatGeometry.ts); a third
+// copy extracts both to src/shared/utils (code-style F2).
 const overlaps = (a: Rect, b: Rect): boolean =>
   a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 

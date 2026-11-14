@@ -204,10 +204,14 @@ function syncBanner(view: HudView, frame: HudFrame, scale: number): void {
   const { banner } = view;
   banner.root.visible = round.phase === "ended";
   if (!banner.root.visible) return;
-  banner.title.text = roundResultLabel(round.winners);
-  const winner = round.winners.length === 1 ? round.winners[0] : undefined;
-  banner.title.style.fill = winner === undefined ? GAME_PALETTE.ink : slotColor(winner);
-  banner.title.style.stroke = { width: winner === undefined ? 0 : 6, color: GAME_PALETTE.ink };
+  const label = roundResultLabel(round.winners);
+  if (banner.title.text !== label) {
+    // Set once per result: style writes re-render the text.
+    banner.title.text = label;
+    const winner = round.winners.length === 1 ? round.winners[0] : undefined;
+    banner.title.style.fill = winner === undefined ? GAME_PALETTE.ink : slotColor(winner);
+    banner.title.style.stroke = { width: winner === undefined ? 0 : 6, color: GAME_PALETTE.ink };
+  }
   const locked = timeSeconds - (round.endedAt ?? timeSeconds) < tunables.match.restartLockSeconds;
   banner.hint.text = locked ? "Final scores" : "Press jump to play again";
   banner.root.scale.set(scale);

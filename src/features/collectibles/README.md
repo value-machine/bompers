@@ -25,3 +25,4 @@ Point orbs (GDD § 5: "points that fall from the roof"): they appear above the l
 - Schedule mirrors combat D6: first after `firstDelaySeconds`, then every `intervalSeconds` while fewer than `maxActive` orbs exist, round-robin over the `point-orb` points, skipping a point that already holds an orb.
 - An orb falls onto its authored point and hovers there, without terrain collision, so a blasted floor never strands one (match-rules D2).
 - Players waiting to respawn are not passed in, so they cannot collect.
+- The touch test is a second copy of combat's `rectsOverlap` (marked in `collectiblesSim.ts`); a third copy moves both to `src/shared/utils/` (code-style F2).

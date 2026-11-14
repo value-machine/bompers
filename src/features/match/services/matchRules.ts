@@ -12,7 +12,7 @@ import { placePlayer, type PlayerState } from "@/features/player/api/playerApi";
 import { chooseSpawnIndex } from "@/features/match/services/spawnChoice";
 
 /**
- * Match rules (sim step 4, GDD § 5 and § 6): scoring from combat's elimination events and from
+ * Match rules (sim step 5, GDD § 5 and § 6): scoring from combat's elimination events and from
  * point orbs, the respawn queue (eliminated players wait out of play), spawn choice and spawn
  * protection. Pure TS; mutates the slices it is given. Decisions: match-rules D1–D6.
  */
@@ -39,7 +39,10 @@ const addPoints = (scores: number[], slot: number, points: number): void => {
   scores[slot] = (scores[slot] ?? 0) + points;
 };
 
-/** A credited kill scores for the killer; an elimination nobody gets credit for costs the victim. */
+/**
+ * A credited kill scores for the killer; an elimination nobody else gets credit for (falling
+ * off alone, or a self-credited one) costs the victim `fallPenalty`.
+ */
 export function scoreEvent(scores: number[], event: CombatEvent, scoring: Scoring): void {
   if (event.type !== "playerEliminated") return;
   const { byPlayerSlot, victimSlot } = event;
@@ -111,14 +114,18 @@ function respawn(args: StepMatchRulesArgs, player: PlayerState): void {
     .filter((other) => other.id !== player.id && isInPlay(rules, other))
     .map((other) => ({ x: other.x, y: other.y }));
   const index = chooseSpawnIndex({ spawns: args.spawns, opponents, slot: player.slot });
-  placePlayer(player, args.spawns[index] ?? { x: player.x, y: player.y });
+  // A level without spawns (normalisation only warns) respawns in the middle of the bounds,
+  // never where the player fell out.
+  const { bounds } = args;
+  const centre = { x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 };
+  placePlayer(player, args.spawns[index] ?? centre);
   respawnFighter(combat, player, tunables);
   const fighter = combat.fighters.get(player.id);
   if (fighter) fighter.invulnerableUntil = timeSeconds + tunables.match.spawnProtectionSeconds;
 }
 
 /**
- * Step 4: out of bounds → elimination (combat credits the last hitter within
+ * Step 5: out of bounds → elimination (combat credits the last hitter within
  * `killCreditSeconds`), score new events, queue eliminated players, respawn the due ones.
  */
 export function stepMatchRules(args: StepMatchRulesArgs): void {

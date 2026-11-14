@@ -44,7 +44,8 @@ export function useGameSession(app: Application | null): void {
     let clock = createFixedStepClock();
     let previousInputs: PlayerInputs = [];
 
-    const restartIfPressed = (inputs: PlayerInputs): void => {
+    /** True when this frame's jump press restarted the round (that press is then consumed). */
+    const restartIfPressed = (inputs: PlayerInputs): boolean => {
       const { round: progress, timeSeconds } = round.state;
       const restart = isRestartPress({
         phase: progress.phase,
@@ -53,9 +54,10 @@ export function useGameSession(app: Application | null): void {
         inputs,
         previous: previousInputs,
       });
-      if (!restart) return;
+      if (!restart) return false;
       clearStage(app);
       round = startRound();
+      return true;
     };
 
     const onFrame = (ticker: Ticker): void => {
@@ -66,8 +68,9 @@ export function useGameSession(app: Application | null): void {
       });
       clock = advance.clock;
       const inputs = input.sample();
-      restartIfPressed(inputs);
+      const restarted = restartIfPressed(inputs);
       previousInputs = inputs;
+      if (restarted) return;
       for (let i = 0; i < advance.steps; i += 1) stepGame(round.state, inputs, stepSeconds);
       renderGame(round.renderer, { state: round.state, app, dt: frameSeconds });
     };
