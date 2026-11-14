@@ -117,14 +117,17 @@ export function rectHitsSolid(grid: TerrainGrid, rect: Rect): boolean {
   return false;
 }
 
-const isDestructibleCell = (grid: TerrainGrid, cx: number, cy: number): boolean =>
-  getCellInfo(grid, cx, cy)?.destructible === true;
+/** What a blast removed: total cells and the count per material ID (for destroy effects / sounds). */
+export interface ClearedCells {
+  removed: number;
+  byMaterial: Record<string, number>;
+}
 
 /**
  * Blasts a circle out of the terrain: destructible cells whose centre lies inside become empty;
- * other cells stay. Returns how many cells were removed.
+ * other cells stay. Returns what was removed, per material.
  */
-export function clearCircle(grid: TerrainGrid, circle: Circle): number {
+export function clearCircle(grid: TerrainGrid, circle: Circle): ClearedCells {
   const size = grid.cellSize;
   const range = cellRangeOf(grid, {
     x: circle.x - circle.radius,
@@ -133,18 +136,20 @@ export function clearCircle(grid: TerrainGrid, circle: Circle): number {
     h: circle.radius * 2,
   });
   const radiusSq = circle.radius * circle.radius;
-  let removed = 0;
+  const cleared: ClearedCells = { removed: 0, byMaterial: {} };
   for (let cy = range.minY; cy <= range.maxY; cy += 1) {
     for (let cx = range.minX; cx <= range.maxX; cx += 1) {
-      if (!isDestructibleCell(grid, cx, cy)) continue;
+      const info = getCellInfo(grid, cx, cy);
+      if (info?.destructible !== true) continue;
       const dx = (cx + 0.5) * size - circle.x;
       const dy = (cy + 0.5) * size - circle.y;
       if (dx * dx + dy * dy > radiusSq) continue;
       setCellSlot(grid, { cx, cy, slot: EMPTY_CELL });
-      removed += 1;
+      cleared.removed += 1;
+      cleared.byMaterial[info.materialId] = (cleared.byMaterial[info.materialId] ?? 0) + 1;
     }
   }
-  return removed;
+  return cleared;
 }
 
 /** Returns the dirty chunk indices and clears the set (called by the renderer). */

@@ -128,5 +128,10 @@
     "title": "Starting arena and destructible terrain",
     "description": "Depends on: Game engine foundation, Level importer in the game. Author the start map as the first HTML level file (floating main platform, raised plateaus, open side edges, no hazards; destructible sections, spawn points, drop locations, out-of-bounds bounds) and load it through the importer, proving the format end to end. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md § Levels. ",
     "status": "done"
+  },
+  {
+    "title": "Combat: health, hit API, rocket launcher and explosions",
+    "description": "Depends on: Player movement and blob feel, Starting arena and destructible terrain. 4-chunk health; a zone-aware hit API (front/back damage from tunables, default 1/2) shared by every attack; rocket launcher pickup dropping from the sky; rockets from the helmet in aim direction; explosions remove 1 chunk from hit opponents, push everyone (rocket jumps, no self-damage) and clear terrain cells. The unarmed attack is the separate dive headbutt task. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. Result: PR #10 (features/combat, applyHit + classifyHitZone, unarmedAttack hook for the dive task).",
+    "status": "done"
   }
 ]

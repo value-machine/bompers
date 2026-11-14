@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { mapPlayerInputs } from "@/shared/utils/gameInputMapping";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
+import { applyHit } from "@/features/combat/api/combatApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
 
 const level: LevelDefinition = {
@@ -52,6 +53,50 @@ describe("gameSim", () => {
     player.y = 2000;
     stepGame(state, keys(), dt);
     expect(player.y).toBeLessThan(250);
+  });
+
+  it("should report the fall as an elimination and refill health when a player leaves the zone", () => {
+    const state = stepGame(newGame(), keys(), dt);
+    const fighter = state.combat.fighters.get("p0")!;
+    fighter.health = 2;
+    state.players[0]!.y = 2000;
+    stepGame(state, keys(), dt);
+    expect(state.combat.events).toContainEqual(
+      expect.objectContaining({ type: "playerEliminated", victimSlot: 0, cause: "out-of-bounds" })
+    );
+    expect(fighter).toMatchObject({
+      health: DEFAULT_GAME_TUNABLES.combat.maxHealth,
+      eliminated: false,
+    });
+  });
+
+  it("should respawn a player whose last health chunk was lost to a hit", () => {
+    const state = stepGame(newGame(), keys(), dt);
+    const victim = state.players[1]!;
+    victim.x = 300;
+    state.combat.fighters.get("p1")!.health = 1;
+    applyHit(
+      { ...state, players: state.players },
+      {
+        victimSlot: 1,
+        attackerSlot: 0,
+        kind: "contact",
+        source: "dive",
+        contactPoint: { x: 300, y: 300 },
+        direction: { x: -1, y: 0 },
+      }
+    );
+    stepGame(state, keys(), dt);
+    expect(state.combat.events).toContainEqual(
+      expect.objectContaining({
+        type: "playerEliminated",
+        victimSlot: 1,
+        byPlayerSlot: 0,
+        cause: "dive",
+      })
+    );
+    expect(victim.x).toBe(600);
+    expect(state.combat.fighters.get("p1")!.health).toBe(DEFAULT_GAME_TUNABLES.combat.maxHealth);
   });
 
   it("should end the round and freeze players when the timer runs out", () => {

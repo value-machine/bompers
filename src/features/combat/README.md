@@ -1,0 +1,47 @@
+# combat
+
+## Purpose
+
+Fighting (GDD § 2 Rocket Jumping, § 3): four health chunks per player, the shared hit / damage API (front / back zones, damage from tunables), the unarmed-attack hook, the rocket launcher that drops from the level's drop points, rockets, explosions (damage to others, impulse to everyone, craters), the spawn-protection hook, and the typed sim events other systems read. Runs as sim step 3 in `match`.
+
+## Structure
+
+| Layer    | Path                         | Purpose                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Types    | `types/combat.types.ts`      | `CombatState` (`fighters` by player id, `rockets`, `pickups`, `events`, drop schedule), `FighterState` (`health`, `eliminated`, `invulnerableUntil`, `weapon`, cooldown, last hitter), `CombatEvent` union                                                                                                                                                                                   |
+| Services | `services/combatSim.ts`      | `stepCombat({ combat, players, inputs, terrain, drops, bounds, tunables, timeSeconds, dt })`: prune events → fighters → attacks → rockets → pickups                                                                                                                                                                                                                                          |
+| Services | `services/combatState.ts`    | `createCombatState`, event log (`emitCombatEvent`, prune), `fighterFor`, `eliminateFighter` (out of bounds, kill credit), `respawnFighter`, `CombatContext`; **hits:** `applyHit(world, hit)`, the one damage path — `classifyHitZone(facing, direction)` → front / back, damage from `combat.hitDamage[kind][zone]`, spawn protection, last hitter, `playerHit` / `playerEliminated` events |
+| Services | `services/attacks.ts`        | Fire button per press: armed → `fireRocket` + cooldown; unarmed → the optional `unarmedAttack` hook (`UnarmedAttackHook`, filled by the dive lap; without it unarmed fire does nothing)                                                                                                                                                                                                      |
+| Services | `services/rockets.ts`        | Rockets from the helmet along the unit aim; swept sub-steps ≤ half a cell; explode on terrain, another player, bounds or lifetime                                                                                                                                                                                                                                                            |
+| Services | `services/explosions.ts`     | `explode`: a `blast` hit through `applyHit` on every other player in range, radial impulse with linear falloff on everyone (shooter too), `clearCircle` crater, `terrainDestroyed` events with the material's catalog effect / sound                                                                                                                                                         |
+| Services | `services/pickups.ts`        | Deterministic drop schedule (round-robin drop points, `maxActive`), falling + landing on terrain (falls again if the ground is blasted), touch to collect (full ammo)                                                                                                                                                                                                                        |
+| Services | `services/combatGeometry.ts` | Body centre, helmet point, rect distance / overlap helpers                                                                                                                                                                                                                                                                                                                                   |
+| Services | `services/combatRenderer.ts` | Layers `pickups`, `effects` (explosion starburst, 250 ms shrink), `rockets` (+ rocket tube on armed players), `overlay` (health chunks above each player); `syncCombatView(view, frame)`                                                                                                                                                                                                     |
+| API      | `api/combatApi.ts`           | Public seam (also `CombatContext` and `FighterState` for the `unarmedAttack` hook)                                                                                                                                                                                                                                                                                                           |
+
+Seams for later work:
+
+- **Match rules:** set `FighterState.invulnerableUntil` (sim seconds) on respawn; replace match step 4; read `playerHit` / `playerEliminated` from `combat.events` (each consumer remembers the last `seq` it read; events live `eventRetentionSeconds`).
+- **Dive lap:** pass `unarmedAttack` to `stepCombat` (from match); deal damage with `applyHit({ kind: "contact", source: "dive", contactPoint, direction })`; knockback is the attack's own.
+- **Sound:** event `type` → SFX (`rocketFired`, `explosion`, `playerHit`, `playerEliminated`, `pickupCollected`); `terrainDestroyed.soundId` / `effectId` come from the catalog material.
+- **Visual pass:** hit flash, shake, debris, smoke trail, respawn blink, zoom-scaled strokes in `combatRenderer.ts`. The tube belongs on the helmet spring once the player renderer has one.
+- **More items:** a new `HeldWeapon.itemId` + its attack in `attacks.ts`; when power-ups or point collectibles arrive, split pickups into their own feature (combat D2).
+- **Tuning:** every number is in the `combat` section of `src/shared/config/gameTunables.ts`.
+
+## Dependencies
+
+- `player` (`PlayerState`, `playerBody`), `arena` (`clearCircle`, `isSolidAt`, `rectHitsSolid`), `level` (`LevelDrop`), `content-catalog` (material effect / sound) through their `api/` files.
+- `pixi.js` (renderer only), `gameTunables`, `gamePalette`, shared geometry / input types.
+- Consumed by `match` (state slice, step 3, step 4 hooks, render layers).
+
+## Decisions
+
+- Combat state is a `GameState.combat` slice keyed by player id; `PlayerState` only carries motion (combat D1).
+- Events carry a monotonic `seq` and are pruned by age, so several sim steps per frame never hide one (combat D3).
+- Elimination flags the fighter; match step 4 does the respawn (combat D4).
+- Launcher: 6 rockets, no time limit, dropped when empty or on elimination (combat D5).
+- Drops: first after 3 s, then every 7 s while fewer than 2 lie in the arena, round-robin over drop points — the sim has no randomness source (combat D6).
+- Blast push radius and crater radius are separate tunables; distance is measured to the nearest point of the body box (combat D7, D8).
+- Knockback and impulses still apply during spawn protection; only damage is blocked.
+- Every attack deals damage through `applyHit`; how much is the `combat.hitDamage` table by hit kind (`contact`, `blast`) and zone (`front`, `back`), never per-attack code. Defaults: contact 1 / 2, blast 1 / 1 (combat D10, owner scope change).
+- Combat has no unarmed attack of its own: the dive lap provides it, plugged in through the `unarmedAttack` hook (combat D11, owner scope change).
