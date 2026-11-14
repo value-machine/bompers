@@ -1,0 +1,189 @@
+/*
+ * Bompers level kit v1 — preview stylesheet.
+ * Loaded by a level file opened in a browser; the game never reads it.
+ * Spec: documentation/game/LEVEL_FORMAT.md
+ *
+ * Palette: neutral placeholders as custom properties. The design-language
+ * work replaces these values (one place); selectors stay the same.
+ */
+:root {
+  --lk-bg: #f4f1ea;
+  --lk-ink: #26232b;
+  --lk-muted: #6f6a75;
+  --lk-panel: #ffffff;
+  --lk-line: #d9d4cc;
+  --lk-grid: rgba(38, 35, 43, 0.08);
+  --lk-grid-major: rgba(38, 35, 43, 0.18);
+  --lk-sky: #dfe9f2;
+  --lk-platform: #7d7a85;
+  --lk-platform-edge: #4d4a55;
+  --lk-destructible: #c08a5b;
+  --lk-destructible-edge: #8a5a33;
+  --lk-spawn: #3f8f5f;
+  --lk-drop: #c94f7c;
+  --lk-collectible: #e0b62c;
+  --lk-bounds: #d24b3a;
+  --lk-warn: #b4471f;
+  --lk-font: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --lk-bg: #1c1b20;
+    --lk-ink: #eeeaf2;
+    --lk-muted: #a7a1ad;
+    --lk-panel: #26252b;
+    --lk-line: #3a3841;
+    --lk-grid: rgba(238, 234, 242, 0.07);
+    --lk-grid-major: rgba(238, 234, 242, 0.16);
+    --lk-sky: #24303b;
+    --lk-warn: #ff9a6b;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--lk-bg);
+  color: var(--lk-ink);
+  font: 14px/1.4 var(--lk-font);
+}
+
+body.lk-ready {
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* The level itself: scale to the page width, keep aspect ratio. */
+svg[data-level-format] {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(100vh - 32px);
+  background: var(--lk-sky);
+  border-radius: 8px;
+}
+
+/* Roles: CSS wins over presentation attributes, so the kit restyles
+   any agent's colours consistently. */
+svg[data-level-format] [data-role='platform'] {
+  fill: var(--lk-platform);
+  stroke: var(--lk-platform-edge);
+  stroke-width: 2;
+}
+svg[data-level-format] [data-role='destructible'] {
+  fill: var(--lk-destructible);
+  stroke: var(--lk-destructible-edge);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+svg[data-level-format] [data-role='spawn'] {
+  fill: var(--lk-spawn);
+  stroke: #fff;
+  stroke-width: 2;
+}
+svg[data-level-format] [data-role='drop'] {
+  fill: var(--lk-drop);
+  stroke: #fff;
+  stroke-width: 2;
+}
+svg[data-level-format] [data-role='collectible'] {
+  fill: var(--lk-collectible);
+  stroke: #fff;
+  stroke-width: 2;
+}
+svg[data-level-format] [data-role='bounds'] {
+  fill: none;
+  stroke: var(--lk-bounds);
+  stroke-width: 3;
+  stroke-dasharray: 14 8;
+}
+
+/* Overlays added by preview.js */
+.lk-grid-minor {
+  stroke: var(--lk-grid);
+}
+.lk-grid-major {
+  stroke: var(--lk-grid-major);
+}
+.lk-grid-layer[hidden] {
+  display: none;
+}
+.lk-label {
+  font: 600 14px var(--lk-font);
+  fill: var(--lk-ink);
+  paint-order: stroke;
+  stroke: var(--lk-bg);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.lk-drop-ray {
+  stroke: var(--lk-drop);
+  stroke-width: 2;
+  stroke-dasharray: 4 6;
+  opacity: 0.6;
+}
+
+/* Panel */
+.lk-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: var(--lk-panel);
+  border: 1px solid var(--lk-line);
+  border-radius: 8px;
+}
+.lk-meta h1 {
+  margin: 0 0 2px;
+  font-size: 18px;
+}
+.lk-meta p {
+  margin: 0;
+  color: var(--lk-muted);
+}
+.lk-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lk-legend li {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.lk-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex: none;
+}
+.lk-swatch-point {
+  border-radius: 50%;
+}
+.lk-swatch-bounds {
+  background: none !important;
+  border: 2px dashed var(--lk-bounds);
+  box-sizing: border-box;
+}
+.lk-controls label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+}
+.lk-issues {
+  flex-basis: 100%;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--lk-warn);
+}
+.lk-issues:empty {
+  display: none;
+}
