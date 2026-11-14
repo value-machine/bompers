@@ -48,7 +48,7 @@ The game (`/`) is a PixiJS v8 canvas driven by our own pure-TS simulation (DOC_A
 | `src/shared/services/gameInputService.ts` + `utils/gameInputMapping.ts` + `types/gameInput.types.ts` | Keyboard halves + Gamepad API → one `PlayerInput` per slot (0–3); default slots: left keys, right keys, pad 0, pad 1 | `PlayerInput { connected, moveX, aimX, aimY, jump, fire }` (held state; edges are derived in the sim) |
 | `src/shared/hooks/usePixiApp.ts` | StrictMode-safe Pixi `Application` mount / destroy | `usePixiApp(hostRef, { background })` → `Application \| null` |
 | `src/shared/config/gameTunables.ts` (+ `types/gameTunables.types.ts`) | **All** tunables, one section per concept: `sim`, `world` (gravity), `match` (duration), `player`, `camera` | Pass a copy into `createGameState`; each lap edits only its section |
-| `src/shared/config/gamePalette.ts` | Placeholder canvas colors | Replaced by the design-language task |
+| `src/shared/config/gamePalette.ts` | Canvas colors (numeric hex for Pixi) | Player body / shade / tint, ink, helmet follow `documentation/game/DESIGN_LANGUAGE.md` § 1; world colours are still placeholders for the visual pass |
 | `features/arena` | Level format, terrain grid, terrain layer | `arenaApi`: `LevelData`, `rectHitsSolid`, `isSolidAt`, `clearCircle`, `createArenaState`, terrain view |
 | `features/player` | Player state + controller + player layer | `playerApi`: `PlayerState` (feet point), `stepPlayers({ players, inputs, terrain, tunables, dt })`, players view |
 | `features/camera` | Framing math | `cameraApi`: `computeCameraView({ targets, bounds, viewport, previous, padding, dt })`, `applyCameraView` |
