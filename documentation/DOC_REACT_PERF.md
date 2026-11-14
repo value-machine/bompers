@@ -10,14 +10,13 @@ Stack-native performance guidance for agents and humans. **Procedure SSOT:** `.a
 | UI | React 19 CSR SPA | RSC, Server Actions, SSR hydration |
 | Server state | TanStack Query 5 | SWR |
 | Code-splitting | `React.lazy` + `Suspense` | `next/dynamic` |
-| API / edge | Cloudflare Workers, Supabase | Next.js route handlers |
+| API / edge | Cloudflare Workers | Next.js route handlers |
 | Components | shadcn/ui kit in `src/components/common/`, named `lucide-react` icon imports | Re-exporting the whole kit or icon set from one barrel |
 
 ## Already in place (0.32.x)
 
 - Kit components imported per folder (`@/components/common/Button`)
-- Lazy auth pages and route-level `Suspense` in `App.tsx`
-- Memoized auth context; stable auth handler callbacks
+- Lazy pages and route-level `Suspense` in `App.tsx`
 - Dev-only dynamic import for React Query Devtools
 
 ## When to use which skill
