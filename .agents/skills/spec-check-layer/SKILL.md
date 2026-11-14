@@ -1,14 +1,11 @@
 ---
 name: spec-check-layer
 description: >-
-  Checks the assumption behind a request to change existing behavior, and catches workarounds:
-  traces how the system really works, then compares the request or the diff against the
-  workaround shapes (special-case flag, parallel path, symptom tuning, disconnected patch,
-  instance-encoded naming, growing scope, "for now" comments). A confirmed patch-on-top becomes
-  an owner choice between the workaround and the structural fix. Use when the architecture
+  Checks the assumption behind a request to change existing behavior and catches workarounds; a
+  confirmed patch-on-top becomes an owner choice vs the structural fix. Use when the architecture
   rule's layer-consistency trigger fires — "just add", "only for this case", a first-of-a-kind
-  instance, behavior by analogy — or when the agent's own diff starts to look like a workaround.
-  Not for industry precedent (loop-plan review-precedent) or naming rules (code-style § Naming).
+  instance, behavior by analogy — or when the agent's own diff looks like a workaround. Not for
+  industry precedent (loop-plan review-precedent) or naming (code-style § Naming).
 ---
 
 # spec-check-layer

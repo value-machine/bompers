@@ -1,13 +1,12 @@
 ---
 name: loop-refine
 description: >-
-  Turns the top backlog task — feature, bug, or Stop 2 feedback — into an agent-facing BRIEF.md:
-  problem, success check, in / out of scope, touched edges, and a size estimate (XS / S / M,
-  larger work cut into laps). Drafts silently from the task, app vision, feature READMEs and
-  code, asks the owner only per the agent-behavior stop list, and ends Stop 1 with a one-line
-  restatement. Use when loop-backlog has picked a task, after a Change verdict, or whenever a
-  request must be scoped before planning — "refine this", "scope it", "what exactly do we build".
-  Not for writing the build plan (use loop-plan) or for choosing which task is next (use loop-backlog).
+  Turns the top backlog task — feature, bug or Stop 2 feedback — into an agent-facing BRIEF.md
+  (problem, success check, scope, edges, size XS / S / M, larger work cut into laps), asks the owner
+  only per the stop list, and ends Stop 1 with a one-line restatement. Use when loop-backlog has
+  picked a task, after a Change verdict, or whenever a request must be scoped — "refine this",
+  "scope it", "what exactly do we build". Not for the build plan (use loop-plan) or picking the next
+  task (use loop-backlog).
 ---
 
 # loop-refine

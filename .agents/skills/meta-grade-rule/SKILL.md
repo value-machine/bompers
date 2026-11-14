@@ -1,13 +1,11 @@
 ---
 name: meta-grade-rule
 description: >-
-  Grades or rewrites one rule, command or skill file without executing it. Grade mode scores it
-  1–5 on a weighted rubric (clarity, ambiguity handling, structure, completeness, actionability,
-  guardrails) with an A–F letter; improve mode rewrites it for brevity, one home per fact,
-  separation of concerns, conditional structure, imperative voice and positive framing. Use when
-  the owner wants a rule scored, critiqued, graded or tightened, runs /rule-quality or
-  /grade-rule, or the harness audit flags one file's wording. Not for the whole harness (use
-  meta-audit-harness) or authoring a skill (use meta-write-skill).
+  Grades or rewrites one rule, command or skill file without executing it: grade mode scores a
+  weighted rubric with an A–F letter; improve mode rewrites it for brevity, one home per fact, clear
+  structure and imperative voice. Use when the owner wants a rule scored, critiqued, graded or
+  tightened, runs /rule-quality or /grade-rule, or the harness audit flags one file's wording. Not
+  for the whole harness (use meta-audit-harness) or authoring a skill (use meta-write-skill).
 ---
 
 # meta-grade-rule
