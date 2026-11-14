@@ -1,0 +1,74 @@
+# Release PRs for Model C (.claude/rules/git-workflow.md § Mode behavior table → version source).
+# One job, so a merge bills one runner minute instead of one per stage (GitHub rounds each job up).
+# Its steps, in order:
+# - **mode** reads the mode through the single reader (validate-git-workflow.cjs --print-mode).
+#   Every later step runs only under model-c; A/B forks stop here.
+# - **bootstrap** creates the baseline GitHub release `v<package.json version>` once, when the
+#   repo has no release yet, so release-please has a starting point and no person has to tag by
+#   hand (D29). It tags the commit that set that version, so later commits still land in the
+#   next release. No-op once any release exists.
+# - **release** runs release-please.
+# - **dispatch-ci** starts ci.yml on the release branch: PRs opened with GITHUB_TOKEN do not
+#   trigger workflows, but a GITHUB_TOKEN workflow_dispatch does, so the required `test`
+#   check reports on the release PR without a PAT (D21). ci.yml runs only the version check
+#   there. Fallback if that ever fails: a GitHub App token (see temp_job_git-workflow-model-c D21).
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Read git workflow mode
+        id: mode
+        run: |
+          mode="$(node scripts/validate-git-workflow.cjs --print-mode)"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
+      - name: Create baseline release when none exists
+        if: steps.mode.outputs.mode == 'model-c'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ -n "$(gh release list --limit 1 --json tagName --jq '.[].tagName')" ]; then
+            echo "A release exists; nothing to bootstrap."
+            exit 0
+          fi
+          version="$(node -p "require('./package.json').version")"
+          sha="$(git log -1 --format=%H -G'"version":' -- package.json)"
+          echo "Creating baseline release v$version at $sha"
+          gh release create "v$version" --target "$sha" --title "v$version" \
+            --notes "Baseline release for release-please (created by the Model C bootstrap job)."
+
+      - uses: googleapis/release-please-action@v4
+        id: release
+        if: steps.mode.outputs.mode == 'model-c'
+        with:
+          # Pre-1.0: breaking changes bump minor, not major (bump-minor-pre-major).
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Run CI on the release branch
+        if: steps.release.outputs.prs_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+        run: gh workflow run ci.yml --ref "$RELEASE_BRANCH"
