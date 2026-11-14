@@ -1,0 +1,47 @@
+{
+  "$comment": "PLACEHOLDER. The level importer lap generates this file from the content catalog in src/ during the build; until then it is hand-written. Spec: documentation/game/LEVEL_FORMAT.md.",
+  "formatVersion": 1,
+  "defaults": {
+    "cellSize": 8,
+    "gravity": 1,
+    "matchDuration": 180,
+    "material": {
+      "platform": "stone",
+      "destructible": "dirt"
+    },
+    "items": {
+      "drop": ["rocket-launcher"],
+      "collectible": "point-orb"
+    }
+  },
+  "material": [
+    {
+      "id": "stone",
+      "label": "Stone",
+      "destructible": false,
+      "effect": "none",
+      "sound": "thud"
+    },
+    {
+      "id": "dirt",
+      "label": "Dirt",
+      "destructible": true,
+      "effect": "dust-burst",
+      "sound": "crumble"
+    }
+  ],
+  "effect": [
+    { "id": "none", "label": "No effect" },
+    { "id": "dust-burst", "label": "Dust burst" }
+  ],
+  "sound": [
+    { "id": "none", "label": "Silent" },
+    { "id": "thud", "label": "Thud" },
+    { "id": "crumble", "label": "Crumble" }
+  ],
+  "behavior": [],
+  "item": [
+    { "id": "rocket-launcher", "label": "Rocket launcher", "use": "drop" },
+    { "id": "point-orb", "label": "Point orb", "use": "collectible" }
+  ]
+}

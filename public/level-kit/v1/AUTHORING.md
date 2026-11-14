@@ -1,0 +1,116 @@
+# Write a Bompers level (format v1) — agent guide
+
+You are writing **one HTML file** that holds **one inline `<svg>`**. The SVG is the level. Bompers is a 2D side-view arena brawler for 2–4 squishy blob players who fire rockets, rocket-jump and blow up destructible terrain. Full spec: `documentation/game/LEVEL_FORMAT.md` in the Bompers repo.
+
+## Rules (all of them)
+
+1. Root: `<svg id="level" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 W H" data-level-format="1" data-title="…">`. The viewBox starts at `0 0`; `W × H` is the world in world units (1 unit ≈ 1 screen pixel at default zoom; 1600 × 1000 is a good arena size). **y points down.**
+2. Use only `<rect>`, `<polygon>` and `<circle>` for game shapes. `<g>` is fine for grouping. **No `<path>`, no `transform`** anywhere above a game shape.
+3. Every game shape has `data-role`:
+   - `platform` — solid ground that never breaks (rect, polygon, circle)
+   - `destructible` — solid ground that explosions clear (rect, polygon, circle)
+   - `spawn` — player start point (circle; the centre counts). **At least 4.**
+   - `drop` — weapons fall from here (circle). **At least 1.** Put them high up.
+   - `collectible` — point pickups appear here (circle). Optional.
+   - `bounds` — **exactly one** rect: the play area; leaving it eliminates a player.
+4. Reference content **by ID only**, never describe it: `data-material` on terrain, `data-items` (space-separated) on `drop`, `data-item` on `collectible`. Optional: `data-effect`, `data-sound`, `data-behavior`. IDs are lowercase-kebab. Current IDs: `/level-kit/v1/catalog.json`. Starter set:
+   - material: `stone` (default for platform), `dirt` (default for destructible)
+   - effect: `none`, `dust-burst` · sound: `none`, `thud`, `crumble`
+   - item: `rocket-launcher` (drop), `point-orb` (collectible)
+   - behavior: none yet — leave it out.
+   Unknown IDs don't break the level; they fall back to the default with a warning.
+5. Optional level settings on the root: `data-gravity` (multiplier, `1` = normal, `0.6` = floaty), `data-match-duration` (seconds), `data-cell-size` (terrain cell size, default `8`). Metadata: `data-author`, `data-agent` (your name, e.g. `claude`, `gemini`, `chatgpt`), `data-level-id`, `data-description`.
+6. Give every shape a `fill` so the file looks right with no network. Colours are yours; the game ignores them.
+7. Design sense: spawns sit just above ground (centre ~24 units above the surface), not inside terrain and not over a pit. Leave the side edges open so players can fall off. Keep `bounds` a bit larger than the terrain so players fly before they die. Snap terrain to multiples of 8.
+
+Link the preview kit in `<head>` (works offline without it):
+
+```html
+<link rel="stylesheet" href="https://bompers.tom-fab.workers.dev/level-kit/v1/preview.css" />
+<script src="https://bompers.tom-fab.workers.dev/level-kit/v1/preview.js" defer></script>
+```
+
+## Minimal valid level
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tiny Box — Bompers level</title>
+    <link rel="stylesheet" href="https://bompers.tom-fab.workers.dev/level-kit/v1/preview.css" />
+    <script src="https://bompers.tom-fab.workers.dev/level-kit/v1/preview.js" defer></script>
+  </head>
+  <body>
+    <svg id="level" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"
+         data-level-format="1" data-title="Tiny Box" data-agent="claude">
+      <rect data-role="bounds" x="0" y="0" width="1200" height="800" fill="none" stroke="#d24b3a" />
+      <rect data-role="platform" x="240" y="560" width="720" height="64" fill="#7d7a85" />
+      <circle data-role="spawn" cx="320" cy="536" r="14" fill="#3f8f5f" />
+      <circle data-role="spawn" cx="520" cy="536" r="14" fill="#3f8f5f" />
+      <circle data-role="spawn" cx="680" cy="536" r="14" fill="#3f8f5f" />
+      <circle data-role="spawn" cx="880" cy="536" r="14" fill="#3f8f5f" />
+      <circle data-role="drop" cx="600" cy="80" r="12" fill="#c94f7c" />
+    </svg>
+  </body>
+</html>
+```
+
+## Full example
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Floating Garden — Bompers level</title>
+    <link rel="stylesheet" href="https://bompers.tom-fab.workers.dev/level-kit/v1/preview.css" />
+    <script src="https://bompers.tom-fab.workers.dev/level-kit/v1/preview.js" defer></script>
+  </head>
+  <body>
+    <svg id="level" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000"
+         data-level-format="1" data-level-id="floating-garden" data-title="Floating Garden"
+         data-author="Bompers team" data-agent="claude"
+         data-description="One floating main platform, three raised plateaus, open side edges."
+         data-cell-size="8" data-gravity="1" data-match-duration="180"
+         style="display:block;width:100%;height:auto;background:#dfe9f2">
+      <title>Floating Garden</title>
+      <rect data-role="bounds" x="40" y="20" width="1520" height="960" fill="none" stroke="#d24b3a" stroke-width="3" stroke-dasharray="14 8" />
+      <g id="terrain">
+        <rect id="main-core" data-role="platform" data-material="stone" data-label="Main platform" x="400" y="640" width="800" height="64" fill="#7d7a85" />
+        <polygon id="main-underside" data-role="platform" data-material="stone" points="480,704 1120,704 1040,800 560,800" fill="#7d7a85" />
+        <rect id="main-lip-left" data-role="destructible" data-material="dirt" x="320" y="640" width="80" height="48" fill="#c08a5b" />
+        <rect id="main-lip-right" data-role="destructible" data-material="dirt" x="1200" y="640" width="80" height="48" fill="#c08a5b" />
+        <rect id="plateau-left" data-role="destructible" data-material="dirt" data-label="Left plateau" x="440" y="460" width="240" height="32" fill="#c08a5b" />
+        <rect id="plateau-right" data-role="destructible" data-material="dirt" data-label="Right plateau" x="920" y="460" width="240" height="32" fill="#c08a5b" />
+        <rect id="plateau-top" data-role="platform" data-material="stone" x="700" y="300" width="200" height="32" fill="#7d7a85" />
+        <circle id="top-knob" data-role="destructible" data-material="dirt" data-effect="dust-burst" data-sound="crumble" cx="800" cy="300" r="28" fill="#c08a5b" />
+      </g>
+      <g id="spawns">
+        <circle data-role="spawn" cx="480" cy="616" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="1120" cy="616" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="560" cy="436" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="1040" cy="436" r="14" fill="#3f8f5f" />
+      </g>
+      <g id="drops">
+        <circle data-role="drop" data-items="rocket-launcher" cx="600" cy="80" r="12" fill="#c94f7c" />
+        <circle data-role="drop" data-items="rocket-launcher" cx="1000" cy="80" r="12" fill="#c94f7c" />
+      </g>
+      <g id="collectibles">
+        <circle data-role="collectible" data-item="point-orb" cx="800" cy="160" r="10" fill="#e0b62c" />
+        <circle data-role="collectible" data-item="point-orb" cx="320" cy="400" r="10" fill="#e0b62c" />
+        <circle data-role="collectible" data-item="point-orb" cx="1280" cy="400" r="10" fill="#e0b62c" />
+      </g>
+    </svg>
+  </body>
+</html>
+```
+
+## Check before you hand it over
+
+- [ ] One root `<svg>` with `data-level-format="1"`, `data-title` and `viewBox="0 0 W H"`.
+- [ ] Exactly one `bounds` rect; ≥ 4 `spawn` circles; ≥ 1 `drop` circle; at least one `platform` or `destructible`.
+- [ ] Only rect/polygon/circle carry `data-role`; no `path`, no `transform`.
+- [ ] Every ID is lowercase-kebab and listed in `catalog.json` (or left out to use the default).
+- [ ] Spawns and drops are inside `bounds` and not inside terrain.
+- [ ] Open the file in a browser: you see the level. With the kit linked, the panel under it lists no problems.
