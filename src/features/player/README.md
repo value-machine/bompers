@@ -12,6 +12,8 @@ The avatar: per-player simulation state, the controller system that moves player
 | Services | `services/playerController.ts` | `stepPlayers({ players, inputs, terrain, tunables, dt })` (sim step 2), `createPlayer`, `placePlayer`, `playerBody`. Per step: jump press / release (buffer, variable-height cut) → horizontal accel (ground accel / decel, turn boost, air steering; kept during the wall-jump lock) → aim → jump (ground, coyote, wall-jump) → gravity + wall-slide cap → axis-separated collision in half-cell sub-steps (no tunnelling, counts landings) → contact probes (wall, ground below, timers) |
 | Services | `services/blobPose.ts`         | Pure render-only pose: squash / stretch from the event counters (land, jump, wall-jump), airborne stretch, idle breathing, foot lag + deform, contact-shadow geometry                                                                                                                                                                                                                                                                                                                      |
 | Services | `services/playerRenderer.ts`   | Render layer: blob per player id (body + crescent + gloss, two feet, helmet with emblem ● ▲ ■ ✚ (geometry from `shared/utils/playerEmblem.ts`), eyes toward aim, ink outline) over a shadow layer; shapes drawn once, `syncPlayersView(view, players, { nowMs?, squash?, protectedIds? })` sets transforms per frame; protected players blink (alpha 100 % / 45 % at 8 Hz) inside a dashed ink ring (DESIGN_LANGUAGE § 6)                                                                                                                                                                                                                                     |
+| Services | `services/bodyCollision.ts`    | `resolveBodyContacts({ players, terrain, tunables })` (sim step 2b): blob-vs-blob contact. Equal-mass circles; along the contact normal each blob's velocity changes by `min((1 + e) / 2 · closingSpeed, maxImpulse)`; no bounce below `restingSpeed`; a grounded blob pushed downward counts as immovable; positions separate with the controller's terrain-safe `moveAxis`. Returns the `BodyContact[]` (pair, normal, approach speeds, impulse) for later systems |
+| Services | `services/tumble.ts`           | The hurt reaction to a hard hit, for any attack: `reactToHit(player, { impulse, hard? }, tunables)` starts a tumble when the impulse is at least `tumble.minImpulse` (or `hard`); `startTumble`, `isTumbling`. A tumbling blob ricochets off floors and walls (`tumble.bounces` times, each weaker, losing speed along the surface), steers at `tumble.steerScale`, cannot jump, and recovers when it comes to rest or after `tumble.maxSeconds`. The controller calls `bounceTumble` after terrain collision and `tickTumble` with the timers; `placePlayer` (respawn) ends it |
 | API      | `api/playerApi.ts`             | Public seam                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 Tests: `services/playerController.test.ts` (feel on a stone test level: accel ramp, gravity-scaled jump apex, jump cut, coyote, buffer, wall-slide, wall-jump, aim fallback) and `services/blobPose.test.ts`.
@@ -20,6 +22,8 @@ Seams for later work:
 
 - **Tuning:** every movement and squash number is in the `player` section of `src/shared/config/gameTunables.ts`. Jump apex = `jumpSpeed² / (2 · world.gravity)`, so a match's gravity setting scales jump height.
 - **Visual pass:** zoom-scaled stroke widths, helmet spring wobble and wall-jump rotation are not built yet (`playerRenderer.ts`).
+- **Abilities (dive, later stuns / recoil):** write `steerScale`, `gravityScale` and `jumpLocked` on `PlayerState`; the controller applies them on the next step. Read `terrainHitX` / `terrainHitY` (+ speeds) to react to walls and floors. For a pose, pass `overlays` (`BlobPoseOverlay` by player id) to `syncPlayersView`; it combines with the spawn-protection blink and ring.
+- **Hurt reaction:** an attack applies its own knockback (`vx` / `vy`), then calls `reactToHit` with the impulse it gave. Used by the dive's strike and by combat's explosions (never on the shooter).
 - **Combat** (`features/combat`) writes `vx` / `vy` for knockback and blast impulses (rocket jumps) and reads `aimX` / `aimY`; health, weapons and invulnerability live in combat state keyed by player `id`.
 
 ## Dependencies
@@ -27,7 +31,7 @@ Seams for later work:
 - `arena` via `api/arenaApi.ts` (`rectHitsSolid`, `TerrainGrid`).
 - Shared: `gameTunables`, `gamePalette`, `gameInput.types`, `gameInputMapping` (`EMPTY_PLAYER_INPUT`), `gameGeometry.types`; `pixi.js` for the renderer.
 - Player colors: `GAME_PALETTE.players` / `playerShades` / `playerTints`, indexed by `slot` (DESIGN_LANGUAGE § 1).
-- Consumed by `match` only.
+- Consumed by `match`, `combat`, `collectibles` and `dive`.
 
 ## Decisions
 
@@ -35,4 +39,7 @@ Seams for later work:
 - Variable jump = one cut of the rise on release (player-movement D2); linear accel toward the input speed with a turn boost (D3).
 - Sim → render events are monotonic counters on `PlayerState`, never per-step flags, because a frame may run several sim steps (player-movement D4). Squash never feeds back into the sim.
 - The animation clock is a `syncPlayersView` option defaulting to `performance.now()` (D5); the sim scans `groundBelowY` for the contact shadow (D6).
+- Blob-vs-blob collision lives here (dive-headbutt D1): it is about `PlayerState` bodies and uses the controller's terrain-safe move. Bodies are circles for blob contact, boxes for terrain (D4). A blob that cannot give way is immovable for that contact, so others bounce off it (D5).
+- Ability systems steer the controller only through the generic motion modifiers; the controller has no ability-specific branch (dive-headbutt D2).
+- The tumble lives here, not in an attack feature (dive-headbutt D10): it is player motion state that several attacks trigger, and the bounce has to happen inside the controller's terrain collision. Each tumble bounce plays the landing squash; the blob rolls while tumbling (render only).
 - Systems receive the slices they need, never the whole `GameState`, so features stay acyclic (game-engine-foundation D5).

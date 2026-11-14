@@ -89,6 +89,82 @@ export interface GameTunables {
       breathSeconds: number;
     };
   };
+  /** Blob-vs-blob contact (equal mass, circle bodies). */
+  bodyCollision: {
+    /** Bounciness along the contact normal: 1 = velocities swap, 0 = both keep the average. */
+    restitution: number;
+    /** Closing speeds below this do not bounce (restitution 0), so resting contact stays calm. */
+    restingSpeed: number;
+    /** Cap on the velocity change one contact gives each blob, units / s. */
+    maxImpulse: number;
+  };
+  /**
+   * Tumble: the hurt reaction to a hard hit (any attack). The victim ricochets off floors and
+   * walls for a few bounces, each weaker than the last, then recovers.
+   */
+  tumble: {
+    /** A hit whose impulse (velocity change) is at least this starts a tumble, units / s. */
+    minImpulse: number;
+    /** Terrain bounces per tumble. */
+    bounces: number;
+    /** Bounciness of the first bounce; each later one is multiplied by `restitutionDecay`. */
+    restitution: number;
+    restitutionDecay: number;
+    /** Share of the speed along the surface kept on each bounce (friction). */
+    surfaceSpeedKeep: number;
+    /** Terrain impact speed below which a tumbling blob just lands, units / s. */
+    minBounceSpeed: number;
+    /** Steering while tumbling (share of normal); jump is locked. */
+    steerScale: number;
+    /** Longest tumble; it also ends when the blob comes to rest on the ground. */
+    maxSeconds: number;
+  };
+  /**
+   * Unarmed attack: the dive headbutt ("bomp", GDD § 3). A committed straight missile that
+   * ricochets off other blobs. Damage comes from `combat.hitDamage.contact` (via `applyHit`).
+   * Seconds and world units; frames = seconds × `sim.stepHz`.
+   */
+  dive: {
+    /** Attacker speed toward the victim below which a touch is a bump, not a hit, units / s. */
+    minHitSpeed: number;
+    /** Seconds a fire press is remembered while a dive is not available yet. */
+    fireBufferSeconds: number;
+    /** Wind-up (the telegraph): seconds; velocity is multiplied by the scale once at its start. */
+    windupSeconds: number;
+    windupSpeedScale: number;
+    /** Gravity during the wind-up (0 = hang in the air). */
+    windupGravityScale: number;
+    /** Launch speed along the 8-way aim, units / s. Travel has no gravity and no steering. */
+    launchSpeed: number;
+    /** Longest travel; reach = launchSpeed × travelSeconds. */
+    travelSeconds: number;
+    /** Velocity is multiplied by this when the travel times out. */
+    exitSpeedScale: number;
+    /** Recovery after a dive that hit nobody: seconds and steering; jump stays locked. */
+    recoverySeconds: number;
+    recoverySteerScale: number;
+    /** Seconds after the recovery before the next dive may start (none after a hit). */
+    cooldownSeconds: number;
+    /** Terrain impact speed below which a touch is ignored by the dive, units / s. */
+    minTerrainHitSpeed: number;
+    /**
+     * Terrain ends the dive. Head-on (the blocked speed is at least `bonkMinAlignment` of the
+     * dive speed) is a bonk: thrown back at `bonkRebound` × speed and stunned for
+     * `bonkStunSeconds`. A glancing touch just ends it (normal recovery).
+     */
+    bonkStunSeconds: number;
+    bonkMinAlignment: number;
+    bonkRebound: number;
+    /** On a hit, on top of the body-collision exchange: push on the victim along the hit direction. */
+    strikeImpulse: number;
+    /** … upward pop on the victim, units / s. */
+    strikeLift: number;
+    /** … upward speed the attacker ricochets off with; its dive is available again at once. */
+    attackerPop: number;
+    /** Seconds a hit victim steers at `staggerSteerScale` (keeps the knockback readable). */
+    staggerSeconds: number;
+    staggerSteerScale: number;
+  };
   /** Health, hits, rocket launcher, explosions and weapon drops (GDD § 3). */
   combat: {
     /** Health chunks per player; 0 eliminates. */

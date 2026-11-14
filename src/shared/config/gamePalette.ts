@@ -37,6 +37,9 @@ export const GAME_PALETTE = {
   hud: { card: 0xfffaf0, caption: 0x8a7a99, timer: 0xffd43b },
   sky: { top: 0x8fd6ff, bottom: 0xfff1cf },
   timerWarning: 0xff8a1f,
+  /** Hit feedback (DESIGN_LANGUAGE § 1 Effects): hit flash, and the explosion mid star for strong hits. */
+  hitFlash: 0xffffff,
+  hitStrong: 0xffe14d,
   /** Keyed by a catalog material's `lookToken`. */
   materialLooks: {
     stone: { fill: 0x5a3f7a, accent: 0x7d5fa6 },

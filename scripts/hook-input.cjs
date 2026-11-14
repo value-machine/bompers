@@ -1,6 +1,7 @@
 /**
- * Shared reader for Claude Code hook input (JSON on stdin), used by every hook script in
- * scripts/ (.claude/settings.json `hooks`). Hook contract: code.claude.com/docs/en/hooks.
+ * Shared reader for agent hook input (JSON on stdin), used by every hook script in scripts/.
+ * Claude Code wires them in .claude/settings.json `hooks` (contract: code.claude.com/docs/en/hooks);
+ * Cursor wires the feedback hooks in .cursor/hooks.json (contract: cursor.com/docs/agent/hooks).
  */
 
 /**
@@ -28,4 +29,14 @@ function readStdin(stream = process.stdin) {
   });
 }
 
-module.exports = { parseHookInput, readStdin };
+/**
+ * Cursor sends `cursor_version` with every hook event; Claude Code never does. Scripts use this to
+ * answer in the caller's output format.
+ * @param {Record<string, any> | null} input
+ * @returns {boolean}
+ */
+function isCursorInput(input) {
+  return Boolean(input && typeof input.cursor_version === "string");
+}
+
+module.exports = { parseHookInput, readStdin, isCursorInput };

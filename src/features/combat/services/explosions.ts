@@ -1,7 +1,7 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { clearCircle } from "@/features/arena/api/arenaApi";
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
-import { playerBody, type PlayerState } from "@/features/player/api/playerApi";
+import { playerBody, reactToHit, type PlayerState } from "@/features/player/api/playerApi";
 import { bodyCenter, distanceToRect, unitBetween } from "@/features/combat/services/combatGeometry";
 import {
   applyHit,
@@ -13,7 +13,8 @@ import {
 /**
  * Explosions (GDD § 2 Rocket Jumping, § 3): a `blast` hit (1 chunk by default, from any side)
  * on every OTHER player in range,
- * a radial impulse on everyone in range (the shooter too — damage-free rocket jumps), and a
+ * a radial impulse on everyone in range (the shooter too — damage-free rocket jumps), the
+ * tumble hurt reaction on every other player the blast pushed hard (`reactToHit`), and a
  * crater in destructible terrain with the material's destroy effect / sound as events.
  */
 export interface Blast {
@@ -24,32 +25,42 @@ export interface Blast {
 
 const UP: Vec2 = { x: 0, y: -1 };
 
-/** Pushes one player away from the blast; returns the push direction, or null when out of range. */
-function pushPlayer(ctx: CombatContext, player: PlayerState, at: Vec2): Vec2 | null {
+interface BlastPush {
+  /** Unit direction away from the blast. */
+  direction: Vec2;
+  /** Velocity change the blast gave the player, units / s. */
+  impulse: Vec2;
+}
+
+/** Pushes one player away from the blast; returns the push, or null when out of range. */
+function pushPlayer(ctx: CombatContext, player: PlayerState, at: Vec2): BlastPush | null {
   const { radius, impulse, minFalloff } = ctx.tunables.combat.explosion;
   const distance = distanceToRect(at, playerBody(player));
   if (distance > radius) return null;
   const falloff = Math.max(minFalloff, 1 - distance / radius);
   const direction = unitBetween(at, bodyCenter(player), UP);
-  player.vx += direction.x * impulse * falloff;
-  player.vy += direction.y * impulse * falloff;
+  const push = { x: direction.x * impulse * falloff, y: direction.y * impulse * falloff };
+  player.vx += push.x;
+  player.vy += push.y;
   player.grounded = false;
-  return direction;
+  return { direction, impulse: push };
 }
 
 function hitPlayers(ctx: CombatContext, blast: Blast): void {
   for (const player of ctx.players) {
     const fighter = fighterFor(ctx.combat, player, ctx.tunables);
     if (fighter.eliminated) continue;
-    const direction = pushPlayer(ctx, player, blast.at);
-    if (!direction || player.id === blast.ownerId) continue;
+    const push = pushPlayer(ctx, player, blast.at);
+    // The shooter is only pushed: no damage and no tumble, so rocket jumps stay in control.
+    if (!push || player.id === blast.ownerId) continue;
+    reactToHit(player, { impulse: push.impulse }, ctx.tunables);
     applyHit(ctx, {
       victimSlot: player.slot,
       attackerSlot: blast.ownerSlot,
       kind: "blast",
       source: "rocket",
       contactPoint: blast.at,
-      direction,
+      direction: push.direction,
     });
   }
 }

@@ -18,7 +18,7 @@ When this skill is done, the change has passed every check the repo can run, and
 |---|---|
 | In | Lap branch diff against its base, plan + Review contract + Amendments, lap `DECISIONS.md`, rules |
 | Out | Fixes (via `loop-build`); check summary for Stop 2 ([`references/rule-audit.md`](references/rule-audit.md) § Report format) |
-| Calls | always → [`references/rule-audit.md`](references/rule-audit.md) (mode `impl`, or `gate` when there's no plan) · if UI components were added or changed → [`references/component-lens.md`](references/component-lens.md) · if a heavy operation is involved (`architecture` rule § Performance cost risk) → [`spec-optimize-performance`](../spec-optimize-performance/SKILL.md) · if blocking findings → [`loop-build`](../loop-build/SKILL.md) · if clean → [`loop-ship`](../loop-ship/SKILL.md) |
+| Calls | always → [`references/rule-audit.md`](references/rule-audit.md) (mode `impl`, or `gate` when there's no plan) · if UI components were added or changed → [`references/component-lens.md`](references/component-lens.md) · if a heavy operation is involved (`architecture` rule § Performance cost risk) → [`spec-optimize-performance`](../spec-optimize-performance/SKILL.md) · at size M, Claude Code only → built-in `/code-review` as one lens ([`router/references/external-skills.md`](../router/references/external-skills.md) § Claude Code built-ins) · if blocking findings → [`loop-build`](../loop-build/SKILL.md) · if clean → [`loop-ship`](../loop-ship/SKILL.md) |
 | Called by | [`router`](../router/SKILL.md), [`loop-build`](../loop-build/SKILL.md) |
 | Next | [`loop-ship`](../loop-ship/SKILL.md) |
 | Owner stops | None, unless resolving a finding hits the stop list ([`agent-behavior` rule § When to ask](../../../.claude/rules/agent-behavior.md)) |
@@ -30,7 +30,7 @@ When this skill is done, the change has passed every check the repo can run, and
    - one read-only subagent per relevant rule, always including `code-style` with its naming sweep;
    - the tooling pass (contract gate list, including the acceptance test);
    - the plan-compliance subagent, which checks phases against code and that lap decisions were folded into their homes;
-   - at size M, the parallel critique lenses on the implementation, reusing [`loop-plan/references/plan-review.md`](../loop-plan/references/plan-review.md) § Fan-out with the diff in place of the plan;
+   - at size M, the parallel critique lenses on the implementation, reusing [`loop-plan/references/plan-review.md`](../loop-plan/references/plan-review.md) § Fan-out with the diff in place of the plan; in Claude Code, one of the two agent-picked lenses is the built-in `/code-review` on the lap diff (correctness bugs), its findings graded like any other lens (Cursor: pick both lenses by hand);
    - the component lens on each UI component added or changed.
 3. **Synthesize.** Deduplicate across rules, group by category, sort by severity and basis. A subagent that errored is reported as `not audited — rerun`, never silently dropped.
 4. **Fix.** `contract` Blockers and Warnings go back to [`loop-build`](../loop-build/SKILL.md), then re-check the affected rules. `drift` and `advisory` findings aren't fixed; they're listed in the summary, where the owner can promote one through a Change verdict. Never weaken a rule or a config to clear a finding (`architecture` rule § Changing architecture rules and configs).

@@ -20,6 +20,12 @@ import {
   syncCollectiblesView,
   type CollectiblesView,
 } from "@/features/collectibles/api/collectiblesApi";
+import {
+  createDiveView,
+  diveBlobPoses,
+  syncDiveView,
+  type DiveView,
+} from "@/features/dive/api/diveApi";
 import { playersInPlay, type GameState } from "@/features/match/services/gameSim";
 import { createHudView, syncHudView, type HudView } from "@/features/match/services/hudRenderer";
 
@@ -30,6 +36,7 @@ import { createHudView, syncHudView, type HudView } from "@/features/match/servi
  *   │  ├─ terrain   (arena)
  *   │  ├─ pickups (combat), point orbs (collectibles)
  *   │  ├─ effects (explosions), rockets (+ rocket tubes)   (combat)
+ *   │  ├─ dive effects (impact pops)   (dive)
  *   │  ├─ players   (player; above effects so they never cover a player outline; protected
  *   │  │             players blink inside a dashed ring)
  *   │  └─ combat overlay (health chunks above each player)
@@ -44,6 +51,7 @@ export interface GameRenderer {
   players: PlayersView;
   combat: CombatView;
   collectibles: CollectiblesView;
+  dive: DiveView;
   hud: HudView;
   camera: CameraView | null;
 }
@@ -54,19 +62,21 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const players = createPlayersView();
   const combat = createCombatView();
   const collectibles = createCollectiblesView();
+  const dive = createDiveView();
   world.addChild(
     terrain.container,
     combat.pickups,
     collectibles.container,
     combat.effects,
     combat.rockets,
+    dive.effects,
     players.container,
     combat.overlay
   );
 
   const hud = createHudView();
   app.stage.addChild(world, hud.root);
-  return { world, terrain, players, combat, collectibles, hud, camera: null };
+  return { world, terrain, players, combat, collectibles, dive, hud, camera: null };
 }
 
 /** Ids of players whose spawn protection is still running. */
@@ -90,7 +100,12 @@ export function renderGame(
   const inPlay = playersInPlay(state);
   const nowMs = performance.now();
   syncTerrainView(renderer.terrain, state.arena.terrain);
-  syncPlayersView(renderer.players, inPlay, { nowMs, protectedIds: protectedIds(state) });
+  syncPlayersView(renderer.players, inPlay, {
+    nowMs,
+    protectedIds: protectedIds(state),
+    overlays: diveBlobPoses(state.dive, state.tunables),
+  });
+  syncDiveView(renderer.dive, state.dive);
   syncCollectiblesView(renderer.collectibles, {
     collectibles: state.collectibles,
     size: state.tunables.collectibles.size,
