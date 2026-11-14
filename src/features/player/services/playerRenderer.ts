@@ -1,5 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import { traceEmblem } from "@/shared/services/emblemRenderer";
+import { playerEmblemShape } from "@/shared/utils/playerEmblem";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import {
   blobPose,
@@ -81,48 +83,6 @@ function drawBody(slot: number, r: number): Graphics {
     .stroke(ink(STROKE));
 }
 
-/** Emblem path per slot: ● ▲ ■ ✚ (the second cue next to colour). */
-function emblemPath(g: Graphics, slot: number, s: number): Graphics {
-  switch (slot % 4) {
-    case 0:
-      return g.circle(0, 0, s);
-    case 1:
-      return g.poly([0, -1.1 * s, 1.05 * s, 0.8 * s, -1.05 * s, 0.8 * s]);
-    case 2:
-      return g.roundRect(-0.9 * s, -0.9 * s, 1.8 * s, 1.8 * s, 0.25 * s);
-    default: {
-      const a = 0.38 * s;
-      const b = 1.05 * s;
-      return g.poly([
-        -a,
-        -b,
-        a,
-        -b,
-        a,
-        -a,
-        b,
-        -a,
-        b,
-        a,
-        a,
-        a,
-        a,
-        b,
-        -a,
-        b,
-        -a,
-        a,
-        -b,
-        a,
-        -b,
-        -a,
-        -a,
-        -a,
-      ]);
-    }
-  }
-}
-
 /** Dome over the top 45 % of the body, 4 units wider, gloss stroke and emblem. Origin: body centre. */
 function drawHelmet(slot: number, r: number): Graphics {
   const shell = r + 2;
@@ -135,7 +95,7 @@ function drawHelmet(slot: number, r: number): Graphics {
     .stroke(ink(STROKE))
     .arc(0, 0, shell * 0.72, Math.PI * 1.15, Math.PI * 1.35)
     .stroke({ width: STROKE_SMALL, color: GAME_PALETTE.gloss, cap: "round" });
-  const emblem = emblemPath(new Graphics(), slot, 0.26 * r)
+  const emblem = traceEmblem(new Graphics(), playerEmblemShape(slot, 0.26 * r))
     .fill(slotColor(GAME_PALETTE.players, slot))
     .stroke(ink(STROKE_SMALL));
   emblem.position.set(0, -0.6 * r);

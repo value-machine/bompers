@@ -1,5 +1,7 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import { traceEmblem } from "@/shared/services/emblemRenderer";
+import { playerEmblemShape } from "@/shared/utils/playerEmblem";
 import type { GameState } from "@/features/match/services/gameSim";
 import { roundResultLabel } from "@/features/match/services/matchRules";
 
@@ -39,15 +41,8 @@ const text = (size: number, fill: number, weight: "600" | "700" = "700"): Text =
   new Text({ text: "", style: { fontFamily: FONT, fontSize: size, fontWeight: weight, fill } });
 
 /** The helmet emblem of a slot (● ▲ ■ ✚, DESIGN_LANGUAGE § 1), in ink, centred on 0,0. */
-function drawEmblem(slot: number, size: number): Graphics {
-  const g = new Graphics();
-  const h = size / 2;
-  if (slot % 4 === 0) g.circle(0, 0, h);
-  else if (slot % 4 === 1) g.poly([0, -h, h, h * 0.8, -h, h * 0.8]);
-  else if (slot % 4 === 2) g.rect(-h * 0.85, -h * 0.85, h * 1.7, h * 1.7);
-  else g.rect(-h, -h * 0.32, h * 2, h * 0.64).rect(-h * 0.32, -h, h * 0.64, h * 2);
-  return g.fill(GAME_PALETTE.ink);
-}
+const drawEmblem = (slot: number, size: number): Graphics =>
+  traceEmblem(new Graphics(), playerEmblemShape(slot, size / 2)).fill(GAME_PALETTE.ink);
 
 function drawChip(slot: number): Container {
   const chip = new Container();
@@ -215,7 +210,7 @@ function syncBanner(view: HudView, frame: HudFrame, scale: number): void {
     banner.title.style.stroke = { width: winner === undefined ? 0 : 6, color: GAME_PALETTE.ink };
   }
   const locked = timeSeconds - (round.endedAt ?? timeSeconds) < tunables.match.restartLockSeconds;
-  banner.hint.text = locked ? "Final scores" : "Press jump to play again";
+  banner.hint.text = locked ? "Final scores" : "Jump: rematch · Back (Q / ⌫ / B): lobby";
   banner.root.scale.set(scale);
   banner.root.position.set(frame.viewport.width / 2, frame.viewport.height / 2);
 }

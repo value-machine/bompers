@@ -2,7 +2,9 @@ import type {
   GamepadSnapshot,
   InputSource,
   KeyboardLayoutId,
+  MenuInput,
   PlayerInput,
+  SlotSources,
 } from "@/shared/types/gameInput.types";
 
 /**
@@ -16,6 +18,10 @@ interface KeyboardLayout {
   down: readonly string[];
   jump: readonly string[];
   fire: readonly string[];
+  /** Menu only: join / choose / start. */
+  confirm: readonly string[];
+  /** Menu only: leave / back to the lobby. */
+  back: readonly string[];
 }
 
 export const KEYBOARD_LAYOUTS: Record<KeyboardLayoutId, KeyboardLayout> = {
@@ -26,6 +32,8 @@ export const KEYBOARD_LAYOUTS: Record<KeyboardLayoutId, KeyboardLayout> = {
     down: ["KeyS"],
     jump: ["KeyW", "Space"],
     fire: ["KeyF"],
+    confirm: ["Space", "KeyF"],
+    back: ["KeyQ"],
   },
   right: {
     left: ["ArrowLeft"],
@@ -34,10 +42,26 @@ export const KEYBOARD_LAYOUTS: Record<KeyboardLayoutId, KeyboardLayout> = {
     down: ["ArrowDown"],
     jump: ["ArrowUp"],
     fire: ["Slash", "Numpad0", "Enter"],
+    confirm: ["Enter", "Slash", "Numpad0"],
+    back: ["Backspace"],
   },
 };
 
-/** Default slot → device map. Joining/reassigning devices is the lobby's job. */
+/** Every device a player can join with, in lobby order: keyboard halves, then pads 0–3. */
+export const INPUT_DEVICES: readonly InputSource[] = [
+  { kind: "keyboard", layout: "left" },
+  { kind: "keyboard", layout: "right" },
+  { kind: "gamepad", padIndex: 0 },
+  { kind: "gamepad", padIndex: 1 },
+  { kind: "gamepad", padIndex: 2 },
+  { kind: "gamepad", padIndex: 3 },
+];
+
+/** Stable key of a device (`keyboard:left`, `gamepad:2`), for maps and React keys. */
+export const inputSourceKey = (source: InputSource): string =>
+  source.kind === "keyboard" ? `keyboard:${source.layout}` : `gamepad:${source.padIndex}`;
+
+/** Default slot → device map (tests, and a match started without the lobby). */
 export const DEFAULT_INPUT_SOURCES: readonly InputSource[] = [
   { kind: "keyboard", layout: "left" },
   { kind: "keyboard", layout: "right" },
@@ -53,7 +77,21 @@ export const GAME_KEY_CODES: ReadonlySet<string> = new Set(
 export const GAMEPAD_DEADZONE = 0.25;
 
 /** Standard-mapping button indices. */
-const PAD_BUTTON = { a: 0, x: 2, rb: 5, rt: 7, dpadLeft: 14, dpadRight: 15 } as const;
+const PAD_BUTTON = {
+  a: 0,
+  b: 1,
+  x: 2,
+  rb: 5,
+  rt: 7,
+  start: 9,
+  dpadUp: 12,
+  dpadDown: 13,
+  dpadLeft: 14,
+  dpadRight: 15,
+} as const;
+
+/** A stick must pass this far to count as a menu direction (firmer than the play deadzone). */
+const MENU_STICK_THRESHOLD = 0.5;
 
 export const EMPTY_PLAYER_INPUT: PlayerInput = {
   connected: false,
@@ -122,14 +160,66 @@ export interface RawInputState {
   gamepads: readonly (GamepadSnapshot | null)[];
 }
 
-/** Maps raw device state to one `PlayerInput` per slot, in slot order. */
+/** Maps raw device state to one `PlayerInput` per slot, in slot order (null slot = empty). */
 export function mapPlayerInputs(
   raw: RawInputState,
-  sources: readonly InputSource[] = DEFAULT_INPUT_SOURCES
+  sources: SlotSources = DEFAULT_INPUT_SOURCES
 ): PlayerInput[] {
-  return sources.map((source) =>
-    source.kind === "keyboard"
+  return sources.map((source) => {
+    if (!source) return EMPTY_PLAYER_INPUT;
+    return source.kind === "keyboard"
       ? mapKeyboardInput(raw.heldKeys, source.layout)
-      : mapGamepadInput(raw.gamepads[source.padIndex] ?? null)
+      : mapGamepadInput(raw.gamepads[source.padIndex] ?? null);
+  });
+}
+
+export const EMPTY_MENU_INPUT: MenuInput = {
+  present: false,
+  up: false,
+  down: false,
+  left: false,
+  right: false,
+  confirm: false,
+  back: false,
+};
+
+function mapKeyboardMenu(held: ReadonlySet<string>, layoutId: KeyboardLayoutId): MenuInput {
+  const layout = KEYBOARD_LAYOUTS[layoutId];
+  return {
+    present: true,
+    up: anyHeld(held, layout.up),
+    down: anyHeld(held, layout.down),
+    left: anyHeld(held, layout.left),
+    right: anyHeld(held, layout.right),
+    confirm: anyHeld(held, layout.confirm),
+    back: anyHeld(held, layout.back),
+  };
+}
+
+/** D-pad or left stick for directions; A / Start confirm, B back. */
+function mapGamepadMenu(pad: GamepadSnapshot | null): MenuInput {
+  if (!pad) return EMPTY_MENU_INPUT;
+  const x = pad.axes[0] ?? 0;
+  const y = pad.axes[1] ?? 0;
+  return {
+    present: true,
+    up: pressed(pad, PAD_BUTTON.dpadUp) || y <= -MENU_STICK_THRESHOLD,
+    down: pressed(pad, PAD_BUTTON.dpadDown) || y >= MENU_STICK_THRESHOLD,
+    left: pressed(pad, PAD_BUTTON.dpadLeft) || x <= -MENU_STICK_THRESHOLD,
+    right: pressed(pad, PAD_BUTTON.dpadRight) || x >= MENU_STICK_THRESHOLD,
+    confirm: pressed(pad, PAD_BUTTON.a) || pressed(pad, PAD_BUTTON.start),
+    back: pressed(pad, PAD_BUTTON.b),
+  };
+}
+
+/** Maps raw device state to one `MenuInput` per device, in `devices` order. */
+export function mapMenuInputs(
+  raw: RawInputState,
+  devices: readonly InputSource[] = INPUT_DEVICES
+): MenuInput[] {
+  return devices.map((device) =>
+    device.kind === "keyboard"
+      ? mapKeyboardMenu(raw.heldKeys, device.layout)
+      : mapGamepadMenu(raw.gamepads[device.padIndex] ?? null)
   );
 }

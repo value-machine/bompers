@@ -45,3 +45,6 @@ export const GAME_PALETTE = {
   /** Look for a lookToken with no entry (should not happen after normalisation). */
   fallbackLook: { fill: 0x5a3f7a, accent: 0x7d5fa6 } as MaterialLook,
 } as const;
+
+/** A palette colour as CSS, for DOM next to the canvas (hints, lobby blobs). */
+export const toCssColor = (color: number): string => `#${color.toString(16).padStart(6, "0")}`;
