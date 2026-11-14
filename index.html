@@ -2,15 +2,38 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bompers</title>
+    <meta
+      name="description"
+      content="Blob arena chaos for 2–4 players on one screen. Rocket-jump, blast the arena, score the most points. Plays in the browser, no install."
+    />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#fff6e6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1d1428" media="(prefers-color-scheme: dark)" />
+    <!-- Link preview: static tags, scrapers do not run JavaScript. Absolute URLs use the production origin. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Bompers" />
+    <meta property="og:title" content="Bompers" />
+    <meta
+      property="og:description"
+      content="Blob arena chaos for 2–4 players on one screen. Rocket-jump, blast the arena, score the most points."
+    />
+    <meta property="og:url" content="https://bompers.tom-fab.workers.dev/" />
+    <meta property="og:image" content="https://bompers.tom-fab.workers.dev/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Bompers: two helmeted candy blobs bump heads under a burst, next to the four player emblems" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400..700&display=swap"
       rel="stylesheet"
     />
-    <title>Plate Harness</title>
     <script>
       // Color mode before first paint (no flash). Mirrors src/shared/theme/colorMode.ts
       // (storage key, modes, class); colorMode.test.ts keeps them in sync.
