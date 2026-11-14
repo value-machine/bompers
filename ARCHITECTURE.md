@@ -22,10 +22,8 @@ src/
 │   ├── level-file/      # Game: level file importer (HTML/SVG → LevelDefinition), Load level control, kit export
 │   ├── match/           # Game: GameState, stepGame systems order, render composition, GameView
 │   ├── player/          # Game: player state, controller system, player render layer
-│   ├── harness-overview/ # /harness overview route + welcome card (deletable)
 │   └── tasks/           # Dev-only task backlog (/tasks)
 ├── layouts/             # App shell: wires features into page chrome
-│   ├── MainLayout/      # Main layout component
 │   └── Topbar/          # Top bar hosting the color mode toggle
 ├── pages/               # Route-level page components
 ├── shared/              # Shared across features
