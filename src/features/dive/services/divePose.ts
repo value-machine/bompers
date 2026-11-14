@@ -1,54 +1,90 @@
-import type { DiveOptionTunables } from "@/shared/types/gameTunables.types";
+import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { BlobPoseOverlay } from "@/features/player/api/playerApi";
 import type { DiveMotion } from "@/features/dive/types/dive.types";
 
 /**
- * Render-only read of a dive (DESIGN_LANGUAGE § 6): crouch into the wind-up, turn headfirst and
- * stretch along the dive while travelling, squash on a terrain bonk, ease upright in recovery,
- * and the "bash hit taken" squash on a victim. Pure, driven by the sim's phase timers.
+ * Render-only read of a dive (DESIGN_LANGUAGE § 6), driven by the sim's phase timers:
+ * a deep crouch that leans toward the target (the telegraph) → a launch stretch that snaps long
+ * and settles into the flight stretch, helmet first → on a hit the attacker squashes against the
+ * victim and springs upright; on a wall a flat bonk squash; the victim takes the "bash hit
+ * taken" squash. Pure; never feeds back into the sim.
  */
-const WINDUP_SQUASH = { sx: 1.22, sy: 0.8 };
-const TRAVEL_STRETCH = { sx: 0.82, sy: 1.24 };
-const BONK_SQUASH = { sx: 1.3, sy: 0.74 };
+type Scale = { sx: number; sy: number };
+
+const UPRIGHT: Scale = { sx: 1, sy: 1 };
+const WINDUP_SQUASH: Scale = { sx: 1.32, sy: 0.7 };
+/** The first frames of the flight overshoot the stretch, then ease to the cruise shape. */
+const LAUNCH_STRETCH: Scale = { sx: 0.68, sy: 1.46 };
+const TRAVEL_STRETCH: Scale = { sx: 0.82, sy: 1.24 };
+const LAUNCH_SETTLE_SECONDS = 0.08;
+const BONK_SQUASH: Scale = { sx: 1.34, sy: 0.7 };
+/** The attacker flattening against the victim, then springing off. */
+const RICOCHET_SQUASH: Scale = { sx: 1.3, sy: 0.74 };
+const RICOCHET_SECONDS = 0.16;
 /** DESIGN_LANGUAGE § 6 "Bash hit taken": (1.15, 0.88) for 100 ms. */
-const HIT_SQUASH = { sx: 1.15, sy: 0.88, seconds: 0.1 };
+const HIT_SQUASH: Scale = { sx: 1.15, sy: 0.88 };
+const HIT_SQUASH_SECONDS = 0.1;
+/** How far the wind-up leans toward the dive direction (share of the full turn). */
+const WINDUP_LEAN = 0.35;
 
 /** Rotation that points the blob's top (the helmet) along a direction; y is down. */
 const headfirstAngle = (dirX: number, dirY: number): number => Math.atan2(dirX, -dirY);
 
+const clamp01 = (t: number): number => Math.min(1, Math.max(0, t));
 const mix = (from: number, to: number, t: number): number => from + (to - from) * t;
+const mixScale = (from: Scale, to: Scale, t: number): Scale => ({
+  sx: mix(from.sx, to.sx, t),
+  sy: mix(from.sy, to.sy, t),
+});
+/** Fast start, soft landing. */
+const easeOut = (t: number): number => 1 - (1 - t) * (1 - t);
+/** Back-out: overshoots past 1 before settling (the spring off a hit). */
+const easeOutBack = (t: number): number => {
+  const c1 = 1.70158;
+  return 1 + (c1 + 1) * (t - 1) ** 3 + c1 * (t - 1) ** 2;
+};
 
 const phaseProgress = (motion: DiveMotion): number =>
-  motion.phaseDuration > 0 ? Math.min(1, motion.phaseSeconds / motion.phaseDuration) : 1;
+  motion.phaseDuration > 0 ? clamp01(motion.phaseSeconds / motion.phaseDuration) : 1;
 
-function hitSquash(motion: DiveMotion, staggerSeconds: number): BlobPoseOverlay | null {
+/** Poses of a blob that is not diving: springing off a hit it landed, or squashed by one it took. */
+function reactionPose(motion: DiveMotion, staggerSeconds: number): BlobPoseOverlay | null {
+  if (motion.sinceRicochet < RICOCHET_SECONDS) {
+    const t = motion.sinceRicochet / RICOCHET_SECONDS;
+    const angle = headfirstAngle(motion.dirX, motion.dirY);
+    return {
+      rotation: angle * (1 - easeOut(t)),
+      ...mixScale(RICOCHET_SQUASH, UPRIGHT, easeOutBack(t)),
+    };
+  }
   const sinceHit = staggerSeconds - motion.stagger;
-  if (motion.stagger <= 0 || sinceHit >= HIT_SQUASH.seconds) return null;
-  const k = 1 - sinceHit / HIT_SQUASH.seconds;
-  return { rotation: 0, sx: mix(1, HIT_SQUASH.sx, k), sy: mix(1, HIT_SQUASH.sy, k) };
+  if (motion.stagger <= 0 || sinceHit >= HIT_SQUASH_SECONDS) return null;
+  return { rotation: 0, ...mixScale(HIT_SQUASH, UPRIGHT, sinceHit / HIT_SQUASH_SECONDS) };
 }
 
 /** The overlay for one player this frame, or null for the plain movement pose. */
 export function diveBlobPose(
   motion: DiveMotion,
-  ctx: { option: DiveOptionTunables; staggerSeconds: number }
+  tunables: Pick<GameTunables["dive"], "staggerSeconds">
 ): BlobPoseOverlay | null {
   const angle = headfirstAngle(motion.dirX, motion.dirY);
   const t = phaseProgress(motion);
-  if (motion.phase === "windup") {
-    // Lean a third of the way toward the dive while crouching.
-    return {
-      rotation: (angle / 3) * t,
-      sx: mix(1, WINDUP_SQUASH.sx, t),
-      sy: mix(1, WINDUP_SQUASH.sy, t),
-    };
+  switch (motion.phase) {
+    case "windup":
+      return {
+        rotation: angle * WINDUP_LEAN * easeOut(t),
+        ...mixScale(UPRIGHT, WINDUP_SQUASH, easeOut(t)),
+      };
+    case "travel": {
+      const settle = clamp01(motion.phaseSeconds / LAUNCH_SETTLE_SECONDS);
+      return { rotation: angle, ...mixScale(LAUNCH_STRETCH, TRAVEL_STRETCH, easeOut(settle)) };
+    }
+    case "recovery":
+      return {
+        rotation: angle * (1 - easeOut(t)),
+        ...mixScale(motion.bonked ? BONK_SQUASH : TRAVEL_STRETCH, UPRIGHT, easeOut(t)),
+      };
+    default:
+      return reactionPose(motion, tunables.staggerSeconds);
   }
-  if (motion.phase === "travel") {
-    return { rotation: angle, sx: TRAVEL_STRETCH.sx, sy: TRAVEL_STRETCH.sy };
-  }
-  if (motion.phase === "recovery") {
-    const from = motion.bonked ? BONK_SQUASH : { sx: 1, sy: 1 };
-    return { rotation: angle * (1 - t), sx: mix(from.sx, 1, t), sy: mix(from.sy, 1, t) };
-  }
-  return hitSquash(motion, ctx.staggerSeconds);
 }

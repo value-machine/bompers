@@ -72,11 +72,14 @@ export interface GameTunables {
     /** Cap on the velocity change one contact gives each blob, units / s. */
     maxImpulse: number;
   };
-  /** Unarmed attack: the dive headbutt ("bomp", GDD § 3). */
+  /**
+   * Unarmed attack: the dive headbutt ("bomp", GDD § 3). A committed straight missile that
+   * ricochets off other blobs. Seconds and world units; frames = seconds × `sim.stepHz`.
+   */
   dive: {
     /**
-     * Health chunks a hit takes per zone (front 0 / back 1 or 4 is configuration only). Phase-1
-     * stand-in for `combat.hitDamage.contact`, which replaces these two in phase 2.
+     * Health chunks a hit takes per zone (front 0 / back 1 or 4 is configuration only). Stand-in
+     * for `combat.hitDamage.contact`, which replaces these two when combat is wired in.
      */
     frontHitDamage: number;
     backHitDamage: number;
@@ -84,13 +87,41 @@ export interface GameTunables {
     minHitSpeed: number;
     /** Seconds a fire press is remembered while a dive is not available yet. */
     fireBufferSeconds: number;
+    /** Wind-up (the telegraph): seconds; velocity is multiplied by the scale once at its start. */
+    windupSeconds: number;
+    windupSpeedScale: number;
+    /** Gravity during the wind-up (0 = hang in the air). */
+    windupGravityScale: number;
+    /** Launch speed along the 8-way aim, units / s. Travel has no gravity and no steering. */
+    launchSpeed: number;
+    /** Longest travel; reach = launchSpeed × travelSeconds. */
+    travelSeconds: number;
+    /** Velocity is multiplied by this when the travel times out. */
+    exitSpeedScale: number;
+    /** Recovery after a dive that hit nobody: seconds and steering; jump stays locked. */
+    recoverySeconds: number;
+    recoverySteerScale: number;
+    /** Seconds after the recovery before the next dive may start (none after a hit). */
+    cooldownSeconds: number;
+    /** Terrain impact speed below which a touch is ignored by the dive, units / s. */
+    minTerrainHitSpeed: number;
+    /**
+     * Terrain ends the dive. Head-on (the blocked speed is at least `bonkMinAlignment` of the
+     * dive speed) is a bonk: thrown back at `bonkRebound` × speed and stunned for
+     * `bonkStunSeconds`. A glancing touch just ends it (normal recovery).
+     */
+    bonkStunSeconds: number;
+    bonkMinAlignment: number;
+    bonkRebound: number;
+    /** On a hit, on top of the body-collision exchange: push on the victim along the hit direction. */
+    strikeImpulse: number;
+    /** … upward pop on the victim, units / s. */
+    strikeLift: number;
+    /** … upward speed the attacker ricochets off with; its dive is available again at once. */
+    attackerPop: number;
     /** Seconds a hit victim steers at `staggerSteerScale` (keeps the knockback readable). */
     staggerSeconds: number;
     staggerSteerScale: number;
-    /** Terrain impact speed below which a touch is ignored by the dive, units / s. */
-    minTerrainHitSpeed: number;
-    /** Phase-1 prototype: the three candidate dives; `options[DiveState.optionIndex]` is played. */
-    options: readonly DiveOptionTunables[];
   };
   /** Multi-target camera framing (GDD § 2). Rates are 1/s (exponential damping). */
   camera: {
@@ -111,62 +142,4 @@ export interface GameTunables {
     /** Screen-edge margin in world units that every target keeps on every frame, even mid-ease. */
     edgeMargin: number;
   };
-}
-
-/** One dive headbutt variant. Seconds and world units; frames = seconds × `sim.stepHz`. */
-export interface DiveOptionTunables {
-  id: string;
-  /** Shown in the prototype overlay. */
-  name: string;
-  /** Snap the aim to 8 directions (true) or dive along the analog aim (false). */
-  aimSnap8: boolean;
-  /** Wind-up before the launch: seconds, and what happens to the current motion meanwhile. */
-  windupSeconds: number;
-  /** Velocity is multiplied by this once when the wind-up starts (0 = stop dead, 1 = keep). */
-  windupSpeedScale: number;
-  windupGravityScale: number;
-  /** Launch speed along the aim, units / s. */
-  launchSpeed: number;
-  /** Share of the pre-launch velocity kept and added to the launch (0 = pure launch). */
-  launchCarry: number;
-  /** Speed cap right after launch, units / s. */
-  maxSpeed: number;
-  /** Travel (the part that hits): longest duration, gravity, steering, exponential drag per s. */
-  travelSeconds: number;
-  travelGravityScale: number;
-  travelSteerScale: number;
-  travelDrag: number;
-  /** Seconds into the travel from which a jump press cancels the dive; null = never. */
-  jumpCancelAfterSeconds: number | null;
-  /** Terrain bounces a dive may take while staying active, and their bounciness. */
-  terrainBounces: number;
-  terrainRestitution: number;
-  /** With no bounce left, landing on ground ends the travel. */
-  endOnGround: boolean;
-  /**
-   * Head-on terrain hit with no bounce left: seconds of stun (0 = just slide / stop). "Head-on"
-   * = the blocked speed is at least `bonkMinAlignment` of the dive speed.
-   */
-  bonkStunSeconds: number;
-  bonkMinAlignment: number;
-  /** Share of the impact speed the diver rebounds with on a bonk. */
-  bonkRebound: number;
-  /** Velocity is multiplied by this when the travel times out. */
-  exitSpeedScale: number;
-  /** Recovery after the travel: seconds, steering, and whether jump stays locked. */
-  recoverySeconds: number;
-  recoverySteerScale: number;
-  recoveryLocksJump: boolean;
-  /** Seconds after a dive ends before the next may start. */
-  cooldownSeconds: number;
-  /** On a hit, on top of the body-collision exchange: push on the victim along the hit direction. */
-  strikeImpulse: number;
-  /** … upward pop on the victim, units / s. */
-  strikeLift: number;
-  /** … share of `strikeImpulse` pushed back onto the attacker. */
-  attackerRebound: number;
-  /** … upward speed the attacker leaves with (0 = none). */
-  attackerPop: number;
-  /** A hit makes the next dive available at once (chains). */
-  refreshOnHit: boolean;
 }

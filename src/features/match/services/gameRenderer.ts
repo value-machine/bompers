@@ -31,7 +31,7 @@ import type { GameState } from "@/features/match/services/gameSim";
  *   │  ├─ (shadows, pickups — reserved)
  *   │  ├─ effects   (dive: impact rings; later explosions, rockets)
  *   │  └─ players   (player; drawn last so effects sit under player outlines)
- *   └─ hud     (screen units: round timer, prototype dive overlay)
+ *   └─ hud     (screen units: round timer)
  * Order follows DESIGN_LANGUAGE.md § 5. Each feature owns its layer's create/sync pair; this
  * file only orders and drives them. Sky / parallax backgrounds come with the visual pass.
  */
@@ -54,8 +54,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const hud = new Container({ label: "hud" });
   const timer = new Text({ text: "", style: { fill: GAME_PALETTE.ink, fontSize: 28 } });
   timer.anchor.set(0.5, 0);
-  dive.overlay.position.set(12, 12);
-  hud.addChild(timer, dive.overlay);
+  hud.addChild(timer);
 
   app.stage.addChild(world, hud);
   return { world, terrain, players, dive, timer, camera: null };
@@ -79,11 +78,7 @@ export function renderGame(
   syncPlayersView(renderer.players, state.players, {
     overlays: diveBlobPoses(state.dive, state.tunables),
   });
-  syncDiveView(renderer.dive, {
-    dive: state.dive,
-    players: state.players,
-    tunables: state.tunables,
-  });
+  syncDiveView(renderer.dive, state.dive);
 
   renderer.camera = computeCameraView({
     targets: state.players.map((player) => ({ x: player.x, y: player.y })),

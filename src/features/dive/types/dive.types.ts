@@ -33,34 +33,23 @@ export interface DiveMotion {
   /** Seconds spent in the current phase, and how long it lasts. */
   phaseSeconds: number;
   phaseDuration: number;
-  /** Unit dive direction: the aim at the press, then the travel direction (bounces turn it). */
+  /** Unit dive direction, locked at the press (the aim snapped to 8 ways). */
   dirX: number;
   dirY: number;
-  /** Terrain bounces left in this dive. */
-  bouncesLeft: number;
-  /** One dive per airtime: spent at the press, back on ground contact (or a refreshing hit). */
+  /** One dive per airtime: spent at the press, back on ground contact or on a hit. */
   charged: boolean;
   /** Seconds until the next dive may start. */
   cooldown: number;
   /** Seconds a fire press is still remembered. */
   fireBuffer: number;
-  /** Held state on the previous step (edge detection). */
+  /** Fire held on the previous step (edge detection). */
   prevFire: boolean;
-  prevJump: boolean;
-  /** Victims already hit by this dive (one hit per victim per dive). */
-  hitVictimIds: string[];
   /** The current recovery is a head-on terrain bonk (stun). */
   bonked: boolean;
   /** Seconds left of reduced steering after being hit. */
   stagger: number;
-}
-
-/** Debug tally per player (phase-1 stand-in for health). */
-export interface HitTally {
-  dealt: number;
-  frontTaken: number;
-  backTaken: number;
-  damageTaken: number;
+  /** Seconds since this player's dive last hit someone (the ricochet pose); Infinity = never. */
+  sinceRicochet: number;
 }
 
 /** A landed hit kept briefly for the impact effect. */
@@ -71,13 +60,9 @@ export interface RecentHit {
 
 /** The dive slice of the game state. */
 export interface DiveState {
-  /** Index into `tunables.dive.options` (phase-1 prototype switch, keys 1 / 2 / 3). */
-  optionIndex: number;
   /** By player id. */
   motions: Record<string, DiveMotion>;
-  /** By player slot. */
-  tallies: Record<number, HitTally>;
-  /** Hits landed on the last step (what combat's `applyHit` will consume). */
+  /** Hits landed on the last step. */
   hits: DiveHit[];
   recentHits: RecentHit[];
 }

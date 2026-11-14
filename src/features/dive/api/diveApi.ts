@@ -7,16 +7,9 @@ export type {
   DiveMotion,
   DivePhase,
   DiveState,
-  HitTally,
   HitZone,
 } from "@/features/dive/types/dive.types";
-export {
-  activeDiveOption,
-  createDiveState,
-  selectDiveOption,
-  stepDives,
-  type StepDivesArgs,
-} from "@/features/dive/services/diveSim";
+export { createDiveState, stepDives, type StepDivesArgs } from "@/features/dive/services/diveSim";
 export { classifyHitZone, hitDamage } from "@/features/dive/services/hitZone";
 export {
   createDiveView,

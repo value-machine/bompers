@@ -51,6 +51,10 @@ Size M normally takes a `DEVELOPMENT_PLAN.md`; this lap is a prototype for a fee
 4. Render (pose overlay, impact ring, overlay text), option keys, docs (`DIVE_OPTIONS.md`, README, ARCHITECTURE).
 5. Check: lint, type-check, arch, structure, feature size / docs, tests, build, a Playwright run of the preview build.
 
+## Phase 2 (after the owner's pick, same PR)
+
+Pick (DECISIONS D8): Cannonball's launch, Pogo's ricochet off other blobs, no terrain bounce. Scope: one dive (the other options, the 1 / 2 / 3 switch and the overlay removed), fair wall stun, polish (wind-up crouch, launch stretch, ricochet squash, impact pop), `DIVE_DESIGN.md`, and wiring into combat (`applyHit`, `classifyHitZone`, the `unarmedAttack` hook) once combat is on main. New edge: `features/combat` (ride — its public API only).
+
 ## Decisions
 
-`DECISIONS.md` D1–D7.
+`DECISIONS.md` D1–D9.

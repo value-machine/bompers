@@ -11,7 +11,7 @@ import {
   stepPlayers,
   type PlayerState,
 } from "@/features/player/api/playerApi";
-import { createDiveState, selectDiveOption, stepDives } from "@/features/dive/services/diveSim";
+import { createDiveState, stepDives } from "@/features/dive/services/diveSim";
 import type { DiveHit, DivePhase } from "@/features/dive/types/dive.types";
 
 // Cell size 8. Floor top y = 320. Thin wall (one cell) x 600–608, y 0–320. Open sky elsewhere.
@@ -36,18 +36,16 @@ const FLOOR_Y = 320;
 const HZ = 120;
 const dt = 1 / HZ;
 const T = DEFAULT_GAME_TUNABLES;
-const OPTIONS = T.dive.options;
-const optionIndex = (id: string): number => OPTIONS.findIndex((option) => option.id === id);
+const D = T.dive;
 const frames = (seconds: number): number => Math.round(seconds * HZ);
 
 type InputPatch = Partial<PlayerInput>;
 
 /** The match's steps 2, 2b and 3a on a small world; players start standing on the floor. */
-const createSim = (id: string, starts: number[], tunables: GameTunables = T) => {
+const createSim = (starts: number[], tunables: GameTunables = T) => {
   const terrain = buildTerrainFromLevel(level);
   const players = starts.map((x, slot) => createPlayer(slot, { x, y: FLOOR_Y }, tunables));
   const dive = createDiveState();
-  selectDiveOption(dive, optionIndex(id), tunables);
   const hits: DiveHit[] = [];
   const step = (patches: InputPatch[] = [], steps = 1): void => {
     for (let i = 0; i < steps; i += 1) {
@@ -78,88 +76,108 @@ const stepsUntilPhaseChange = (sim: ReturnType<typeof createSim>, patch: InputPa
 };
 
 const RIGHT: InputPatch = { fire: true, aimX: 1 };
+/** Lifts a settled player into open air. */
+const liftTo = (player: PlayerState, y: number): void => {
+  player.y = y;
+  player.grounded = false;
+};
 
 describe("stepDives timeline", () => {
-  it.each(OPTIONS.map((option) => [option.id, option] as const))(
-    "should run %s through wind-up, travel and recovery for the tuned number of steps when fire is pressed",
-    (id, option) => {
-      const sim = createSim(id, [100]);
-      const player = sim.players[0]!;
-      sim.step([RIGHT]);
-      expect(sim.phaseOf(player)).toBe("windup");
-      expect(stepsUntilPhaseChange(sim)).toBe(frames(option.windupSeconds));
-      expect(sim.phaseOf(player)).toBe("travel");
-      expect(Math.hypot(player.vx, player.vy)).toBeCloseTo(option.launchSpeed, 0);
-      // Open ground, no jump press: only the timer (or, for a bouncing option, landing) ends it.
-      const travel = stepsUntilPhaseChange(sim);
-      expect(travel).toBeLessThanOrEqual(frames(option.travelSeconds));
-      if (!option.endOnGround) expect(travel).toBe(frames(option.travelSeconds));
-      expect(sim.phaseOf(player)).toBe("recovery");
-      expect(stepsUntilPhaseChange(sim)).toBe(frames(option.recoverySeconds));
-      expect(sim.phaseOf(player)).toBe("idle");
-    }
-  );
+  it("should run wind-up, travel and recovery for the tuned number of steps when fire is pressed", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    sim.step([RIGHT]);
+    expect(sim.phaseOf(player)).toBe("windup");
+    expect(stepsUntilPhaseChange(sim)).toBe(frames(D.windupSeconds));
+    expect(sim.phaseOf(player)).toBe("travel");
+    expect(player.vx).toBeCloseTo(D.launchSpeed);
+    expect(player.vy).toBe(0);
+    expect(stepsUntilPhaseChange(sim)).toBe(frames(D.travelSeconds));
+    expect(sim.phaseOf(player)).toBe("recovery");
+    expect(stepsUntilPhaseChange(sim)).toBe(frames(D.recoverySeconds));
+    expect(sim.phaseOf(player)).toBe("idle");
+  });
 
-  it("should fly the cannonball straight for launchSpeed × travelSeconds when nothing is in the way", () => {
-    const option = OPTIONS[optionIndex("cannonball")]!;
-    const sim = createSim("cannonball", [100]);
+  it("should fly dead straight for launchSpeed × travelSeconds with no gravity when nothing is in the way", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    liftTo(player, 150);
+    sim.step([RIGHT]);
+    stepsUntilPhaseChange(sim);
+    const start = { x: player.x, y: player.y };
+    stepsUntilPhaseChange(sim);
+    expect(player.x - start.x).toBeCloseTo(D.launchSpeed * D.travelSeconds, 0);
+    expect(player.y).toBeCloseTo(start.y);
+  });
+
+  it("should hang in the air during the wind-up when the dive starts while falling", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    liftTo(player, 100);
+    player.vy = 400;
+    sim.step([RIGHT]);
+    const y = player.y;
+    sim.step([], frames(D.windupSeconds) - 1);
+    expect(player.y - y).toBeLessThan(400 * D.windupSpeedScale * D.windupSeconds + 1);
+  });
+
+  it("should snap the dive to 8 directions when the aim is analog", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    liftTo(player, 150);
+    sim.step([{ fire: true, aimX: 1, aimY: -0.3 }]);
+    stepsUntilPhaseChange(sim);
+    expect(player.vx).toBeCloseTo(D.launchSpeed);
+    expect(player.vy).toBeCloseTo(0);
+  });
+
+  it("should ignore steering and jump while the dive travels", () => {
+    const sim = createSim([100]);
     const player = sim.players[0]!;
     sim.step([RIGHT]);
     stepsUntilPhaseChange(sim);
-    const startX = player.x;
-    stepsUntilPhaseChange(sim);
-    expect(player.x - startX).toBeCloseTo(option.launchSpeed * option.travelSeconds, 0);
+    sim.step([{ moveX: -1, jump: true }], 10);
+    expect(sim.phaseOf(player)).toBe("travel");
+    expect(player.vx).toBeCloseTo(D.launchSpeed);
     expect(player.y).toBe(FLOOR_Y);
   });
 
   it("should not start a dive again when fire stays held", () => {
-    const sim = createSim("snap", [100]);
-    sim.step([RIGHT], 240);
+    const sim = createSim([100]);
+    sim.step([RIGHT], 300);
     expect(sim.phaseOf(sim.players[0]!)).toBe("idle");
   });
 
   it("should wait for the cooldown before the next dive when fire is pressed again at once", () => {
-    const option = OPTIONS[optionIndex("snap")]!;
-    const sim = createSim("snap", [100]);
+    const sim = createSim([100]);
     sim.step([RIGHT]);
     while (sim.phaseOf(sim.players[0]!) !== "idle") sim.step();
     sim.step([RIGHT]);
     expect(sim.phaseOf(sim.players[0]!)).toBe("idle");
-    sim.step([], frames(option.cooldownSeconds));
+    sim.step([], frames(D.cooldownSeconds));
     sim.step([RIGHT]);
     expect(sim.phaseOf(sim.players[0]!)).toBe("windup");
   });
 
   it("should allow only one dive per airtime when diving upward", () => {
-    const sim = createSim("snap", [100]);
+    const sim = createSim([100]);
     const player = sim.players[0]!;
-    player.y = 60;
-    player.grounded = false;
-    sim.step([{ fire: true, aimY: -1 }]);
+    liftTo(player, 60);
+    const UP: InputPatch = { fire: true, aimY: -1 };
+    sim.step([UP]);
     while (sim.phaseOf(player) !== "idle") sim.step();
-    sim.step([], 40);
+    sim.step([], frames(D.cooldownSeconds) + 1);
     expect(player.grounded).toBe(false);
-    sim.step([{ fire: true, aimY: -1 }]);
+    sim.step([UP]);
+    sim.step();
     expect(sim.phaseOf(player)).toBe("idle");
     while (!player.grounded) sim.step();
-    sim.step([{ fire: true, aimY: -1 }]);
+    sim.step([UP]);
     expect(sim.phaseOf(player)).toBe("windup");
   });
 
-  it("should end the snap early when jump is pressed inside the cancel window", () => {
-    const sim = createSim("snap", [100]);
-    const player = sim.players[0]!;
-    sim.step([RIGHT]);
-    stepsUntilPhaseChange(sim);
-    sim.step([], 8);
-    expect(sim.phaseOf(player)).toBe("travel");
-    sim.step([{ jump: true }]);
-    expect(sim.phaseOf(player)).toBe("idle");
-    expect(player.jumpLocked).toBe(false);
-  });
-
   it("should hand steering and gravity back to the controller when the dive is over", () => {
-    const sim = createSim("cannonball", [100]);
+    const sim = createSim([100]);
     const player = sim.players[0]!;
     sim.step([RIGHT]);
     expect(player.steerScale).toBe(0);
@@ -172,98 +190,117 @@ describe("stepDives timeline", () => {
 });
 
 describe("stepDives terrain", () => {
-  it.each(OPTIONS.map((option) => option.id))(
-    "should not tunnel %s through a one-cell wall when diving into it",
-    (id) => {
-      const sim = createSim(id, [520]);
-      sim.step([RIGHT]);
-      sim.step([], 200);
-      expect(sim.players[0]!.x + sim.players[0]!.width / 2).toBeLessThanOrEqual(600);
-    }
-  );
-
-  it("should not tunnel through a one-cell wall when the launch speed is far above the tuned one", () => {
-    const fast: GameTunables = {
-      ...T,
-      dive: {
-        ...T.dive,
-        options: OPTIONS.map((option) => ({ ...option, launchSpeed: 6000, maxSpeed: 6000 })),
-      },
-    };
-    const sim = createSim("cannonball", [300], fast);
+  it("should not tunnel through a one-cell wall when diving into it", () => {
+    const sim = createSim([520]);
     sim.step([RIGHT]);
     sim.step([], 200);
     expect(sim.players[0]!.x + sim.players[0]!.width / 2).toBeLessThanOrEqual(600);
   });
 
-  it("should stun the cannonball and throw it back when it hits a wall head-on", () => {
-    const option = OPTIONS[optionIndex("cannonball")]!;
-    const sim = createSim("cannonball", [520]);
+  it("should not tunnel through a one-cell wall when the launch speed is far above the tuned one", () => {
+    const fast: GameTunables = { ...T, dive: { ...D, launchSpeed: 6000 } };
+    const sim = createSim([300], fast);
+    sim.step([RIGHT]);
+    sim.step([], 200);
+    expect(sim.players[0]!.x + sim.players[0]!.width / 2).toBeLessThanOrEqual(600);
+  });
+
+  it("should stun the diver briefly and throw it back when it hits a wall head-on", () => {
+    const sim = createSim([520]);
     const player = sim.players[0]!;
     sim.step([RIGHT]);
     stepsUntilPhaseChange(sim);
     stepsUntilPhaseChange(sim);
     expect(sim.phaseOf(player)).toBe("recovery");
     expect(sim.dive.motions[player.id]!.bonked).toBe(true);
-    expect(player.vx).toBeCloseTo(-option.launchSpeed * option.bonkRebound);
-    expect(stepsUntilPhaseChange(sim)).toBe(frames(option.bonkStunSeconds));
+    expect(player.vx).toBeCloseTo(-D.launchSpeed * D.bonkRebound);
+    expect(stepsUntilPhaseChange(sim)).toBe(frames(D.bonkStunSeconds));
   });
 
-  it("should bounce the pogo off the floor and keep the dive active when it dives down", () => {
-    const option = OPTIONS[optionIndex("pogo")]!;
-    const sim = createSim("pogo", [100]);
+  it("should end the dive without a bounce when it dives straight down onto the floor", () => {
+    const sim = createSim([100]);
     const player = sim.players[0]!;
-    player.y = 200;
-    player.grounded = false;
+    liftTo(player, 200);
     sim.step([{ fire: true, aimY: 1 }]);
     stepsUntilPhaseChange(sim);
-    let bounced = false;
-    for (let i = 0; i < 60 && !bounced; i += 1) {
-      sim.step();
-      bounced = player.vy < 0;
-    }
-    expect(bounced).toBe(true);
-    expect(sim.phaseOf(player)).toBe("travel");
-    expect(sim.dive.motions[player.id]!.bouncesLeft).toBe(option.terrainBounces - 1);
+    stepsUntilPhaseChange(sim);
+    expect(sim.phaseOf(player)).toBe("recovery");
+    // The bonk rebound is a small hop, far below the dive speed: no ricochet off terrain.
+    expect(Math.abs(player.vy)).toBeLessThanOrEqual(D.launchSpeed * D.bonkRebound + 1);
+    sim.step([], 40);
+    expect(player.y).toBeGreaterThan(FLOOR_Y - 20);
+  });
+
+  it("should end the dive and keep sliding along the floor when it hits the floor at an angle", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    liftTo(player, 280);
+    sim.step([{ fire: true, aimX: 1, aimY: 1 }]);
+    stepsUntilPhaseChange(sim);
+    stepsUntilPhaseChange(sim);
+    expect(sim.phaseOf(player)).toBe("recovery");
+    expect(sim.dive.motions[player.id]!.bonked).toBe(false);
+    expect(player.vx).toBeGreaterThan(0);
+    expect(player.vy).toBeGreaterThanOrEqual(0);
+    expect(player.y).toBe(FLOOR_Y);
   });
 });
 
 describe("stepDives hits", () => {
-  it.each(OPTIONS.map((option) => option.id))(
-    "should land exactly one front hit with %s and send the victim away when diving at a blob that faces the attacker",
-    (id) => {
-      const sim = createSim(id, [100, 150]);
-      const [attacker, victim] = sim.players as [PlayerState, PlayerState];
-      victim.facing = -1;
-      sim.step([RIGHT]);
-      sim.step([], 120);
-      expect(sim.hits).toHaveLength(1);
-      expect(sim.hits[0]).toMatchObject({
-        attackerSlot: attacker.slot,
-        victimSlot: victim.slot,
-        kind: "contact",
-        source: "dive",
-        zone: "front",
-        damage: T.dive.frontHitDamage,
-      });
-      expect(sim.hits[0]!.impulse.x).toBeGreaterThan(0);
-      expect(victim.x).toBeGreaterThan(150 + 20);
-      expect(sim.dive.tallies[victim.slot]).toMatchObject({ frontTaken: 1, damageTaken: 1 });
-      expect(sim.dive.tallies[attacker.slot]?.dealt).toBe(1);
-    }
-  );
+  it("should land exactly one front hit and send the victim away when diving at a blob that faces the attacker", () => {
+    const sim = createSim([100, 150]);
+    const [attacker, victim] = sim.players as [PlayerState, PlayerState];
+    victim.facing = -1;
+    sim.step([RIGHT]);
+    sim.step([], 120);
+    expect(sim.hits).toHaveLength(1);
+    expect(sim.hits[0]).toMatchObject({
+      attackerSlot: attacker.slot,
+      victimSlot: victim.slot,
+      kind: "contact",
+      source: "dive",
+      zone: "front",
+      damage: D.frontHitDamage,
+    });
+    expect(sim.hits[0]!.impulse.x).toBeGreaterThan(0);
+    expect(victim.x).toBeGreaterThan(150 + 100);
+  });
 
   it("should deal the back damage when the victim looks away from the attacker", () => {
-    const sim = createSim("cannonball", [100, 150]);
+    const sim = createSim([100, 150]);
     sim.players[1]!.facing = 1;
     sim.step([RIGHT]);
     sim.step([], 60);
     expect(sim.hits).toHaveLength(1);
-    expect(sim.hits[0]).toMatchObject({ zone: "back", damage: T.dive.backHitDamage });
+    expect(sim.hits[0]).toMatchObject({ zone: "back", damage: D.backHitDamage });
   });
 
-  it("should reflect both divers equally and hit both when two cannonballs meet head-on", () => {
-    const sim = createSim("cannonball", [100, 300]);
+  it("should ricochet the attacker upward with its dive ready again when it lands a hit", () => {
+    const sim = createSim([100, 150]);
+    const attacker = sim.players[0]!;
+    sim.step([RIGHT]);
+    while (sim.hits.length === 0) sim.step();
+    expect(attacker.vy).toBeCloseTo(-D.attackerPop);
+    expect(sim.phaseOf(attacker)).toBe("idle");
+    sim.step([], 2);
+    expect(attacker.grounded).toBe(false);
+    sim.step([RIGHT]);
+    expect(sim.phaseOf(attacker)).toBe("windup");
+  });
+
+  it("should pop the victim up and stagger its steering when it is hit", () => {
+    const sim = createSim([100, 150]);
+    const victim = sim.players[1]!;
+    sim.step([RIGHT]);
+    while (sim.hits.length === 0) sim.step();
+    expect(victim.vy).toBeLessThanOrEqual(-D.strikeLift + 1);
+    expect(victim.steerScale).toBe(D.staggerSteerScale);
+    sim.step([], frames(D.staggerSeconds) + 1);
+    expect(victim.steerScale).toBe(1);
+  });
+
+  it("should reflect both divers equally and hit both when two dives meet head-on", () => {
+    const sim = createSim([100, 300]);
     const [a, b] = sim.players as [PlayerState, PlayerState];
     sim.step([RIGHT, { fire: true, aimX: -1 }]);
     while (sim.hits.length === 0) sim.step();
@@ -275,14 +312,14 @@ describe("stepDives hits", () => {
     expect(a.x - 100).toBeCloseTo(300 - b.x);
   });
 
-  it("should count a slow touch as a bump, not a hit, when the diver is barely moving", () => {
-    const sim = createSim("snap", [100, 128]);
+  it("should count a slow touch as a bump, not a hit, when nobody is diving", () => {
+    const sim = createSim([100, 128]);
     sim.step([{ moveX: 1 }], 60);
     expect(sim.hits).toHaveLength(0);
   });
 
   it("should not hit when a blob runs into a diver from behind", () => {
-    const sim = createSim("cannonball", [200, 100]);
+    const sim = createSim([200, 100]);
     const [diver, runner] = sim.players as [PlayerState, PlayerState];
     sim.step([RIGHT]);
     runner.x = diver.x - 20;
@@ -291,23 +328,15 @@ describe("stepDives hits", () => {
     expect(sim.hits).toHaveLength(0);
   });
 
-  it("should let the pogo dive again at once when it lands a hit", () => {
-    const sim = createSim("pogo", [100, 150]);
-    const attacker = sim.players[0]!;
-    sim.step([RIGHT]);
-    while (sim.hits.length === 0) sim.step();
-    expect(attacker.vy).toBeLessThan(0);
-    sim.step([RIGHT]);
-    expect(sim.phaseOf(attacker)).toBe("windup");
-  });
-
-  it("should stagger the victim's steering when it is hit", () => {
-    const sim = createSim("cannonball", [100, 150]);
+  it("should cancel the victim's own dive when it is hit during its wind-up", () => {
+    const sim = createSim([100, 250]);
     const victim = sim.players[1]!;
     sim.step([RIGHT]);
+    sim.step([], frames(D.windupSeconds) + 6);
+    sim.step([{}, { fire: true, aimX: 1 }]);
+    expect(sim.phaseOf(victim)).toBe("windup");
     while (sim.hits.length === 0) sim.step();
-    expect(victim.steerScale).toBe(T.dive.staggerSteerScale);
-    sim.step([], frames(T.dive.staggerSeconds) + 1);
-    expect(victim.steerScale).toBe(1);
+    expect(sim.hits).toHaveLength(1);
+    expect(sim.phaseOf(victim)).toBe("recovery");
   });
 });
