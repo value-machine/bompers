@@ -59,7 +59,7 @@ Interpretations of open points in the GDD, made against the GDD itself. Change a
 Levels are importable as **one self-contained HTML file with inline SVG**: any AI agent (Claude, Gemini, ChatGPT, ...) can write one, any browser shows it as a picture, and the game imports it.
 
 - **References, not content.** A level file holds geometry, roles (platform, spawn, drop point, bounds, collectible) and IDs only. Materials, effects, sounds and behaviours live in one content catalog in the game code and are referenced by stable string ID.
-- **Internal seam.** The importer turns a file into a typed `LevelDefinition`; the engine never depends on the file format.
+- **Internal seam.** The importer (`features/level-file`) turns a file into a typed `LevelDefinition` (`features/level`); the engine never depends on the file format. Built-in levels are real level files in `public/levels/`.
 - **Staying current as the game grows.** The catalog in code is the single source. The build generates the public level kit (catalog list, preview stylesheet/script, authoring guide, example level) from it, and a CI drift check fails when the kit lags behind. Files carry a format version with migrations; unknown IDs warn and fall back to a safe default, never crash.
 - **Viewable outside the app.** A level references the hosted kit for a richer preview (legend, labels) but still renders as a plain picture with no network.
 
