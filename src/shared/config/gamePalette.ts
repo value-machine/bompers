@@ -49,10 +49,12 @@ export const GAME_PALETTE = {
   /** Destructible cell grid line / pip, and the crack next to a crater. */
   cellLine: 0xb9722a,
   crack: 0x2b1d3a,
-  /** Rocket smoke puffs and the impact pop. */
+  /** Rocket smoke puffs. */
   smoke: 0xffffff,
-  hitFlash: 0xffffff,
   timerWarning: 0xff8a1f,
+  /** Hit feedback (DESIGN_LANGUAGE § 1 Effects): hit flash, and the explosion mid star for strong hits. */
+  hitFlash: 0xffffff,
+  hitStrong: 0xffe14d,
   /** Keyed by a catalog material's `lookToken`. */
   materialLooks: {
     stone: { fill: 0x5a3f7a, accent: 0x7d5fa6 },

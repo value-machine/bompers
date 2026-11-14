@@ -9,6 +9,7 @@ import {
 } from "@/features/combat/api/combatApi";
 import type { OrbCollected } from "@/features/collectibles/api/collectiblesApi";
 import { placePlayer, type PlayerState } from "@/features/player/api/playerApi";
+import { resetDive, type DiveState } from "@/features/dive/api/diveApi";
 import { chooseSpawnIndex } from "@/features/match/services/spawnChoice";
 
 /**
@@ -77,6 +78,8 @@ export function awardOrbs(
 export interface StepMatchRulesArgs {
   rules: MatchRulesState;
   combat: CombatState;
+  /** Dive slice: a respawning player gets a fresh dive. */
+  dive: DiveState;
   players: PlayerState[];
   spawns: readonly Vec2[];
   /** Leaving this area eliminates a player. */
@@ -120,6 +123,8 @@ function respawn(args: StepMatchRulesArgs, player: PlayerState): void {
   const centre = { x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 };
   placePlayer(player, args.spawns[index] ?? centre);
   respawnFighter(combat, player, tunables);
+  // A fresh start: `placePlayer` ended any tumble; the dive forgets its phase and cooldown.
+  resetDive(args.dive, player);
   const fighter = combat.fighters.get(player.id);
   if (fighter) fighter.invulnerableUntil = timeSeconds + tunables.match.spawnProtectionSeconds;
 }

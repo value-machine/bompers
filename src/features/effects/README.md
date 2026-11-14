@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Visual feedback drawn from sim events (DESIGN_LANGUAGE § 5 step 6, § 6): explosion starbursts, impact pops where a player is hit, and cell-coloured debris where terrain is destroyed. Presentation only: it reads the combat event log and never changes game state. Drawn under rockets and players, so effects never cover a player outline.
+Visual feedback drawn from sim events (DESIGN_LANGUAGE § 5 step 6, § 6): explosion starbursts, impact pops where a rocket or blast hits a player (dive hits draw their own pop in `features/dive`), and cell-coloured debris where terrain is destroyed. Presentation only: it reads the combat event log and never changes game state. Drawn under rockets and players, so effects never cover a player outline.
 
 ## Structure
 

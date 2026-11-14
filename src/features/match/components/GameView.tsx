@@ -14,7 +14,7 @@ const HINT_STYLE = {
 };
 
 const CONTROLS_HINT =
-  "P1: A/D move · W/Space jump · F fire — P2: ←/→ · ↑ · / — gamepads join slots 3–4";
+  "P1: A/D move · W/Space jump · S aim down · F bomp — P2: ←/→ · ↑ · ↓ · / or Enter bomp — gamepads join slots 3–4";
 
 /**
  * The game canvas: fills its parent and runs one match on the current level. A level file

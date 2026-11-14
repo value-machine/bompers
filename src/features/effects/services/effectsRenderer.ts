@@ -144,7 +144,8 @@ export function syncEffectsView(view: EffectsView, frame: EffectsFrame): void {
     },
   });
   syncDisplayById(view.pops, view.layer, {
-    list: liveEvents(frame, "playerHit", POP.seconds),
+    // Dive hits draw their own pop (features/dive); this one marks rocket and blast hits.
+    list: liveEvents(frame, "playerHit", POP.seconds).filter((event) => event.source !== "dive"),
     key: (event) => event.seq,
     create: () => drawPop(width),
     place: (sprite, event) => {

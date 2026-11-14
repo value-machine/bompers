@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "matcher": "Write",
+        "command": "node scripts/lint-edited-file.cjs",
+        "timeout": 60,
+        "failClosed": false
+      }
+    ],
+    "stop": [
+      {
+        "command": "node scripts/type-check-on-stop.cjs",
+        "timeout": 120,
+        "loop_limit": 3,
+        "failClosed": false
+      }
+    ]
+  }
+}

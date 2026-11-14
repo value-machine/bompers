@@ -221,6 +221,41 @@ describe("combat — rockets and explosions", () => {
   });
 });
 
+describe("combat — blast hurt reaction", () => {
+  const blastY = FLOOR_Y - P.height / 2;
+  const twoPlayers = () =>
+    createWorld({
+      at: [
+        { x: 100, y: FLOOR_Y },
+        { x: 300, y: FLOOR_Y },
+      ],
+    });
+
+  it("should send a victim tumbling off the floor when the blast is close", () => {
+    const world = twoPlayers();
+    const victim = world.players[1]!;
+    explode(world.ctx(), { at: { x: 284, y: blastY + 6 }, ownerSlot: 0, ownerId: "p0" });
+    expect(victim.tumbleSeconds).toBeGreaterThan(0);
+    world.step([], 240);
+    expect(victim.tumbleBounceCount).toBeGreaterThan(0);
+    expect(victim.tumbleSeconds).toBe(0);
+  });
+
+  it("should only push the victim when the blast is at the edge of its range", () => {
+    const world = twoPlayers();
+    explode(world.ctx(), { at: { x: 240, y: blastY }, ownerSlot: 0, ownerId: "p0" });
+    expect(world.players[1]!.vx).toBeGreaterThan(0);
+    expect(world.players[1]!.tumbleSeconds).toBe(0);
+  });
+
+  it("should never send the shooter tumbling when they stand in their own blast", () => {
+    const world = twoPlayers();
+    explode(world.ctx(), { at: { x: 100, y: FLOOR_Y }, ownerSlot: 0, ownerId: "p0" });
+    expect(world.players[0]!.vy).toBeLessThan(0);
+    expect(world.players[0]!.tumbleSeconds).toBe(0);
+  });
+});
+
 describe("combat — rockets", () => {
   it("should lift the shooter higher than a full jump when firing straight down from standing", () => {
     const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });

@@ -28,6 +28,12 @@ import {
   syncCollectiblesView,
   type CollectiblesView,
 } from "@/features/collectibles/api/collectiblesApi";
+import {
+  createDiveView,
+  diveBlobPoses,
+  syncDiveView,
+  type DiveView,
+} from "@/features/dive/api/diveApi";
 import { playersInPlay, type GameState } from "@/features/match/services/gameSim";
 import { createHudView, syncHudView, type HudView } from "@/features/match/services/hudRenderer";
 
@@ -39,7 +45,8 @@ import { createHudView, syncHudView, type HudView } from "@/features/match/servi
  *   │  ├─ terrain   (arena: solid slabs, destructible tiles)
  *   │  ├─ contact shadows of pickups and rockets (combat)
  *   │  ├─ pickups (combat), point orbs (collectibles)
- *   │  ├─ effects (debris, explosions, impact pops — effects), rockets (+ trails, tubes — combat)
+ *   │  ├─ effects (debris, explosions, rocket-hit pops — effects), rockets (+ trails, tubes — combat)
+ *   │  ├─ dive effects (dive impact pops)   (dive)
  *   │  ├─ players   (player; above effects so they never cover a player outline; protected
  *   │  │             players blink inside a dashed ring)
  *   │  └─ combat overlay (health chunks above each player)
@@ -57,6 +64,7 @@ export interface GameRenderer {
   combat: CombatView;
   effects: EffectsView;
   collectibles: CollectiblesView;
+  dive: DiveView;
   hud: HudView;
   camera: CameraView | null;
 }
@@ -69,6 +77,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const combat = createCombatView();
   const effects = createEffectsView();
   const collectibles = createCollectiblesView();
+  const dive = createDiveView();
   world.addChild(
     terrain.container,
     combat.shadows,
@@ -76,13 +85,25 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     collectibles.container,
     effects.layer,
     combat.rockets,
+    dive.effects,
     players.container,
     combat.overlay
   );
 
   const hud = createHudView();
   app.stage.addChild(backdrop.root, world, hud.root);
-  return { backdrop, world, terrain, players, combat, effects, collectibles, hud, camera: null };
+  return {
+    backdrop,
+    world,
+    terrain,
+    players,
+    combat,
+    effects,
+    collectibles,
+    dive,
+    hud,
+    camera: null,
+  };
 }
 
 /** Ids of players whose spawn protection is still running. */
@@ -105,7 +126,12 @@ interface LayerFrame {
 function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerFrame): void {
   const { inPlay, nowMs, zoom } = frame;
   syncTerrainView(renderer.terrain, state.arena.terrain, zoom);
-  syncPlayersView(renderer.players, inPlay, { nowMs, protectedIds: protectedIds(state) });
+  syncPlayersView(renderer.players, inPlay, {
+    nowMs,
+    protectedIds: protectedIds(state),
+    overlays: diveBlobPoses(state.dive, state.tunables),
+  });
+  syncDiveView(renderer.dive, state.dive);
   syncCollectiblesView(renderer.collectibles, {
     collectibles: state.collectibles,
     size: state.tunables.collectibles.size,

@@ -7,6 +7,7 @@ import {
   noteBlobEvents,
   type BlobAnim,
   type BlobPose,
+  type BlobPoseOverlay,
   type SquashTunables,
 } from "@/features/player/services/blobPose";
 import type { PlayerState } from "@/features/player/types/player.types";
@@ -47,6 +48,8 @@ export interface SyncPlayersOptions {
   squash?: SquashTunables;
   /** Players under spawn protection: they blink and wear the dashed ring (GDD § 6). */
   protectedIds?: ReadonlySet<string>;
+  /** Ability poses by player id (e.g. the dive's headfirst turn), laid over the movement pose. */
+  overlays?: ReadonlyMap<string, BlobPoseOverlay>;
 }
 
 /** Outline widths, world units (DESIGN_LANGUAGE § 3 at this blob size). */
@@ -224,11 +227,31 @@ function footLift(player: PlayerState, r: number): [number, number] {
   return [Math.max(0, wave) * 0.22 * r, Math.max(0, -wave) * 0.22 * r];
 }
 
-function applyPose(sprite: BlobSprite, player: PlayerState, pose: BlobPose): void {
+/** A tumbling blob rolls with the distance it travels, like a ball; 0 when not tumbling. */
+const tumbleRoll = (player: PlayerState, r: number): number =>
+  player.tumbleSeconds > 0 ? (player.x / (1.6 * r)) % (Math.PI * 2) : 0;
+
+interface PoseFrame {
+  pose: BlobPose;
+  overlay: BlobPoseOverlay | undefined;
+}
+
+/** Places and scales the blob. The root turns around the body centre (overlay rotation, roll). */
+function placeBlob(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): void {
+  const { pose, overlay } = frame;
+  // With no overlay and no roll this is the plain feet-point placement.
+  const centerY = player.height / 2;
+  sprite.root.pivot.set(0, -centerY);
+  sprite.root.position.set(player.x, player.y - centerY);
+  sprite.root.rotation = (overlay?.rotation ?? 0) + tumbleRoll(player, sprite.radius);
+  sprite.body.scale.set(pose.bodySx * (overlay?.sx ?? 1), pose.bodySy * (overlay?.sy ?? 1));
+  sprite.body.rotation = overlay ? 0 : Math.max(-0.15, Math.min(0.15, player.vx / 2400));
+}
+
+function applyPose(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): void {
+  const { pose } = frame;
   const r = sprite.radius;
-  sprite.root.position.set(player.x, player.y);
-  sprite.body.scale.set(pose.bodySx, pose.bodySy);
-  sprite.body.rotation = Math.max(-0.15, Math.min(0.15, player.vx / 2400));
+  placeBlob(sprite, player, frame);
   const lift = footLift(player, r);
   sprite.feet.forEach((foot, i) => {
     const side = i === 0 ? -1 : 1;
@@ -281,7 +304,8 @@ export function syncPlayersView(
   for (const player of players) {
     const sprite = spriteFor(view, player);
     noteBlobEvents(sprite.anim, { player, squash, nowMs });
-    applyPose(sprite, player, blobPose(sprite.anim, { player, squash, nowMs }));
+    const pose = blobPose(sprite.anim, { player, squash, nowMs });
+    applyPose(sprite, player, { pose, overlay: options.overlays?.get(player.id) });
     applyProtection(sprite, options.protectedIds?.has(player.id) === true, nowMs);
   }
   pruneSprites(view, new Set(players.map((player) => player.id)));
