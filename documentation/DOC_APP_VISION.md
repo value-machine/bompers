@@ -63,6 +63,10 @@ Levels are importable as **one self-contained HTML file with inline SVG**: any A
 - **Staying current as the game grows.** The catalog in code is the single source. The build generates the public level kit (catalog list, preview stylesheet/script, authoring guide, example level) from it, and a CI drift check fails when the kit lags behind. Files carry a format version with migrations; unknown IDs warn and fall back to a safe default, never crash.
 - **Viewable outside the app.** A level references the hosted kit for a richer preview (legend, labels) but still renders as a plain picture with no network.
 
+## Design language
+
+Visual and audio identity: "Gumdrop Pop" (sticker-bright candy toys, ink outlines, toy-box pop sound). SSOT: [`documentation/game/DESIGN_LANGUAGE.md`](game/DESIGN_LANGUAGE.md). Picked 2026-11-14 by the orchestrator against the GDD while the owner was away.
+
 ## North-star goals
 
 - **Goal 1:** a 4-player round on the starting map is playable end to end (join, fight, respawn, score, winner) in a desktop browser at a stable 60 fps.
@@ -72,5 +76,4 @@ Levels are importable as **one self-contained HTML file with inline SVG**: any A
 
 ## Open questions
 
-- Visual design language and audio identity (being worked out as its own task).
 - Online play after MVP: not planned until the local game is fun.

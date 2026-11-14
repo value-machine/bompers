@@ -10,7 +10,6 @@ Quick reference guide to all rules and their relationships.
 - Documentation requirements
 - Code organization
 - **What tooling enforces** (Prettier, `eslint.config.js`, tsc, dependency-cruiser) — run the command
-- **Styling scope** (agent picks the scope, global tokens by default, and reports it)
 - **Complexity thresholds** (SSOT `eslint.config.js`)
 - Reuse and extraction checks
 
@@ -20,7 +19,7 @@ Quick reference guide to all rules and their relationships.
 
 ### Architecture (`.claude/rules/architecture.md`)
 - **Proactive design checks:** pattern risk (precedent review, `loop-plan`), don't reinvent the wheel, performance cost risk, layer consistency (workaround guard; naming via `code-style` § Naming)
-- **Code placement**, edge-case placement, import direction
+- Pointer to `app-code` for code placement, edge-case placement and import direction
 - **Folder structure** and **path aliases** (SSOT: `@/*` → `src/*` only)
 - **Feature granularity / bounded context** (budgets in `featureBudgets.config.cjs`, cross-feature imports)
 - **TanStack Query optimistic + canonical merge** (summary; playbook SSOT `documentation/DOC_TANSTACK_QUERY.md`)
@@ -95,11 +94,22 @@ Quick reference guide to all rules and their relationships.
 ---
 
 ### Debugging (`.claude/rules/debugging.md`)
-- Debugging strategies and logging practices
+- Debugging strategies and logging practices (API troubleshooting and pagination: `app-code`)
 - Pointer to the `spec-debug-runtime` skill for the scientific-method procedure
 - Reductive strategy for bugs and new features
 
 **Related to:** testing, architecture
+
+---
+
+### App code (`.claude/rules/app-code.md`, `paths: ["src/**"]`)
+- **Code placement** (layers, decision order), **edge-case placement**, import direction
+- **TypeScript** conventions
+- **Styling scope** (agent picks the scope, global tokens by default, and reports it)
+- **API troubleshooting** and **filtering / pagination**
+- Loads only when a `src/**` file is in play; moved out of architecture, code-style and debugging (context-cost audit R10)
+
+**Related to:** architecture, code-style, debugging
 
 ---
 
@@ -121,16 +131,17 @@ When modifying a rule, check these related rules and skills (SSOT — always-on 
 
 | Rule | Check These Rules |
 |------|-------------------|
-| `code-style` | architecture, testing, spec-optimize-performance + spec-check-layer skills |
-| `architecture` | code-style, testing, security, spec-optimize-performance skill (refactors respect placements) |
+| `code-style` | app-code, architecture, testing, spec-optimize-performance + spec-check-layer skills |
+| `architecture` | app-code, code-style, testing, security, spec-optimize-performance skill (refactors respect placements) |
 | `testing` | code-style, architecture, debugging |
 | `security` | architecture, code-style, api-integration (MCP-first principle) |
 | `git-workflow` | agent-behavior, platform, testing |
 | `agent-behavior` | git-workflow, debugging, architecture (layer-consistency stop), loop-build + loop-ship + loop-verdict skills |
 | `platform` | git-workflow, security, `DOC_WINDOWS_SHELL.md`, spec-debug-runtime patterns (platform command SSOT) |
 | `api-integration` | security |
-| `debugging` | testing, architecture, agent-behavior, spec-debug-runtime skill |
-| `file-placement` | architecture |
+| `debugging` | app-code, testing, architecture, agent-behavior, spec-debug-runtime skill |
+| `file-placement` | architecture, app-code |
+| `app-code` | architecture, code-style, debugging, file-placement, spec-optimize-performance skill |
 
 ## Adding a New Rule
 
