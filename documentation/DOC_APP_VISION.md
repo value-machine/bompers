@@ -1,40 +1,76 @@
 # App vision & goals
 
-> **Vision status:** `ACTIVE` — When every section below reflects your real product (delete placeholder bullets; write real prose), change `DRAFT` to `ACTIVE` on this line so agents treat this file as the product SSOT.
+> **Vision status:** `ACTIVE` — Product SSOT. Game mechanics SSOT: [`documentation/game/GAME_DESIGN_DOCUMENT.md`](game/GAME_DESIGN_DOCUMENT.md) (GDD V7, Dutch). When this file and the GDD disagree on a mechanic, the GDD wins; this file records how the GDD is read.
 
-Static, **fill-in** product brief for this fork. Agents read this before ambiguous product or UX work. **SSOT** for problem, persona, and the app’s role relative to users.
+Agents read this before any product, gameplay or UX work.
 
 ---
 
 ## Problem statement
 
-A fast, chaotic 4-player arena shooter in the spirit of LittleBigPlanet's multiplayer battles: light blob-physics characters, rocket jumping and short rounds on a small arena. The gap it fills for players is not yet stated (see open questions).
+Friends sitting together want a quick, chaotic, physical party game to play on one screen in a browser — no install, no accounts. Existing arena brawlers are tied to a console or a store, and the multiplayer battle feel of LittleBigPlanet (bouncy, physics-driven, everything reacts) has no light browser equivalent.
 
 ---
 
 ## User persona
 
-Two to four competitive players in one match, on the same screen, who want quick, physical, chaotic rounds. One player can also play alone, but only for testing.
+- **Who:** 2–4 people on one couch around one screen (laptop or TV), each with a gamepad or sharing a keyboard. A solo developer or tester runs single-player to try things out.
+- **Goals:** pick up and play in seconds, laugh at the chaos, win the round on points.
+- **Frustrations:** long setup, menus before fun, getting spawn-killed, losing track of yourself on screen.
+- **Constraints:** a desktop browser; mixed input (keyboard + up to 4 gamepads); short sessions.
 
 ---
 
-## App’s role
+## App's role
 
-A small local multiplayer arena shooter (platformer and/or top-down elements). The game design document (Dutch, "Game Design Document: 4-Player Arena Shooter V7") is the source for the details below.
-
-- **In one sentence, this app:** is a same-screen arena shooter for 2–4 players where rounds are won by the highest score within the time limit.
-- **Characters and combat:** each character is a round body with two round feet and a helmet; weapons fire from the helmet in the aim direction. Each player has 4 health chunks. Unarmed, the fire button is a punch that damages and knocks back. The MVP weapon is a rocket launcher that drops from the sky and removes exactly 1 chunk per hit, never hurts the shooter (so rocket jumps are free) and destroys destructible arena sections.
-- **Movement and camera:** soft, momentum-based blob movement (squash on landing, curved acceleration and braking), high jumps, air control, wall-jumps. A multi-target camera keeps all active players in frame.
-- **Start map:** a minimalist floating main platform with raised plateaus, open edges to fall from, no lava. Weapons, power-ups and collectibles fall from above. Level elements: player spawn points, drop locations, platform edges, adjustable out-of-bounds zones.
-- **Rules:** the highest score at the end of the round wins; kills and collected items give points. After a kill the player respawns at the safe spawn point farthest from all opponents, blinks and is briefly invulnerable, and can move and shoot freely meanwhile.
-- **Settings:** match duration and gravity are configurable per match or map; other arena and game variables (weapon availability at spawn, hazards) are modular and adjustable.
-- **It is not:** an online game or a single-player game (single-player exists for testing only).
-- **Integrates with / assumes:** none yet. Local play needs no accounts or backend.
+- **In one sentence, this app:** is a fast, physics- and chaos-driven 2D arena shooter for 2–4 local players (1 for testing), where squishy blob characters fire rockets from their helmets, rocket-jump, and blow up the arena while scoring points within a timed round.
+- **It is not:** an online multiplayer game (MVP is same-screen local play), a progression/meta game with accounts, unlocks or stores, or a top-down shooter (the starting map is side-view platform action).
+- **Integrates with / assumes:** a static browser build (Cloudflare hosting for previews and production). No backend is needed for MVP; Supabase, sign-in and error reporting were removed (hosting lap) and come back only if a feature needs them.
 
 ---
 
-## Optional: open questions
+## How the GDD is read (orchestrator calls)
 
-- What is the goal of the game (fun with friends, a portfolio piece, something to release), and who are the players?
-- On which devices is it played (desktop with keyboard or gamepads, phone, a mix), and how do four people control it on one screen?
-- Does the game live inside this web app, or does the web app only host it?
+Interpretations of open points in the GDD, made against the GDD itself. Change any of them by telling the orchestrator.
+
+| GDD point | Reading |
+|-----------|---------|
+| "platformer- en/of top-down" | Side-view 2D platformer for MVP; the starting map (Smash-like floating platforms, gravity, wall-jumps) requires it. |
+| 2–4 players, shared multi-target camera | Local same-screen multiplayer; input is keyboard (up to 2 players) plus Gamepad API (up to 4). |
+| Destructible arena sections | Arena geometry is split into destructible chunks that rocket explosions remove; indestructible base parts keep the map playable. |
+| Rocket jump without self-damage | Explosion impulse applies to the shooter; damage never does. |
+| Health | 4 chunks per player; a rocket hit removes exactly 1; the unarmed bash also removes 1 and knocks back. |
+| Falling off the map | Leaving the out-of-bounds zone eliminates the player (counts as a kill for the last player who hit them within a short window). |
+| Configurable settings | Match duration and gravity first; all tunables live in one settings/config module so later options plug in. |
+
+---
+
+## Engine (orchestrator call)
+
+**PixiJS v8 (`pixi.js@8.23.0`) for rendering only; the game simulation is our own pure TypeScript with a fixed timestep and no physics engine.** Chosen 2026-11-14 by the orchestrator under the owner's "make your own call against the GDD" instruction while the owner was away; the owner can overrule it before the foundation PR merges.
+
+- Why: precise platformer feel (accel curves, air steering, wall-jumps, per-map gravity) is controller code, not rigid-body physics; destructible terrain is simplest as a cell grid that blasts clear; a DOM-free `step(state, inputs, dt)` keeps the sim unit-testable in Vitest and fits the repo's layers.
+- Rejected: Phaser 4 (Arcade) — least custom code, but game logic is bound to scenes and hard to test headless; PixiJS + Rapier2D — 1.3 MB WASM and fighting a rigid-body engine for platformer feel; matter-js — unmaintained since 2024.
+- Main risk: we own collision and feel tuning; rockets step in small increments to avoid tunnelling.
+- Sound: own small Web Audio module, no extra dependency.
+
+## Levels (owner requirement, orchestrator design)
+
+Levels are importable as **one self-contained HTML file with inline SVG**: any AI agent (Claude, Gemini, ChatGPT, ...) can write one, any browser shows it as a picture, and the game imports it.
+
+- **References, not content.** A level file holds geometry, roles (platform, spawn, drop point, bounds, collectible) and IDs only. Materials, effects, sounds and behaviours live in one content catalog in the game code and are referenced by stable string ID.
+- **Internal seam.** The importer (`features/level-file`) turns a file into a typed `LevelDefinition` (`features/level`); the engine never depends on the file format. Built-in levels are real level files in `public/levels/`.
+- **Staying current as the game grows.** The catalog in code is the single source. The build generates the public level kit (catalog list, preview stylesheet/script, authoring guide, example level) from it, and a CI drift check fails when the kit lags behind. Files carry a format version with migrations; unknown IDs warn and fall back to a safe default, never crash.
+- **Viewable outside the app.** A level references the hosted kit for a richer preview (legend, labels) but still renders as a plain picture with no network.
+
+## North-star goals
+
+- **Goal 1:** a 4-player round on the starting map is playable end to end (join, fight, respawn, score, winner) in a desktop browser at a stable 60 fps.
+- **Goal 2:** the movement feels light and bouncy: testers describe it as "squishy/fun" before they comment on anything else.
+
+---
+
+## Open questions
+
+- Visual design language and audio identity (being worked out as its own task).
+- Online play after MVP: not planned until the local game is fun.
