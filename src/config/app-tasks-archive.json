@@ -103,5 +103,10 @@
     "title": "Game engine foundation",
     "description": "Blocking for all gameplay tasks. Add pixi.js@8.23.0 (renderer only; orchestrator call, see DOC_APP_VISION.md § Engine). Build the game shell: a canvas page at `/` (replacing the template home), a Pixi lifecycle hook safe under StrictMode, a fixed-timestep loop (e.g. 120 Hz) driving a pure-TS simulation `step(state, inputs, dt)` with no DOM, an input layer for up to 4 players (keyboard for 2 + Gamepad API for 4), a grid-based terrain module (solid/empty cells, collision queries, circle-clear for blasts, chunked redraw), a level data format (platforms, destructible vs solid, spawn points, drop points, out-of-bounds zone) and one tunables/config module (gravity, match duration). A placeholder box per player proves input → sim → render. Writes the module map (feature split per bounded concept, shared engine code) so later threads can work in parallel without overlap. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "done"
+  },
+  {
+    "title": "Player movement and blob feel",
+    "description": "Depends on: Game engine foundation. Character controller in the sim: smooth accel/decel, curved motion, high jumps scaled by gravity, air steering, wall-jumps, landing squash and foot deform (render side), aim direction per input. Tunables in the config module. Unit tests for the controller. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "done"
   }
 ]

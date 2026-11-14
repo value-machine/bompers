@@ -10,11 +10,6 @@
     "status": "to-do"
   },
   {
-    "title": "Player movement and blob feel",
-    "description": "Depends on: Game engine foundation. Character controller in the sim: smooth accel/decel, curved motion, high jumps scaled by gravity, air steering, wall-jumps, landing squash and foot deform (render side), aim direction per input. Tunables in the config module. Unit tests for the controller. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Multi-target camera",
     "description": "Depends on: Game engine foundation. Pure-math camera that frames all active players with zoom limits, smoothing and a central deadzone; applied to the render container. Unit tests. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
