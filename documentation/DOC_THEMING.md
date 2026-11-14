@@ -32,15 +32,15 @@ Components never use raw colors or one-off values for themeable aspects; they us
 
 **Workflow:** edit a `*.tokens.json` file → `pnpm tokens:build` → commit the JSON and `tokens.generated.css` together. If you forget the build, the test suite fails and names the fix. `pnpm tokens:check` lints the files with Terrazzo.
 
-## Default theme: bronze plate
+## Default theme: Gumdrop Pop
 
-The shipped tokens are the "Engraved plate" bronze identity, chosen by the owner from live previews (2026-10-20) over "Classic foundry" and "Modern metal":
-- **Type:** Cinzel headings (engraved Roman capitals) and Inter body.
-- **Shape:** 0.25rem plate corners; buttons follow `radius`.
-- **Primary:** bronze, with a bevelled metallic gradient button (`elevation-brand` uses inset highlight and shade).
-  Dark mode uses the lighter bronze `#d4a05e` (gradient start `#a87238`) on purpose: the darker first pick failed WCAG AA for button text (2.49:1 → 4.52:1). Keep button text at AA when changing these.
-- **Secondary:** verdigris.
-- **Surfaces:** warm paper in light mode, warm charcoal in dark mode.
+The shipped tokens carry the game's design language, "Gumdrop Pop" (SSOT with every value and rule: [`documentation/game/DESIGN_LANGUAGE.md`](game/DESIGN_LANGUAGE.md) § 7), picked on 2026-11-14 over "Afterglow" and "Soft Clay". It replaced the harness's bronze-plate theme (history: git before this change).
+- **Type:** Fredoka (rounded, weights 400–700) for headings and body.
+- **Shape:** 0.75rem corners; pill buttons (`button-radius` 9999px).
+- **Primary:** plum `#5a3f7a` (dark mode `#c3a6ef`), a sticker-press button (`elevation-brand`: hard 3px ink drop shadow plus inset gloss).
+- **Secondary:** honey `#f4ad55`; **accent:** sky `#8fd6ff` at low alpha.
+- **Surfaces:** cream and white in light mode, plum night in dark mode; ink `#2b1d3a` text.
+- Every text/background pair, including button text on both gradient stops, is at WCAG AA (≥ 4.5:1). Keep it there when changing these.
 
 Fonts load from Google Fonts in `index.html`. When you change `font.*` tokens, update that link too.
 

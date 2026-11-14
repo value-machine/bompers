@@ -54,6 +54,10 @@ Interpretations of open points in the GDD, made against the GDD itself. Change a
 - Main risk: we own collision and feel tuning; rockets step in small increments to avoid tunnelling.
 - Sound: own small Web Audio module, no extra dependency.
 
+## Design language
+
+Visual and audio identity: "Gumdrop Pop" (sticker-bright candy toys, ink outlines, toy-box pop sound). SSOT: [`documentation/game/DESIGN_LANGUAGE.md`](game/DESIGN_LANGUAGE.md). Picked 2026-11-14 by the orchestrator against the GDD while the owner was away.
+
 ## North-star goals
 
 - **Goal 1:** a 4-player round on the starting map is playable end to end (join, fight, respawn, score, winner) in a desktop browser at a stable 60 fps.
@@ -63,5 +67,4 @@ Interpretations of open points in the GDD, made against the GDD itself. Change a
 
 ## Open questions
 
-- Visual design language and audio identity (being worked out as its own task).
 - Online play after MVP: not planned until the local game is fun.
