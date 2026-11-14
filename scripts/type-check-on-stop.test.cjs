@@ -1,6 +1,6 @@
 const { describe, test } = require("node:test");
 const assert = require("node:assert/strict");
-const { parseChangedPaths, run } = require("./type-check-on-stop.cjs");
+const { parseChangedPaths, formatStopOutput, run } = require("./type-check-on-stop.cjs");
 
 const hookInput = JSON.stringify({
   hook_event_name: "Stop",
@@ -111,5 +111,38 @@ describe("type-check-on-stop", () => {
       "src/new.ts",
       "src/b.tsx",
     ]);
+  });
+});
+
+describe("type-check-on-stop (Cursor stop)", () => {
+  const cursorInput = (status) =>
+    JSON.stringify({
+      hook_event_name: "stop",
+      cursor_version: "2.0.0",
+      workspace_roots: ["/repo"],
+      status,
+      loop_count: 0,
+    });
+
+  test("should block with a follow-up when a completed Cursor turn leaves type errors", () => {
+    const h = harness(fakeGit(TS_CHANGE), 2);
+    const res = run(cursorInput("completed"), h.deps);
+    assert.equal(res.block, true);
+    const out = JSON.parse(formatStopOutput(res, true));
+    assert.match(out.followup_message, /error TS2322/);
+    assert.equal(out.decision, undefined);
+  });
+
+  test("should skip the check when the Cursor turn was aborted or errored", () => {
+    const h = harness(fakeGit(TS_CHANGE), 2);
+    assert.equal(run(cursorInput("aborted"), h.deps).block, false);
+    assert.equal(run(cursorInput("error"), h.deps).block, false);
+    assert.equal(h.runs(), 0);
+  });
+
+  test("should answer in Claude Code format when the input has no cursor_version", () => {
+    const out = JSON.parse(formatStopOutput({ block: true, reason: "r" }, false));
+    assert.deepEqual(out, { decision: "block", reason: "r" });
+    assert.equal(formatStopOutput({ block: false }, true), "");
   });
 });

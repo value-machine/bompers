@@ -18,10 +18,30 @@ export interface PlayerInput {
 /** Inputs for all player slots, index = slot (0–3). */
 export type PlayerInputs = readonly PlayerInput[];
 
-/** Where a slot's input comes from. */
+/** Where a slot's input comes from (an input device: one keyboard half or one gamepad). */
 export type InputSource =
   | { kind: "keyboard"; layout: KeyboardLayoutId }
   | { kind: "gamepad"; padIndex: number };
+
+/** Per-slot sources for a match; null = nobody in that slot (always disconnected). */
+export type SlotSources = readonly (InputSource | null)[];
+
+/**
+ * One device's menu buttons (lobby and round-end screens), held state. Edges are derived by
+ * the consumer from its previous sample, like the sim does for `PlayerInput`.
+ */
+export interface MenuInput {
+  /** The device is there (keyboard halves always are; a gamepad only while connected). */
+  present: boolean;
+  up: boolean;
+  down: boolean;
+  left: boolean;
+  right: boolean;
+  /** Join / choose / start. */
+  confirm: boolean;
+  /** Leave / back to the lobby. */
+  back: boolean;
+}
 
 export type KeyboardLayoutId = "left" | "right";
 

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createGameInputReader, type GameInputReader } from "@/shared/services/gameInputService";
 
-const press = (type: "keydown" | "keyup", code: string): void => {
-  window.dispatchEvent(new KeyboardEvent(type, { code }));
+const press = (type: "keydown" | "keyup", code: string, repeat = false): void => {
+  window.dispatchEvent(new KeyboardEvent(type, { code, repeat }));
 };
 
 describe("gameInputService", () => {
@@ -29,5 +29,21 @@ describe("gameInputService", () => {
     reader.dispose();
     press("keydown", "KeyA");
     expect(reader.sample()[0]?.moveX).toBe(0);
+  });
+
+  it("should ignore auto-repeat of a key held since before the reader started", () => {
+    reader = createGameInputReader(window);
+    press("keydown", "Space", true);
+    expect(reader.sampleMenus()[0]?.confirm).toBe(false);
+    press("keydown", "Space");
+    expect(reader.sampleMenus()[0]?.confirm).toBe(true);
+  });
+
+  it("should leave an empty slot disconnected when its source is null", () => {
+    reader = createGameInputReader(window, [null, { kind: "keyboard", layout: "left" }]);
+    press("keydown", "KeyA");
+    const inputs = reader.sample();
+    expect(inputs[0]?.connected).toBe(false);
+    expect(inputs[1]?.moveX).toBe(-1);
   });
 });

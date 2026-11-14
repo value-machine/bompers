@@ -159,9 +159,13 @@ export interface RestartPressArgs {
   previous: PlayerInputs;
 }
 
+/** The round has ended and its result has been shown for the lock time (rematch or lobby). */
+export const isPastRestartLock = (args: Omit<RestartPressArgs, "inputs" | "previous">): boolean =>
+  args.phase === "ended" && args.secondsSinceEnd >= args.lockSeconds;
+
 /** A jump press (not a held jump) on any slot, once the round has been over for the lock time. */
 export function isRestartPress(args: RestartPressArgs): boolean {
-  if (args.phase !== "ended" || args.secondsSinceEnd < args.lockSeconds) return false;
+  if (!isPastRestartLock(args)) return false;
   return args.inputs.some((input, slot) => input.jump && !args.previous[slot]?.jump);
 }
 

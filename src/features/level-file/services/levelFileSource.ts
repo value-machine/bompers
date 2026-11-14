@@ -6,7 +6,17 @@ import type { LevelIssue } from "@/features/level-file/types/levelFile.types";
  * Where level file text comes from: a built-in level served from `public/levels/` (real level
  * files, the same format players import), or a file the player picks or drops.
  */
-export const BUILT_IN_LEVEL_URL = "/levels/start-arena.html";
+/**
+ * The built-in level manifest: every file in `public/levels/`, in picker order. The first is
+ * the default (the GDD § 4 start map). A drift test checks it against the folder, so a new
+ * level file is one file plus one line here.
+ */
+export const BUILT_IN_LEVEL_FILES = ["start-arena.html", "floating-garden.html"] as const;
+
+/** Served URL of a built-in level file. */
+export const builtInLevelUrl = (fileName: string): string => `/levels/${fileName}`;
+
+export const BUILT_IN_LEVEL_URLS: readonly string[] = BUILT_IN_LEVEL_FILES.map(builtInLevelUrl);
 
 export interface LoadedLevel {
   level: LevelDefinition;
