@@ -25,6 +25,7 @@ export {
   eliminateFighter,
   isFighterEliminated,
   respawnFighter,
+  type CombatContext,
   type EliminateArgs,
 } from "@/features/combat/services/combatState";
 export {
