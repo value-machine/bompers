@@ -12,7 +12,6 @@ export type {
 } from "@/features/level/types/levelDefinition.types";
 export {
   DEFAULT_LEVEL_SETTINGS,
-  DEFAULT_MATERIAL_BY_ROLE,
   LEVEL_FORMAT_VERSION,
   normalizeLevelDefinition,
 } from "@/features/level/services/levelDefinition";

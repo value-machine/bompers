@@ -18,7 +18,12 @@ export interface TerrainGridSize {
   chunkCells?: number;
 }
 
-const EMPTY_SLOT: TerrainCellSlot = { materialId: "", destructible: false, lookToken: "" };
+const EMPTY_SLOT: TerrainCellSlot = {
+  role: "platform",
+  materialId: "",
+  destructible: false,
+  lookToken: "",
+};
 
 export function createTerrainGrid(size: TerrainGridSize): TerrainGrid {
   const chunkCells = size.chunkCells ?? DEFAULT_CHUNK_CELLS;
@@ -42,7 +47,11 @@ export function createTerrainGrid(size: TerrainGridSize): TerrainGrid {
 /** Index of the slot for this material / destructibility, added on first use. */
 export function slotFor(grid: TerrainGrid, slot: TerrainCellSlot): number {
   const found = grid.slots.findIndex(
-    (s, i) => i > 0 && s.materialId === slot.materialId && s.destructible === slot.destructible
+    (s, i) =>
+      i > 0 &&
+      s.role === slot.role &&
+      s.materialId === slot.materialId &&
+      s.destructible === slot.destructible
   );
   if (found > 0) return found;
   grid.slots.push(slot);

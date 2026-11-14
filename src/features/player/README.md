@@ -23,6 +23,7 @@ Seams for later work:
 
 - `arena` via `api/arenaApi.ts` (`rectHitsSolid`, `TerrainGrid`).
 - Shared: `gameTunables`, `gamePalette`, `gameInput.types`, `gameInputMapping` (`EMPTY_PLAYER_INPUT`), `gameGeometry.types`; `pixi.js` for the renderer.
+- Player colors: `GAME_PALETTE.players` / `playerShades` / `playerTints`, indexed by `slot` (DESIGN_LANGUAGE § 1).
 - Consumed by `match` only.
 
 ## Decisions

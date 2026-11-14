@@ -19,6 +19,8 @@ Updated: 2026-11-14
 | D10 | Destructible cells | closed | destructible iff role "destructible" AND material.destructible | loop-build | orchestrator: role + material, no hard-coded kind |
 | D11 | Palette source | closed | DESIGN_LANGUAGE.md § 1 values in `gamePalette.ts`; draw order § 5 | loop-build | orchestrator; PR #3 not merged into this branch |
 | D12 | Shared Rect fields | closed | `{ x, y, w, h }` everywhere | loop-build | clear-winner: one Rect, same names as the level file |
+| D13 | Level vocabulary | closed | follow LEVEL_FORMAT.md v1 (PR #4): catalog fields `label`, material `effect`/`sound`, item `use`, `defaults`; non-zero polygons; platform wins overlaps; W4/W5/W8 in normalisation, E1–E8 in the importer | loop-build | orchestrator 14:41 |
+| D14 | Palette keys | closed | `players`, `playerShades`, `playerTints`, `ink`, `helmet` (the movement thread codes against them) | loop-build | orchestrator 14:43 |
 
 ## Open
 
@@ -30,3 +32,4 @@ Updated: 2026-11-14
 - 2026-11-14 — D1–D6 closed via loop-refine (clear-winner / orchestrator)
 - 2026-11-14 — D7–D8 closed via loop-build (clear-winner)
 - 2026-11-14 — D9–D12 closed via loop-build (orchestrator / clear-winner)
+- 2026-11-14 — D13–D14 closed via loop-build (orchestrator)

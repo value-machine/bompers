@@ -1,5 +1,5 @@
 import { Container, Graphics } from "pixi.js";
-import { GAME_PALETTE, playerColors } from "@/shared/config/gamePalette";
+import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import type { PlayerState } from "@/features/player/types/player.types";
 
 /**
@@ -18,7 +18,7 @@ export const createPlayersView = (): PlayersView => ({
 });
 
 function drawPlayer(player: PlayerState): Graphics {
-  const { body } = playerColors(player.slot);
+  const body = GAME_PALETTE.players[player.slot % GAME_PALETTE.players.length] ?? GAME_PALETTE.ink;
   const { width, height } = player;
   return new Graphics()
     .rect(-width / 2, -height, width, height)

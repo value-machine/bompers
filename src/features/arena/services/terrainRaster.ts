@@ -5,27 +5,32 @@ import type { TerrainGrid } from "@/features/arena/types/arena.types";
 import {
   cellRangeOf,
   createTerrainGrid,
+  getCellInfo,
   setCellSlot,
   slotFor,
 } from "@/features/arena/services/terrainGrid";
 
 /**
- * Builds the terrain grid from a level's terrain shapes: a cell is filled when its centre lies
- * inside a shape (level file contract). Pieces apply in order, later ones overwrite.
+ * Builds the terrain grid from a level's terrain shapes (LEVEL_FORMAT.md § 4): a cell is filled
+ * when its centre lies inside a shape; polygons use the non-zero rule; where shapes overlap a
+ * platform wins over a destructible, and between equal roles the later piece sets the material.
  */
+const crossSign = (a: Vec2, b: Vec2, p: Vec2): number =>
+  (b.x - a.x) * (p.y - a.y) - (p.x - a.x) * (b.y - a.y);
+
+/** Non-zero winding number test. */
 function polygonContains(points: readonly Vec2[], p: Vec2): boolean {
-  let inside = false;
-  for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
+  let winding = 0;
+  for (let i = 0; i < points.length; i += 1) {
     const a = points[i]!;
-    const b = points[j]!;
-    const crosses =
-      a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x;
-    if (crosses) inside = !inside;
+    const b = points[(i + 1) % points.length]!;
+    if (a.y <= p.y && b.y > p.y && crossSign(a, b, p) > 0) winding += 1;
+    else if (a.y > p.y && b.y <= p.y && crossSign(a, b, p) < 0) winding -= 1;
   }
-  return inside;
+  return winding !== 0;
 }
 
-/** Even-odd point-in-shape test. */
+/** Point-in-shape test (rect half-open like cells; circle inclusive; polygon non-zero). */
 export function shapeContains(shape: TerrainShape, p: Vec2): boolean {
   if (shape.type === "rect") {
     return p.x >= shape.x && p.x < shape.x + shape.w && p.y >= shape.y && p.y < shape.y + shape.h;
@@ -50,20 +55,33 @@ function shapeBounds(shape: TerrainShape) {
   return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
 }
 
-function rasterizePiece(grid: TerrainGrid, piece: TerrainPiece): void {
-  const material = resolveCatalogEntry("material", piece.materialId).entry;
-  const slot = slotFor(grid, {
-    materialId: material?.id ?? piece.materialId,
-    destructible: piece.role === "destructible" && material?.destructible === true,
-    lookToken: material?.lookToken ?? "",
+/** The cell slot a piece fills: its role plus the material's behaviour and look. */
+function slotOfPiece(grid: TerrainGrid, piece: TerrainPiece): number {
+  const { entry } = resolveCatalogEntry("material", piece.materialId);
+  if (!entry)
+    return slotFor(grid, {
+      role: piece.role,
+      materialId: piece.materialId,
+      destructible: false,
+      lookToken: "",
+    });
+  return slotFor(grid, {
+    role: piece.role,
+    materialId: entry.id,
+    destructible: piece.role === "destructible" && entry.destructible,
+    lookToken: entry.lookToken,
   });
+}
+
+function rasterizePiece(grid: TerrainGrid, piece: TerrainPiece): void {
+  const slot = slotOfPiece(grid, piece);
   const size = grid.cellSize;
   const range = cellRangeOf(grid, shapeBounds(piece.shape));
   for (let cy = range.minY; cy <= range.maxY; cy += 1) {
     for (let cx = range.minX; cx <= range.maxX; cx += 1) {
-      if (shapeContains(piece.shape, { x: (cx + 0.5) * size, y: (cy + 0.5) * size })) {
-        setCellSlot(grid, { cx, cy, slot });
-      }
+      if (!shapeContains(piece.shape, { x: (cx + 0.5) * size, y: (cy + 0.5) * size })) continue;
+      if (piece.role === "destructible" && getCellInfo(grid, cx, cy)?.role === "platform") continue;
+      setCellSlot(grid, { cx, cy, slot });
     }
   }
 }
