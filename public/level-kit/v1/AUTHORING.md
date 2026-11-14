@@ -38,6 +38,19 @@ Link the preview kit in `<head>` (works offline without it):
 | sound | `none` | Silent |  |
 | sound | `thud` | Thud |  |
 | sound | `crumble` | Crumble |  |
+| sound | `jump` | Jump |  |
+| sound | `land` | Land |  |
+| sound | `tumble-bounce` | Tumble bounce |  |
+| sound | `dive-launch` | Dive launch |  |
+| sound | `dive-impact` | Dive impact |  |
+| sound | `hit` | Hit |  |
+| sound | `elimination` | Elimination |  |
+| sound | `rocket-fire` | Rocket fire |  |
+| sound | `explosion` | Explosion |  |
+| sound | `pickup` | Pickup |  |
+| sound | `respawn` | Respawn |  |
+| sound | `round-start` | Round start |  |
+| sound | `round-end` | Round end |  |
 | behavior | — | none yet; leave it out | |
 | item | `rocket-launcher` | Rocket launcher | use: drop, default for drop |
 | item | `point-orb` | Point orb | use: collectible, default for collectible |

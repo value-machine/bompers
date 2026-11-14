@@ -239,6 +239,8 @@ Every SFX prompt is built from one template: **material + action + palette words
 
 **Post-processing** for every file: trim leading and trailing silence, cut to the target length with a short fade-out, loudness-normalise to −16 LUFS, mono, short mp3.
 
+**Chosen takes** (owner, 2026-11-14; files in `public/audio/sfx/`, wiring in `src/features/sound/`): jump, tumble bounce, rocket fire and respawn from the first batch (one take each); explosion 3 takes and pickup 2 takes from the first batch; hit from the test batch; round start, all 4 test takes; land, dive launch, dive impact and elimination from round two; round end, all 6 round-two takes, one picked at random each time. Spares kept for later: dive impact × 4 (future material-specific collisions), elimination × 2.
+
 ---
 
 ## Reference mockups

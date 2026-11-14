@@ -13,8 +13,9 @@ One round of the game (timed round, scoring, respawn and spawn protection, winne
 | Services   | `services/spawnChoice.ts`  | `chooseSpawnIndex` — the spawn whose nearest active opponent is farthest (pure)                                                                                                                                                                    |
 | Services   | `services/gameRenderer.ts` | Scene graph per DESIGN_LANGUAGE § 5: `world` (camera transform: terrain → pickups, point orbs → effects → rockets → dive impact pops → players (protected ones blink; dive pose overlays) → combat overlay) and `hud`; only players in play are drawn and framed; `renderGame` per frame frames the camera with `computeCameraView` (`settings: state.tunables.camera`) |
 | Services   | `services/hudRenderer.ts`  | HUD (DESIGN_LANGUAGE § 7, simplified): timer card, one card per player (emblem chip, health chunks, score), round-result banner; fixed canvas colours only                                                                                         |
-| Hooks      | `hooks/useGameSession.ts`  | `useGameSession(app, setup, onExitToLobby)` with `MatchSetup { level, tunables, inputSources }` (a new setup object starts a new match). Per Pixi ticker frame: back check → sample input → restart check → `advanceFixedStep` → N × `stepGame` → `renderGame`; after the round (past the lock) jump = rematch on the same setup, back = `onExitToLobby`; full teardown in cleanup |
-| Components | `components/GameView.tsx`  | Canvas host (`usePixiApp`) running the lobby's `setup`, controls hint (canvas ink on a cream pill, never theme tokens) |
+| Services   | `services/matchSound.ts`   | `soundSnapshotOf(state)` (the frame the sound feature reads) and `createMatchSound(window)` → `{ hear(state), newRound(), dispose() }`, the session's sound |
+| Hooks      | `hooks/useGameSession.ts`  | `useGameSession(app, setup, onExitToLobby)` with `MatchSetup { level, tunables, inputSources }` (a new setup object starts a new match). Per Pixi ticker frame: back check → sample input → restart check → `advanceFixedStep` → N × `stepGame` → `sound.hear` → `renderGame`; after the round (past the lock) jump = rematch on the same setup, back = `onExitToLobby`; full teardown in cleanup |
+| Components | `components/GameView.tsx`  | Canvas host (`usePixiApp`) running the lobby's `setup`, controls hint incl. M for sound (canvas ink on a cream pill, never theme tokens) |
 | API        | `api/matchApi.ts`          | Simulation entry, `applyLevelSettings`, `MatchSetup` for other consumers (lobby, tests)                                                                                                                                                                                           |
 
 Systems order in `stepGame` (new concepts slot into their number):
@@ -32,7 +33,7 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 
 ## Dependencies
 
-- `level`, `arena`, `player`, `camera`, `combat`, `dive`, `collectibles` through their `api/` files (the level arrives in `MatchSetup` from the lobby).
+- `level`, `arena`, `player`, `camera`, `combat`, `dive`, `collectibles`, `sound` through their `api/` files (the level arrives in `MatchSetup` from the lobby).
 - Shared engine: `gameLoop`, `gameInputService`, `usePixiApp`, `gameTunables`, `gamePalette`, `gameInput.types`.
 - Mounted by `src/pages/GamePage.tsx` at `/` once the lobby starts a round.
 
