@@ -93,5 +93,10 @@
     "title": "Context-cost audit: slim always-on rules",
     "description": "meta-audit-harness context-cost lens (R1-R9): moved Model A/B promote and PR procedures from git-workflow.md into loop-ship references, cut Related Rules footers (DOC_RULES_INDEX is SSOT), moved Windows-only shell text to documentation/DOC_WINDOWS_SHELL.md, and trimmed testing, agent-behavior, code-style and architecture to pointers. Always-on context about 17.6k to 14.5k tokens (-18%), no information lost (ledger in the lap folder). Follow-ups R10-R12 are separate backlog tasks. From the Claude Code video-lessons review.",
     "status": "done"
+  },
+  {
+    "title": "Design language for the game",
+    "description": "Not blocked by code. Propose 2–3 visual directions for characters (round blob body, two round feet, helmet), arena, UI and effects, plus an audio identity, then the orchestrator picks one. Deliver documentation/game/DESIGN_LANGUAGE.md (palette, shapes, line/shading, motion, UI type, sound direction) and the UI color tokens. ElevenLabs image generation allowed for moodboards within the budget the orchestrator sets. Does not touch game code. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "done"
   }
 ]

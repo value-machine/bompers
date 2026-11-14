@@ -10,11 +10,6 @@
     "status": "to-do"
   },
   {
-    "title": "Design language for the game",
-    "description": "Not blocked by code. Propose 2–3 visual directions for characters (round blob body, two round feet, helmet), arena, UI and effects, plus an audio identity, then the orchestrator picks one. Deliver documentation/game/DESIGN_LANGUAGE.md (palette, shapes, line/shading, motion, UI type, sound direction) and the UI color tokens. ElevenLabs image generation allowed for moodboards within the budget the orchestrator sets. Does not touch game code. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Player movement and blob feel",
     "description": "Depends on: Game engine foundation. Character controller in the sim: smooth accel/decel, curved motion, high jumps scaled by gravity, air steering, wall-jumps, landing squash and foot deform (render side), aim direction per input. Tunables in the config module. Unit tests for the controller. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
