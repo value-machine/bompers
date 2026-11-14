@@ -15,8 +15,10 @@ src/
 │       └── Input/        # (kit primitives only; no feature imports, enforced by ESLint)
 ├── config/              # Configuration files (app-tasks JSON, git workflow)
 ├── features/            # Feature modules (business logic)
-│   ├── arena/           # Game: level format, terrain cell grid, terrain render layer
+│   ├── arena/           # Game: terrain runtime (cell grid from level shapes, blasts, terrain layer)
 │   ├── camera/          # Game: framing math + applying it to the world layer
+│   ├── content-catalog/ # Game: registry of material/effect/sound/behavior/item IDs
+│   ├── level/           # Game: LevelDefinition model, defaults, normalisation (later: importer)
 │   ├── match/           # Game: GameState, stepGame systems order, render composition, GameView
 │   ├── player/          # Game: player state, controller system, player render layer
 │   ├── harness-overview/ # /harness overview route + welcome card (deletable)
@@ -48,8 +50,10 @@ The game (`/`) is a PixiJS v8 canvas driven by our own pure-TS simulation (DOC_A
 | `src/shared/services/gameInputService.ts` + `utils/gameInputMapping.ts` + `types/gameInput.types.ts` | Keyboard halves + Gamepad API → one `PlayerInput` per slot (0–3); default slots: left keys, right keys, pad 0, pad 1 | `PlayerInput { connected, moveX, aimX, aimY, jump, fire }` (held state; edges are derived in the sim) |
 | `src/shared/hooks/usePixiApp.ts` | StrictMode-safe Pixi `Application` mount / destroy | `usePixiApp(hostRef, { background })` → `Application \| null` |
 | `src/shared/config/gameTunables.ts` (+ `types/gameTunables.types.ts`) | **All** tunables, one section per concept: `sim`, `world` (gravity), `match` (duration), `player`, `camera` | Pass a copy into `createGameState`; each lap edits only its section |
-| `src/shared/config/gamePalette.ts` | Placeholder canvas colors | Replaced by the design-language task |
-| `features/arena` | Level format, terrain grid, terrain layer | `arenaApi`: `LevelData`, `rectHitsSolid`, `isSolidAt`, `clearCircle`, `createArenaState`, terrain view |
+| `src/shared/config/gamePalette.ts` | Canvas colors from `documentation/game/DESIGN_LANGUAGE.md` § 1 | `GAME_PALETTE`, `playerColors(slot)`, `materialLooks[lookToken]` |
+| `features/content-catalog` | The registry of content IDs (material, effect, sound, behavior, item) | `contentCatalogApi`: `resolveCatalogEntry(kind, id)` → `{ entry, fallback }`, `exportCatalog()` (plain JSON for the level kit) |
+| `features/level` | `LevelDefinition` (1:1 with the HTML/SVG level file contract), defaults, normalisation; later the importer | `levelApi`: `LevelDefinition`, `normalizeLevelDefinition` → `{ level, warnings }`, `PLACEHOLDER_LEVEL` |
+| `features/arena` | Terrain runtime: rasterised cell grid with per-cell material, collision, blasts, terrain layer | `arenaApi`: `rectHitsSolid`, `isSolidAt`, `getCellInfo`, `clearCircle`, `createArenaState`, terrain view |
 | `features/player` | Player state + controller + player layer | `playerApi`: `PlayerState` (feet point), `stepPlayers({ players, inputs, terrain, tunables, dt })`, players view |
 | `features/camera` | Framing math | `cameraApi`: `computeCameraView({ targets, bounds, viewport, previous, padding, dt })`, `applyCameraView` |
 | `features/match` | `GameState`, `stepGame` systems order, render composition, `GameView` | `matchApi`: `createGameState`, `stepGame`, `GameState` |
@@ -57,11 +61,12 @@ The game (`/`) is a PixiJS v8 canvas driven by our own pure-TS simulation (DOC_A
 
 **Rules of the map**
 
-- Features talk only through `features/<x>/api/<x>Api.ts` (dependency-cruiser `no-cross-feature-internals`). Direction: `match → player, camera, arena`; `player → arena`; `arena` and `camera` import no game feature.
+- Features talk only through `features/<x>/api/<x>Api.ts` (dependency-cruiser `no-cross-feature-internals`). Direction: `match → level, player, camera, arena`; `player → arena`; `arena → level, content-catalog`; `level → content-catalog`; `camera` and `content-catalog` import no game feature.
+- The engine runs only on a normalised `LevelDefinition` plus the content catalog, never on a file format. Levels reference looks, sounds and behaviours by catalog ID; unknown IDs become a safe default plus a warning.
 - Only `match` knows `GameState`. Systems take the slices they need (options object), so a new concept adds one slice, one system call at its number, and one render layer.
 - Simulation code (`services/` sims) has no DOM, clock or randomness source of its own; it mutates the state it is given. Pixi code lives only in `*Renderer.ts` services, `usePixiApp` and `useGameSession`.
 - Systems order (`features/match/services/gameSim.ts`): 1 join slots · 2 players · 3 *(combat)* · 4 out-of-bounds · 5 round timer. The camera runs per rendered frame, outside the sim.
-- Scene graph: `stage → world (camera) → backdrop, terrain, players, (combat fx)`; `stage → hud`.
+- Scene graph (DESIGN_LANGUAGE § 5): `stage → world (camera) → terrain, (shadows, pickups, effects, rockets), players`; `stage → hud`.
 
 ## Server State Management (TanStack Query)
 

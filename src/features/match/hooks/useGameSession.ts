@@ -3,7 +3,7 @@ import type { Application, Ticker } from "pixi.js";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { advanceFixedStep, createFixedStepClock } from "@/shared/services/gameLoop";
 import { createGameInputReader } from "@/shared/services/gameInputService";
-import { PLACEHOLDER_LEVEL } from "@/features/arena/api/arenaApi";
+import { PLACEHOLDER_LEVEL } from "@/features/level/api/levelApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
 import { createGameRenderer, renderGame } from "@/features/match/services/gameRenderer";
 
@@ -22,6 +22,8 @@ export function useGameSession(app: Application | null): void {
     const tunables = DEFAULT_GAME_TUNABLES;
     const stepSeconds = 1 / tunables.sim.stepHz;
     const state = createGameState({ level: PLACEHOLDER_LEVEL, tunables });
+    // Level authors (often AI agents) see what was corrected; the game still runs.
+    if (state.levelWarnings.length > 0) console.warn("Level warnings:", state.levelWarnings);
     const input = createGameInputReader(window);
     const renderer = createGameRenderer(app, state);
     let clock = createFixedStepClock();

@@ -10,12 +10,12 @@ import type { CameraFrameArgs, CameraView, Viewport } from "@/features/camera/ty
 export function computeCameraView(args: CameraFrameArgs): CameraView {
   const { bounds, viewport, padding } = args;
   const zoom = Math.min(
-    viewport.width / (bounds.width + padding * 2),
-    viewport.height / (bounds.height + padding * 2)
+    viewport.width / (bounds.w + padding * 2),
+    viewport.height / (bounds.h + padding * 2)
   );
   return {
-    centerX: bounds.x + bounds.width / 2,
-    centerY: bounds.y + bounds.height / 2,
+    centerX: bounds.x + bounds.w / 2,
+    centerY: bounds.y + bounds.h / 2,
     zoom: Number.isFinite(zoom) && zoom > 0 ? zoom : 1,
   };
 }
