@@ -15,7 +15,7 @@ export {
   isSolidAt,
   rectHitsSolid,
 } from "@/features/arena/services/terrainGrid";
-export { buildTerrainFromLevel, shapeContains } from "@/features/arena/services/terrainRaster";
+export { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 export {
   createTerrainView,
   syncTerrainView,

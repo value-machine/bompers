@@ -15,4 +15,3 @@ export {
   LEVEL_FORMAT_VERSION,
   normalizeLevelDefinition,
 } from "@/features/level/services/levelDefinition";
-export { PLACEHOLDER_LEVEL } from "@/features/level/services/placeholderLevel";

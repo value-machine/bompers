@@ -3,7 +3,7 @@ import type { Application, Ticker } from "pixi.js";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { advanceFixedStep, createFixedStepClock } from "@/shared/services/gameLoop";
 import { createGameInputReader } from "@/shared/services/gameInputService";
-import { PLACEHOLDER_LEVEL } from "@/features/level/api/levelApi";
+import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
 import { createGameRenderer, renderGame } from "@/features/match/services/gameRenderer";
 
@@ -12,16 +12,17 @@ const isAppAlive = (app: Application): boolean =>
   (app.ticker as Ticker | null) !== null && (app.stage as Application["stage"] | null) !== null;
 
 /**
- * Runs one match on a ready Pixi app: input → fixed steps of `stepGame` → render, once per
+ * Runs one match of `level` on a ready Pixi app (nothing until both are ready; a new level
+ * object restarts the match): input → fixed steps of `stepGame` → render, once per
  * Pixi ticker frame. Everything is created in the effect and torn down in its cleanup, so a
  * StrictMode remount starts a clean session.
  */
-export function useGameSession(app: Application | null): void {
+export function useGameSession(app: Application | null, level: LevelDefinition | null): void {
   useEffect(() => {
-    if (!app) return undefined;
+    if (!app || !level) return undefined;
     const tunables = DEFAULT_GAME_TUNABLES;
     const stepSeconds = 1 / tunables.sim.stepHz;
-    const state = createGameState({ level: PLACEHOLDER_LEVEL, tunables });
+    const state = createGameState({ level, tunables });
     // Level authors (often AI agents) see what was corrected; the game still runs.
     if (state.levelWarnings.length > 0) console.warn("Level warnings:", state.levelWarnings);
     const input = createGameInputReader(window);
@@ -49,5 +50,5 @@ export function useGameSession(app: Application | null): void {
       app.ticker.remove(onFrame);
       app.stage.removeChildren().forEach((child) => child.destroy({ children: true }));
     };
-  }, [app]);
+  }, [app, level]);
 }
