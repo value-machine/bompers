@@ -16,6 +16,8 @@ export const GAME_PALETTE = {
   helmet: 0xfff4e2,
   /** Rocket-tube cap and helmet shading edge: shell mixed 28 % toward ink (mockup variant E). */
   helmetEdge: 0xc4b8b3,
+  /** Bottom of the helmet gradient: shell mixed 10 % toward ink (DESIGN_LANGUAGE § 3). */
+  helmetShade: 0xeadfd1,
   /** Eye whites (pupils are ink). */
   eyeWhite: 0xffffff,
   /** Gloss oval on bodies and the helmet gloss stroke. */

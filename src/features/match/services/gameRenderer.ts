@@ -43,9 +43,9 @@ import { createHudView, syncHudView, type HudView } from "@/features/match/servi
  *   ├─ backdrop (screen units: sky, sun, parallax hills and clouds — arena)
  *   ├─ world   (camera transform; world units)
  *   │  ├─ terrain   (arena: solid slabs, destructible tiles)
- *   │  ├─ contact shadows of pickups and rockets (combat)
+ *   │  ├─ contact shadows: pickups and rockets (combat), players (player)
  *   │  ├─ pickups (combat), point orbs (collectibles)
- *   │  ├─ effects (debris, explosions, rocket-hit pops — effects), rockets (+ trails, tubes — combat)
+ *   │  ├─ effects (debris, explosions, rocket-hit pops — effects), rockets (+ trails — combat)
  *   │  ├─ dive effects (dive impact pops)   (dive)
  *   │  ├─ players   (player; above effects so they never cover a player outline; protected
  *   │  │             players blink inside a dashed ring)
@@ -81,6 +81,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   world.addChild(
     terrain.container,
     combat.shadows,
+    players.shadows,
     combat.pickups,
     collectibles.container,
     effects.layer,
@@ -106,6 +107,13 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   };
 }
 
+/** Ids of players holding a weapon (they wear the rocket tube). */
+const armedIds = (state: GameState): Set<string> => {
+  const ids = new Set<string>();
+  for (const [id, fighter] of state.combat.fighters) if (fighter.weapon) ids.add(id);
+  return ids;
+};
+
 /** Ids of players whose spawn protection is still running. */
 const protectedIds = (state: GameState): Set<string> => {
   const ids = new Set<string>();
@@ -130,6 +138,8 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     nowMs,
     protectedIds: protectedIds(state),
     overlays: diveBlobPoses(state.dive, state.tunables),
+    armedIds: armedIds(state),
+    zoom,
   });
   syncDiveView(renderer.dive, state.dive);
   syncCollectiblesView(renderer.collectibles, {

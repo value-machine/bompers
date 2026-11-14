@@ -2,19 +2,18 @@ import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import { contactShadow, CONTACT_SHADOW_RANGE } from "@/shared/utils/contactShadow";
 import { syncDisplayById } from "@/shared/utils/displaySync";
-import { DESIGN_SCALE, outlineWidth, type OutlineWidth } from "@/shared/utils/outlineWidth";
+import { DESIGN_SCALE, outlineWidth } from "@/shared/utils/outlineWidth";
 import { surfaceBelow, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
-import { helmetPoint } from "@/features/combat/services/combatGeometry";
 import type { CombatState, PickupState, RocketState } from "@/features/combat/types/combat.types";
 
 /**
  * Combat render layers (DESIGN_LANGUAGE § 1 Effects, § 4 shadows, § 5 draw order). The match
  * renderer places them: shadows (4, contact shadows of airborne pickups and rockets) → pickups
- * (5) → [effects (6), the `effects` feature] → rockets (7, with smoke trail, plus the rocket tube of
- * armed players) → players (8) → overlay (health chunks above each player). Effects therefore
+ * (5) → [effects (6), the `effects` feature] → rockets (7, with smoke trail) → players (8, which
+ * wear the rocket tube while armed) → overlay (health chunks above each player). Effects therefore
  * never cover a player outline. Shapes follow mockup variant E at `DESIGN_SCALE`; outlines use
- * the zoom-clamped prop width. Sprites are drawn once (pickups and tubes are keyed by the
+ * the zoom-clamped prop width. Sprites are drawn once (pickups are keyed by the
  * outline step, so they rebuild only when the width step changes); per frame only transforms
  * change, except the health pips, which redraw when a player's health changes.
  *
@@ -28,12 +27,9 @@ export interface CombatView {
   pickupSprites: Map<string, Container>;
   rocketSprites: Map<number, Container>;
   shadowSprites: Map<string, Container>;
-  tubes: Map<string, Container>;
   health: Map<string, { pips: Graphics; shown: number }>;
 }
 
-/** Body radius per collision height (matches the player renderer). */
-const RADIUS_PER_HEIGHT = 1 / 2.12;
 const PIP = { w: 6, h: 5, gap: 2, lift: 10 };
 const S = DESIGN_SCALE;
 /** Rocket length (mockup 25 + nose) for its contact shadow. */
@@ -54,7 +50,6 @@ export function createCombatView(): CombatView {
     pickupSprites: new Map(),
     rocketSprites: new Map(),
     shadowSprites: new Map(),
-    tubes: new Map(),
     health: new Map(),
   };
 }
@@ -121,32 +116,6 @@ function drawPickup(size: number, width: number): Container {
     .fill(GAME_PALETTE.ink);
 }
 
-/**
- * Rocket tube on the helmet (mockup variant E: 26 × 14 with an 8 × 16 cap), pivoting toward the
- * aim. Style E: ink pass at twice the width, then the fills, so it carries one silhouette line.
- */
-function drawTube(width: number): Graphics {
-  const tube = (g: Graphics) =>
-    g
-      .roundRect(-3 * S, -7 * S, 26 * S, 14 * S, 6 * S)
-      .roundRect(17 * S, -8 * S, 8 * S, 16 * S, 3.5 * S);
-  return tube(new Graphics())
-    .fill(GAME_PALETTE.ink)
-    .stroke(ink(width * 2))
-    .roundRect(-3 * S, -7 * S, 26 * S, 14 * S, 6 * S)
-    .fill(GAME_PALETTE.helmet)
-    .roundRect(17 * S, -8 * S, 8 * S, 16 * S, 3.5 * S)
-    .fill(GAME_PALETTE.helmetEdge);
-}
-
-function placeTube(sprite: Container, player: PlayerState): void {
-  const helmet = helmetPoint(player);
-  const angle = Math.atan2(player.aimY, player.aimX);
-  const r = player.height * RADIUS_PER_HEIGHT;
-  sprite.position.set(helmet.x + Math.cos(angle) * r * 0.5, helmet.y + Math.sin(angle) * 4 * S);
-  sprite.rotation = angle;
-}
-
 interface PipsLook {
   health: number;
   slot: number;
@@ -164,15 +133,8 @@ function drawPips(pips: Graphics, { health, slot, max }: PipsLook): void {
   }
 }
 
-function syncPlayerExtras(view: CombatView, frame: CombatFrame, width: OutlineWidth): void {
+function syncPlayerExtras(view: CombatView, frame: CombatFrame): void {
   const { combat, players, maxHealth } = frame;
-  const armed = players.filter((player) => combat.fighters.get(player.id)?.weapon);
-  syncDisplayById(view.tubes, view.rockets, {
-    list: armed,
-    key: (player) => `${player.id}:${width.step}`,
-    create: () => drawTube(width.width),
-    place: placeTube,
-  });
   for (const player of players) {
     const fighter = combat.fighters.get(player.id);
     if (!fighter) continue;
@@ -257,5 +219,5 @@ export function syncCombatView(view: CombatView, frame: CombatFrame): void {
     place: placeRocket,
   });
   syncShadows(view, frame);
-  syncPlayerExtras(view, frame, width);
+  syncPlayerExtras(view, frame);
 }

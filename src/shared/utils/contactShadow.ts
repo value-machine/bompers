@@ -1,8 +1,7 @@
 /**
  * Flat contact shadow under airborne things (DESIGN_LANGUAGE § 4): an ink ellipse on the first
  * surface below, shrinking and fading with height; none beyond 240 units.
- * Second copy: `features/player/services/blobPose.ts` `blobShadow` uses the same formula; the
- * player redraw (visual-pass phase B) switches it to this module.
+ * Used by the player (`blobShadow`) and combat (pickups, rockets) layers.
  */
 export const CONTACT_SHADOW_RANGE = 240;
 const HEIGHT = 12;

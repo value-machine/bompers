@@ -1,4 +1,5 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
+import { contactShadow } from "@/shared/utils/contactShadow";
 import type { PlayerState } from "@/features/player/types/player.types";
 
 /**
@@ -52,10 +53,6 @@ export interface BlobPoseOverlay {
 export const FEET_LAG_MS = 33;
 /** Feet squash this much harder than the body. */
 const FEET_SQUASH_GAIN = 1.4;
-/** Shadow fade distance and size (DESIGN_LANGUAGE § 4). */
-const SHADOW_RANGE = 240;
-const SHADOW_HEIGHT = 12;
-const SHADOW_ALPHA = 0.28;
 /** Extra airborne stretch at terminal fall speed. */
 const AIR_STRETCH = 0.08;
 const AIR_STRETCH_SPEED = 1400;
@@ -136,14 +133,9 @@ function motionStretch(player: PlayerState, frame: { squash: SquashTunables; now
 /** Flat contact shadow while airborne over ground within range; null otherwise. */
 export function blobShadow(player: PlayerState): BlobShadow | null {
   if (player.grounded || player.groundBelowY === null) return null;
-  const t = Math.min(1, (player.groundBelowY - player.y) / SHADOW_RANGE);
-  if (t >= 1) return null;
-  return {
-    y: player.groundBelowY,
-    width: 1.05 * player.width * (1 - 0.5 * t),
-    height: SHADOW_HEIGHT * (1 - 0.5 * t),
-    alpha: SHADOW_ALPHA * (1 - t),
-  };
+  const shadow = contactShadow(player.groundBelowY - player.y, player.width);
+  if (!shadow || shadow.alpha <= 0) return null;
+  return { y: player.groundBelowY, ...shadow };
 }
 
 /** The pose to draw this frame. Call `noteBlobEvents` first. */
