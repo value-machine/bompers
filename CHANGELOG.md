@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.45.0](https://github.com/value-machine/bompers/compare/v0.44.0...v0.45.0) (2026-11-14)
+
+
+### Features
+
+* Combat health, hit API, rocket launcher and explosions ([#10](https://github.com/value-machine/bompers/issues/10)) ([5bb9a83](https://github.com/value-machine/bompers/commit/5bb9a8387a4a84f9c8dd889e23e3c9715a5b8d96))
+* Dive headbutt unarmed attack ([#12](https://github.com/value-machine/bompers/issues/12)) ([5ba6487](https://github.com/value-machine/bompers/commit/5ba6487f02bd2903b2273b4b3a0455e22b1ce88e))
+* Draw the game in the Gumdrop Pop style with line style E ([#23](https://github.com/value-machine/bompers/issues/23)) ([91488bd](https://github.com/value-machine/bompers/commit/91488bdf5def529fe6de4f6d6db44eeea7090e5b))
+* Game design language, style E ([#13](https://github.com/value-machine/bompers/issues/13)) ([db9c89c](https://github.com/value-machine/bompers/commit/db9c89cbc384d3f632a21ac701786328f123ec62))
+* Game engine foundation ([#5](https://github.com/value-machine/bompers/issues/5)) ([9f07b95](https://github.com/value-machine/bompers/commit/9f07b953acdc2f3a079ee7621ab4ec9f1caa8b4d))
+* Game sound effects ([#22](https://github.com/value-machine/bompers/issues/22)) ([96f2207](https://github.com/value-machine/bompers/commit/96f2207297c817fac34d27e6bcf3badd9b42eec7))
+* Let loop skills call Claude Code built-in review skills ([#19](https://github.com/value-machine/bompers/issues/19)) ([bccdfd1](https://github.com/value-machine/bompers/commit/bccdfd156cea928eb68df120ac2ee51aa95ae440))
+* Level file format and preview kit ([#14](https://github.com/value-machine/bompers/issues/14)) ([86d1c05](https://github.com/value-machine/bompers/commit/86d1c0553a6856a553fb85ca63f9c3722089a251))
+* Level importer in the game ([#9](https://github.com/value-machine/bompers/issues/9)) ([8997e19](https://github.com/value-machine/bompers/commit/8997e194ee61def282d8e654d577e88a71c3bf8a))
+* Lobby, match settings and level picker ([#21](https://github.com/value-machine/bompers/issues/21)) ([ae82c7d](https://github.com/value-machine/bompers/commit/ae82c7d0fd495413be5bf1a3b8a37116971cb977))
+* Make the interface yours: Bompers name, icons, link preview ([#18](https://github.com/value-machine/bompers/issues/18)) ([fd7cab9](https://github.com/value-machine/bompers/commit/fd7cab93a686e47cb1eb5753de8cc8ac562b6890))
+* Match rules, scoring and respawn ([#15](https://github.com/value-machine/bompers/issues/15)) ([780d904](https://github.com/value-machine/bompers/commit/780d90461e3c3f0382f8e749dca7d193fb53d58f))
+* Multi-target camera ([#6](https://github.com/value-machine/bompers/issues/6)) ([a5fc0a5](https://github.com/value-machine/bompers/commit/a5fc0a5881bfe54cc1c3a35aff95b8208b88fa9a))
+* Player movement and blob feel ([#8](https://github.com/value-machine/bompers/issues/8)) ([b7fa1f6](https://github.com/value-machine/bompers/commit/b7fa1f6b4c0e57b6f2358b598f13650ce2fbe39a))
+* Port feedback hooks to Cursor ([#20](https://github.com/value-machine/bompers/issues/20)) ([cdfaa1f](https://github.com/value-machine/bompers/commit/cdfaa1f83d95676d0de8e593b21b1546a9f35cdb))
+* Port the no-git-writes-on-main guard to Cursor ([#24](https://github.com/value-machine/bompers/issues/24)) ([8d79983](https://github.com/value-machine/bompers/commit/8d79983597b4da4c03b828aa9a03fac5d4b7a35e))
+* Starting arena as the default level ([#7](https://github.com/value-machine/bompers/issues/7)) ([775f09b](https://github.com/value-machine/bompers/commit/775f09b4af30e51e9fd3041009b39476ca96b5d6))
+
 ## [0.44.0](https://github.com/value-machine/bronze-plate-harness/compare/v0.43.0...v0.44.0) (2026-10-26)
 
 
