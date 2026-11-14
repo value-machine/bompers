@@ -1,10 +1,5 @@
 [
   {
-    "title": "Game engine foundation",
-    "description": "Blocking for all gameplay tasks. Add pixi.js@8.23.0 (renderer only; orchestrator call, see DOC_APP_VISION.md § Engine). Build the game shell: a canvas page at `/` (replacing the template home), a Pixi lifecycle hook safe under StrictMode, a fixed-timestep loop (e.g. 120 Hz) driving a pure-TS simulation `step(state, inputs, dt)` with no DOM, an input layer for up to 4 players (keyboard for 2 + Gamepad API for 4), a grid-based terrain module (solid/empty cells, collision queries, circle-clear for blasts, chunked redraw), a level data format (platforms, destructible vs solid, spawn points, drop points, out-of-bounds zone) and one tunables/config module (gravity, match duration). A placeholder box per player proves input → sim → render. Writes the module map (feature split per bounded concept, shared engine code) so later threads can work in parallel without overlap. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Design language for the game",
     "description": "Not blocked by code. Propose 2–3 visual directions for characters (round blob body, two round feet, helmet), arena, UI and effects, plus an audio identity, then the orchestrator picks one. Deliver documentation/game/DESIGN_LANGUAGE.md (palette, shapes, line/shading, motion, UI type, sound direction) and the UI color tokens. ElevenLabs image generation allowed for moodboards within the budget the orchestrator sets. Does not touch game code. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
