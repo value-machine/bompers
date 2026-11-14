@@ -2,16 +2,16 @@
 
 ## Purpose
 
-The overview of the agent harness for non-technical readers: the `/harness` route (a designed flowchart of the product-owner loop, helper skills, guardrails and upkeep skills) and a welcome card on the home page that links to it. It is template onboarding content: every visitor sees the card, signed in or not, on a preview URL and on the first local run.
+The overview of the agent harness for non-technical readers: the `/harness` route (a designed flowchart of the product-owner loop, helper skills, guardrails and upkeep skills) and a welcome card that links to it. Since the game took over `/` (game-engine-foundation), the card is not mounted anywhere; the lobby lap decides whether template UI stays. It is template onboarding content: every visitor sees the card, signed in or not, on a preview URL and on the first local run.
 
 ## Structure
 
-| Layer      | Path                                                                    | Purpose                                                                                                                                                                 |
-| ---------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Components | `components/HarnessOverviewCard.tsx`                                    | Home-page card with the preview image and one link to `/harness`                                                                                                        |
+| Layer      | Path                                                                    | Purpose                                                                                                                                                                                                                                                                 |
+| ---------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Components | `components/HarnessOverviewCard.tsx`                                    | Welcome card with the preview image and one link to `/harness`                                                                                                                                                                                                          |
 | Components | `components/HarnessOverviewView.tsx`, `components/HarnessLoopStage.tsx` | The overview: legend, loop stages with helpers, outcomes, guardrails, upkeep skills. Styled only with theme tokens, so it follows the app theme and light/dark mode. A "Your turn" badge marks the two stages where the owner steps in (`ownerStep` in the content). |
-| Services   | `services/harnessOverviewContent.ts`                                    | The content as typed data; `listHarnessSkillNames()` feeds the drift test                                                                                               |
-| Types      | `types/harnessOverview.types.ts`                                        | Stage, helper, outcome and guardrail shapes                                                                                                                             |
+| Services   | `services/harnessOverviewContent.ts`                                    | The content as typed data; `listHarnessSkillNames()` feeds the drift test                                                                                                                                                                                               |
+| Types      | `types/harnessOverview.types.ts`                                        | Stage, helper, outcome and guardrail shapes                                                                                                                                                                                                                             |
 
 The route is `src/pages/HarnessOverviewPage.tsx` (set in `src/App.tsx`); it renders its own title and description and passes the content from `services/` to the view as props, since feature components may not import feature services. `public/harness-overview.png` is a screenshot of the route, used by the card and the root `README.md`.
 
@@ -29,4 +29,4 @@ The route is `src/pages/HarnessOverviewPage.tsx` (set in `src/App.tsx`); it rend
 
 ## Removing it from a fork
 
-Delete this folder, `src/pages/HarnessOverviewPage.tsx` and its test, the `/harness` route and lazy import in `src/App.tsx`, the card line in `src/pages/HomePage.tsx`, and `public/harness-overview.png`. Then drop the image from the root `README.md` and the row from `documentation/DOC_INDEX.md`.
+Delete this folder, `src/pages/HarnessOverviewPage.tsx` and its test, the `/harness` route and lazy import in `src/App.tsx`, and `public/harness-overview.png`. Then drop the image from the root `README.md` and the row from `documentation/DOC_INDEX.md`.

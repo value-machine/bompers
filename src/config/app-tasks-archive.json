@@ -95,6 +95,26 @@
     "status": "done"
   },
   {
+    "title": "Put your app online (Cloudflare hosting)",
+    "description": "Get your app live on the internet with Cloudflare (free tier is fine). Your coding agent does the setup — just ask it to \"do the hosting task\". What you need ready: a Cloudflare account and (optional) a domain name you own. How it works once set up depends on your git workflow mode (see .claude/rules/git-workflow.md § Mode behavior table, rows staging and production) — by default every pull request gets its own preview link and merging the pull request ships to production. One step happens in the Cloudflare website (connecting your repo); the agent tells you what must be set there and why, waits for you, and checks the result. Agent playbook + troubleshooting: documentation/DOC_CLOUDFLARE_WORKERS.md (see \"Agent one-shot brief\"). If you explicitly say this app does not use Cloudflare, the agent offers to delete that hosting code (there is then no preview link). Agent gate: .agents/skills/loop-backlog/references/onboarding.md § Shipped integrations and § Configuration tasks gate (Hosting). Status: Worker bompers is connected (production https://bompers.tom-fab.workers.dev serves deep links). Preview command must be npx wrangler versions upload; the dashboard default npx wrangler preview (private beta) gave 404 on deep links such as /harness. Open: confirm a branch build with that command serves /harness, then archive.",
+    "status": "done"
+  },
+  {
+    "title": "Game engine foundation",
+    "description": "Blocking for all gameplay tasks. Add pixi.js@8.23.0 (renderer only; orchestrator call, see DOC_APP_VISION.md § Engine). Build the game shell: a canvas page at `/` (replacing the template home), a Pixi lifecycle hook safe under StrictMode, a fixed-timestep loop (e.g. 120 Hz) driving a pure-TS simulation `step(state, inputs, dt)` with no DOM, an input layer for up to 4 players (keyboard for 2 + Gamepad API for 4), a grid-based terrain module (solid/empty cells, collision queries, circle-clear for blasts, chunked redraw), a level data format (platforms, destructible vs solid, spawn points, drop points, out-of-bounds zone) and one tunables/config module (gravity, match duration). A placeholder box per player proves input → sim → render. Writes the module map (feature split per bounded concept, shared engine code) so later threads can work in parallel without overlap. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Player movement and blob feel",
+    "description": "Depends on: Game engine foundation. Character controller in the sim: smooth accel/decel, curved motion, high jumps scaled by gravity, air steering, wall-jumps, landing squash and foot deform (render side), aim direction per input. Tunables in the config module. Unit tests for the controller. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Multi-target camera",
+    "description": "Depends on: Game engine foundation. Pure-math camera that frames all active players with zoom limits, smoothing and a central deadzone; applied to the render container. Unit tests. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "done"
+  },
+  {
     "title": "Design language for the game",
     "description": "Not blocked by code. Propose 2–3 visual directions for characters (round blob body, two round feet, helmet), arena, UI and effects, plus an audio identity, then the orchestrator picks one. Deliver documentation/game/DESIGN_LANGUAGE.md (palette, shapes, line/shading, motion, UI type, sound direction) and the UI color tokens. ElevenLabs image generation allowed for moodboards within the budget the orchestrator sets. Does not touch game code. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "done"

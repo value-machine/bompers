@@ -54,6 +54,15 @@ Interpretations of open points in the GDD, made against the GDD itself. Change a
 - Main risk: we own collision and feel tuning; rockets step in small increments to avoid tunnelling.
 - Sound: own small Web Audio module, no extra dependency.
 
+## Levels (owner requirement, orchestrator design)
+
+Levels are importable as **one self-contained HTML file with inline SVG**: any AI agent (Claude, Gemini, ChatGPT, ...) can write one, any browser shows it as a picture, and the game imports it.
+
+- **References, not content.** A level file holds geometry, roles (platform, spawn, drop point, bounds, collectible) and IDs only. Materials, effects, sounds and behaviours live in one content catalog in the game code and are referenced by stable string ID.
+- **Internal seam.** The importer (`features/level-file`) turns a file into a typed `LevelDefinition` (`features/level`); the engine never depends on the file format. Built-in levels are real level files in `public/levels/`.
+- **Staying current as the game grows.** The catalog in code is the single source. The build generates the public level kit (catalog list, preview stylesheet/script, authoring guide, example level) from it, and a CI drift check fails when the kit lags behind. Files carry a format version with migrations; unknown IDs warn and fall back to a safe default, never crash.
+- **Viewable outside the app.** A level references the hosted kit for a richer preview (legend, labels) but still renders as a plain picture with no network.
+
 ## Design language
 
 Visual and audio identity: "Gumdrop Pop" (sticker-bright candy toys, ink outlines, toy-box pop sound). SSOT: [`documentation/game/DESIGN_LANGUAGE.md`](game/DESIGN_LANGUAGE.md). Picked 2026-11-14 by the orchestrator against the GDD while the owner was away.
