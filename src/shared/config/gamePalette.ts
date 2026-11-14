@@ -14,6 +14,10 @@ export const GAME_PALETTE = {
   /** The only outline color; also HUD text. */
   ink: 0x2b1d3a,
   helmet: 0xfff4e2,
+  /** Eye whites (pupils are ink). */
+  eyeWhite: 0xffffff,
+  /** Gloss oval on bodies and the helmet gloss stroke. */
+  gloss: 0xffffff,
   /** Body colors P1–P4: tomato, cobalt, lemon, mint. */
   players: [0xff4f3a, 0x3069ff, 0xffd43b, 0x2ed0a0],
   /** Darker crescent: body mixed 38 % toward ink. */
