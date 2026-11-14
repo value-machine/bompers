@@ -18,13 +18,13 @@ Updated: 2026-11-14
 | D9 | ID lifecycle | closed | IDs never renamed or reused; retired IDs keep a catalog alias | loop-build | clear-winner: files outlive catalog changes ("connect flawlessly"); renames are not format migrations |
 | D10 | When the version bumps | closed | Only breaking changes; new IDs/attributes/roles are additive and warn on older games | loop-build | clear-winner: matches "unknown warns, never crashes"; avoids migration churn |
 | D11 | Kit validation strictness | closed | Preview script runs a soft subset and lists problems; never blocks rendering | loop-build | the importer is the authority |
+| D12 | Whitelist `public/level-kit/v*/` | closed | Added to `projectStructure.config.cjs` | owner via orchestrator (game-orchestration D4) | protected-file consent 2026-11-14 |
+| D13 | Vocabulary | closed | Approved as proposed (roles, kinds, US "behavior", cell size 8); engine matches 1:1 | orchestrator | |
+| D14 | Kit origin | closed | `https://bompers.tom-fab.workers.dev` | orchestrator | in-repo example keeps relative links |
 
 ## Open
 
 | id | topic | status | options briefly | blocked phase |
 |----|-------|--------|-----------------|---------------|
-| O1 | Whitelist `public/level-kit/v1/` | open | orchestrator/owner approval of `projectStructure.config.cjs` change | ship |
-| O2 | Vocabulary alignment with engine `LevelDefinition` | open | orchestrator | spec |
-| O3 | Canonical hosted origin for absolute kit URLs | open | orchestrator | spec |
 
 ## Log

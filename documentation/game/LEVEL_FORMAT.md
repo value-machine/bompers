@@ -20,8 +20,8 @@ A level is **one self-contained HTML file with one inline `<svg>`**. Any AI agen
   <head>
     <meta charset="utf-8" />
     <title>My Level — Bompers level</title>
-    <link rel="stylesheet" href="https://KIT_ORIGIN/level-kit/v1/preview.css" />
-    <script src="https://KIT_ORIGIN/level-kit/v1/preview.js" defer></script>
+    <link rel="stylesheet" href="https://bompers.tom-fab.workers.dev/level-kit/v1/preview.css" />
+    <script src="https://bompers.tom-fab.workers.dev/level-kit/v1/preview.js" defer></script>
   </head>
   <body>
     <svg id="level" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000"
@@ -32,7 +32,7 @@ A level is **one self-contained HTML file with one inline `<svg>`**. Any AI agen
 </html>
 ```
 
-`KIT_ORIGIN` is the game's hosted origin (see § 9). The importer reads only the root `<svg>`; everything else in the HTML is ignored, so a bare `.svg` with the same root is accepted too.
+The kit origin is the game's production site, `https://bompers.tom-fab.workers.dev` (§ 9). The importer reads only the root `<svg>`; everything else in the HTML is ignored, so a bare `.svg` with the same root is accepted too.
 
 ## 3. Root element
 
@@ -168,7 +168,7 @@ Served from the game's own site under `/level-kit/v1/`:
 | `AUTHORING.md` | The agent one-pager. |
 | `example-level.html` | A complete level using relative kit links (works served or opened from the repo). |
 
-Agent-written levels link the kit with absolute URLs on `KIT_ORIGIN`, the game's production origin. Without network access the links fail silently and the file is still a correct picture.
+Agent-written levels link the kit with absolute URLs on `https://bompers.tom-fab.workers.dev`, the game's production origin. Without network access the links fail silently and the file is still a correct picture.
 
 ## 10. Mapping to the game
 
