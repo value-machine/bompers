@@ -1,7 +1,12 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
-import { createArenaState, type ArenaState, type LevelData } from "@/features/arena/api/arenaApi";
+import { createArenaState, type ArenaState } from "@/features/arena/api/arenaApi";
+import {
+  normalizeLevelDefinition,
+  type LevelDefinition,
+  type LevelSettings,
+} from "@/features/level/api/levelApi";
 import {
   createPlayer,
   placePlayer,
@@ -17,7 +22,7 @@ import {
  *   1. joinSlots       — a connected input slot without a player gets one
  *   2. stepPlayers     — player feature: controller + terrain collision
  *   3. (combat)        — reserved: projectiles, blasts → arena clearCircle, damage, bash
- *   4. outOfBounds     — leaving level.outOfBounds respawns (elimination + scoring: match/combat)
+ *   4. outOfBounds     — leaving level.bounds respawns (elimination + scoring: match/combat)
  *   5. roundTimer      — counts down; at 0 the round ends and systems 1–4 stop
  */
 /** Round progress (GDD § 5: points within a timed round). */
@@ -39,28 +44,47 @@ export interface GameState {
   /** Settings for this match (a copy of the defaults, possibly overridden). */
   tunables: GameTunables;
   arena: ArenaState;
+  /** What normalising the level corrected (unknown IDs etc.); empty for a clean level. */
+  levelWarnings: string[];
   players: PlayerState[];
   round: MatchRoundState;
 }
 
 export interface CreateGameStateArgs {
-  level: LevelData;
+  /** Any level; it is normalised against the content catalog here. */
+  level: LevelDefinition;
+  /** Engine defaults (or lobby overrides); the level's settings apply on top. */
   tunables: GameTunables;
 }
 
+/** Per-level settings on top of the engine tunables (gravity is a multiplier). */
+export function applyLevelSettings(tunables: GameTunables, settings: LevelSettings): GameTunables {
+  return {
+    ...tunables,
+    world: { ...tunables.world, gravity: tunables.world.gravity * settings.gravity },
+    match: {
+      ...tunables.match,
+      durationSeconds: settings.matchDurationS ?? tunables.match.durationSeconds,
+    },
+  };
+}
+
 export function createGameState({ level, tunables }: CreateGameStateArgs): GameState {
+  const normalized = normalizeLevelDefinition(level);
+  const matchTunables = applyLevelSettings(tunables, normalized.level.settings);
   return {
     tick: 0,
     timeSeconds: 0,
-    tunables,
-    arena: createArenaState(level),
+    tunables: matchTunables,
+    arena: createArenaState(normalized.level),
+    levelWarnings: normalized.warnings,
     players: [],
-    round: { phase: "playing", remainingSeconds: tunables.match.durationSeconds },
+    round: { phase: "playing", remainingSeconds: matchTunables.match.durationSeconds },
   };
 }
 
 const spawnPointFor = (state: GameState, slot: number): Vec2 => {
-  const points = state.arena.level.spawnPoints;
+  const points = state.arena.level.spawns;
   return points[slot % points.length] ?? { x: 0, y: 0 };
 };
 
@@ -74,12 +98,12 @@ function joinSlots(state: GameState, inputs: PlayerInputs): void {
 }
 
 const isOutOfBounds = (player: PlayerState, state: GameState): boolean => {
-  const zone = state.arena.level.outOfBounds;
+  const zone = state.arena.level.bounds;
   return (
     player.x < zone.x ||
-    player.x > zone.x + zone.width ||
+    player.x > zone.x + zone.w ||
     player.y < zone.y ||
-    player.y > zone.y + zone.height
+    player.y > zone.y + zone.h
   );
 };
 

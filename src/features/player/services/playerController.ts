@@ -49,8 +49,8 @@ export function placePlayer(player: PlayerState, at: Vec2): void {
 export const playerBody = (player: PlayerState): Rect => ({
   x: player.x - player.width / 2,
   y: player.y - player.height,
-  width: player.width,
-  height: player.height,
+  w: player.width,
+  h: player.height,
 });
 
 /** Snaps the moving edge back to the boundary of the cell it entered. */

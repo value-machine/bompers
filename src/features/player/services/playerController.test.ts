@@ -2,22 +2,27 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import type { PlayerInput } from "@/shared/types/gameInput.types";
-import { buildTerrainFromLevel, type LevelData } from "@/features/arena/api/arenaApi";
+import { buildTerrainFromLevel } from "@/features/arena/api/arenaApi";
+import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { createPlayer, stepPlayers } from "@/features/player/services/playerController";
 
-const level: LevelData = {
-  id: "test",
-  name: "Test",
-  cellSize: 8,
-  widthCells: 100,
-  heightCells: 50,
-  blocks: [
-    { x: 0, y: 40, width: 100, height: 4, kind: "solid" },
-    { x: 60, y: 30, width: 2, height: 10, kind: "solid" },
+const level: LevelDefinition = {
+  formatVersion: 1,
+  meta: { levelId: "t", title: "T" },
+  settings: { cellSize: 8, gravity: 1 },
+  worldSize: { w: 800, h: 400 },
+  terrain: [
+    { shape: { type: "rect", x: 0, y: 320, w: 800, h: 32 }, role: "platform", materialId: "stone" },
+    {
+      shape: { type: "rect", x: 480, y: 240, w: 16, h: 80 },
+      role: "platform",
+      materialId: "stone",
+    },
   ],
-  spawnPoints: [],
-  dropPoints: [],
-  outOfBounds: { x: 0, y: 0, width: 800, height: 400 },
+  spawns: [],
+  drops: [],
+  collectibles: [],
+  bounds: { x: 0, y: 0, w: 800, h: 400 },
 };
 
 const dt = 1 / 120;

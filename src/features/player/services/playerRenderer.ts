@@ -1,10 +1,10 @@
 import { Container, Graphics } from "pixi.js";
-import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import { GAME_PALETTE, playerColors } from "@/shared/config/gamePalette";
 import type { PlayerState } from "@/features/player/types/player.types";
 
 /**
  * Player render layer: one display object per player id, created on first sight and removed
- * when the player leaves the state. Placeholder box with a helmet notch on the facing side; the
+ * when the player leaves the state. Placeholder box (player color, ink outline) with a helmet notch on the facing side; the
  * movement lap swaps in the blob body, squash and feet.
  */
 export interface PlayersView {
@@ -18,13 +18,14 @@ export const createPlayersView = (): PlayersView => ({
 });
 
 function drawPlayer(player: PlayerState): Graphics {
-  const color = GAME_PALETTE.players[player.slot % GAME_PALETTE.players.length] ?? 0xffffff;
+  const { body } = playerColors(player.slot);
   const { width, height } = player;
   return new Graphics()
     .rect(-width / 2, -height, width, height)
-    .fill(color)
-    .rect(width / 2 - 6, -height + 4, 4, 8)
-    .fill(GAME_PALETTE.hudText);
+    .fill(body)
+    .stroke({ color: GAME_PALETTE.ink, width: 3 })
+    .rect(width / 2 - 7, -height + 5, 5, 9)
+    .fill(GAME_PALETTE.helmet);
 }
 
 /** Matches the layer to the current players. Call once per rendered frame. */

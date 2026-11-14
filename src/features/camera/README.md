@@ -20,7 +20,7 @@ Pipeline per frame (`computeCameraView`):
 5. **Damping:** exponential, dt-based (`1 - e^(-rate·dt)`); zoom eases in log space; `zoomOutRate` > `zoomInRate`.
 6. **Hard containment:** after damping, zoom out just enough that every target keeps `edgeMargin` from the screen edge. The bounds clamp beats `padding`; `edgeMargin` beats the clamp and the zoom-out limit.
 
-Tunables: the `camera` section of `src/shared/config/gameTunables.ts`. `match/services/gameRenderer.ts` passes only `padding`; the rest defaults to `DEFAULT_GAME_TUNABLES.camera`. Seam: pass `settings: state.tunables.camera` there to make the camera per-match tunable.
+Tunables: the `camera` section of `src/shared/config/gameTunables.ts`. `match/services/gameRenderer.ts` passes `settings: state.tunables.camera` (per-match tunable); without `settings` the camera falls back to `DEFAULT_GAME_TUNABLES.camera`.
 
 ## Dependencies
 
@@ -32,4 +32,4 @@ Tunables: the `camera` section of `src/shared/config/gameTunables.ts`. `match/se
 - The camera runs per rendered frame, outside the fixed-step simulation: it is presentation and depends on the viewport size (game-engine-foundation).
 - Zoom limits are in world units (min visible height, arena fit), not raw zoom factors, so the framing is the same on every screen size (multi-target-camera).
 - Keeping every player on screen beats the zoom-out limit and the level-bounds clamp; out-of-bounds kills bound how far it zooms out (multi-target-camera).
-- `settings` is optional on `CameraFrameArgs` so the renderer's call stays unchanged (multi-target-camera).
+- `settings` is optional on `CameraFrameArgs` (defaults to the shared tunables) so tests and other callers stay short; the match renderer passes the match's tunables (multi-target-camera).

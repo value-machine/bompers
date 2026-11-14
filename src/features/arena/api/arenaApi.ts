@@ -1,34 +1,35 @@
 /**
- * Public seam of the arena feature (the only file other features import). Level format,
- * terrain grid queries / destruction, and the terrain render layer.
+ * Public seam of the arena feature (the terrain runtime): terrain grid queries / destruction,
+ * building the grid from a level, and the terrain render layer.
  */
-export type {
-  ArenaState,
-  LevelBlock,
-  LevelData,
-  TerrainCellKind,
-  TerrainGrid,
-} from "@/features/arena/types/arena.types";
-export { TERRAIN_CELL } from "@/features/arena/types/arena.types";
+import type { LevelDefinition } from "@/features/level/api/levelApi";
+import type { TerrainGrid } from "@/features/arena/types/arena.types";
+import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
+
+export type { TerrainCellSlot, TerrainGrid } from "@/features/arena/types/arena.types";
+export { EMPTY_CELL } from "@/features/arena/types/arena.types";
 export {
-  buildTerrainFromLevel,
   clearCircle,
-  getCell,
+  getCellInfo,
   isSolidAt,
   rectHitsSolid,
 } from "@/features/arena/services/terrainGrid";
-export { PLACEHOLDER_LEVEL } from "@/features/arena/services/placeholderLevel";
+export { buildTerrainFromLevel, shapeContains } from "@/features/arena/services/terrainRaster";
 export {
   createTerrainView,
   syncTerrainView,
   type TerrainView,
 } from "@/features/arena/services/terrainRenderer";
 
-import type { ArenaState, LevelData } from "@/features/arena/types/arena.types";
-import { buildTerrainFromLevel } from "@/features/arena/services/terrainGrid";
+/** The arena slice of the game state (declared here: types/ may not import another feature). */
+export interface ArenaState {
+  /** Normalised level (all IDs exist in the content catalog). */
+  level: LevelDefinition;
+  terrain: TerrainGrid;
+}
 
-/** Fresh arena state for a level (the terrain is rebuilt; the level data is shared, read-only). */
-export const createArenaState = (level: LevelData): ArenaState => ({
+/** Fresh arena state for a normalised level (the terrain is rebuilt; the level is read-only). */
+export const createArenaState = (level: LevelDefinition): ArenaState => ({
   level,
   terrain: buildTerrainFromLevel(level),
 });

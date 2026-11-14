@@ -1,14 +1,13 @@
 import type { Circle, Rect } from "@/shared/types/gameGeometry.types";
 import {
-  TERRAIN_CELL,
-  type LevelData,
-  type TerrainCellKind,
+  EMPTY_CELL,
+  type TerrainCellSlot,
   type TerrainGrid,
 } from "@/features/arena/types/arena.types";
 
 /**
  * Terrain cell grid: collision queries and destruction. Pure TS; mutates the grid it is given.
- * Out-of-range cells read as empty, so open map edges need no special casing.
+ * Out-of-range cells read as empty, so open map edges need no special case.
  */
 export const DEFAULT_CHUNK_CELLS = 16;
 
@@ -18,6 +17,8 @@ export interface TerrainGridSize {
   heightCells: number;
   chunkCells?: number;
 }
+
+const EMPTY_SLOT: TerrainCellSlot = { materialId: "", destructible: false, lookToken: "" };
 
 export function createTerrainGrid(size: TerrainGridSize): TerrainGrid {
   const chunkCells = size.chunkCells ?? DEFAULT_CHUNK_CELLS;
@@ -30,11 +31,22 @@ export function createTerrainGrid(size: TerrainGridSize): TerrainGrid {
     widthCells: size.widthCells,
     heightCells: size.heightCells,
     cells: new Uint8Array(size.widthCells * size.heightCells),
+    slots: [EMPTY_SLOT],
     chunkCells,
     chunksX,
     chunksY,
     dirtyChunks,
   };
+}
+
+/** Index of the slot for this material / destructibility, added on first use. */
+export function slotFor(grid: TerrainGrid, slot: TerrainCellSlot): number {
+  const found = grid.slots.findIndex(
+    (s, i) => i > 0 && s.materialId === slot.materialId && s.destructible === slot.destructible
+  );
+  if (found > 0) return found;
+  grid.slots.push(slot);
+  return grid.slots.length - 1;
 }
 
 const inGrid = (grid: TerrainGrid, cx: number, cy: number): boolean =>
@@ -43,53 +55,45 @@ const inGrid = (grid: TerrainGrid, cx: number, cy: number): boolean =>
 const chunkIndexOfCell = (grid: TerrainGrid, cx: number, cy: number): number =>
   Math.floor(cy / grid.chunkCells) * grid.chunksX + Math.floor(cx / grid.chunkCells);
 
-export function getCell(grid: TerrainGrid, cx: number, cy: number): TerrainCellKind {
-  if (!inGrid(grid, cx, cy)) return TERRAIN_CELL.empty;
-  return grid.cells[cy * grid.widthCells + cx] as TerrainCellKind;
+/** Slot index of a cell (0 = empty, also outside the grid). */
+export function getCellSlot(grid: TerrainGrid, cx: number, cy: number): number {
+  if (!inGrid(grid, cx, cy)) return EMPTY_CELL;
+  return grid.cells[cy * grid.widthCells + cx] ?? EMPTY_CELL;
+}
+
+/** Material info of a cell, or null when empty. */
+export function getCellInfo(grid: TerrainGrid, cx: number, cy: number): TerrainCellSlot | null {
+  const slot = getCellSlot(grid, cx, cy);
+  return slot === EMPTY_CELL ? null : (grid.slots[slot] ?? null);
 }
 
 /** Writes one cell and marks its chunk dirty when the value changes. */
-export function setCell(
+export function setCellSlot(
   grid: TerrainGrid,
-  cell: { cx: number; cy: number; kind: TerrainCellKind }
+  cell: { cx: number; cy: number; slot: number }
 ): void {
-  const { cx, cy, kind } = cell;
+  const { cx, cy, slot } = cell;
   if (!inGrid(grid, cx, cy)) return;
   const index = cy * grid.widthCells + cx;
-  if (grid.cells[index] === kind) return;
-  grid.cells[index] = kind;
+  if (grid.cells[index] === slot) return;
+  grid.cells[index] = slot;
   grid.dirtyChunks.add(chunkIndexOfCell(grid, cx, cy));
-}
-
-/** Builds the grid a level describes. */
-export function buildTerrainFromLevel(level: LevelData): TerrainGrid {
-  const grid = createTerrainGrid(level);
-  for (const block of level.blocks) {
-    const kind = block.kind === "solid" ? TERRAIN_CELL.solid : TERRAIN_CELL.destructible;
-    for (let cy = block.y; cy < block.y + block.height; cy += 1) {
-      for (let cx = block.x; cx < block.x + block.width; cx += 1) {
-        setCell(grid, { cx, cy, kind });
-      }
-    }
-  }
-  return grid;
 }
 
 /** True when the world point lies in a non-empty cell. */
 export function isSolidAt(grid: TerrainGrid, x: number, y: number): boolean {
-  const cx = Math.floor(x / grid.cellSize);
-  const cy = Math.floor(y / grid.cellSize);
-  return getCell(grid, cx, cy) !== TERRAIN_CELL.empty;
+  const size = grid.cellSize;
+  return getCellSlot(grid, Math.floor(x / size), Math.floor(y / size)) !== EMPTY_CELL;
 }
 
 /** Cell range a world rect overlaps (edges touching a cell boundary do not count). */
-function cellRangeOf(grid: TerrainGrid, rect: Rect) {
+export function cellRangeOf(grid: TerrainGrid, rect: Rect) {
   const size = grid.cellSize;
   return {
     minX: Math.floor(rect.x / size),
     minY: Math.floor(rect.y / size),
-    maxX: Math.ceil((rect.x + rect.width) / size) - 1,
-    maxY: Math.ceil((rect.y + rect.height) / size) - 1,
+    maxX: Math.ceil((rect.x + rect.w) / size) - 1,
+    maxY: Math.ceil((rect.y + rect.h) / size) - 1,
   };
 }
 
@@ -98,33 +102,36 @@ export function rectHitsSolid(grid: TerrainGrid, rect: Rect): boolean {
   const range = cellRangeOf(grid, rect);
   for (let cy = range.minY; cy <= range.maxY; cy += 1) {
     for (let cx = range.minX; cx <= range.maxX; cx += 1) {
-      if (getCell(grid, cx, cy) !== TERRAIN_CELL.empty) return true;
+      if (getCellSlot(grid, cx, cy) !== EMPTY_CELL) return true;
     }
   }
   return false;
 }
 
+const isDestructibleCell = (grid: TerrainGrid, cx: number, cy: number): boolean =>
+  getCellInfo(grid, cx, cy)?.destructible === true;
+
 /**
- * Blasts a circle out of the terrain: destructible cells whose center lies inside become empty;
- * solid cells stay. Returns how many cells were removed.
+ * Blasts a circle out of the terrain: destructible cells whose centre lies inside become empty;
+ * other cells stay. Returns how many cells were removed.
  */
 export function clearCircle(grid: TerrainGrid, circle: Circle): number {
   const size = grid.cellSize;
   const range = cellRangeOf(grid, {
     x: circle.x - circle.radius,
     y: circle.y - circle.radius,
-    width: circle.radius * 2,
-    height: circle.radius * 2,
+    w: circle.radius * 2,
+    h: circle.radius * 2,
   });
   const radiusSq = circle.radius * circle.radius;
   let removed = 0;
   for (let cy = range.minY; cy <= range.maxY; cy += 1) {
     for (let cx = range.minX; cx <= range.maxX; cx += 1) {
-      if (getCell(grid, cx, cy) !== TERRAIN_CELL.destructible) continue;
+      if (!isDestructibleCell(grid, cx, cy)) continue;
       const dx = (cx + 0.5) * size - circle.x;
       const dy = (cy + 0.5) * size - circle.y;
       if (dx * dx + dy * dy > radiusSq) continue;
-      setCell(grid, { cx, cy, kind: TERRAIN_CELL.empty });
+      setCellSlot(grid, { cx, cy, slot: EMPTY_CELL });
       removed += 1;
     }
   }

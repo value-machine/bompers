@@ -13,7 +13,7 @@ Holding a player's "right" key (keyboard half 1) for N fixed steps moves that pl
 - Fixed-timestep loop (120 Hz accumulator, max sub-steps) driving a pure `stepGame(state, inputs, dt)`.
 - Input for up to 4 slots: two keyboard halves + Gamepad API, sampled into plain `PlayerInput` objects.
 - Terrain cell grid (empty / solid / destructible), collision queries, `clearCircle`, chunk dirty tracking + chunked redraw.
-- Level data format (blocks, spawn points, drop points, out-of-bounds zone) + one placeholder level.
+- `LevelDefinition` (1:1 with the level file contract) + content catalog with ID fallback + one placeholder level; shapes rasterised into the grid.
 - One tunables module (gravity, match duration, …) and one placeholder palette module.
 - Placeholder player box (run, gravity, jump, out-of-bounds respawn) proving input → sim → render; static fit-to-level camera.
 - Module map in `ARCHITECTURE.md` + feature READMEs (homes and seams for player, camera, arena, combat, match).
@@ -27,7 +27,9 @@ Holding a player's "right" key (keyboard half 1) for N fixed steps moves that pl
 | Feature area | Loop today | Hook point | Ride / new |
 |---|---|---|---|
 | `src/shared/{services,utils,types,hooks,config}` (game engine) | Not found | flat engine modules | new — game-agnostic loop, input, Pixi mount, tunables, palette |
-| `features/arena` | Not found | level + terrain grid + terrain renderer | new — bounded concept: the playfield |
+| `features/level` | Not found | LevelDefinition, normalisation, placeholder map | new — bounded concept: the level model (orchestrator D9) |
+| `features/content-catalog` | Not found | ID registry, resolve, export | new — bounded concept: content IDs (orchestrator D9) |
+| `features/arena` | Not found | terrain grid from level shapes + terrain renderer | new — bounded concept: terrain runtime |
 | `features/player` | Not found | player state, controller system, player renderer | new — bounded concept: the avatar |
 | `features/camera` | Not found | pure camera view + apply | new — bounded concept: framing |
 | `features/match` | Not found | GameState composition, `stepGame`, systems order, GameView | new — bounded concept: one round |

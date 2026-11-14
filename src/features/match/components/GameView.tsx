@@ -9,7 +9,7 @@ const CONTROLS_HINT =
 /** The game canvas: fills its parent and runs one match inside it. */
 export const GameView = () => {
   const hostRef = useRef<HTMLDivElement>(null);
-  const app = usePixiApp(hostRef, { background: GAME_PALETTE.background });
+  const app = usePixiApp(hostRef, { background: GAME_PALETTE.sky.top });
   useGameSession(app);
 
   return (

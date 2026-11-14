@@ -1,7 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
-import { TERRAIN_CELL, type TerrainGrid } from "@/features/arena/types/arena.types";
-import { getCell, takeDirtyChunks } from "@/features/arena/services/terrainGrid";
+import { EMPTY_CELL, type TerrainGrid } from "@/features/arena/types/arena.types";
+import { getCellSlot, takeDirtyChunks } from "@/features/arena/services/terrainGrid";
 
 /**
  * Chunked terrain drawing: one `Graphics` per chunk, redrawn only when the simulation marked the
@@ -12,9 +12,10 @@ export interface TerrainView {
   chunks: Graphics[];
 }
 
-const COLOR_BY_CELL: Record<number, number> = {
-  [TERRAIN_CELL.solid]: GAME_PALETTE.terrainSolid,
-  [TERRAIN_CELL.destructible]: GAME_PALETTE.terrainDestructible,
+const slotColor = (grid: TerrainGrid, slot: number): number | undefined => {
+  if (slot === EMPTY_CELL) return undefined;
+  const look = GAME_PALETTE.materialLooks[grid.slots[slot]?.lookToken ?? ""];
+  return (look ?? GAME_PALETTE.fallbackLook).fill;
 };
 
 export function createTerrainView(grid: TerrainGrid): TerrainView {
@@ -24,7 +25,7 @@ export function createTerrainView(grid: TerrainGrid): TerrainView {
   return { container, chunks };
 }
 
-/** Draws one row of a chunk, merging runs of equal cells into one rect. */
+/** Draws one row of a chunk, merging runs of equal cells into one rect. Placeholder look (flat fill per material); the visual pass adds lips, cell grid and pips (DESIGN_LANGUAGE § 2). */
 function drawRow(
   graphics: Graphics,
   grid: TerrainGrid,
@@ -33,10 +34,10 @@ function drawRow(
   const size = grid.cellSize;
   let cx = row.x0;
   while (cx < row.x1) {
-    const kind = getCell(grid, cx, row.cy);
+    const slot = getCellSlot(grid, cx, row.cy);
     const runStart = cx;
-    while (cx < row.x1 && getCell(grid, cx, row.cy) === kind) cx += 1;
-    const color = COLOR_BY_CELL[kind];
+    while (cx < row.x1 && getCellSlot(grid, cx, row.cy) === slot) cx += 1;
+    const color = slotColor(grid, slot);
     if (color !== undefined) {
       graphics.rect(runStart * size, row.cy * size, (cx - runStart) * size, size).fill(color);
     }

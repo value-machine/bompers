@@ -53,7 +53,7 @@ interface GoalArgs {
 /** The view the camera eases toward this frame. */
 function goalView({ targets, bounds, viewport, previous, settings }: GoalArgs): CameraView {
   const { padding } = settings;
-  const arenaZoom = fitZoom(viewport, bounds.width + padding * 2, bounds.height + padding * 2);
+  const arenaZoom = fitZoom(viewport, bounds.w + padding * 2, bounds.h + padding * 2);
   const maxZoom = Math.max(arenaZoom, viewport.height / settings.minViewHeight);
   if (targets.length === 0) return toView(rectCenter(bounds), arenaZoom);
 
@@ -93,8 +93,8 @@ function clampToBounds(
 ): Vec2 {
   const { bounds, viewport, zoom } = opts;
   return {
-    x: clampAxis(center.x, { start: bounds.x, length: bounds.width }, viewport.width / zoom),
-    y: clampAxis(center.y, { start: bounds.y, length: bounds.height }, viewport.height / zoom),
+    x: clampAxis(center.x, { start: bounds.x, length: bounds.w }, viewport.width / zoom),
+    y: clampAxis(center.y, { start: bounds.y, length: bounds.h }, viewport.height / zoom),
   };
 }
 
@@ -137,8 +137,8 @@ function containTargets(
 
 /** Largest zoom that shows `box` (+ margin) around a fixed centre. */
 function fitAround(center: Vec2, box: Rect, opts: { viewport: Viewport; margin: number }): number {
-  const halfW = Math.max(center.x - box.x, box.x + box.width - center.x) + opts.margin;
-  const halfH = Math.max(center.y - box.y, box.y + box.height - center.y) + opts.margin;
+  const halfW = Math.max(center.x - box.x, box.x + box.w - center.x) + opts.margin;
+  const halfH = Math.max(center.y - box.y, box.y + box.h - center.y) + opts.margin;
   return fitZoom(opts.viewport, halfW * 2, halfH * 2);
 }
 
@@ -152,11 +152,11 @@ function boundingBox(points: readonly Vec2[]): Rect {
   const ys = points.map((p) => p.y);
   const x = Math.min(...xs);
   const y = Math.min(...ys);
-  return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
 }
 
 function rectCenter(rect: Rect): Vec2 {
-  return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+  return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
 }
 
 function toView(center: Vec2, zoom: number): CameraView {

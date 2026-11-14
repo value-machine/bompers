@@ -1,33 +1,32 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { mapPlayerInputs } from "@/shared/utils/gameInputMapping";
-import type { LevelData } from "@/features/arena/api/arenaApi";
+import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
 
-const level: LevelData = {
-  id: "test",
-  name: "Test",
-  cellSize: 8,
-  widthCells: 100,
-  heightCells: 50,
-  blocks: [{ x: 0, y: 40, width: 100, height: 4, kind: "solid" }],
-  spawnPoints: [
+const level: LevelDefinition = {
+  formatVersion: 1,
+  meta: { levelId: "t", title: "T" },
+  settings: { cellSize: 8, gravity: 1 },
+  worldSize: { w: 800, h: 400 },
+  terrain: [
+    { shape: { type: "rect", x: 0, y: 320, w: 800, h: 32 }, role: "platform", materialId: "stone" },
+  ],
+  spawns: [
     { x: 100, y: 200 },
     { x: 600, y: 200 },
   ],
-  dropPoints: [],
-  outOfBounds: { x: -100, y: -100, width: 1000, height: 600 },
+  drops: [],
+  collectibles: [],
+  bounds: { x: -100, y: -100, w: 1000, h: 600 },
 };
 
 const dt = 1 / 120;
 const keys = (...codes: string[]) => mapPlayerInputs({ heldKeys: new Set(codes), gamepads: [] });
-const newGame = (durationSeconds = 180) =>
+const newGame = (matchDurationS?: number) =>
   createGameState({
-    level,
-    tunables: {
-      ...DEFAULT_GAME_TUNABLES,
-      match: { ...DEFAULT_GAME_TUNABLES.match, durationSeconds },
-    },
+    level: { ...level, settings: { ...level.settings, matchDurationS } },
+    tunables: DEFAULT_GAME_TUNABLES,
   });
 
 describe("gameSim", () => {
@@ -62,5 +61,33 @@ describe("gameSim", () => {
     const frozenX = state.players[0]!.x;
     stepGame(state, keys("KeyD"), dt);
     expect(state.players[0]!.x).toBe(frozenX);
+  });
+
+  it("should scale gravity and override the round length from the level settings", () => {
+    const state = createGameState({
+      level: { ...level, settings: { cellSize: 8, gravity: 0.5, matchDurationS: 60 } },
+      tunables: DEFAULT_GAME_TUNABLES,
+    });
+    expect(state.tunables.world.gravity).toBe(DEFAULT_GAME_TUNABLES.world.gravity * 0.5);
+    expect(state.round.remainingSeconds).toBe(60);
+  });
+
+  it("should run on a level with unknown IDs and report them", () => {
+    const state = createGameState({
+      level: {
+        ...level,
+        terrain: [
+          {
+            shape: { type: "rect", x: 0, y: 320, w: 800, h: 32 },
+            role: "platform",
+            materialId: "lava",
+          },
+        ],
+      },
+      tunables: DEFAULT_GAME_TUNABLES,
+    });
+    expect(state.levelWarnings).toEqual(['terrain[0]: unknown material "lava", using "stone"']);
+    for (let i = 0; i < 120; i += 1) stepGame(state, keys(), dt);
+    expect(state.players[0]?.grounded).toBe(true);
   });
 });

@@ -5,11 +5,11 @@ import type { CameraView } from "@/features/camera/types/camera.types";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 
 const SETTINGS = DEFAULT_GAME_TUNABLES.camera;
-const BOUNDS = { x: 0, y: 0, width: 1280, height: 720 };
+const BOUNDS = { x: 0, y: 0, w: 1280, h: 720 };
 const VIEWPORT = { width: 1280, height: 720 };
 const ARENA_ZOOM = Math.min(
-  VIEWPORT.width / (BOUNDS.width + SETTINGS.padding * 2),
-  VIEWPORT.height / (BOUNDS.height + SETTINGS.padding * 2)
+  VIEWPORT.width / (BOUNDS.w + SETTINGS.padding * 2),
+  VIEWPORT.height / (BOUNDS.h + SETTINGS.padding * 2)
 );
 const MAX_ZOOM = VIEWPORT.height / SETTINGS.minViewHeight;
 
@@ -119,7 +119,7 @@ describe("cameraView limits and edge cases", () => {
     const halfW = VIEWPORT.width / view.zoom / 2;
     const halfH = VIEWPORT.height / view.zoom / 2;
     expect(view.centerX - halfW).toBeGreaterThanOrEqual(-1e-6);
-    expect(view.centerY + halfH).toBeLessThanOrEqual(BOUNDS.height + 1e-6);
+    expect(view.centerY + halfH).toBeLessThanOrEqual(BOUNDS.h + 1e-6);
   });
 
   it("should ease to the arena centre when there are no targets", () => {
@@ -165,7 +165,7 @@ describe("cameraView limits and edge cases", () => {
   it("should fall back to zoom 1 when the viewport has no size yet", () => {
     const view = computeCameraView({
       targets: [],
-      bounds: { x: 0, y: 0, width: 100, height: 100 },
+      bounds: { x: 0, y: 0, w: 100, h: 100 },
       viewport: { width: 0, height: 0 },
       previous: null,
       padding: 10,
