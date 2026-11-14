@@ -20,12 +20,13 @@ The unarmed attack (GDD § 3 "Ongewapende aanval", the "bomp"): fire makes a blo
 - **Dive:** 12 frames of wind-up (hang, crouch, direction locked, 8-way), then up to 30 frames dead straight at 900 units / s with no gravity, no steering and no cancel. One dive per airtime.
 - The dive **never moves a player**. It writes velocity at events (launch, bonk, strike) and the controller's motion modifiers (`steerScale`, `gravityScale`, `jumpLocked`) every step; `stepPlayers` does all movement and terrain collision, so a dive cannot tunnel.
 - A **hit** = a `BodyContact` from `resolveBodyContacts` (player feature) where the attacker is travelling toward the other at `dive.minHitSpeed` or more. The body collision has already exchanged the momentum; the dive adds the strike on the victim (push + upward pop + a short steering stagger) and the **ricochet** on the attacker (pops straight up, dive ready again at once).
+- **Hurt reaction:** the strike calls the player feature's `reactToHit` with the impulse it gave. A hard hit (impulse at least `tumble.minImpulse`, or any back hit) sends the victim into a tumble: it ricochets off floors and walls. A tumbling blob cannot start a dive. The attacker itself never bounces off terrain.
 - **Terrain always ends the dive and never bounces it:** head-on is a bonk (small hop back, short stun), a glancing touch a plain recovery.
 - **Seam to combat:** a `DiveHit` carries combat's `Hit` fields (`victimSlot`, `attackerSlot`, `kind: "contact"`, `source: "dive"`, `contactPoint`, `direction`) plus `zone`, `damage` and `impulse`. `stepDives` returns the step's hits and keeps them in `DiveState.hits`.
 
 ## Dependencies
 
-- `player` via `api/playerApi.ts` (`PlayerState`, `BodyContact`, `BlobPoseOverlay`).
+- `player` via `api/playerApi.ts` (`PlayerState`, `BodyContact`, `BlobPoseOverlay`, `reactToHit`, `isTumbling`).
 - Shared: `gameTunables` (`dive` section), `gamePalette`, `gameInput.types`, `gameInputMapping`, `gameGeometry.types`; `pixi.js` in the renderer.
 - Consumed by `match` only.
 

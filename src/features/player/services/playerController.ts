@@ -4,6 +4,7 @@ import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
 import { rectHitsSolid, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { PlayerState } from "@/features/player/types/player.types";
+import { bounceTumble, endTumble, isTumbling, tickTumble } from "@/features/player/services/tumble";
 
 /**
  * Player controller system (sim step 2): blob movement feel (GDD § 2). Per step:
@@ -54,6 +55,10 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     terrainHitY: 0,
     terrainHitSpeedX: 0,
     terrainHitSpeedY: 0,
+    tumbleSeconds: 0,
+    tumbleBouncesLeft: 0,
+    tumbleBounceCount: 0,
+    lastTumbleBounceSpeed: 0,
     groundBelowY: null,
     jumpCount: 0,
     wallJumpCount: 0,
@@ -78,6 +83,7 @@ export function placePlayer(player: PlayerState, at: Vec2): void {
   player.steerScale = 1;
   player.gravityScale = 1;
   player.jumpLocked = false;
+  endTumble(player);
 }
 
 export const playerBody = (player: PlayerState): Rect => ({
@@ -175,7 +181,8 @@ function applyHorizontal(player: PlayerState, input: PlayerInput, args: StepPlay
   if (input.moveX !== 0) player.facing = input.moveX > 0 ? 1 : -1;
   if (player.wallJumpLockTimer > 0) return;
   const target = input.moveX * p.runSpeed;
-  const rate = horizontalRate(player, target, p) * player.steerScale;
+  const tumbleSteer = isTumbling(player) ? args.tunables.tumble.steerScale : 1;
+  const rate = horizontalRate(player, target, p) * player.steerScale * tumbleSteer;
   player.vx = approach(player.vx, target, rate * args.dt);
 }
 
@@ -192,7 +199,7 @@ function launch(player: PlayerState, vy: number): void {
 
 /** Fires a buffered jump off the ground (or within coyote time), else off a wall. */
 function applyJump(player: PlayerState, p: PlayerTunables): void {
-  if (player.jumpBufferTimer <= 0 || player.jumpLocked) return;
+  if (player.jumpBufferTimer <= 0 || player.jumpLocked || isTumbling(player)) return;
   if (player.grounded || player.coyoteTimer > 0) {
     launch(player, -p.jumpSpeed);
     player.jumpCount += 1;
@@ -248,6 +255,7 @@ function applyMotion(player: PlayerState, args: StepPlayersArgs): void {
   player.grounded = hitY && impactSpeed > 0;
   if (hitY) player.vy = 0;
   reportTerrainHit(player, { x: hitX, speedX, y: hitY, speedY: impactSpeed });
+  bounceTumble(player, args.tunables);
   if (player.grounded && !wasGrounded) {
     player.landCount += 1;
     player.lastLandingSpeed = impactSpeed;
@@ -290,6 +298,7 @@ function updateContacts(player: PlayerState, args: StepPlayersArgs): void {
     player.wallDir !== 0 ? p.coyoteTime : Math.max(0, player.wallCoyoteTimer - dt);
   player.jumpBufferTimer = Math.max(0, player.jumpBufferTimer - dt);
   player.wallJumpLockTimer = Math.max(0, player.wallJumpLockTimer - dt);
+  tickTumble(player, dt);
 }
 
 /** Advances every player one fixed step. Mutates the players in place. */

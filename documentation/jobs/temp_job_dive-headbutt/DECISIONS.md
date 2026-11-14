@@ -16,8 +16,10 @@ Updated: 2026-11-14
 | D7 | One dive per airtime | closed | A dive spends a charge that returns on ground contact (Pogo also on a hit) | loop-plan | clear-winner: otherwise zero-gravity dives chain into flight. Precedent: air-dash charges in platformers |
 | D8 | Which dive | closed | Cannonball's launch + Pogo's ricochet off other blobs; terrain never bounces the dive | owner (via orchestrator) | asked at Stop 2 of phase 1: "I want the cannonball launch and the pogo ricochet when bouncing off heads and other characters, but I don't want the bouncing off the ground" |
 | D9 | Wall-bonk stun | closed | 30 frames (250 ms) + a hop back at 25 % of the speed | loop-build | agent-pick: the owner asked for a fair stun; the prototype's 54 frames was the harshest part of Cannonball |
+| D10 | Terrain ricochet as a hurt reaction | closed | A reusable tumble in `features/player` (`reactToHit`): hard hits (impulse ≥ `tumble.minImpulse`, or a back hit) make the victim ricochet off floors and walls; the attacker never does | owner (via orchestrator) | "the pogo effect from the dive... we should retain that for if a character is hurt in a certain way" |
 
 ## Log
 
 - 2026-11-14 — D1–D2 closed via loop-refine, D3–D7 via loop-plan (clear-winner / agent-pick; orchestrator run, the owner is reached through the orchestrator)
 - 2026-11-14 — D8 closed by the owner (relayed by the orchestrator), D9 via loop-build (agent-pick)
+- 2026-11-14 — D10 closed by the owner (relayed by the orchestrator)

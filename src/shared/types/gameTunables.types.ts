@@ -73,6 +73,27 @@ export interface GameTunables {
     maxImpulse: number;
   };
   /**
+   * Tumble: the hurt reaction to a hard hit (any attack). The victim ricochets off floors and
+   * walls for a few bounces, each weaker than the last, then recovers.
+   */
+  tumble: {
+    /** A hit whose impulse (velocity change) is at least this starts a tumble, units / s. */
+    minImpulse: number;
+    /** Terrain bounces per tumble. */
+    bounces: number;
+    /** Bounciness of the first bounce; each later one is multiplied by `restitutionDecay`. */
+    restitution: number;
+    restitutionDecay: number;
+    /** Share of the speed along the surface kept on each bounce (friction). */
+    surfaceSpeedKeep: number;
+    /** Terrain impact speed below which a tumbling blob just lands, units / s. */
+    minBounceSpeed: number;
+    /** Steering while tumbling (share of normal); jump is locked. */
+    steerScale: number;
+    /** Longest tumble; it also ends when the blob comes to rest on the ground. */
+    maxSeconds: number;
+  };
+  /**
    * Unarmed attack: the dive headbutt ("bomp", GDD § 3). A committed straight missile that
    * ricochets off other blobs. Seconds and world units; frames = seconds × `sim.stepHz`.
    */

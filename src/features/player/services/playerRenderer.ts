@@ -193,6 +193,10 @@ function footLift(player: PlayerState, r: number): [number, number] {
   return [Math.max(0, wave) * 0.22 * r, Math.max(0, -wave) * 0.22 * r];
 }
 
+/** A tumbling blob rolls with the distance it travels, like a ball; 0 when not tumbling. */
+const tumbleRoll = (player: PlayerState, r: number): number =>
+  player.tumbleSeconds > 0 ? (player.x / (1.6 * r)) % (Math.PI * 2) : 0;
+
 /** Places and scales the blob. The root turns around the body centre (overlay rotation). */
 function placeBlob(
   sprite: BlobSprite,
@@ -204,7 +208,7 @@ function placeBlob(
   const centerY = player.height / 2;
   sprite.root.pivot.set(0, -centerY);
   sprite.root.position.set(player.x, player.y - centerY);
-  sprite.root.rotation = overlay?.rotation ?? 0;
+  sprite.root.rotation = (overlay?.rotation ?? 0) + tumbleRoll(player, sprite.radius);
   sprite.body.scale.set(pose.bodySx * (overlay?.sx ?? 1), pose.bodySy * (overlay?.sy ?? 1));
   sprite.body.rotation = overlay ? 0 : Math.max(-0.15, Math.min(0.15, player.vx / 2400));
 }

@@ -26,6 +26,8 @@ A hit is a body contact made while travelling toward the other blob at 150 units
 2. **Strike:** the victim gets another 160 units / s along the hit direction and a 320 units / s pop upward, and steers at 15 % for 36 frames (300 ms) so the flight reads.
 3. **Ricochet:** the attacker pops straight up at 720 units / s (about 118 units high) with its **dive ready again at once**: no recovery, no cooldown. Dive again from the air to chain off the next blob.
 
+4. **Hurt reaction (tumble):** a hard hit, meaning an impulse of 800 units / s or more, or any hit in the back, sends the victim tumbling. It ricochets off floors and walls like a rubber ball: 3 bounces at 75 %, 56 % and 42 % of the impact speed, losing 40 % of its speed along the surface each time, with 25 % steering, no jump and no dive, rolling as it goes. It recovers when it comes to rest on the ground, or after 1.4 s at the latest. A full-speed dive hit is hard (about 1000 units / s); a glancing, off-centre one is light and keeps the plain knockback. The tumble is a player-feature mechanism (`reactToHit`), so rocket blasts can trigger the same reaction.
+
 - **Zone and damage:** back when the hit travels the way the victim faces, front otherwise (straight from above or below = front). Front 1, back 2 health chunks; front 0 / back 1 or 4 is a tunables change.
 - **Head-on clash:** both are attackers and victims; both reflect equally (same speed, mirrored), both ricochet up, both take a front hit.
 - **A victim caught mid-dive** loses its dive.
@@ -60,4 +62,5 @@ A hit is a body contact made while travelling toward the other blob at 150 units
 ## Open tuning questions
 
 - **Launch strength.** The victim's launch comes from the real collision at 900 units / s, so it is stronger than the phase-1 Pogo's (780 units / s). If it throws people off the arena too easily: lower `bodyCollision.maxImpulse` or `dive.strikeImpulse`.
+- **Tumble threshold.** `tumble.minImpulse` (800) decides what counts as a hard hit; with it nearly every clean dive hit tumbles. Raise it to make tumbles rarer.
 - **Chain length.** Nothing caps how many blobs one player can chain off. If one player can juggle forever, add a cap.

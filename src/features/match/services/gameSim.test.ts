@@ -105,10 +105,12 @@ describe("gameSim", () => {
     });
     stepGame(state, keys(), dt);
     const hits = [];
+    let victimFarthestX = 0;
     for (let i = 0; i < 90; i += 1) {
       // Fire + right for the first steps only (one press), then hands off.
       stepGame(state, i < 3 ? keys("KeyF", "KeyD") : keys(), dt);
       hits.push(...state.dive.hits);
+      victimFarthestX = Math.max(victimFarthestX, state.players[1]!.x);
     }
     expect(hits).toHaveLength(1);
     // Player 2 spawns facing right, away from the attacker: a back hit.
@@ -121,6 +123,6 @@ describe("gameSim", () => {
       damage: DEFAULT_GAME_TUNABLES.dive.backHitDamage,
     });
     expect(hits[0]!.impulse.x).toBeGreaterThan(0);
-    expect(state.players[1]!.x).toBeGreaterThan(360 + 40);
+    expect(victimFarthestX).toBeGreaterThan(360 + 100);
   });
 });

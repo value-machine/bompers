@@ -54,6 +54,14 @@ export interface PlayerState {
   terrainHitY: -1 | 0 | 1;
   terrainHitSpeedX: number;
   terrainHitSpeedY: number;
+  /**
+   * Tumble (hurt reaction to a hard hit, `services/tumble.ts`): seconds left (0 = not
+   * tumbling) and terrain bounces left. The count and speed are render events (squash).
+   */
+  tumbleSeconds: number;
+  tumbleBouncesLeft: number;
+  tumbleBounceCount: number;
+  lastTumbleBounceSpeed: number;
   /** Top of the first surface below the feet within shadow range, or null (contact shadow). */
   groundBelowY: number | null;
   /**

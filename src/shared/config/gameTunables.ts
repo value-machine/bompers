@@ -42,6 +42,17 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     },
   },
   bodyCollision: { restitution: 0.9, restingSpeed: 140, maxImpulse: 1100 },
+  // A full-speed dive hit gives about 1000 units / s: hard. A glancing one stays below: light.
+  tumble: {
+    minImpulse: 800,
+    bounces: 3,
+    restitution: 0.75,
+    restitutionDecay: 0.75,
+    surfaceSpeedKeep: 0.6,
+    minBounceSpeed: 160,
+    steerScale: 0.25,
+    maxSeconds: 1.4,
+  },
   dive: {
     frontHitDamage: 1,
     backHitDamage: 2,

@@ -12,6 +12,12 @@ export {
   type BodyContact,
   type ResolveBodyContactsArgs,
 } from "@/features/player/services/bodyCollision";
+export {
+  isTumbling,
+  reactToHit,
+  startTumble,
+  type HitReactionArgs,
+} from "@/features/player/services/tumble";
 export type { BlobPoseOverlay } from "@/features/player/services/blobPose";
 export {
   createPlayersView,

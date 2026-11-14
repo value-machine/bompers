@@ -2,7 +2,12 @@ import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInput, PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
-import type { BodyContact, PlayerState } from "@/features/player/api/playerApi";
+import {
+  isTumbling,
+  reactToHit,
+  type BodyContact,
+  type PlayerState,
+} from "@/features/player/api/playerApi";
 import type { DiveHit, DiveMotion, DiveState } from "@/features/dive/types/dive.types";
 import { classifyHitZone, hitDamage } from "@/features/dive/services/hitZone";
 
@@ -187,7 +192,7 @@ function stepPhase(motion: DiveMotion, player: PlayerState, args: StepDivesArgs)
   if (player.grounded && !active) motion.charged = true;
   if (motion.phase === "travel") stepTravel(motion, player, { d, dt: args.dt });
   else if (motion.phase !== "idle") motion.phaseSeconds += args.dt;
-  else if (canStartDive(motion)) startWindup(motion, player, d);
+  else if (canStartDive(motion) && !isTumbling(player)) startWindup(motion, player, d);
   handOverPhase(motion, player, d);
 }
 
@@ -266,6 +271,9 @@ function applyStrike(strike: Strike, args: StepDivesArgs): DiveHit {
   victim.vy += direction.y * push - d.strikeLift;
   victim.grounded = false;
   const total = contact.impulse + push;
+  const impulse = { x: direction.x * total, y: direction.y * total - d.strikeLift };
+  // A hard hit (or one in the back) sends the victim tumbling: it ricochets off terrain.
+  reactToHit(victim, { impulse, hard: zone === "back" }, args.tunables);
   return {
     victimSlot: victim.slot,
     attackerSlot: attacker.slot,
@@ -275,7 +283,7 @@ function applyStrike(strike: Strike, args: StepDivesArgs): DiveHit {
     direction,
     zone,
     damage: hitDamage(zone, d),
-    impulse: { x: direction.x * total, y: direction.y * total - d.strikeLift },
+    impulse,
   };
 }
 

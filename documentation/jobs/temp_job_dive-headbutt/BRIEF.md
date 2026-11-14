@@ -53,8 +53,8 @@ Size M normally takes a `DEVELOPMENT_PLAN.md`; this lap is a prototype for a fee
 
 ## Phase 2 (after the owner's pick, same PR)
 
-Pick (DECISIONS D8): Cannonball's launch, Pogo's ricochet off other blobs, no terrain bounce. Scope: one dive (the other options, the 1 / 2 / 3 switch and the overlay removed), fair wall stun, polish (wind-up crouch, launch stretch, ricochet squash, impact pop), `DIVE_DESIGN.md`, and wiring into combat (`applyHit`, `classifyHitZone`, the `unarmedAttack` hook) once combat is on main. New edge: `features/combat` (ride — its public API only).
+Pick (DECISIONS D8): Cannonball's launch, Pogo's ricochet off other blobs, no terrain bounce. Scope: one dive (the other options, the 1 / 2 / 3 switch and the overlay removed), fair wall stun, polish (wind-up crouch, launch stretch, ricochet squash, impact pop), `DIVE_DESIGN.md`, and wiring into combat (`applyHit`, `classifyHitZone`, the `unarmedAttack` hook) once combat is on main. Added by the owner during phase 2 (D10): a reusable tumble hurt reaction in `features/player`. New edge: `features/combat` (ride — its public API only).
 
 ## Decisions
 
-`DECISIONS.md` D1–D9.
+`DECISIONS.md` D1–D10.

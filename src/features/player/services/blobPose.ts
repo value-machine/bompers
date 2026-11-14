@@ -15,6 +15,7 @@ export interface BlobAnim {
   seenJumps: number;
   seenWallJumps: number;
   seenLandings: number;
+  seenTumbleBounces: number;
   active: { kind: SquashKind; startMs: number; amount: number } | null;
 }
 
@@ -67,6 +68,7 @@ export const createBlobAnim = (player: PlayerState): BlobAnim => ({
   seenJumps: player.jumpCount,
   seenWallJumps: player.wallJumpCount,
   seenLandings: player.landCount,
+  seenTumbleBounces: player.tumbleBounceCount,
   active: null,
 });
 
@@ -89,6 +91,11 @@ export function noteBlobEvents(
     const impact = Math.min(1, player.lastLandingSpeed / squash.landFullImpact);
     anim.active = { kind: "land", startMs: nowMs, amount: 0.5 + 0.5 * impact };
   }
+  // A tumble bounce (floor or wall) squashes like a landing at that speed.
+  if (player.tumbleBounceCount !== anim.seenTumbleBounces) {
+    const impact = Math.min(1, player.lastTumbleBounceSpeed / squash.landFullImpact);
+    anim.active = { kind: "land", startMs: nowMs, amount: 0.5 + 0.5 * impact };
+  }
   if (player.jumpCount !== anim.seenJumps) {
     anim.active = { kind: "jump", startMs: nowMs, amount: 1 };
   }
@@ -96,6 +103,7 @@ export function noteBlobEvents(
     anim.active = { kind: "wallJump", startMs: nowMs, amount: 1 };
   }
   anim.seenLandings = player.landCount;
+  anim.seenTumbleBounces = player.tumbleBounceCount;
   anim.seenJumps = player.jumpCount;
   anim.seenWallJumps = player.wallJumpCount;
 }

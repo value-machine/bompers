@@ -18,7 +18,7 @@ Systems order in `stepGame` (new concepts slot into their number):
 
 1. `joinSlots` — a connected input slot without a player gets one (the lobby lap replaces this with explicit joining)
 2. `stepPlayers` — player feature; 2b. `resolveBodyContacts` — player feature (blob-vs-blob bounce; its contacts feed 3a)
-3. 3a. `stepDives` — dive feature (unarmed attack; this step's `DiveHit`s are in `state.dive.hits`); 3b. _(reserved: combat — projectiles, blasts → `clearCircle`, health; its `applyHit(world, hit)` consumes the hits from 3a, which already carry combat's `Hit` fields)_
+3. 3a. `stepDives` — dive feature (unarmed attack; this step's `DiveHit`s are in `state.dive.hits`; a hard hit also starts the player feature's tumble); 3b. _(reserved: combat — projectiles, blasts → `clearCircle`, health; its `applyHit(world, hit)` consumes the hits from 3a, which already carry combat's `Hit` fields)_
 4. `outOfBounds` — leaving `level.bounds` respawns (elimination credit + scoring later)
 5. `roundTimer` — at 0 the round ends and steps 1–4 stop
 

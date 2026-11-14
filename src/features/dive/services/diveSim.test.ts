@@ -340,3 +340,50 @@ describe("stepDives hits", () => {
     expect(sim.phaseOf(victim)).toBe("recovery");
   });
 });
+
+describe("stepDives hurt reaction", () => {
+  it("should send the victim tumbling off the floor and block its dive when the hit is hard", () => {
+    const sim = createSim([100, 150]);
+    const victim = sim.players[1]!;
+    victim.facing = -1;
+    sim.step([RIGHT]);
+    while (sim.hits.length === 0) sim.step();
+    expect(Math.hypot(sim.hits[0]!.impulse.x, sim.hits[0]!.impulse.y)).toBeGreaterThanOrEqual(
+      T.tumble.minImpulse
+    );
+    expect(victim.tumbleSeconds).toBeGreaterThan(0);
+    sim.step([{}, { fire: true, aimX: -1 }], 2);
+    expect(sim.phaseOf(victim)).toBe("idle");
+    while (victim.tumbleBounceCount === 0 && victim.tumbleSeconds > 0) sim.step();
+    expect(victim.tumbleBounceCount).toBe(1);
+    expect(victim.vy).toBeLessThan(0);
+  });
+
+  it("should keep the plain knockback when a front hit is light", () => {
+    const soft: GameTunables = { ...T, tumble: { ...T.tumble, minImpulse: 5000 } };
+    const sim = createSim([100, 150], soft);
+    const victim = sim.players[1]!;
+    victim.facing = -1;
+    sim.step([RIGHT]);
+    while (sim.hits.length === 0) sim.step();
+    expect(victim.tumbleSeconds).toBe(0);
+    expect(victim.steerScale).toBe(D.staggerSteerScale);
+  });
+
+  it("should send the victim tumbling on any back hit", () => {
+    const soft: GameTunables = { ...T, tumble: { ...T.tumble, minImpulse: 5000 } };
+    const sim = createSim([100, 150], soft);
+    const victim = sim.players[1]!;
+    victim.facing = 1;
+    sim.step([RIGHT]);
+    while (sim.hits.length === 0) sim.step();
+    expect(sim.hits[0]!.zone).toBe("back");
+    expect(victim.tumbleSeconds).toBeGreaterThan(0);
+  });
+
+  it("should never bounce the attacker off terrain when it misses", () => {
+    const sim = createSim([520]);
+    sim.step([RIGHT], 200);
+    expect(sim.players[0]!.tumbleBounceCount).toBe(0);
+  });
+});
