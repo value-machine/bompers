@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { mapPlayerInputs } from "@/shared/utils/gameInputMapping";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
+import { applyHit } from "@/features/combat/api/combatApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
 
 const level: LevelDefinition = {
@@ -54,6 +55,50 @@ describe("gameSim", () => {
     expect(player.y).toBeLessThan(250);
   });
 
+  it("should report the fall as an elimination and refill health when a player leaves the zone", () => {
+    const state = stepGame(newGame(), keys(), dt);
+    const fighter = state.combat.fighters.get("p0")!;
+    fighter.health = 2;
+    state.players[0]!.y = 2000;
+    stepGame(state, keys(), dt);
+    expect(state.combat.events).toContainEqual(
+      expect.objectContaining({ type: "playerEliminated", victimSlot: 0, cause: "out-of-bounds" })
+    );
+    expect(fighter).toMatchObject({
+      health: DEFAULT_GAME_TUNABLES.combat.maxHealth,
+      eliminated: false,
+    });
+  });
+
+  it("should respawn a player whose last health chunk was lost to a hit", () => {
+    const state = stepGame(newGame(), keys(), dt);
+    const victim = state.players[1]!;
+    victim.x = 300;
+    state.combat.fighters.get("p1")!.health = 1;
+    applyHit(
+      { ...state, players: state.players },
+      {
+        victimSlot: 1,
+        attackerSlot: 0,
+        kind: "contact",
+        source: "dive",
+        contactPoint: { x: 300, y: 300 },
+        direction: { x: -1, y: 0 },
+      }
+    );
+    stepGame(state, keys(), dt);
+    expect(state.combat.events).toContainEqual(
+      expect.objectContaining({
+        type: "playerEliminated",
+        victimSlot: 1,
+        byPlayerSlot: 0,
+        cause: "dive",
+      })
+    );
+    expect(victim.x).toBe(600);
+    expect(state.combat.fighters.get("p1")!.health).toBe(DEFAULT_GAME_TUNABLES.combat.maxHealth);
+  });
+
   it("should end the round and freeze players when the timer runs out", () => {
     const state = newGame(1);
     for (let i = 0; i < 130; i += 1) stepGame(state, keys(), dt);
@@ -90,7 +135,9 @@ describe("gameSim", () => {
     for (let i = 0; i < 120; i += 1) stepGame(state, keys(), dt);
     expect(state.players[0]?.grounded).toBe(true);
   });
+});
 
+describe("gameSim — dive headbutt", () => {
   // Acceptance test of the dive-headbutt lap (BRIEF.md § Success check).
   it("should land one typed dive hit and knock the opponent away when player 1 fires toward them", () => {
     const state = createGameState({
@@ -120,8 +167,11 @@ describe("gameSim", () => {
       kind: "contact",
       source: "dive",
       zone: "back",
-      damage: DEFAULT_GAME_TUNABLES.dive.backHitDamage,
+      damage: DEFAULT_GAME_TUNABLES.combat.hitDamage.contact.back,
     });
+    expect(state.combat.fighters.get("p1")?.health).toBe(
+      DEFAULT_GAME_TUNABLES.combat.maxHealth - DEFAULT_GAME_TUNABLES.combat.hitDamage.contact.back
+    );
     expect(hits[0]!.impulse.x).toBeGreaterThan(0);
     expect(victimFarthestX).toBeGreaterThan(360 + 100);
   });

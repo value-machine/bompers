@@ -2,15 +2,14 @@
 
 ## Purpose
 
-The unarmed attack (GDD § 3 "Ongewapende aanval", the "bomp"): fire makes a blob dive headfirst along its aim, a committed straight missile; hitting another blob knocks it away and ricochets the attacker up with the dive ready again. Owns the dive state machine, the strike and the typed hit events. Design and numbers: `documentation/jobs/temp_job_dive-headbutt/DIVE_DESIGN.md`.
+The unarmed attack (GDD § 3 "Ongewapende aanval", the "bomp"): fire makes a blob dive headfirst along its aim, a committed straight missile; hitting another blob knocks it away and ricochets the attacker up with the dive ready again. Owns the dive state machine, the strike and the ricochet; damage, health and spawn protection are combat's. Design and numbers: `documentation/jobs/temp_job_dive-headbutt/DIVE_DESIGN.md`.
 
 ## Structure
 
 | Layer    | Path                       | Purpose |
 | -------- | -------------------------- | ------- |
-| Types    | `types/dive.types.ts`      | `DiveState` (slice of `GameState`), `DiveMotion` per player, `DiveHit`, `HitZone` |
-| Services | `services/diveSim.ts`      | `stepDives({ dive, players, inputs, contacts, tunables, dt })` → this step's `DiveHit[]` (sim step 3a); `createDiveState`. Phases: idle → wind-up → travel → recovery |
-| Services | `services/hitZone.ts`      | `classifyHitZone(victimFacing, direction)` (same rule and signature as combat's), `hitDamage(zone, tunables)` |
+| Types    | `types/dive.types.ts`      | `DiveState` (slice of `GameState`), `DiveMotion` per player, `DiveHit` (combat's `Hit` + its result + the impulse) |
+| Services | `services/diveSim.ts`      | `stepDives({ dive, players, combat, contacts, tunables, timeSeconds, dt })` → this step's `DiveHit[]` (sim step 3b); `requestDive` (a fire press), `resetDive` (respawn), `createDiveState`. Phases: idle → wind-up → travel → recovery |
 | Services | `services/divePose.ts`     | Pure render pose per phase (crouch, launch stretch, ricochet squash, bonk squash, hit squash) as a `BlobPoseOverlay` |
 | Services | `services/diveRenderer.ts` | Impact pops (world effects layer) and `diveBlobPoses` for the player layer |
 | API      | `api/diveApi.ts`           | Public seam |
@@ -22,10 +21,11 @@ The unarmed attack (GDD § 3 "Ongewapende aanval", the "bomp"): fire makes a blo
 - A **hit** = a `BodyContact` from `resolveBodyContacts` (player feature) where the attacker is travelling toward the other at `dive.minHitSpeed` or more. The body collision has already exchanged the momentum; the dive adds the strike on the victim (push + upward pop + a short steering stagger) and the **ricochet** on the attacker (pops straight up, dive ready again at once).
 - **Hurt reaction:** the strike calls the player feature's `reactToHit` with the impulse it gave. A hard hit (impulse at least `tumble.minImpulse`, or any back hit) sends the victim into a tumble: it ricochets off floors and walls. A tumbling blob cannot start a dive. The attacker itself never bounces off terrain.
 - **Terrain always ends the dive and never bounces it:** head-on is a bonk (small hop back, short stun), a glancing touch a plain recovery.
-- **Seam to combat:** a `DiveHit` carries combat's `Hit` fields (`victimSlot`, `attackerSlot`, `kind: "contact"`, `source: "dive"`, `contactPoint`, `direction`) plus `zone`, `damage` and `impulse`. `stepDives` returns the step's hits and keeps them in `DiveState.hits`.
+- **Combat:** the dive starts from combat's `unarmedAttack` hook (match passes `requestDive`), so it only fires for an unarmed, non-eliminated player, once per press. Every strike goes through combat's `applyHit` with `kind: "contact"`, `source: "dive"`: zone, damage (`combat.hitDamage.contact`), spawn protection, kill credit and the `playerHit` event are combat's. A spawn-protected victim is still bounced (`landed: false`, no damage). The knockback, ricochet and cooldown are the dive's.
 
 ## Dependencies
 
+- `combat` via `api/combatApi.ts` (`applyHit`, `CombatState`).
 - `player` via `api/playerApi.ts` (`PlayerState`, `BodyContact`, `BlobPoseOverlay`, `reactToHit`, `isTumbling`).
 - Shared: `gameTunables` (`dive` section), `gamePalette`, `gameInput.types`, `gameInputMapping`, `gameGeometry.types`; `pixi.js` in the renderer.
 - Consumed by `match` only.

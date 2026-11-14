@@ -1,7 +1,5 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
-import type { PlayerInput, PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
-import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import {
   isTumbling,
   reactToHit,
@@ -9,15 +7,17 @@ import {
   type PlayerState,
 } from "@/features/player/api/playerApi";
 import type { DiveHit, DiveMotion, DiveState } from "@/features/dive/types/dive.types";
-import { classifyHitZone, hitDamage } from "@/features/dive/services/hitZone";
+import { applyHit, type CombatState } from "@/features/combat/api/combatApi";
 
 /**
- * Dive headbutt system (sim step 3a, after players and body contacts). Fire makes the blob dive
+ * Dive headbutt system (sim step 3b, after players, body contacts and combat). Unarmed fire
+ * (combat's `unarmedAttack` hook → `requestDive`) makes the blob dive
  * headfirst along its 8-way aim: idle → wind-up (hang and crouch) → travel (dead straight, no
  * gravity, no steering) → recovery. Terrain always ends the dive: a head-on hit is a short stun
  * ("bonk"), a glancing one a plain recovery; it never bounces. A body contact while travelling
  * toward someone is a hit: the body collision already exchanged the momentum; the dive adds
- * its strike, ricochets the attacker up with the dive ready again, and emits a `DiveHit`.
+ * its strike, ricochets the attacker up with the dive ready again, and deals the damage through
+ * combat's `applyHit` (kind "contact", source "dive").
  *
  * The dive never moves a player itself. It writes velocity at events (launch, bonk, strike)
  * and the controller's motion modifiers (`steerScale`, `gravityScale`, `jumpLocked`) each step.
@@ -25,10 +25,13 @@ import { classifyHitZone, hitDamage } from "@/features/dive/services/hitZone";
 export interface StepDivesArgs {
   dive: DiveState;
   players: PlayerState[];
-  inputs: PlayerInputs;
+  /** Combat slice: hits go through its `applyHit` (health, spawn protection, events). */
+  combat: CombatState;
   /** This step's blob-vs-blob contacts (`resolveBodyContacts`). */
   contacts: readonly BodyContact[];
   tunables: GameTunables;
+  /** Sim time at the start of this step, seconds. */
+  timeSeconds: number;
   /** Fixed step, seconds. */
   dt: number;
 }
@@ -55,7 +58,6 @@ const createDiveMotion = (): DiveMotion => ({
   charged: true,
   cooldown: 0,
   fireBuffer: 0,
-  prevFire: false,
   bonked: false,
   stagger: 0,
   sinceRicochet: Number.POSITIVE_INFINITY,
@@ -63,6 +65,19 @@ const createDiveMotion = (): DiveMotion => ({
 
 function motionOf(dive: DiveState, player: PlayerState): DiveMotion {
   return (dive.motions[player.id] ??= createDiveMotion());
+}
+
+/**
+ * A fire press by an unarmed player (combat's `unarmedAttack` hook calls this once per press).
+ * The press is buffered: the dive starts as soon as it is available.
+ */
+export function requestDive(dive: DiveState, player: PlayerState, tunables: GameTunables): void {
+  motionOf(dive, player).fireBuffer = tunables.dive.fireBufferSeconds;
+}
+
+/** Forgets a player's dive (respawn): idle, charged, no cooldown. */
+export function resetDive(dive: DiveState, player: PlayerState): void {
+  dive.motions[player.id] = createDiveMotion();
 }
 
 // ── Phase changes ────────────────────────────────────────────────────────────
@@ -162,14 +177,11 @@ function stepTravel(motion: DiveMotion, player: PlayerState, ctx: { d: DiveTunab
 
 // ── Per-player step ──────────────────────────────────────────────────────────
 
-function tickTimers(motion: DiveMotion, input: PlayerInput, args: StepDivesArgs): void {
-  const { dt, tunables } = args;
+function tickTimers(motion: DiveMotion, dt: number): void {
   motion.cooldown = Math.max(0, motion.cooldown - dt);
   motion.fireBuffer = Math.max(0, motion.fireBuffer - dt);
   motion.stagger = Math.max(0, motion.stagger - dt);
   motion.sinceRicochet += dt;
-  if (input.fire && !motion.prevFire) motion.fireBuffer = tunables.dive.fireBufferSeconds;
-  motion.prevFire = input.fire;
 }
 
 const canStartDive = (motion: DiveMotion): boolean =>
@@ -187,7 +199,7 @@ function handOverPhase(motion: DiveMotion, player: PlayerState, d: DiveTunables)
 
 function stepPhase(motion: DiveMotion, player: PlayerState, args: StepDivesArgs): void {
   const d = args.tunables.dive;
-  tickTimers(motion, args.inputs[player.slot] ?? EMPTY_PLAYER_INPUT, args);
+  tickTimers(motion, args.dt);
   const active = motion.phase === "windup" || motion.phase === "travel";
   if (player.grounded && !active) motion.charged = true;
   if (motion.phase === "travel") stepTravel(motion, player, { d, dt: args.dt });
@@ -265,26 +277,25 @@ function ricochet(strike: Strike, d: DiveTunables): void {
 function applyStrike(strike: Strike, args: StepDivesArgs): DiveHit {
   const { attacker, victim, direction, contact } = strike;
   const d = args.tunables.dive;
-  const zone = classifyHitZone(victim.facing, direction);
   const push = d.strikeImpulse;
   victim.vx += direction.x * push;
   victim.vy += direction.y * push - d.strikeLift;
   victim.grounded = false;
   const total = contact.impulse + push;
   const impulse = { x: direction.x * total, y: direction.y * total - d.strikeLift };
-  // A hard hit (or one in the back) sends the victim tumbling: it ricochets off terrain.
-  reactToHit(victim, { impulse, hard: zone === "back" }, args.tunables);
-  return {
+  // Damage, spawn protection, credit and the `playerHit` event are combat's.
+  const hit = {
     victimSlot: victim.slot,
     attackerSlot: attacker.slot,
     kind: "contact",
     source: "dive",
     contactPoint: contact.at,
     direction,
-    zone,
-    damage: hitDamage(zone, d),
-    impulse,
-  };
+  } as const;
+  const result = applyHit(args, hit);
+  // A hard hit (or one in the back) sends the victim tumbling: it ricochets off terrain.
+  reactToHit(victim, { impulse, hard: result.zone === "back" }, args.tunables);
+  return { ...hit, ...result, impulse };
 }
 
 /** What a landed hit does to both dive states. */

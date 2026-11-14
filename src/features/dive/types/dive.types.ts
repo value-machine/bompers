@@ -1,13 +1,9 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 
-/** Where on the victim a hit landed, from the victim's facing (GDD § 3; back hits hurt more). */
-export type HitZone = "front" | "back";
-
 /**
- * One landed dive headbutt. This is the seam to the combat feature: the first six fields are
- * exactly the `Hit` its `applyHit(world, hit)` takes, and `zone` / `damage` are what it returns
- * (and emits as `playerHit`). Until combat lands, the dive fills those two itself and only
- * tallies the hits.
+ * One dive headbutt that connected. The first six fields are the `Hit` given to combat's
+ * `applyHit` (spelled out here: `types/` may not import another feature); `landed`, `zone` and
+ * `damage` are what it returned; `impulse` is the knockback the dive applied.
  */
 export interface DiveHit {
   victimSlot: number;
@@ -18,8 +14,10 @@ export interface DiveHit {
   contactPoint: Vec2;
   /** Unit travel direction of the hit, attacker → victim. */
   direction: Vec2;
-  zone: HitZone;
-  /** Health chunks (phase 1: `tunables.dive.frontHitDamage` / `backHitDamage`). */
+  /** False when combat refused the damage (spawn protection): the blobs still bounce. */
+  landed: boolean;
+  zone: "front" | "back";
+  /** Health chunks removed (0 when not landed), from `combat.hitDamage.contact`. */
   damage: number;
   /** Total velocity change the hit gave the victim (collision exchange + strike), units / s. */
   impulse: Vec2;
@@ -42,8 +40,6 @@ export interface DiveMotion {
   cooldown: number;
   /** Seconds a fire press is still remembered. */
   fireBuffer: number;
-  /** Fire held on the previous step (edge detection). */
-  prevFire: boolean;
   /** The current recovery is a head-on terrain bonk (stun). */
   bonked: boolean;
   /** Seconds left of reduced steering after being hit. */
@@ -62,7 +58,7 @@ export interface RecentHit {
 export interface DiveState {
   /** By player id. */
   motions: Record<string, DiveMotion>;
-  /** Hits landed on the last step. */
+  /** Hits made on the last step (also emitted by combat as `playerHit` events). */
   hits: DiveHit[];
   recentHits: RecentHit[];
 }

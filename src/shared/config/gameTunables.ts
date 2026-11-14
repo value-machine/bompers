@@ -54,8 +54,6 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     maxSeconds: 1.4,
   },
   dive: {
-    frontHitDamage: 1,
-    backHitDamage: 2,
     minHitSpeed: 150,
     fireBufferSeconds: 0.1,
     // 12 frames of crouch, then 30 frames dead straight: 0.25 s × 900 = 225 units (8 blob widths).
@@ -78,6 +76,25 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     attackerPop: 720,
     staggerSeconds: 0.3,
     staggerSteerScale: 0.15,
+  },
+  combat: {
+    maxHealth: 4,
+    killCreditSeconds: 4,
+    eventRetentionSeconds: 1,
+    // Body hits from behind hurt more; explosions stay exactly 1 chunk from any side (GDD § 3).
+    hitDamage: { contact: { front: 1, back: 2 }, blast: { front: 1, back: 1 } },
+    // 6 rockets, no time limit: the count stays legible without a HUD timer (combat D5).
+    rocket: {
+      speed: 950,
+      radius: 3,
+      ammo: 6,
+      fireCooldown: 0.4,
+      muzzleOffset: 6,
+      maxLifetime: 4,
+    },
+    // Rocket jump from standing: ≈ 1350² / 4400 ≈ 410 units, well above a full jump (≈ 250).
+    explosion: { radius: 64, craterRadius: 34, impulse: 1350, minFalloff: 0.35 },
+    drops: { firstDelaySeconds: 3, intervalSeconds: 7, maxActive: 2, size: 22 },
   },
   camera: {
     padding: 96,

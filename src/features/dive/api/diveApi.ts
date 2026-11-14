@@ -1,16 +1,15 @@
 /**
- * Public seam of the dive feature (the unarmed attack): state slice, the sim system, the hit
- * events combat will consume, and the render pieces.
+ * Public seam of the dive feature (the unarmed attack): state slice, the sim system, the entry
+ * for combat's `unarmedAttack` hook, and the render pieces.
  */
-export type {
-  DiveHit,
-  DiveMotion,
-  DivePhase,
-  DiveState,
-  HitZone,
-} from "@/features/dive/types/dive.types";
-export { createDiveState, stepDives, type StepDivesArgs } from "@/features/dive/services/diveSim";
-export { classifyHitZone, hitDamage } from "@/features/dive/services/hitZone";
+export type { DiveHit, DiveMotion, DivePhase, DiveState } from "@/features/dive/types/dive.types";
+export {
+  createDiveState,
+  requestDive,
+  resetDive,
+  stepDives,
+  type StepDivesArgs,
+} from "@/features/dive/services/diveSim";
 export {
   createDiveView,
   diveBlobPoses,

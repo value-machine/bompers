@@ -95,15 +95,10 @@ export interface GameTunables {
   };
   /**
    * Unarmed attack: the dive headbutt ("bomp", GDD § 3). A committed straight missile that
-   * ricochets off other blobs. Seconds and world units; frames = seconds × `sim.stepHz`.
+   * ricochets off other blobs. Damage comes from `combat.hitDamage.contact` (via `applyHit`).
+   * Seconds and world units; frames = seconds × `sim.stepHz`.
    */
   dive: {
-    /**
-     * Health chunks a hit takes per zone (front 0 / back 1 or 4 is configuration only). Stand-in
-     * for `combat.hitDamage.contact`, which replaces these two when combat is wired in.
-     */
-    frontHitDamage: number;
-    backHitDamage: number;
     /** Attacker speed toward the victim below which a touch is a bump, not a hit, units / s. */
     minHitSpeed: number;
     /** Seconds a fire press is remembered while a dive is not available yet. */
@@ -143,6 +138,56 @@ export interface GameTunables {
     /** Seconds a hit victim steers at `staggerSteerScale` (keeps the knockback readable). */
     staggerSeconds: number;
     staggerSteerScale: number;
+  };
+  /** Health, hits, rocket launcher, explosions and weapon drops (GDD § 3). */
+  combat: {
+    /** Health chunks per player; 0 eliminates. */
+    maxHealth: number;
+    /** Seconds after a hit in which falling out still credits the hitter. */
+    killCreditSeconds: number;
+    /** Seconds sim events stay readable in `combat.events`. */
+    eventRetentionSeconds: number;
+    /**
+     * Health chunks a hit removes, per hit kind and per zone of the victim it lands on
+     * (front = toward the victim's facing, back = behind it). Pure configuration: 0 = the hit
+     * only bounces. `contact` is body hits (the unarmed dive), `blast` is explosions.
+     */
+    hitDamage: {
+      contact: { front: number; back: number };
+      blast: { front: number; back: number };
+    };
+    rocket: {
+      /** Flight speed, units / s (straight line, no gravity). */
+      speed: number;
+      /** Collision radius, world units. */
+      radius: number;
+      /** Rockets per launcher pickup; the launcher is dropped when empty. */
+      ammo: number;
+      /** Seconds between shots. */
+      fireCooldown: number;
+      /** Spawn distance from the helmet centre along the aim. */
+      muzzleOffset: number;
+      /** Seconds before a rocket that hit nothing explodes in the air. */
+      maxLifetime: number;
+    };
+    explosion: {
+      /** Players within this distance of the blast (nearest body point) are hit and pushed. */
+      radius: number;
+      /** Destructible cells within this radius are cleared. */
+      craterRadius: number;
+      /** Speed added at the blast centre, units / s; falls off linearly to `minFalloff` at the edge. */
+      impulse: number;
+      minFalloff: number;
+    };
+    /** Weapon pickups dropping from the level's drop points. */
+    drops: {
+      firstDelaySeconds: number;
+      intervalSeconds: number;
+      /** No new drop while this many pickups lie in the arena. */
+      maxActive: number;
+      /** Square pickup box, world units. */
+      size: number;
+    };
   };
   /** Multi-target camera framing (GDD § 2). Rates are 1/s (exponential damping). */
   camera: {

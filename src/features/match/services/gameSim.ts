@@ -8,13 +8,27 @@ import {
   type LevelSettings,
 } from "@/features/level/api/levelApi";
 import {
+  createCombatState,
+  eliminateFighter,
+  isFighterEliminated,
+  respawnFighter,
+  stepCombat,
+  type CombatState,
+} from "@/features/combat/api/combatApi";
+import {
   createPlayer,
   placePlayer,
   resolveBodyContacts,
   stepPlayers,
   type PlayerState,
 } from "@/features/player/api/playerApi";
-import { createDiveState, stepDives, type DiveState } from "@/features/dive/api/diveApi";
+import {
+  createDiveState,
+  requestDive,
+  resetDive,
+  stepDives,
+  type DiveState,
+} from "@/features/dive/api/diveApi";
 
 /**
  * The simulation: `stepGame(state, inputs, dt)` advances one fixed step. Pure TS, no DOM, no
@@ -23,11 +37,12 @@ import { createDiveState, stepDives, type DiveState } from "@/features/dive/api/
  * Systems order (each later concept slots into its numbered place):
  *   1. joinSlots       — a connected input slot without a player gets one
  *   2. stepPlayers     — player feature: controller + terrain collision
- *   2b. bodyContacts   — player feature: blob-vs-blob bounce; the contacts feed step 3a
- *   3a. stepDives      — dive feature: the unarmed attack; returns this step's `DiveHit`s
- *   3b. (combat)       — reserved: projectiles, blasts → arena clearCircle, health. Its
- *                        `applyHit` consumes the hits from 3a (zone-aware damage)
- *   4. outOfBounds     — leaving level.bounds respawns (elimination + scoring: match/combat)
+ *   2b. bodyContacts   — player feature: blob-vs-blob bounce; the contacts feed step 3b
+ *   3. stepCombat      — combat feature: rockets, blasts (damage, impulse, clearCircle), pickups;
+ *                        unarmed fire goes through its `unarmedAttack` hook to the dive
+ *   3b. stepDives      — dive feature: the unarmed attack; its hits go through combat's `applyHit`
+ *   4. respawnPlayers  — out of bounds or eliminated by combat → back to a spawn point, full health
+ *                        (spawn choice, protection and scoring: match-rules lap)
  *   5. roundTimer      — counts down; at 0 the round ends and systems 1–4 stop
  */
 /** Round progress (GDD § 5: points within a timed round). */
@@ -52,7 +67,9 @@ export interface GameState {
   /** What normalising the level corrected (unknown IDs etc.); empty for a clean level. */
   levelWarnings: string[];
   players: PlayerState[];
-  /** Unarmed attack state; `dive.hits` holds the last step's hit events. */
+  /** Health, weapons, rockets, pickups and the combat event log (keyed by player id). */
+  combat: CombatState;
+  /** Unarmed attack (dive headbutt) state; `dive.hits` holds the last step's hits. */
   dive: DiveState;
   round: MatchRoundState;
 }
@@ -86,6 +103,7 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
     arena: createArenaState(normalized.level),
     levelWarnings: normalized.warnings,
     players: [],
+    combat: createCombatState(matchTunables),
     dive: createDiveState(),
     round: { phase: "playing", remainingSeconds: matchTunables.match.durationSeconds },
   };
@@ -115,9 +133,16 @@ const isOutOfBounds = (player: PlayerState, state: GameState): boolean => {
   );
 };
 
-function outOfBounds(state: GameState): void {
+function respawnPlayers(state: GameState): void {
+  const { combat, tunables, timeSeconds } = state;
   for (const player of state.players) {
-    if (isOutOfBounds(player, state)) placePlayer(player, spawnPointFor(state, player.slot));
+    if (isOutOfBounds(player, state)) {
+      eliminateFighter({ combat, player, cause: "out-of-bounds", tunables, timeSeconds });
+    }
+    if (!isFighterEliminated(combat, player.id)) continue;
+    placePlayer(player, spawnPointFor(state, player.slot));
+    respawnFighter(combat, player, tunables);
+    resetDive(state.dive, player);
   }
 }
 
@@ -142,18 +167,28 @@ export function stepGame(state: GameState, inputs: PlayerInputs, dt: number): Ga
       terrain: state.arena.terrain,
       tunables: state.tunables,
     });
-    // Combat seam: a `DiveHit` carries combat's `Hit` fields (victimSlot, attackerSlot, kind,
-    // source, contactPoint, direction). Phase 2 passes each to combat's `applyHit` and takes
-    // zone / damage from its result; until then the dive fills and tallies them itself.
+    stepCombat({
+      combat: state.combat,
+      players: state.players,
+      inputs,
+      terrain: state.arena.terrain,
+      drops: state.arena.level.drops,
+      bounds: state.arena.level.bounds,
+      tunables: state.tunables,
+      timeSeconds: state.timeSeconds,
+      dt,
+      unarmedAttack: ({ attacker }) => requestDive(state.dive, attacker, state.tunables),
+    });
     stepDives({
       dive: state.dive,
       players: state.players,
-      inputs,
+      combat: state.combat,
       contacts,
       tunables: state.tunables,
+      timeSeconds: state.timeSeconds,
       dt,
     });
-    outOfBounds(state);
+    respawnPlayers(state);
     roundTimer(state, dt);
   }
   state.tick += 1;

@@ -11,7 +11,8 @@ import {
   stepPlayers,
   type PlayerState,
 } from "@/features/player/api/playerApi";
-import { createDiveState, stepDives } from "@/features/dive/services/diveSim";
+import { createCombatState, stepCombat } from "@/features/combat/api/combatApi";
+import { createDiveState, requestDive, stepDives } from "@/features/dive/services/diveSim";
 import type { DiveHit, DivePhase } from "@/features/dive/types/dive.types";
 
 // Cell size 8. Floor top y = 320. Thin wall (one cell) x 600–608, y 0–320. Open sky elsewhere.
@@ -37,16 +38,19 @@ const HZ = 120;
 const dt = 1 / HZ;
 const T = DEFAULT_GAME_TUNABLES;
 const D = T.dive;
+const CONTACT = T.combat.hitDamage.contact;
 const frames = (seconds: number): number => Math.round(seconds * HZ);
 
 type InputPatch = Partial<PlayerInput>;
 
-/** The match's steps 2, 2b and 3a on a small world; players start standing on the floor. */
+/** The match's steps 2, 2b, 3 and 3b on a small world; players start standing on the floor. */
 const createSim = (starts: number[], tunables: GameTunables = T) => {
   const terrain = buildTerrainFromLevel(level);
   const players = starts.map((x, slot) => createPlayer(slot, { x, y: FLOOR_Y }, tunables));
   const dive = createDiveState();
+  const combat = createCombatState(tunables);
   const hits: DiveHit[] = [];
+  let timeSeconds = 0;
   const step = (patches: InputPatch[] = [], steps = 1): void => {
     for (let i = 0; i < steps; i += 1) {
       const inputs = players.map((_, slot) => ({
@@ -56,12 +60,26 @@ const createSim = (starts: number[], tunables: GameTunables = T) => {
       }));
       stepPlayers({ players, inputs, terrain, tunables, dt });
       const contacts = resolveBodyContacts({ players, terrain, tunables });
-      hits.push(...stepDives({ dive, players, inputs, contacts, tunables, dt }));
+      stepCombat({
+        combat,
+        players,
+        inputs,
+        terrain,
+        drops: [],
+        bounds: level.bounds,
+        tunables,
+        timeSeconds,
+        dt,
+        unarmedAttack: ({ attacker }) => requestDive(dive, attacker, tunables),
+      });
+      hits.push(...stepDives({ dive, players, combat, contacts, tunables, timeSeconds, dt }));
+      timeSeconds += dt;
     }
   };
   step(); // settle on the floor (grounded, dive charged)
   const phaseOf = (player: PlayerState): DivePhase => dive.motions[player.id]!.phase;
-  return { players, dive, hits, step, phaseOf };
+  const healthOf = (player: PlayerState): number => combat.fighters.get(player.id)!.health;
+  return { players, dive, combat, hits, step, phaseOf, healthOf, time: () => timeSeconds };
 };
 
 /** Steps with `patch` for player 0 until its phase changes; returns the steps that took. */
@@ -259,9 +277,12 @@ describe("stepDives hits", () => {
       victimSlot: victim.slot,
       kind: "contact",
       source: "dive",
+      landed: true,
       zone: "front",
-      damage: D.frontHitDamage,
+      damage: CONTACT.front,
     });
+    expect(sim.healthOf(victim)).toBe(T.combat.maxHealth - CONTACT.front);
+    expect(sim.healthOf(attacker)).toBe(T.combat.maxHealth);
     expect(sim.hits[0]!.impulse.x).toBeGreaterThan(0);
     expect(victim.x).toBeGreaterThan(150 + 100);
   });
@@ -272,7 +293,8 @@ describe("stepDives hits", () => {
     sim.step([RIGHT]);
     sim.step([], 60);
     expect(sim.hits).toHaveLength(1);
-    expect(sim.hits[0]).toMatchObject({ zone: "back", damage: D.backHitDamage });
+    expect(sim.hits[0]).toMatchObject({ zone: "back", damage: CONTACT.back });
+    expect(sim.healthOf(sim.players[1]!)).toBe(T.combat.maxHealth - CONTACT.back);
   });
 
   it("should ricochet the attacker upward with its dive ready again when it lands a hit", () => {
@@ -338,6 +360,41 @@ describe("stepDives hits", () => {
     while (sim.hits.length === 0) sim.step();
     expect(sim.hits).toHaveLength(1);
     expect(sim.phaseOf(victim)).toBe("recovery");
+  });
+});
+
+describe("stepDives and combat", () => {
+  it("should still bounce a spawn-protected victim but take no health when the dive hits it", () => {
+    const sim = createSim([100, 150]);
+    const victim = sim.players[1]!;
+    sim.combat.fighters.get(victim.id)!.invulnerableUntil = sim.time() + 10;
+    sim.step([RIGHT]);
+    while (sim.hits.length === 0) sim.step();
+    expect(sim.hits[0]).toMatchObject({ landed: false, damage: 0 });
+    expect(sim.healthOf(victim)).toBe(T.combat.maxHealth);
+    expect(victim.vx).toBeGreaterThan(0);
+  });
+
+  it("should shoot a rocket instead of diving when the player holds a launcher", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    sim.combat.fighters.get(player.id)!.weapon = { itemId: "rocket-launcher", ammo: 3 };
+    sim.step([RIGHT]);
+    expect(sim.phaseOf(player)).toBe("idle");
+    expect(sim.combat.rockets).toHaveLength(1);
+  });
+
+  it("should emit combat's playerHit event with the dive as source when a dive lands", () => {
+    const sim = createSim([100, 150]);
+    sim.step([RIGHT]);
+    while (sim.hits.length === 0) sim.step();
+    const event = sim.combat.events.find((entry) => entry.type === "playerHit");
+    expect(event).toMatchObject({
+      source: "dive",
+      kind: "contact",
+      victimSlot: 1,
+      byPlayerSlot: 0,
+    });
   });
 });
 

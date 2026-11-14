@@ -57,4 +57,4 @@ Pick (DECISIONS D8): Cannonball's launch, Pogo's ricochet off other blobs, no te
 
 ## Decisions
 
-`DECISIONS.md` D1–D10.
+`DECISIONS.md` D1–D12.

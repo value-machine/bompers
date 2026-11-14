@@ -6,27 +6,27 @@ One round of the game, and the composition root of the game features: the `GameS
 
 ## Structure
 
-| Layer      | Path                       | Purpose                                                                                                                                                                            |
-| ---------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Services   | `services/gameSim.ts`      | `GameState`, `createGameState({ level, tunables })`, `stepGame(state, inputs, dt)` — pure, no DOM; mutates and returns `state`                                                     |
-| Services   | `services/gameRenderer.ts` | Scene graph per DESIGN_LANGUAGE § 5: `world` (camera transform: terrain → shadows, pickups (reserved) → effects (dive impact pops) → players) and `hud` (round timer); `renderGame` per frame frames the camera with `computeCameraView` (`settings: state.tunables.camera`) |
-| Hooks      | `hooks/useGameSession.ts`  | `useGameSession(app, level)`: a new level object restarts the match. Per Pixi ticker frame: sample input → `advanceFixedStep` → N × `stepGame` → `renderGame`; full teardown in cleanup                |
-| Components | `components/GameView.tsx`  | Canvas host (`usePixiApp`), the level from `level-file`'s `useLevelSource` + "Load level" control, drop a level file anywhere on the game (`useFileDrop`), controls hint                                                                                        |
-| API        | `api/matchApi.ts`          | Simulation entry for other consumers (lobby, tests)                                                                               |
+| Layer      | Path                       | Purpose                                                                                                                                                                                                                                                          |
+| ---------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Services   | `services/gameSim.ts`      | `GameState`, `createGameState({ level, tunables })`, `stepGame(state, inputs, dt)` — pure, no DOM; mutates and returns `state`                                                                                                                                   |
+| Services   | `services/gameRenderer.ts` | Scene graph per DESIGN_LANGUAGE § 5: `world` (camera transform: terrain → pickups → effects → rockets → dive impact pops → players → combat overlay) and `hud` (round timer); `renderGame` per frame frames the camera with `computeCameraView` (`settings: state.tunables.camera`) |
+| Hooks      | `hooks/useGameSession.ts`  | `useGameSession(app, level)`: a new level object restarts the match. Per Pixi ticker frame: sample input → `advanceFixedStep` → N × `stepGame` → `renderGame`; full teardown in cleanup                                                                          |
+| Components | `components/GameView.tsx`  | Canvas host (`usePixiApp`), the level from `level-file`'s `useLevelSource` + "Load level" control, drop a level file anywhere on the game (`useFileDrop`), controls hint                                                                                         |
+| API        | `api/matchApi.ts`          | Simulation entry for other consumers (lobby, tests)                                                                                                                                                                                                              |
 
 Systems order in `stepGame` (new concepts slot into their number):
 
 1. `joinSlots` — a connected input slot without a player gets one (the lobby lap replaces this with explicit joining)
-2. `stepPlayers` — player feature; 2b. `resolveBodyContacts` — player feature (blob-vs-blob bounce; its contacts feed 3a)
-3. 3a. `stepDives` — dive feature (unarmed attack; this step's `DiveHit`s are in `state.dive.hits`; a hard hit also starts the player feature's tumble); 3b. _(reserved: combat — projectiles, blasts → `clearCircle`, health; its `applyHit(world, hit)` consumes the hits from 3a, which already carry combat's `Hit` fields)_
-4. `outOfBounds` — leaving `level.bounds` respawns (elimination credit + scoring later)
+2. `stepPlayers` — player feature; 2b. `resolveBodyContacts` — player feature (blob-vs-blob bounce; its contacts feed 3b)
+3. `stepCombat` — combat feature: rockets, blasts (damage, impulse, `clearCircle`), pickups; unarmed fire goes through its `unarmedAttack` hook to the dive's `requestDive`; 3b. `stepDives` — dive feature (the unarmed attack; hits go through combat's `applyHit`, a hard hit starts the player feature's tumble). A respawn also resets the player's dive (`resetDive`)
+4. `respawnPlayers` — leaving `level.bounds` emits `playerEliminated` (cause `out-of-bounds`, credit to a recent hitter); out-of-bounds or combat-eliminated players go back to their slot's spawn with full health (spawn choice, protection and scoring: match-rules lap)
 5. `roundTimer` — at 0 the round ends and steps 1–4 stop
 
 Adding a concept: add its slice to `GameState`, its system call at its number in `stepGame`, and its render layer (create + sync pair from its feature api) in `gameRenderer.ts`.
 
 ## Dependencies
 
-- `level`, `level-file`, `arena`, `player`, `dive`, `camera` through their `api/` files.
+- `level`, `level-file`, `arena`, `player`, `camera`, `combat`, `dive` through their `api/` files.
 - Shared engine: `gameLoop`, `gameInputService`, `usePixiApp`, `gameTunables`, `gamePalette`, `gameInput.types`.
 - Mounted by `src/pages/GamePage.tsx` at `/`.
 

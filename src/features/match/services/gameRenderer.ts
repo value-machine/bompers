@@ -15,6 +15,7 @@ import {
   computeCameraView,
   type CameraView,
 } from "@/features/camera/api/cameraApi";
+import { createCombatView, syncCombatView, type CombatView } from "@/features/combat/api/combatApi";
 import {
   createDiveView,
   diveBlobPoses,
@@ -28,9 +29,10 @@ import type { GameState } from "@/features/match/services/gameSim";
  *   stage
  *   ├─ world   (camera transform; world units)
  *   │  ├─ terrain   (arena)
- *   │  ├─ (shadows, pickups — reserved)
- *   │  ├─ effects   (dive: impact rings; later explosions, rockets)
- *   │  └─ players   (player; drawn last so effects sit under player outlines)
+ *   │  ├─ pickups, effects (explosions), rockets (+ rocket tubes)   (combat)
+ *   │  ├─ dive effects (impact pops)   (dive)
+ *   │  ├─ players   (player; above effects so they never cover a player outline)
+ *   │  └─ combat overlay (health chunks above each player)
  *   └─ hud     (screen units: round timer)
  * Order follows DESIGN_LANGUAGE.md § 5. Each feature owns its layer's create/sync pair; this
  * file only orders and drives them. Sky / parallax backgrounds come with the visual pass.
@@ -39,6 +41,7 @@ export interface GameRenderer {
   world: Container;
   terrain: TerrainView;
   players: PlayersView;
+  combat: CombatView;
   dive: DiveView;
   timer: Text;
   camera: CameraView | null;
@@ -48,8 +51,17 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const world = new Container({ label: "world" });
   const terrain = createTerrainView(state.arena.terrain);
   const players = createPlayersView();
+  const combat = createCombatView();
   const dive = createDiveView();
-  world.addChild(terrain.container, dive.effects, players.container);
+  world.addChild(
+    terrain.container,
+    combat.pickups,
+    combat.effects,
+    combat.rockets,
+    dive.effects,
+    players.container,
+    combat.overlay
+  );
 
   const hud = new Container({ label: "hud" });
   const timer = new Text({ text: "", style: { fill: GAME_PALETTE.ink, fontSize: 28 } });
@@ -57,7 +69,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   hud.addChild(timer);
 
   app.stage.addChild(world, hud);
-  return { world, terrain, players, dive, timer, camera: null };
+  return { world, terrain, players, combat, dive, timer, camera: null };
 }
 
 const formatClock = (seconds: number): string => {
@@ -79,6 +91,13 @@ export function renderGame(
     overlays: diveBlobPoses(state.dive, state.tunables),
   });
   syncDiveView(renderer.dive, state.dive);
+  syncCombatView(renderer.combat, {
+    combat: state.combat,
+    players: state.players,
+    timeSeconds: state.timeSeconds,
+    maxHealth: state.tunables.combat.maxHealth,
+    pickupSize: state.tunables.combat.drops.size,
+  });
 
   renderer.camera = computeCameraView({
     targets: state.players.map((player) => ({ x: player.x, y: player.y })),

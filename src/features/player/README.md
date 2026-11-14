@@ -16,20 +16,22 @@ The avatar: per-player simulation state, the controller system that moves player
 | Services | `services/tumble.ts`           | The hurt reaction to a hard hit, for any attack: `reactToHit(player, { impulse, hard? }, tunables)` starts a tumble when the impulse is at least `tumble.minImpulse` (or `hard`); `startTumble`, `isTumbling`. A tumbling blob ricochets off floors and walls (`tumble.bounces` times, each weaker, losing speed along the surface), steers at `tumble.steerScale`, cannot jump, and recovers when it comes to rest or after `tumble.maxSeconds`. The controller calls `bounceTumble` after terrain collision and `tickTumble` with the timers |
 | API      | `api/playerApi.ts`             | Public seam                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
+Tests: `services/playerController.test.ts` (feel on a stone test level: accel ramp, gravity-scaled jump apex, jump cut, coyote, buffer, wall-slide, wall-jump, aim fallback) and `services/blobPose.test.ts`.
+
 Seams for later work:
 
 - **Tuning:** every movement and squash number is in the `player` section of `src/shared/config/gameTunables.ts`. Jump apex = `jumpSpeed² / (2 · world.gravity)`, so a match's gravity setting scales jump height.
 - **Visual pass:** zoom-scaled stroke widths, helmet spring wobble and wall-jump rotation are not built yet (`playerRenderer.ts`).
 - **Abilities (dive, later stuns / recoil):** write `steerScale`, `gravityScale` and `jumpLocked` on `PlayerState`; the controller applies them on the next step. Read `terrainHitX` / `terrainHitY` (+ speeds) to react to walls and floors. For a pose, pass `overlays` (`BlobPoseOverlay` by player id) to `syncPlayersView`.
-- **Hurt reaction:** an attack applies its own knockback (`vx` / `vy`), then calls `reactToHit` with the impulse it gave. Used by the dive; rocket blasts can call the same.
-- **Combat:** knockback and rocket jumps = writing `vx` / `vy`; the rocket tube points along `aimX` / `aimY`. Health and invulnerability belong to combat state keyed by player `id`.
+- **Hurt reaction:** an attack applies its own knockback (`vx` / `vy`), then calls `reactToHit` with the impulse it gave. Used by the dive's strike and by combat's explosions (never on the shooter).
+- **Combat** (`features/combat`) writes `vx` / `vy` for knockback and blast impulses (rocket jumps) and reads `aimX` / `aimY`; health, weapons and invulnerability live in combat state keyed by player `id`.
 
 ## Dependencies
 
 - `arena` via `api/arenaApi.ts` (`rectHitsSolid`, `TerrainGrid`).
 - Shared: `gameTunables`, `gamePalette`, `gameInput.types`, `gameInputMapping` (`EMPTY_PLAYER_INPUT`), `gameGeometry.types`; `pixi.js` for the renderer.
 - Player colors: `GAME_PALETTE.players` / `playerShades` / `playerTints`, indexed by `slot` (DESIGN_LANGUAGE § 1).
-- Consumed by `match` and `dive`.
+- Consumed by `match`, `combat` and `dive`.
 
 ## Decisions
 
