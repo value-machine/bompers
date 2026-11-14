@@ -62,6 +62,58 @@
     {
       "id": "crumble",
       "label": "Crumble"
+    },
+    {
+      "id": "jump",
+      "label": "Jump"
+    },
+    {
+      "id": "land",
+      "label": "Land"
+    },
+    {
+      "id": "tumble-bounce",
+      "label": "Tumble bounce"
+    },
+    {
+      "id": "dive-launch",
+      "label": "Dive launch"
+    },
+    {
+      "id": "dive-impact",
+      "label": "Dive impact"
+    },
+    {
+      "id": "hit",
+      "label": "Hit"
+    },
+    {
+      "id": "elimination",
+      "label": "Elimination"
+    },
+    {
+      "id": "rocket-fire",
+      "label": "Rocket fire"
+    },
+    {
+      "id": "explosion",
+      "label": "Explosion"
+    },
+    {
+      "id": "pickup",
+      "label": "Pickup"
+    },
+    {
+      "id": "respawn",
+      "label": "Respawn"
+    },
+    {
+      "id": "round-start",
+      "label": "Round start"
+    },
+    {
+      "id": "round-end",
+      "label": "Round end"
     }
   ],
   "behavior": [],
