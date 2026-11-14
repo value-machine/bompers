@@ -74,14 +74,12 @@ export interface GameTunables {
   };
   /** Unarmed attack: the dive headbutt ("bomp", GDD § 3). */
   dive: {
-    /** Health chunks a hit takes per zone (front 0 / back 1 or 4 is configuration only). */
+    /**
+     * Health chunks a hit takes per zone (front 0 / back 1 or 4 is configuration only). Phase-1
+     * stand-in for `combat.hitDamage.contact`, which replaces these two in phase 2.
+     */
     frontHitDamage: number;
     backHitDamage: number;
-    /**
-     * A hit is "back" when the hit direction (attacker → victim) and the victim's facing have a
-     * dot product above this (0 = any hit from the rear half, 1 = only dead-on from behind).
-     */
-    backZoneMinDot: number;
     /** Attacker speed toward the victim below which a touch is a bump, not a hit, units / s. */
     minHitSpeed: number;
     /** Seconds a fire press is remembered while a dive is not available yet. */

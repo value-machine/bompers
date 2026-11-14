@@ -81,7 +81,7 @@ function motionOf(dive: DiveState, player: PlayerState): DiveMotion {
   return (dive.motions[player.id] ??= createDiveMotion());
 }
 
-const tallyOf = (dive: DiveState, id: string): HitTally => (dive.tallies[id] ??= createTally());
+const tallyOf = (dive: DiveState, slot: number): HitTally => (dive.tallies[slot] ??= createTally());
 
 // ── Phase changes ────────────────────────────────────────────────────────────
 
@@ -358,7 +358,7 @@ function applyStrike(strike: Strike, args: StepDivesArgs): DiveHit {
   const { attacker, victim, direction, contact } = strike;
   const { dive, tunables } = args;
   const option = activeDiveOption(dive, tunables);
-  const zone = classifyHitZone(direction, victim.facing, tunables.dive);
+  const zone = classifyHitZone(victim.facing, direction);
   const push = option.strikeImpulse;
   victim.vx += direction.x * push;
   victim.vy += direction.y * push - option.strikeLift;
@@ -368,12 +368,15 @@ function applyStrike(strike: Strike, args: StepDivesArgs): DiveHit {
   if (option.attackerPop > 0) attacker.vy = -option.attackerPop;
   const total = contact.impulse + push;
   return {
-    attackerId: attacker.id,
-    victimId: victim.id,
+    victimSlot: victim.slot,
+    attackerSlot: attacker.slot,
+    kind: "contact",
+    source: "dive",
+    contactPoint: contact.at,
+    direction,
     zone,
     damage: hitDamage(zone, tunables.dive),
     impulse: { x: direction.x * total, y: direction.y * total - option.strikeLift },
-    at: contact.at,
   };
 }
 
@@ -397,8 +400,8 @@ function settleHit(strike: Strike, strikers: ReadonlySet<string>, args: StepDive
 }
 
 function recordHit(dive: DiveState, hit: DiveHit): void {
-  const victim = tallyOf(dive, hit.victimId);
-  tallyOf(dive, hit.attackerId).dealt += 1;
+  const victim = tallyOf(dive, hit.victimSlot);
+  tallyOf(dive, hit.attackerSlot).dealt += 1;
   if (hit.zone === "back") victim.backTaken += 1;
   else victim.frontTaken += 1;
   victim.damageTaken += hit.damage;

@@ -142,8 +142,9 @@ export function stepGame(state: GameState, inputs: PlayerInputs, dt: number): Ga
       terrain: state.arena.terrain,
       tunables: state.tunables,
     });
-    // Combat seam: these hits (attacker, victim, zone, damage, impulse) go to combat's
-    // `applyHit` once that feature lands; until then the dive only tallies them.
+    // Combat seam: a `DiveHit` carries combat's `Hit` fields (victimSlot, attackerSlot, kind,
+    // source, contactPoint, direction). Phase 2 passes each to combat's `applyHit` and takes
+    // zone / damage from its result; until then the dive fills and tallies them itself.
     stepDives({
       dive: state.dive,
       players: state.players,

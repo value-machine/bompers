@@ -239,15 +239,17 @@ describe("stepDives hits", () => {
       sim.step([], 120);
       expect(sim.hits).toHaveLength(1);
       expect(sim.hits[0]).toMatchObject({
-        attackerId: attacker.id,
-        victimId: victim.id,
+        attackerSlot: attacker.slot,
+        victimSlot: victim.slot,
+        kind: "contact",
+        source: "dive",
         zone: "front",
         damage: T.dive.frontHitDamage,
       });
       expect(sim.hits[0]!.impulse.x).toBeGreaterThan(0);
       expect(victim.x).toBeGreaterThan(150 + 20);
-      expect(sim.dive.tallies[victim.id]).toMatchObject({ frontTaken: 1, damageTaken: 1 });
-      expect(sim.dive.tallies[attacker.id]?.dealt).toBe(1);
+      expect(sim.dive.tallies[victim.slot]).toMatchObject({ frontTaken: 1, damageTaken: 1 });
+      expect(sim.dive.tallies[attacker.slot]?.dealt).toBe(1);
     }
   );
 

@@ -4,19 +4,25 @@ import type { Vec2 } from "@/shared/types/gameGeometry.types";
 export type HitZone = "front" | "back";
 
 /**
- * One landed dive headbutt. This is the seam to the combat feature: its `applyHit` takes these
- * (zone-aware damage in health chunks); until then the dive only tallies them.
+ * One landed dive headbutt. This is the seam to the combat feature: the first six fields are
+ * exactly the `Hit` its `applyHit(world, hit)` takes, and `zone` / `damage` are what it returns
+ * (and emits as `playerHit`). Until combat lands, the dive fills those two itself and only
+ * tallies the hits.
  */
 export interface DiveHit {
-  attackerId: string;
-  victimId: string;
+  victimSlot: number;
+  attackerSlot: number;
+  kind: "contact";
+  source: "dive";
+  /** Contact point, world units. */
+  contactPoint: Vec2;
+  /** Unit travel direction of the hit, attacker → victim. */
+  direction: Vec2;
   zone: HitZone;
-  /** Health chunks, from `tunables.dive.frontHitDamage` / `backHitDamage`. */
+  /** Health chunks (phase 1: `tunables.dive.frontHitDamage` / `backHitDamage`). */
   damage: number;
   /** Total velocity change the hit gave the victim (collision exchange + strike), units / s. */
   impulse: Vec2;
-  /** Contact point, world units. */
-  at: Vec2;
 }
 
 export type DivePhase = "idle" | "windup" | "travel" | "recovery";
@@ -69,7 +75,8 @@ export interface DiveState {
   optionIndex: number;
   /** By player id. */
   motions: Record<string, DiveMotion>;
-  tallies: Record<string, HitTally>;
+  /** By player slot. */
+  tallies: Record<number, HitTally>;
   /** Hits landed on the last step (what combat's `applyHit` will consume). */
   hits: DiveHit[];
   recentHits: RecentHit[];

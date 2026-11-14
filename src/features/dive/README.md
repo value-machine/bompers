@@ -12,7 +12,7 @@ The unarmed attack (GDD § 3 "Ongewapende aanval", the "bomp"): fire makes a blo
 | -------- | -------------------------- | ------- |
 | Types    | `types/dive.types.ts`      | `DiveState` (slice of `GameState`), `DiveMotion` per player, `DiveHit`, `HitZone`, `HitTally` |
 | Services | `services/diveSim.ts`      | `stepDives({ dive, players, inputs, contacts, tunables, dt })` → this step's `DiveHit[]` (sim step 3a); `createDiveState`, `selectDiveOption`, `activeDiveOption`. Phases: idle → wind-up → travel → recovery |
-| Services | `services/hitZone.ts`      | `classifyHitZone(hitDirection, victimFacing, tunables)`, `hitDamage(zone, tunables)` |
+| Services | `services/hitZone.ts`      | `classifyHitZone(victimFacing, direction)` (same rule and signature as combat's), `hitDamage(zone, tunables)` |
 | Services | `services/divePose.ts`     | Pure render pose per phase (crouch, headfirst turn + stretch, bonk squash, hit squash) as a `BlobPoseOverlay` |
 | Services | `services/diveRenderer.ts` | Impact rings (world effects layer), `diveBlobPoses` for the player layer, the prototype overlay text |
 | API      | `api/diveApi.ts`           | Public seam |
@@ -21,7 +21,7 @@ The unarmed attack (GDD § 3 "Ongewapende aanval", the "bomp"): fire makes a blo
 
 - The dive **never moves a player**. It writes velocity at events (launch, terrain bounce, strike) and the controller's motion modifiers (`steerScale`, `gravityScale`, `jumpLocked`) every step; `stepPlayers` does all movement and terrain collision, so a dive cannot tunnel.
 - A **hit** = a `BodyContact` from `resolveBodyContacts` (player feature) where the attacker is in the travel phase and moves toward the other at `dive.minHitSpeed` or more. The body collision has already exchanged the momentum; the dive adds the option's strike. One hit per victim per dive.
-- **Seam to combat:** `stepDives` returns the step's hits and keeps them in `DiveState.hits`. `features/match/services/gameSim.ts` step 3a is where combat's `applyHit(hit)` plugs in. Until then `DiveState.tallies` counts them for the overlay.
+- **Seam to combat:** `stepDives` returns the step's hits and keeps them in `DiveState.hits`. `features/match/services/gameSim.ts` step 3a is where combat's `applyHit(world, hit)` plugs in: a `DiveHit` already carries its `Hit` fields, and `zone` / `damage` then come from its result. In phase 2 the dive also starts from combat's `unarmedAttack` hook, and `hitZone.ts` plus the two damage tunables are deleted in favour of combat's. Until then `DiveState.tallies` counts hits for the overlay.
 - A variant is one `DiveOptionTunables` set in `gameTunables.dive.options`; there is a single code path.
 
 ## Dependencies

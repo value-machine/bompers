@@ -45,7 +45,6 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   dive: {
     frontHitDamage: 1,
     backHitDamage: 2,
-    backZoneMinDot: 0.35,
     minHitSpeed: 150,
     fireBufferSeconds: 0.1,
     staggerSeconds: 0.3,

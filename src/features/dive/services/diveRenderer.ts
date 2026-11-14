@@ -63,7 +63,7 @@ function syncRings(view: DiveView, dive: DiveState): void {
       (RING_RADIUS.from + (RING_RADIUS.to - RING_RADIUS.from) * t) * (strong ? 1.4 : 1);
     ringAt(view, index)
       .clear()
-      .circle(hit.at.x, hit.at.y, radius)
+      .circle(hit.contactPoint.x, hit.contactPoint.y, radius)
       .fill({
         color: strong ? GAME_PALETTE.hitStrong : GAME_PALETTE.hitFlash,
         alpha: 0.9 * (1 - t),
@@ -88,7 +88,7 @@ function overlayText(dive: DiveState, players: readonly PlayerState[], tunables:
   const option = activeDiveOption(dive, tunables);
   const keys = tunables.dive.options.map((entry, i) => `${i + 1} ${entry.name}`).join(" · ");
   const lines = [`Bomp: ${option.name}   (keys: ${keys})`];
-  for (const player of players) lines.push(tallyLine(player, dive.tallies[player.id]));
+  for (const player of players) lines.push(tallyLine(player, dive.tallies[player.slot]));
   return lines.join("\n");
 }
 

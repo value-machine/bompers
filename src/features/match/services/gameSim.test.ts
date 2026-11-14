@@ -117,8 +117,10 @@ describe("gameSim", () => {
       expect(hits).toHaveLength(1);
       // Player 2 spawns facing right, away from the attacker: a back hit.
       expect(hits[0]).toMatchObject({
-        attackerId: "p0",
-        victimId: "p1",
+        attackerSlot: 0,
+        victimSlot: 1,
+        kind: "contact",
+        source: "dive",
         zone: "back",
         damage: DEFAULT_GAME_TUNABLES.dive.backHitDamage,
       });
