@@ -1,12 +1,7 @@
 [
   {
-    "title": "Design language for the game",
-    "description": "Not blocked by code. Propose 2–3 visual directions for characters (round blob body, two round feet, helmet), arena, UI and effects, plus an audio identity, then the orchestrator picks one. Deliver documentation/game/DESIGN_LANGUAGE.md (palette, shapes, line/shading, motion, UI type, sound direction) and the UI color tokens. ElevenLabs image generation allowed for moodboards within the budget the orchestrator sets. Does not touch game code. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Dive headbutt: unarmed attack",
-    "description": "Owner priority before rockets. Firing unarmed makes the blob dive headfirst in the aim direction (a dive headbutt, 'bomp'): a hit knocks off health and bounces the target away. Physics-like and intuitive: blob-vs-blob collision reflects equal blobs equally on a symmetric hit; hits in the back deal double damage (tunable, so 'front bounces only, back hurts 1 or 4' stays a configuration). Phase 1: three playable designs (Fable 5.2) for the owner to pick; phase 2: build the pick and wire it into combat's hit API. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "description": "Owner pick (2026-11-14): Cannonball launch (wind-up, straight zero-gravity committed dive) plus Pogo's ricochet off other characters only; no bouncing off terrain (keeps it controllable). Keep the slightly unpredictable hit reaction. Plus a shared hurt reaction ('tumble'): hard hits make the VICTIM pogo-bounce off floors and walls, also triggered by strong rocket blasts. Hits go through combat's applyHit (front 1 / back 2, tunable). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
   },
   {
@@ -26,7 +21,17 @@
   },
   {
     "title": "Apply the design language in game",
-    "description": "Depends on: Design language for the game, Player movement and blob feel, Starting arena and destructible terrain. Characters, arena, pickups, effects and HUD drawn in the chosen style. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "description": "Depends on: Design language for the game, Player movement and blob feel, Starting arena and destructible terrain. Characters, arena, pickups, effects and HUD drawn in the chosen style. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md.  Owner picked line style E (silhouette outline only, softer egg-shaped blobs, body gradient + gloss; DESIGN_LANGUAGE.md). Also: fix the PixiJS deprecation (addChild on Graphics in features/player playerRenderer.ts) and load Fredoka before drawing canvas text.",
+    "status": "to-do"
+  },
+  {
+    "title": "Gamepad support and verification",
+    "description": "The owner has only verified keyboard play. Make up to 4 gamepads work end to end: join, move, aim (stick), jump, fire/dive, hot-plug and disconnect, sensible deadzones; then the owner verifies with real controllers. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "to-do"
+  },
+  {
+    "title": "Level picker",
+    "description": "Let players choose the level before a round: the built-in levels in public/levels/ (start-arena, floating-garden) plus imported ones from the session. Fits the lobby flow. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
   },
   {
