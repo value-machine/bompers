@@ -95,12 +95,6 @@ describe("parseLevelFile — kit files", () => {
     });
   });
 
-  it("should put destructible pieces before platforms when shapes overlap so platforms win", () => {
-    const roles = okLevel(parseLevelFile(EXAMPLE)).level.terrain.map((p) => p.role);
-    const firstPlatform = roles.indexOf("platform");
-    expect(roles.slice(firstPlatform).every((r) => r === "platform")).toBe(true);
-  });
-
   it("should import every built-in level without warnings when shipped in public/levels", () => {
     for (const { id, text } of BUILT_INS) {
       const result = okLevel(parseLevelFile(text));

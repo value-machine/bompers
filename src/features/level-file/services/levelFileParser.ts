@@ -55,18 +55,13 @@ const RECOMMENDED_SPAWNS = 4;
 const ofRole = <R extends RoleElement["role"]>(items: readonly RoleElement[], ...roles: R[]) =>
   items.filter((item): item is RoleElement & { role: R } => roles.includes(item.role as R));
 
-/**
- * Terrain pieces, destructible before platform: the engine paints later pieces over earlier ones,
- * so this makes "platform wins on overlap; same role → later wins" (§ 4) hold.
- */
+/** Terrain pieces in document order (the raster resolves overlaps, LEVEL_FORMAT § 4). */
 function readTerrain(items: readonly RoleElement[], log: LevelIssueLog): TerrainPiece[] {
-  const pieces = ofRole(items, "platform", "destructible").flatMap((item) => {
+  return ofRole(items, "platform", "destructible").flatMap((item) => {
     const shape = readShape(item, log);
     const role: TerrainRole = item.role;
     return shape ? [{ shape, role, ...readTerrainRefs(item, log) }] : [];
   });
-  const rank = (piece: TerrainPiece): number => (piece.role === "platform" ? 1 : 0);
-  return pieces.sort((a, b) => rank(a) - rank(b));
 }
 
 /** E4: exactly one bounds rect, inside the world. */

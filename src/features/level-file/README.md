@@ -34,7 +34,6 @@ Kit sync: `pnpm level-kit:sync` writes the generated files; `pnpm level-kit:chec
 ## Decisions
 
 - Built-in levels are real level files in `public/levels/*.html`, fetched at start (game-orchestration D4).
-- Terrain comes out destructible-first, then platforms: the engine paints later pieces over earlier ones, so the spec's "platform wins on overlap; same role → later wins" holds (level-importer).
 - A rejected import keeps the current level; any accepted import (even the same file again) restarts the match with a new level object (level-importer).
 - Point roles carry no behaviour in the engine yet; `data-behavior` on them is only checked (W4) (level-importer).
 - `x`, `y`, `cx`, `cy` default to 0 as in SVG; sizes (`width`, `height`, `r` on terrain, `points`) are required and positive (level-importer).

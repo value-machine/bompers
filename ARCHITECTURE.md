@@ -18,7 +18,8 @@ src/
 │   ├── arena/           # Game: terrain runtime (cell grid from level shapes, blasts, terrain layer)
 │   ├── camera/          # Game: framing math + applying it to the world layer
 │   ├── content-catalog/ # Game: registry of material/effect/sound/behavior/item IDs
-│   ├── level/           # Game: LevelDefinition model, defaults, normalisation (later: importer)
+│   ├── level/           # Game: LevelDefinition model, defaults, normalisation
+│   ├── level-file/      # Game: level file importer (HTML/SVG → LevelDefinition), Load level control, kit export
 │   ├── match/           # Game: GameState, stepGame systems order, render composition, GameView
 │   ├── player/          # Game: player state, controller system, player render layer
 │   ├── harness-overview/ # /harness overview route + welcome card (deletable)
@@ -44,20 +45,21 @@ The game (`/`) is a PixiJS v8 canvas driven by our own pure-TS simulation (DOC_A
 
 **Data flow per rendered frame** (`features/match/hooks/useGameSession.ts`): `gameInputService.sample()` → `advanceFixedStep` (120 Hz accumulator) → N × `stepGame(state, inputs, dt)` → `renderGame` (layers sync from state, camera applied).
 
-| Home | Owns | Seam other code uses |
-|------|------|----------------------|
-| `src/shared/services/gameLoop.ts` | Fixed-timestep accumulator | `advanceFixedStep(clock, frameSeconds, { stepSeconds, maxSteps })` |
-| `src/shared/services/gameInputService.ts` + `utils/gameInputMapping.ts` + `types/gameInput.types.ts` | Keyboard halves + Gamepad API → one `PlayerInput` per slot (0–3); default slots: left keys, right keys, pad 0, pad 1 | `PlayerInput { connected, moveX, aimX, aimY, jump, fire }` (held state; edges are derived in the sim) |
-| `src/shared/hooks/usePixiApp.ts` | StrictMode-safe Pixi `Application` mount / destroy | `usePixiApp(hostRef, { background })` → `Application \| null` |
-| `src/shared/config/gameTunables.ts` (+ `types/gameTunables.types.ts`) | **All** tunables, one section per concept: `sim`, `world` (gravity), `match` (duration), `player`, `camera` | Pass a copy into `createGameState`; each lap edits only its section |
-| `src/shared/config/gamePalette.ts` | Canvas colors from `documentation/game/DESIGN_LANGUAGE.md` § 1 | `GAME_PALETTE`, `playerColors(slot)`, `materialLooks[lookToken]` |
-| `features/content-catalog` | The registry of content IDs (material, effect, sound, behavior, item) | `contentCatalogApi`: `resolveCatalogEntry(kind, id)` → `{ entry, fallback }`, `exportCatalog()` (plain JSON for the level kit) |
-| `features/level` | `LevelDefinition` (1:1 with the HTML/SVG level file contract), defaults, normalisation; later the importer | `levelApi`: `LevelDefinition`, `normalizeLevelDefinition` → `{ level, warnings }`, `PLACEHOLDER_LEVEL` |
-| `features/arena` | Terrain runtime: rasterised cell grid with per-cell material, collision, blasts, terrain layer | `arenaApi`: `rectHitsSolid`, `isSolidAt`, `getCellInfo`, `clearCircle`, `createArenaState`, terrain view |
-| `features/player` | Player state + controller + player layer | `playerApi`: `PlayerState` (feet point), `stepPlayers({ players, inputs, terrain, tunables, dt })`, players view |
-| `features/camera` | Framing math | `cameraApi`: `computeCameraView({ targets, bounds, viewport, previous, padding, dt })`, `applyCameraView` |
-| `features/match` | `GameState`, `stepGame` systems order, render composition, `GameView` | `matchApi`: `createGameState`, `stepGame`, `GameState` |
-| `features/combat` *(not created yet)* | Rockets, health chunks, blasts, bash, spawn protection | Sim step 3 + a `world` render layer above players |
+| Home                                                                                                 | Owns                                                                                                                                                                     | Seam other code uses                                                                                                                           |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/shared/services/gameLoop.ts`                                                                    | Fixed-timestep accumulator                                                                                                                                               | `advanceFixedStep(clock, frameSeconds, { stepSeconds, maxSteps })`                                                                             |
+| `src/shared/services/gameInputService.ts` + `utils/gameInputMapping.ts` + `types/gameInput.types.ts` | Keyboard halves + Gamepad API → one `PlayerInput` per slot (0–3); default slots: left keys, right keys, pad 0, pad 1                                                     | `PlayerInput { connected, moveX, aimX, aimY, jump, fire }` (held state; edges are derived in the sim)                                          |
+| `src/shared/hooks/usePixiApp.ts`                                                                     | StrictMode-safe Pixi `Application` mount / destroy                                                                                                                       | `usePixiApp(hostRef, { background })` → `Application \| null`                                                                                  |
+| `src/shared/config/gameTunables.ts` (+ `types/gameTunables.types.ts`)                                | **All** tunables, one section per concept: `sim`, `world` (gravity), `match` (duration), `player`, `camera`                                                              | Pass a copy into `createGameState`; each lap edits only its section                                                                            |
+| `src/shared/config/gamePalette.ts`                                                                   | Canvas colors from `documentation/game/DESIGN_LANGUAGE.md` § 1                                                                                                           | `GAME_PALETTE`: `players`, `playerShades`, `playerTints` (by slot), `ink`, `helmet`, `sky`, `materialLooks[lookToken]`                         |
+| `features/content-catalog`                                                                           | The registry of content IDs (material, effect, sound, behavior, item) and the level defaults                                                                             | `contentCatalogApi`: `resolveCatalogEntry(kind, id)` → `{ entry, isFallback }`, `CATALOG_DEFAULTS`, `exportCatalog()` (the kit's catalog.json) |
+| `features/level`                                                                                     | `LevelDefinition` (1:1 with the HTML/SVG level file contract), defaults, normalisation                                                                                   | `levelApi`: `LevelDefinition`, `normalizeLevelDefinition` → `{ level, warnings }`                                                              |
+| `features/level-file`                                                                                | Level file I/O: importer (errors E1–E8, warnings W1–W10, format migrations), built-in level source (`public/levels/*.html`), "Load level" control + drop, kit generation | `levelFileApi`: `parseLevelFile(text)` → `LevelImportResult`, `useLevelSource()`, `LevelImportControl`, `BUILT_IN_LEVEL_URL`                   |
+| `features/arena`                                                                                     | Terrain runtime: rasterised cell grid with per-cell material, collision, blasts, terrain layer                                                                           | `arenaApi`: `rectHitsSolid`, `isSolidAt`, `getCellInfo`, `clearCircle`, `createArenaState`, terrain view                                       |
+| `features/player`                                                                                    | Player state + controller + player layer                                                                                                                                 | `playerApi`: `PlayerState` (feet point), `stepPlayers({ players, inputs, terrain, tunables, dt })`, players view                               |
+| `features/camera`                                                                                    | Framing math                                                                                                                                                             | `cameraApi`: `computeCameraView({ targets, bounds, viewport, previous, padding, dt })`, `applyCameraView`                                      |
+| `features/match`                                                                                     | `GameState`, `stepGame` systems order, render composition, `GameView`                                                                                                    | `matchApi`: `createGameState`, `stepGame`, `GameState`                                                                                         |
+| `features/combat` _(not created yet)_                                                                | Rockets, health chunks, blasts, bash, spawn protection                                                                                                                   | Sim step 3 + a `world` render layer above players                                                                                              |
 
 **Rules of the map**
 
@@ -65,8 +67,20 @@ The game (`/`) is a PixiJS v8 canvas driven by our own pure-TS simulation (DOC_A
 - The engine runs only on a normalised `LevelDefinition` plus the content catalog, never on a file format; `level-file` imports level files (built-ins in `public/levels/`) and generates the public kit's catalog (`pnpm level-kit:sync`, drift-checked in CI). Levels reference looks, sounds and behaviours by catalog ID; unknown IDs become a safe default plus a warning.
 - Only `match` knows `GameState`. Systems take the slices they need (options object), so a new concept adds one slice, one system call at its number, and one render layer.
 - Simulation code (`services/` sims) has no DOM, clock or randomness source of its own; it mutates the state it is given. Pixi code lives only in `*Renderer.ts` services, `usePixiApp` and `useGameSession`.
-- Systems order (`features/match/services/gameSim.ts`): 1 join slots · 2 players · 3 *(combat)* · 4 out-of-bounds · 5 round timer. The camera runs per rendered frame, outside the sim.
+- Systems order (`features/match/services/gameSim.ts`): 1 join slots · 2 players · 3 _(combat)_ · 4 out-of-bounds · 5 round timer. The camera runs per rendered frame, outside the sim.
+- Level vocabulary: `documentation/game/LEVEL_FORMAT.md`. 1 world unit = 1 SVG unit, origin top-left, y down.
 - Scene graph (DESIGN_LANGUAGE § 5): `stage → world (camera) → terrain, (shadows, pickups, effects, rockets), players`; `stage → hud`.
+
+**Where follow-up work goes**
+
+| Lap                      | Home                                                                                                                                                                |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Player movement          | `features/player/services/playerController.ts` (`applyInput` / `applyMotion`), `playerRenderer.ts`; tunables `player` section                                       |
+| Multi-target camera      | `features/camera/services/cameraView.ts`; tunables `camera` section (in the renderer: `state.tunables.camera`)                                                      |
+| Starting arena           | an HTML level file in `public/levels/`; point `BUILT_IN_LEVEL_URL` (`features/level-file/services/levelFileSource.ts`) at it                                        |
+| New level format version | `LEVEL_FORMAT_VERSION` + a `migrateVnToVn+1` entry in `features/level-file/services/levelFileMigrations.ts` with a fixture test; a `public/level-kit/vN/` beside v1 |
+| New content ID           | `features/content-catalog`, then `pnpm level-kit:sync` (CI `level-kit:check` fails until the kit matches)                                                           |
+| Combat                   | new `features/combat`: sim step 3 in `stepGame`, a render layer between terrain and players                                                                         |
 
 ## Server State Management (TanStack Query)
 
@@ -90,6 +104,7 @@ Pages → Components → Hooks → Services → Shared Services
 ```
 
 **Rules:**
+
 1. **Pages** can import from: Components, Hooks, Layouts, shared context
 2. **Components** can import from: Common components, Hooks (same feature), Types
 3. **Hooks** can import from: Services (same feature), Types
@@ -131,6 +146,7 @@ features/[feature-name]/
 ### Example: Items Feature (illustrative)
 
 **Types** (`types/item.types.ts`):
+
 ```typescript
 export interface Item {
   id: string;
@@ -139,6 +155,7 @@ export interface Item {
 ```
 
 **Service** (`services/itemService.ts`):
+
 ```typescript
 // Pure functions, no React hooks
 export const fetchItems = async (): Promise<Item[]> => {
@@ -147,6 +164,7 @@ export const fetchItems = async (): Promise<Item[]> => {
 ```
 
 **Hook** (`hooks/useItems.ts`):
+
 ```typescript
 // Uses React hooks, calls services
 export const useItems = () => {
@@ -156,6 +174,7 @@ export const useItems = () => {
 ```
 
 **Component** (`components/ItemList.tsx`):
+
 ```typescript
 // UI only, uses hooks
 export const ItemList = () => {
@@ -165,6 +184,7 @@ export const ItemList = () => {
 ```
 
 **Page** (`pages/HomePage.tsx`):
+
 ```typescript
 // Route-level, composes components
 export const HomePage = () => {
@@ -176,20 +196,20 @@ export const HomePage = () => {
 
 ### Where to Put Code
 
-| What | Where |
-|------|-------|
-| Reusable UI component (no logic) | `src/components/common/` |
-| Feature-specific UI component | `src/features/[feature]/components/` |
-| React hook with state | `src/features/[feature]/hooks/` or `src/shared/hooks/` |
-| Pure function, API call | `src/features/[feature]/services/` |
-| TypeScript types | `src/features/[feature]/types/` |
-| Feature-specific utility function | `src/features/[feature]/services/` or `src/shared/utils/` |
-| Feature-local documentation | `src/features/[feature]/README.md` (+ optional `src/features/[feature]/docs/*.md`) |
-| Route-level component | `src/pages/` |
-| Layout wrapper | `src/layouts/` |
-| Global state (Context) | `src/shared/context/` |
-| Shared service (data providers) | `src/shared/services/` |
-| Shared utility (cross-feature) | `src/shared/utils/` |
+| What                              | Where                                                                              |
+| --------------------------------- | ---------------------------------------------------------------------------------- |
+| Reusable UI component (no logic)  | `src/components/common/`                                                           |
+| Feature-specific UI component     | `src/features/[feature]/components/`                                               |
+| React hook with state             | `src/features/[feature]/hooks/` or `src/shared/hooks/`                             |
+| Pure function, API call           | `src/features/[feature]/services/`                                                 |
+| TypeScript types                  | `src/features/[feature]/types/`                                                    |
+| Feature-specific utility function | `src/features/[feature]/services/` or `src/shared/utils/`                          |
+| Feature-local documentation       | `src/features/[feature]/README.md` (+ optional `src/features/[feature]/docs/*.md`) |
+| Route-level component             | `src/pages/`                                                                       |
+| Layout wrapper                    | `src/layouts/`                                                                     |
+| Global state (Context)            | `src/shared/context/`                                                              |
+| Shared service (data providers)   | `src/shared/services/`                                                             |
+| Shared utility (cross-feature)    | `src/shared/utils/`                                                                |
 
 ### Examples
 
@@ -231,6 +251,7 @@ The project enforces complexity thresholds to maintain code maintainability:
 Exact thresholds live in `eslint.config.js` and `.claude/rules/code-style.md` if this list drifts.
 
 **Refactoring Patterns Used:**
+
 - **Extract Method/Function**: Break long functions into smaller, focused functions
 - **Extract Component**: Split large React components into smaller sub-components
 - **Extract Hook**: Move complex logic from components into custom hooks
@@ -244,13 +265,15 @@ When complexity violations are detected, refactor using these patterns to improv
 ### The Three Tools
 
 #### 1. **ESLint** (The Engine)
+
 - **Purpose**: Static code analysis tool that identifies bugs, enforces code quality, and catches potential errors
 - **What it checks**: Logic errors, unused variables, type issues, best practices, code smells
 - **Examples**: `no-var` (enforces `let`/`const`), `eqeqeq` (enforces `===`), `no-floating-promises` (catches unhandled promises)
 
 #### 2. **GTS** (Google TypeScript Style - The Configuration)
+
 - **Purpose**: Google's opinionated TypeScript style guide that provides a pre-configured ESLint setup
-- **What it provides**: 
+- **What it provides**:
   - Pre-configured ESLint rules following Google's standards
   - TypeScript-specific linting rules via `typescript-eslint`
   - Integration with Prettier (includes `eslint-config-prettier` and `eslint-plugin-prettier`)
@@ -258,6 +281,7 @@ When complexity violations are detected, refactor using these patterns to improv
 - **Why we use it**: Provides a solid, battle-tested foundation of code quality rules without manual configuration
 
 #### 3. **Prettier** (The Formatter)
+
 - **Purpose**: Opinionated code formatter that automatically formats code for consistency
 - **What it handles**: Indentation, quotes, line breaks, spacing, semicolons, trailing commas
 - **Why we use it**: Eliminates formatting debates and ensures consistent code style across the entire codebase
@@ -271,6 +295,7 @@ Each tool serves a distinct purpose:
 - **Prettier**: Handles all formatting concerns (ensures consistent style)
 
 Together, they provide:
+
 - ✅ **Code Quality**: GTS + ESLint catch bugs and enforce best practices
 - ✅ **Architecture Enforcement**: Custom ESLint rules prevent architectural violations
 - ✅ **Consistent Formatting**: Prettier ensures uniform code style
@@ -290,12 +315,14 @@ GTS (base rules) → Custom ESLint rules → Prettier (formatting)
 ### Configuration Details
 
 **Prettier Configuration** (`.prettierrc.json`):
+
 - Uses **double quotes** (`"singleQuote": false`)
 - 100 character line width
 - 2 space indentation
 - LF line endings (Unix-style)
 
 **ESLint Configuration** (`eslint.config.js`):
+
 - Extends GTS configuration
 - Overrides GTS's quote rule to match Prettier (double quotes)
 - Adds custom architecture enforcement rules
@@ -312,10 +339,10 @@ rules: {
 
 ### Workflow
 
-1. **During Development**: 
+1. **During Development**:
    - Your editor should format on save using Prettier
    - ESLint provides real-time feedback in your IDE
-   - **Editor Setup**: 
+   - **Editor Setup**:
      - **VS Code/Cursor**: Install "Prettier" and "ESLint" extensions, enable "Format on Save"
      - **Other editors**: Configure Prettier and ESLint plugins to run on save
 
@@ -331,14 +358,17 @@ rules: {
 ### Common Issues and Solutions
 
 **Issue**: ESLint complains about quote style
+
 - **Cause**: GTS's quote rule conflicts with Prettier
 - **Solution**: Already handled in `eslint.config.js` - GTS's quote rule is overridden to match Prettier
 
 **Issue**: Formatting conflicts between tools
+
 - **Cause**: ESLint and Prettier both trying to enforce formatting
 - **Solution**: `eslint-config-prettier` (included in GTS) disables conflicting ESLint formatting rules
 
 **Issue**: AI agents generating wrong quotes
+
 - **Cause**: Tools have conflicting quote preferences
 - **Solution**: Configuration ensures Prettier is the single source of truth for formatting
 
@@ -371,7 +401,7 @@ This harness supports connecting to external APIs:
 
 No backend or external API is configured: the app is a local, same-screen game. Add one only through the loop.
 
-**Researching a new external API before wiring it up?** See `.claude/rules/api-integration.md` (principles) and `.agents/skills/loop-plan/references/research-api.md` (MCP-first, schema→sample procedure) — this bullet describes *what's configured*, not *how to research* a new vendor/API.
+**Researching a new external API before wiring it up?** See `.claude/rules/api-integration.md` (principles) and `.agents/skills/loop-plan/references/research-api.md` (MCP-first, schema→sample procedure) — this bullet describes _what's configured_, not _how to research_ a new vendor/API.
 
 ## Dev task backlog
 
@@ -417,10 +447,9 @@ Fresh clones ship onboarding tasks (Hosting, App vision, Theme). See `src/featur
 ## Questions?
 
 If you're unsure where to put code:
+
 1. Is it reusable UI? → `src/components/common/`
 2. Is it feature-specific? → `src/features/[feature]/`
 3. Is it shared across features? → `src/shared/`
 4. Is it a route screen? → `src/pages/`
 5. Is it a layout? → `src/layouts/`
-
-
