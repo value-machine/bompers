@@ -14,11 +14,13 @@ The avatar: per-player simulation state, the controller system that moves player
 | Services | `services/playerRenderer.ts`   | Render layer: blob per player id (body + crescent + gloss, two feet, helmet with emblem ● ▲ ■ ✚, eyes toward aim, ink outline) over a shadow layer; shapes drawn once, `syncPlayersView(view, players, { nowMs?, squash? })` sets transforms per frame                                                                                                                                                                                                                                     |
 | API      | `api/playerApi.ts`             | Public seam                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
+Tests: `services/playerController.test.ts` (feel on a stone test level: accel ramp, gravity-scaled jump apex, jump cut, coyote, buffer, wall-slide, wall-jump, aim fallback) and `services/blobPose.test.ts`.
+
 Seams for later work:
 
 - **Tuning:** every movement and squash number is in the `player` section of `src/shared/config/gameTunables.ts`. Jump apex = `jumpSpeed² / (2 · world.gravity)`, so a match's gravity setting scales jump height.
 - **Visual pass:** zoom-scaled stroke widths, helmet spring wobble and wall-jump rotation are not built yet (`playerRenderer.ts`).
-- **Combat:** knockback and rocket jumps = writing `vx` / `vy`; the rocket tube points along `aimX` / `aimY`. Health and invulnerability belong to combat state keyed by player `id`.
+- **Combat** (`features/combat`) writes `vx` / `vy` for knockback and blast impulses (rocket jumps) and reads `aimX` / `aimY`; health, weapons and invulnerability live in combat state keyed by player `id`.
 
 ## Dependencies
 

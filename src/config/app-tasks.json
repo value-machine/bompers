@@ -10,11 +10,6 @@
     "status": "to-do"
   },
   {
-    "title": "Combat: health, hit API, rocket launcher and explosions",
-    "description": "Depends on: Player movement and blob feel, Starting arena and destructible terrain. 4-chunk health; a zone-aware hit API (front/back damage from tunables, default 1/2) shared by every attack; rocket launcher pickup dropping from the sky; rockets from the helmet in aim direction; explosions remove 1 chunk from hit opponents, push everyone (rocket jumps, no self-damage) and clear terrain cells. The unarmed attack is the separate dive headbutt task. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Match rules, scoring and respawn",
     "description": "Depends on: Combat. Timed round, points for kills (incl. knock-offs out of bounds) and collectibles falling from the sky, winner screen, respawn at the safe spawn point farthest from opponents with blinking invulnerability and full freedom of action. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
