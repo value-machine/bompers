@@ -1,6 +1,14 @@
 {
   "version": 1,
   "hooks": {
+    "beforeShellExecution": [
+      {
+        "matcher": "git",
+        "command": "node scripts/deny-git-write-on-main.cjs",
+        "timeout": 10,
+        "failClosed": false
+      }
+    ],
     "postToolUse": [
       {
         "matcher": "Write",

@@ -1,17 +1,23 @@
 #!/usr/bin/env node
 /**
- * Claude Code PreToolUse (Bash) hook: agents never write to `main` in any git workflow mode
- * (.claude/rules/git-workflow.md § Mode behavior table invariants).
+ * Shell-command guard: agents never write to `main` in any git workflow mode
+ * (.claude/rules/git-workflow.md § Mode behavior table invariants). Wired as Claude Code
+ * PreToolUse (Bash) and Cursor beforeShellExecution.
  * Blocks `git commit` while `main` is checked out, and any `git push` whose destination is `main`.
  * No override: the user runs bootstrap/emergency commands on `main` themselves.
  *
- * Contract: exit 2 + reason on stderr blocks the tool call; exit 0 with no output = no decision.
- * Malformed input fails closed only when the raw text mentions git.
+ * Contract (Claude Code): exit 2 + reason on stderr blocks the tool call; exit 0 with no output =
+ * no decision. A crash exits non-zero, which Claude Code treats as a non-blocking error.
+ * Contract (Cursor): exit 0 + JSON `{permission: "deny", user_message, agent_message}` blocks;
+ * `{permission: "allow"}` otherwise (a permission hook with no or invalid JSON blocks the
+ * command). A crash inside the script answers allow; `failClosed: false` in .cursor/hooks.json
+ * covers crashes outside it.
+ * Both: malformed input fails closed only when the raw text mentions git.
  */
 
 const path = require("path");
 const { spawnSync } = require("child_process");
-const { parseHookInput, readStdin } = require("./hook-input.cjs");
+const { parseHookInput, readStdin, isCursorInput, resolveCwd } = require("./hook-input.cjs");
 
 const PROTECTED_BRANCH = "main";
 const SEPARATORS = new Set(["&&", "||", ";", "|", "&", "\n"]);
@@ -147,32 +153,79 @@ function defaultGetBranch(dir) {
 }
 
 /**
+ * @param {Record<string, any> | null} input
+ * @returns {{command: unknown, cwd: unknown}} Claude Code nests the command in `tool_input`;
+ * Cursor sends it top-level
+ */
+function readShellCommand(input) {
+  if (!input) return { command: undefined, cwd: undefined };
+  if (isCursorInput(input)) return { command: input.command, cwd: resolveCwd(input) };
+  return { command: input.tool_input && input.tool_input.command, cwd: input.cwd };
+}
+
+/**
  * @param {string} raw stdin text
  * @param {(dir: string) => string | null} [getBranch]
  * @returns {{block: boolean, reason?: string}}
  */
 function decide(raw, getBranch = defaultGetBranch) {
-  const input = parseHookInput(raw);
-  const command = input && input.tool_input && input.tool_input.command;
-  if (typeof command !== "string" || typeof input.cwd !== "string") {
+  const { command, cwd } = readShellCommand(parseHookInput(raw));
+  if (typeof command !== "string" || typeof cwd !== "string") {
     return /\bgit\b/.test(raw)
       ? { block: true, reason: `${REASON} (hook input unreadable)` }
       : { block: false };
   }
-  return commandWritesMain(command, input.cwd, getBranch)
+  return commandWritesMain(command, cwd, getBranch)
     ? { block: true, reason: REASON }
     : { block: false };
 }
 
+/**
+ * @typedef {{exitCode: number, stderr?: string, stdout?: string}} HookOutput
+ */
+
+/**
+ * @param {{block: boolean, reason?: string}} result
+ * @returns {HookOutput} Cursor's beforeShellExecution answer
+ */
+function formatCursorOutput(result) {
+  if (!result.block) return { exitCode: 0, stdout: JSON.stringify({ permission: "allow" }) };
+  return {
+    exitCode: 0,
+    stdout: JSON.stringify({
+      permission: "deny",
+      user_message: result.reason,
+      agent_message: result.reason,
+    }),
+  };
+}
+
+/**
+ * Cursor answers allow on an internal error (fail-safe for unrelated commands); Claude Code keeps
+ * throwing, as before the Cursor port.
+ * @param {string} raw stdin text
+ * @param {(dir: string) => string | null} [getBranch]
+ * @returns {HookOutput}
+ */
+function run(raw, getBranch = defaultGetBranch) {
+  const cursor = isCursorInput(parseHookInput(raw));
+  try {
+    const result = decide(raw, getBranch);
+    if (cursor) return formatCursorOutput(result);
+    return result.block ? { exitCode: 2, stderr: `${result.reason}\n` } : { exitCode: 0 };
+  } catch (err) {
+    if (!cursor) throw err;
+    return formatCursorOutput({ block: false });
+  }
+}
+
 if (require.main === module) {
   void readStdin().then((raw) => {
-    const result = decide(raw);
-    if (result.block) {
-      process.stderr.write(`${result.reason}\n`);
-      process.exit(2);
-    }
-    process.exit(0);
+    const result = run(raw);
+    if (result.stderr) process.stderr.write(result.stderr);
+    if (result.stdout) process.stdout.write(result.stdout);
+    process.exit(result.exitCode);
   });
 }
 
-module.exports = { tokenize, commandWritesMain, decide };
+module.exports = { tokenize, commandWritesMain, decide, run };
