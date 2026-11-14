@@ -31,6 +31,10 @@ export const GAME_PALETTE = {
   pickupRing: 0x8fd6ff,
   /** Lost health chunk (DESIGN_LANGUAGE § 7). */
   healthLost: 0xe9dfd0,
+  /** Point orb: bubblegum star (DESIGN_LANGUAGE § 1 Effects). */
+  pointOrb: 0xff8fc8,
+  /** HUD cards (DESIGN_LANGUAGE § 7): card fill, caption text, timer numerals. */
+  hud: { card: 0xfffaf0, caption: 0x8a7a99, timer: 0xffd43b },
   sky: { top: 0x8fd6ff, bottom: 0xfff1cf },
   timerWarning: 0xff8a1f,
   /** Keyed by a catalog material's `lookToken`. */

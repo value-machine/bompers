@@ -24,6 +24,12 @@ const level: LevelDefinition = {
 
 const dt = 1 / 120;
 const keys = (...codes: string[]) => mapPlayerInputs({ heldKeys: new Set(codes), gamepads: [] });
+const respawnDelay = DEFAULT_GAME_TUNABLES.match.respawnDelaySeconds;
+/** Steps the game for `seconds` of sim time with the given inputs. */
+const stepFor = (state: ReturnType<typeof createGameState>, seconds: number, inputs = keys()) => {
+  for (let t = 0; t < seconds; t += dt) stepGame(state, inputs, dt);
+  return state;
+};
 const newGame = (matchDurationS?: number) =>
   createGameState({
     level: { ...level, settings: { ...level.settings, matchDurationS } },
@@ -51,7 +57,7 @@ describe("gameSim", () => {
     const state = stepGame(newGame(), keys(), dt);
     const player = state.players[0]!;
     player.y = 2000;
-    stepGame(state, keys(), dt);
+    stepFor(state, respawnDelay + 0.05);
     expect(player.y).toBeLessThan(250);
   });
 
@@ -64,6 +70,7 @@ describe("gameSim", () => {
     expect(state.combat.events).toContainEqual(
       expect.objectContaining({ type: "playerEliminated", victimSlot: 0, cause: "out-of-bounds" })
     );
+    stepFor(state, respawnDelay);
     expect(fighter).toMatchObject({
       health: DEFAULT_GAME_TUNABLES.combat.maxHealth,
       eliminated: false,
@@ -95,19 +102,22 @@ describe("gameSim", () => {
         cause: "dive",
       })
     );
-    expect(victim.x).toBe(600);
+    stepFor(state, respawnDelay);
+    expect(victim.x).toBe(600); // farthest from the opponent at x = 100
     expect(state.combat.fighters.get("p1")!.health).toBe(DEFAULT_GAME_TUNABLES.combat.maxHealth);
   });
 
   it("should end the round and freeze players when the timer runs out", () => {
     const state = newGame(1);
     for (let i = 0; i < 130; i += 1) stepGame(state, keys(), dt);
-    expect(state.round).toEqual({ phase: "ended", remainingSeconds: 0 });
+    expect(state.round).toMatchObject({ phase: "ended", remainingSeconds: 0 });
     const frozenX = state.players[0]!.x;
     stepGame(state, keys("KeyD"), dt);
     expect(state.players[0]!.x).toBe(frozenX);
   });
+});
 
+describe("gameSim level settings", () => {
   it("should scale gravity and override the round length from the level settings", () => {
     const state = createGameState({
       level: { ...level, settings: { cellSize: 8, gravity: 0.5, matchDurationS: 60 } },

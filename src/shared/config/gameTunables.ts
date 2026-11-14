@@ -13,7 +13,22 @@ export type { GameTunables };
 export const DEFAULT_GAME_TUNABLES: GameTunables = {
   sim: { stepHz: 120, maxStepsPerFrame: 8 },
   world: { gravity: 2200, maxFallSpeed: 1400 },
-  match: { durationSeconds: 180, maxPlayers: 4 },
+  match: {
+    durationSeconds: 180,
+    maxPlayers: 4,
+    respawnDelaySeconds: 1.2,
+    spawnProtectionSeconds: 2.5,
+    restartLockSeconds: 2,
+    // A kill outweighs an orb; falling off alone costs a point (match-rules D1).
+    scoring: { kill: 2, orb: 1, fallPenalty: 1 },
+  },
+  collectibles: {
+    firstDelaySeconds: 5,
+    intervalSeconds: 6,
+    maxActive: 2,
+    dropHeight: 600,
+    size: 22,
+  },
   player: {
     width: 28,
     height: 28,

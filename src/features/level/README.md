@@ -10,7 +10,7 @@ The level model the engine runs on: `LevelDefinition` (geometry, spawns, drops, 
 |-------|------|---------|
 | Types | `types/levelDefinition.types.ts` | `LevelDefinition` `{ formatVersion, meta{levelId, title, author?, agent?, description?}, settings{cellSize, gravity, matchDurationS?}, worldSize{w,h}, terrain[{shape: rect\|polygon\|circle, role: platform\|destructible, materialId, effectId?, soundId?, behaviorId?}], spawns[], drops[{at, itemIds}], collectibles[{at, itemId}], bounds{x,y,w,h} }` |
 | Services | `services/levelDefinition.ts` | `LEVEL_FORMAT_VERSION`, `DEFAULT_LEVEL_SETTINGS` (from the catalog defaults), `normalizeLevelDefinition(level)` → `{ level, warnings }` |
-| Services | `services/placeholderLevel.ts` | Placeholder start map as a TS `LevelDefinition` |
+| Services | `services/placeholderLevel.ts` | Placeholder start map as a TS `LevelDefinition` (three point-orb collectible points for the match rules) |
 | API | `api/levelApi.ts` | Public seam |
 
 Units: 1 world unit = 1 SVG unit, origin top-left, y down. Spawn points are feet points (bottom-centre of a player). `bounds` is the in-bounds area; leaving it eliminates. `settings.gravity` multiplies the engine default.

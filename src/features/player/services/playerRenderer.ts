@@ -34,6 +34,8 @@ interface BlobSprite {
   eyes: [Container, Container];
   pupils: [Graphics, Graphics];
   shadow: Graphics;
+  /** Dashed spawn-protection ring (DESIGN_LANGUAGE § 6), hidden unless protected. */
+  ring: Graphics;
   anim: BlobAnim;
   /** Body radius R, world units. */
   radius: number;
@@ -43,6 +45,8 @@ export interface SyncPlayersOptions {
   /** Animation clock, ms. Defaults to `performance.now()`. */
   nowMs?: number;
   squash?: SquashTunables;
+  /** Players under spawn protection: they blink and wear the dashed ring (GDD § 6). */
+  protectedIds?: ReadonlySet<string>;
 }
 
 /** Outline widths, world units (DESIGN_LANGUAGE § 3 at this blob size). */
@@ -157,6 +161,34 @@ function drawEye(r: number): { eye: Container; pupil: Graphics } {
   return { eye, pupil };
 }
 
+/** Dashed ink ring of radius 1.5 R around the torso (12 dashes). */
+function drawProtectionRing(r: number): Graphics {
+  const ring = new Graphics();
+  const radius = 1.5 * r;
+  const dashes = 12;
+  for (let i = 0; i < dashes; i += 1) {
+    const start = (i / dashes) * Math.PI * 2;
+    ring.moveTo(Math.cos(start) * radius, Math.sin(start) * radius);
+    ring.arc(0, 0, radius, start, start + (Math.PI / dashes) * 1.1);
+  }
+  ring.stroke({ width: STROKE_SMALL, color: GAME_PALETTE.ink, cap: "round" });
+  ring.position.set(0, -1.12 * r);
+  ring.visible = false;
+  return ring;
+}
+
+/** Blink between full and 45 % alpha at 8 Hz while protected (DESIGN_LANGUAGE § 6). */
+const BLINK = { hz: 8, lowAlpha: 0.45 };
+
+function applyProtection(sprite: BlobSprite, isProtected: boolean, nowMs: number): void {
+  sprite.ring.visible = isProtected;
+  const low = Math.floor((nowMs / 1000) * BLINK.hz * 2) % 2 === 1;
+  sprite.body.alpha = isProtected && low ? BLINK.lowAlpha : 1;
+  sprite.feet.forEach((foot) => {
+    foot.alpha = sprite.body.alpha;
+  });
+}
+
 function createBlobSprite(player: PlayerState): BlobSprite {
   const r = player.height * RADIUS_PER_HEIGHT;
   const feet: [Graphics, Graphics] = [drawFoot(player.slot, r), drawFoot(player.slot, r)];
@@ -169,7 +201,8 @@ function createBlobSprite(player: PlayerState): BlobSprite {
   torso.addChild(drawBody(player.slot, r), left.eye, right.eye, drawHelmet(player.slot, r));
   body.addChild(torso);
   const root = new Container({ label: player.id });
-  root.addChild(...feet, body);
+  const ring = drawProtectionRing(r);
+  root.addChild(ring, ...feet, body);
   const shadow = new Graphics().ellipse(0, 0, 1, 1).fill(GAME_PALETTE.ink);
   return {
     root,
@@ -178,6 +211,7 @@ function createBlobSprite(player: PlayerState): BlobSprite {
     eyes: [left.eye, right.eye],
     pupils: [left.pupil, right.pupil],
     shadow,
+    ring,
     anim: createBlobAnim(player),
     radius: r,
   };
@@ -248,6 +282,7 @@ export function syncPlayersView(
     const sprite = spriteFor(view, player);
     noteBlobEvents(sprite.anim, { player, squash, nowMs });
     applyPose(sprite, player, blobPose(sprite.anim, { player, squash, nowMs }));
+    applyProtection(sprite, options.protectedIds?.has(player.id) === true, nowMs);
   }
   pruneSprites(view, new Set(players.map((player) => player.id)));
 }

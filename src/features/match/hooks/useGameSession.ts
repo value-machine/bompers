@@ -4,29 +4,59 @@ import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { advanceFixedStep, createFixedStepClock } from "@/shared/services/gameLoop";
 import { createGameInputReader } from "@/shared/services/gameInputService";
 import { PLACEHOLDER_LEVEL } from "@/features/level/api/levelApi";
-import { createGameState, stepGame } from "@/features/match/services/gameSim";
-import { createGameRenderer, renderGame } from "@/features/match/services/gameRenderer";
+import type { PlayerInputs } from "@/shared/types/gameInput.types";
+import { createGameState, stepGame, type GameState } from "@/features/match/services/gameSim";
+import {
+  createGameRenderer,
+  renderGame,
+  type GameRenderer,
+} from "@/features/match/services/gameRenderer";
+import { isRestartPress } from "@/features/match/services/matchRules";
 
 // Pixi nulls these on destroy although the types say they are always set.
 const isAppAlive = (app: Application): boolean =>
   (app.ticker as Ticker | null) !== null && (app.stage as Application["stage"] | null) !== null;
 
 /**
- * Runs one match on a ready Pixi app: input → fixed steps of `stepGame` → render, once per
- * Pixi ticker frame. Everything is created in the effect and torn down in its cleanup, so a
- * StrictMode remount starts a clean session.
+ * Runs matches on a ready Pixi app: input → fixed steps of `stepGame` → render, once per
+ * Pixi ticker frame. After a round ends, a jump press (past the restart lock) starts a fresh
+ * round on the same level and settings. Everything is created in the effect and torn down in
+ * its cleanup, so a StrictMode remount starts a clean session.
  */
+const clearStage = (app: Application): void => {
+  app.stage.removeChildren().forEach((child) => child.destroy({ children: true }));
+};
+
 export function useGameSession(app: Application | null): void {
   useEffect(() => {
     if (!app) return undefined;
     const tunables = DEFAULT_GAME_TUNABLES;
     const stepSeconds = 1 / tunables.sim.stepHz;
-    const state = createGameState({ level: PLACEHOLDER_LEVEL, tunables });
+    const startRound = (): { state: GameState; renderer: GameRenderer } => {
+      const state = createGameState({ level: PLACEHOLDER_LEVEL, tunables });
+      return { state, renderer: createGameRenderer(app, state) };
+    };
+    let round = startRound();
     // Level authors (often AI agents) see what was corrected; the game still runs.
-    if (state.levelWarnings.length > 0) console.warn("Level warnings:", state.levelWarnings);
+    const { levelWarnings } = round.state;
+    if (levelWarnings.length > 0) console.warn("Level warnings:", levelWarnings);
     const input = createGameInputReader(window);
-    const renderer = createGameRenderer(app, state);
     let clock = createFixedStepClock();
+    let previousInputs: PlayerInputs = [];
+
+    const restartIfPressed = (inputs: PlayerInputs): void => {
+      const { round: progress, timeSeconds } = round.state;
+      const restart = isRestartPress({
+        phase: progress.phase,
+        secondsSinceEnd: timeSeconds - (progress.endedAt ?? timeSeconds),
+        lockSeconds: round.state.tunables.match.restartLockSeconds,
+        inputs,
+        previous: previousInputs,
+      });
+      if (!restart) return;
+      clearStage(app);
+      round = startRound();
+    };
 
     const onFrame = (ticker: Ticker): void => {
       const frameSeconds = ticker.deltaMS / 1000;
@@ -36,8 +66,10 @@ export function useGameSession(app: Application | null): void {
       });
       clock = advance.clock;
       const inputs = input.sample();
-      for (let i = 0; i < advance.steps; i += 1) stepGame(state, inputs, stepSeconds);
-      renderGame(renderer, { state, app, dt: frameSeconds });
+      restartIfPressed(inputs);
+      previousInputs = inputs;
+      for (let i = 0; i < advance.steps; i += 1) stepGame(round.state, inputs, stepSeconds);
+      renderGame(round.renderer, { state: round.state, app, dt: frameSeconds });
     };
 
     app.ticker.add(onFrame);
@@ -47,7 +79,7 @@ export function useGameSession(app: Application | null): void {
       // only a still-live app (a session restart on the same app) needs manual teardown.
       if (!isAppAlive(app)) return;
       app.ticker.remove(onFrame);
-      app.stage.removeChildren().forEach((child) => child.destroy({ children: true }));
+      clearStage(app);
     };
   }, [app]);
 }
