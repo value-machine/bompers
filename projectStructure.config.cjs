@@ -515,11 +515,6 @@ module.exports = {
             },
           ],
         },
-        // Built-in levels (one HTML file per level, format: documentation/game/LEVEL_FORMAT.md)
-        {
-          name: "levels",
-          children: [{ name: "*.html" }],
-        },
       ],
     },
     // Tests
