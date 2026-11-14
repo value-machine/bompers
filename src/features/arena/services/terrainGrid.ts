@@ -117,6 +117,23 @@ export function rectHitsSolid(grid: TerrainGrid, rect: Rect): boolean {
   return false;
 }
 
+/**
+ * Top of the first terrain surface under a span (x .. x + w) at or below `y`, scanning cell rows
+ * down to `y + range`; null when there is none. For contact shadows of pickups and rockets.
+ * Second copy: `features/player/services/playerController.ts` `scanGroundBelow` scans the same way
+ * for the player body.
+ */
+export function surfaceBelow(
+  grid: TerrainGrid,
+  span: { x: number; y: number; w: number; range: number }
+): number | null {
+  const size = grid.cellSize;
+  for (let top = Math.ceil(span.y / size) * size; top <= span.y + span.range; top += size) {
+    if (rectHitsSolid(grid, { x: span.x, y: top, w: span.w, h: 1 })) return top;
+  }
+  return null;
+}
+
 /** What a blast removed: total cells and the count per material ID (for destroy effects / sounds). */
 export interface ClearedCells {
   removed: number;

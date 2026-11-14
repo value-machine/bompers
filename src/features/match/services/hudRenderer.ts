@@ -1,14 +1,15 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import { GAME_FONT_FAMILY } from "@/shared/utils/gameFont";
 import type { GameState } from "@/features/match/services/gameSim";
 import { roundResultLabel } from "@/features/match/services/matchRules";
 
 /**
- * Screen-space HUD (DESIGN_LANGUAGE § 7, simplified): a timer card centred at the top, one
- * player card per joined slot (P1–P2 left, P3–P4 right) with emblem chip, health chunks and
- * score, and the round-result banner. All colours are fixed canvas colours from the palette,
+ * Screen-space HUD (DESIGN_LANGUAGE § 7): a timer card centred at the top, one player card per
+ * joined slot (P1–P2 left, P3–P4 right) with emblem chip, health chunks (a lost chunk pops out)
+ * and score, and the round-result banner. All colours are fixed canvas colours from the palette,
  * never UI theme tokens: the canvas looks the same in light and dark mode (match-rules D7).
- * Fredoka falls back to a rounded system face until the visual pass loads it.
+ * Text is Fredoka; the session waits for the font before creating this view (visual-pass D5).
  */
 export interface HudView {
   root: Container;
@@ -20,23 +21,28 @@ export interface HudView {
 interface PlayerCard {
   root: Container;
   pips: Graphics;
+  /** The chunk that was just lost, popping out (scale 1.3 → 0). */
+  pop: Graphics;
+  poppedAt: number;
   score: Text;
   shown: { health: number; max: number };
 }
 
-const FONT = "Fredoka, ui-rounded, 'Arial Rounded MT Bold', system-ui, sans-serif";
 const DESIGN_WIDTH = 1280;
 const CARD = { w: 228, h: 70, radius: 18, gap: 12, margin: 16, top: 12, tilt: 0.026 };
 const TIMER = { w: 140, h: 70, radius: 18, warnSeconds: 10 };
-const PIP = { w: 18, h: 16, radius: 6, gap: 4, x: 70, y: 40 };
+const PIP = { w: 22, h: 20, radius: 7, gap: 4, x: 70, y: 40, popSeconds: 0.15 };
 const BANNER = { w: 560, h: 160, radius: 24 };
-const OUTLINE = 4;
+const OUTLINE = 3;
 
 const ink = (width: number) => ({ width, color: GAME_PALETTE.ink, join: "round" as const });
 const slotColor = (slot: number): number =>
   GAME_PALETTE.players[slot % GAME_PALETTE.players.length] ?? GAME_PALETTE.ink;
 const text = (size: number, fill: number, weight: "600" | "700" = "700"): Text =>
-  new Text({ text: "", style: { fontFamily: FONT, fontSize: size, fontWeight: weight, fill } });
+  new Text({
+    text: "",
+    style: { fontFamily: GAME_FONT_FAMILY, fontSize: size, fontWeight: weight, fill },
+  });
 
 /** The helmet emblem of a slot (● ▲ ■ ✚, DESIGN_LANGUAGE § 1), in ink, centred on 0,0. */
 function drawEmblem(slot: number, size: number): Graphics {
@@ -52,7 +58,7 @@ function drawEmblem(slot: number, size: number): Graphics {
 function drawChip(slot: number): Container {
   const chip = new Container();
   chip.addChild(
-    new Graphics().roundRect(-25, -25, 50, 50, 14).fill(slotColor(slot)).stroke(ink(3)),
+    new Graphics().roundRect(-25, -25, 50, 50, 14).fill(slotColor(slot)),
     drawEmblem(slot, 20)
   );
   chip.position.set(35, 35);
@@ -79,34 +85,49 @@ function createPlayerCard(slot: number): PlayerCard {
   label.position.set(PIP.x, 10);
   const { score, caption } = drawScore();
   const pips = new Graphics();
+  const pop = new Graphics()
+    .roundRect(-PIP.w / 2, -PIP.h / 2, PIP.w, PIP.h, PIP.radius)
+    .fill(slotColor(slot));
+  pop.visible = false;
   const card = new Graphics()
     .roundRect(0, 0, CARD.w, CARD.h, CARD.radius)
     .fill(GAME_PALETTE.hud.card)
     .stroke(ink(OUTLINE));
-  root.addChild(card, drawChip(slot), label, pips, score, caption);
+  root.addChild(card, drawChip(slot), label, pips, pop, score, caption);
   root.pivot.set(CARD.w / 2, CARD.h / 2);
   root.rotation = slot % 2 === 0 ? -CARD.tilt : CARD.tilt;
-  return { root, pips, score, shown: { health: -1, max: -1 } };
+  return { root, pips, pop, poppedAt: -Infinity, score, shown: { health: -1, max: -1 } };
 }
 
 interface PipsLook {
   slot: number;
   health: number;
   max: number;
+  /** Sim time, for the chunk pop. */
+  timeSeconds: number;
 }
 
-/** Redraws the health chunks only when health or the chunk count changed. */
-function drawPips(card: PlayerCard, { slot, health, max }: PipsLook): void {
+/** Redraws the health chunks only when health or the chunk count changed; a loss starts the pop. */
+function drawPips(card: PlayerCard, { slot, health, max, timeSeconds }: PipsLook): void {
   if (card.shown.health === health && card.shown.max === max) return;
+  if (card.shown.max === max && health < card.shown.health && health >= 0) {
+    card.pop.position.set(PIP.x + health * (PIP.w + PIP.gap) + PIP.w / 2, PIP.y + PIP.h / 2);
+    card.poppedAt = timeSeconds;
+  }
   card.shown = { health, max };
   card.pips.clear();
   for (let i = 0; i < max; i += 1) {
     const x = PIP.x + i * (PIP.w + PIP.gap);
     card.pips
       .roundRect(x, PIP.y, PIP.w, PIP.h, PIP.radius)
-      .fill(i < health ? slotColor(slot) : GAME_PALETTE.healthLost)
-      .stroke(ink(2.5));
+      .fill(i < health ? slotColor(slot) : GAME_PALETTE.healthLost);
   }
+}
+
+function syncPop(card: PlayerCard, timeSeconds: number): void {
+  const t = (timeSeconds - card.poppedAt) / PIP.popSeconds;
+  card.pop.visible = t >= 0 && t < 1;
+  if (card.pop.visible) card.pop.scale.set(1.3 * (1 - t));
 }
 
 function createTimer(): HudView["timer"] {
@@ -182,18 +203,25 @@ function cardCentre(slot: number, frame: HudFrame, scale: number): { x: number; 
   return { x, y: (CARD.top + CARD.h / 2) * scale };
 }
 
+/** The card for a slot, created and added behind the timer on first sight. */
+function cardFor(view: HudView, slot: number): PlayerCard {
+  const existing = view.cards.get(slot);
+  if (existing) return existing;
+  const card = createPlayerCard(slot);
+  view.cards.set(slot, card);
+  view.root.addChildAt(card.root, 0);
+  return card;
+}
+
 function syncCards(view: HudView, frame: HudFrame, scale: number): void {
   const { state } = frame;
   const max = state.tunables.combat.maxHealth;
   for (const player of state.players) {
-    let card = view.cards.get(player.slot);
-    if (!card) {
-      card = createPlayerCard(player.slot);
-      view.cards.set(player.slot, card);
-      view.root.addChildAt(card.root, 0);
-    }
+    const card = cardFor(view, player.slot);
     const fighter = state.combat.fighters.get(player.id);
-    drawPips(card, { slot: player.slot, health: fighter?.health ?? max, max });
+    const health = fighter?.health ?? max;
+    drawPips(card, { slot: player.slot, health, max, timeSeconds: state.timeSeconds });
+    syncPop(card, state.timeSeconds);
     card.score.text = String(state.rules.scores[player.slot] ?? 0);
     const centre = cardCentre(player.slot, frame, scale);
     card.root.position.set(centre.x, centre.y);

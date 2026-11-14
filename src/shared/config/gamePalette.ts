@@ -14,6 +14,8 @@ export const GAME_PALETTE = {
   /** The only outline color; also HUD text. */
   ink: 0x2b1d3a,
   helmet: 0xfff4e2,
+  /** Rocket-tube cap and helmet shading edge: shell mixed 28 % toward ink (mockup variant E). */
+  helmetEdge: 0xc4b8b3,
   /** Eye whites (pupils are ink). */
   eyeWhite: 0xffffff,
   /** Gloss oval on bodies and the helmet gloss stroke. */
@@ -36,6 +38,20 @@ export const GAME_PALETTE = {
   /** HUD cards (DESIGN_LANGUAGE § 7): card fill, caption text, timer numerals. */
   hud: { card: 0xfffaf0, caption: 0x8a7a99, timer: 0xffd43b },
   sky: { top: 0x8fd6ff, bottom: 0xfff1cf },
+  /** Backdrop (DESIGN_LANGUAGE § 1 World): sun disc, clouds with a soft edge, two hill bands. */
+  backdrop: {
+    sun: 0xfff6a8,
+    cloud: 0xffffff,
+    cloudEdge: 0xbfe3f5,
+    hillsFar: 0xbfe8d0,
+    hillsNear: 0x9fd8b8,
+  },
+  /** Destructible cell grid line / pip, and the crack next to a crater. */
+  cellLine: 0xb9722a,
+  crack: 0x2b1d3a,
+  /** Rocket smoke puffs and the impact pop. */
+  smoke: 0xffffff,
+  hitFlash: 0xffffff,
   timerWarning: 0xff8a1f,
   /** Keyed by a catalog material's `lookToken`. */
   materialLooks: {

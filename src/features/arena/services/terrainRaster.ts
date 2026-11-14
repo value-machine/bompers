@@ -1,7 +1,7 @@
 import { shapeContains } from "@/shared/utils/shapeGeometry";
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import type { LevelDefinition, TerrainPiece, TerrainShape } from "@/features/level/api/levelApi";
-import type { TerrainGrid } from "@/features/arena/types/arena.types";
+import type { TerrainCellSlot, TerrainGrid } from "@/features/arena/types/arena.types";
 import {
   cellRangeOf,
   createTerrainGrid,
@@ -27,23 +27,23 @@ function shapeBounds(shape: TerrainShape) {
   return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
 }
 
-/** The cell slot a piece fills: its role plus the material's behaviour and look. */
-function slotOfPiece(grid: TerrainGrid, piece: TerrainPiece): number {
+/** What a piece fills: its role plus the material's behaviour and look (catalog). */
+export function pieceCellSlot(piece: TerrainPiece): TerrainCellSlot {
   const { entry } = resolveCatalogEntry("material", piece.materialId);
-  if (!entry)
-    return slotFor(grid, {
-      role: piece.role,
-      materialId: piece.materialId,
-      destructible: false,
-      lookToken: "",
-    });
-  return slotFor(grid, {
+  if (!entry) {
+    return { role: piece.role, materialId: piece.materialId, destructible: false, lookToken: "" };
+  }
+  return {
     role: piece.role,
     materialId: entry.id,
     destructible: piece.role === "destructible" && entry.destructible,
     lookToken: entry.lookToken,
-  });
+  };
 }
+
+/** The cell slot a piece fills. */
+const slotOfPiece = (grid: TerrainGrid, piece: TerrainPiece): number =>
+  slotFor(grid, pieceCellSlot(piece));
 
 function rasterizePiece(grid: TerrainGrid, piece: TerrainPiece): void {
   const slot = slotOfPiece(grid, piece);

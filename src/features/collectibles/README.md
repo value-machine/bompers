@@ -6,12 +6,12 @@ Point orbs (GDD § 5: "points that fall from the roof"): they appear above the l
 
 ## Structure
 
-| Layer    | Path                                | Purpose                                                                                                                                                               |
-| -------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Types    | `types/collectibles.types.ts`       | `PointOrb`, `CollectiblesState` (orbs, spawn timer, round-robin index), `OrbCollected`                                                                                 |
-| Services | `services/collectiblesSim.ts`       | `createCollectiblesState(tunables)`, `stepCollectibles({ collectibles, points, players, tunables, dt })` → orbs collected this step. Pure TS, no randomness or clock |
-| Services | `services/collectiblesRenderer.ts`  | Bubblegum star layer (DESIGN_LANGUAGE § 1 Effects), hover bob; `createCollectiblesView`, `syncCollectiblesView`                                                         |
-| API      | `api/collectiblesApi.ts`            | The seam `match` uses                                                                                                                                                  |
+| Layer    | Path                               | Purpose                                                                                                                                                                            |
+| -------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Types    | `types/collectibles.types.ts`      | `PointOrb`, `CollectiblesState` (orbs, spawn timer, round-robin index), `OrbCollected`                                                                                             |
+| Services | `services/collectiblesSim.ts`      | `createCollectiblesState(tunables)`, `stepCollectibles({ collectibles, points, players, tunables, dt })` → orbs collected this step. Pure TS, no randomness or clock               |
+| Services | `services/collectiblesRenderer.ts` | Bubblegum star layer (DESIGN_LANGUAGE § 1 Effects) with the zoom-clamped prop outline (rebuilt when its step changes), hover bob; `createCollectiblesView`, `syncCollectiblesView` |
+| API      | `api/collectiblesApi.ts`           | The seam `match` uses                                                                                                                                                              |
 
 ## Dependencies
 

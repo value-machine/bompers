@@ -1,43 +1,45 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import { contactShadow, CONTACT_SHADOW_RANGE } from "@/shared/utils/contactShadow";
+import { syncDisplayById } from "@/shared/utils/displaySync";
+import { DESIGN_SCALE, outlineWidth, type OutlineWidth } from "@/shared/utils/outlineWidth";
+import { surfaceBelow, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import { helmetPoint } from "@/features/combat/services/combatGeometry";
-import type {
-  CombatEvent,
-  CombatState,
-  PickupState,
-  RocketState,
-} from "@/features/combat/types/combat.types";
+import type { CombatState, PickupState, RocketState } from "@/features/combat/types/combat.types";
 
 /**
- * Combat render layers (DESIGN_LANGUAGE § 1 Effects, § 5 draw order). The match renderer
- * places them: pickups (5) → effects (6, explosion starbursts) → rockets (7, plus the rocket
- * tube of armed players) → players (8) → overlay (health chunks above each player). Effects
- * therefore never cover a player outline. Shapes are drawn once; per frame only transforms
+ * Combat render layers (DESIGN_LANGUAGE § 1 Effects, § 4 shadows, § 5 draw order). The match
+ * renderer places them: shadows (4, contact shadows of airborne pickups and rockets) → pickups
+ * (5) → [effects (6), the `effects` feature] → rockets (7, with smoke trail, plus the rocket tube of
+ * armed players) → players (8) → overlay (health chunks above each player). Effects therefore
+ * never cover a player outline. Shapes follow mockup variant E at `DESIGN_SCALE`; outlines use
+ * the zoom-clamped prop width. Sprites are drawn once (pickups and tubes are keyed by the
+ * outline step, so they rebuild only when the width step changes); per frame only transforms
  * change, except the health pips, which redraw when a player's health changes.
  *
- * Not yet (visual pass): hit flash, screen shake, debris, smoke trail, zoom-scaled strokes.
+ * Not yet: hit flash, screen shake (motion polish follow-up).
  */
 export interface CombatView {
+  shadows: Container;
   pickups: Container;
-  effects: Container;
   rockets: Container;
   overlay: Container;
-  pickupSprites: Map<number, Container>;
+  pickupSprites: Map<string, Container>;
   rocketSprites: Map<number, Container>;
-  /** Explosion starbursts by event seq. */
-  blasts: Map<number, Container>;
+  shadowSprites: Map<string, Container>;
   tubes: Map<string, Container>;
   health: Map<string, { pips: Graphics; shown: number }>;
 }
 
-/** Explosion pop: full size on the first frame, shrinks away over this many seconds. */
-const BLAST_SECONDS = 0.25;
-const STROKE = 2.5;
-const STROKE_SMALL = 1.5;
 /** Body radius per collision height (matches the player renderer). */
 const RADIUS_PER_HEIGHT = 1 / 2.12;
 const PIP = { w: 6, h: 5, gap: 2, lift: 10 };
+const S = DESIGN_SCALE;
+/** Rocket length (mockup 25 + nose) for its contact shadow. */
+const ROCKET_LENGTH = 32 * S;
+/** Smoke puffs behind a rocket: one more appears every this many seconds of flight. */
+const PUFF_SECONDS = 0.012;
 
 const ink = (width: number) => ({ width, color: GAME_PALETTE.ink, join: "round" as const });
 const slotColor = (slot: number): number =>
@@ -45,136 +47,104 @@ const slotColor = (slot: number): number =>
 
 export function createCombatView(): CombatView {
   return {
+    shadows: new Container({ label: "contact-shadows" }),
     pickups: new Container({ label: "pickups" }),
-    effects: new Container({ label: "effects" }),
     rockets: new Container({ label: "rockets" }),
     overlay: new Container({ label: "combat-overlay" }),
     pickupSprites: new Map(),
     rocketSprites: new Map(),
-    blasts: new Map(),
+    shadowSprites: new Map(),
     tubes: new Map(),
     health: new Map(),
   };
 }
 
-function starPoints(points: number, outer: number, inner: number): number[] {
-  const path: number[] = [];
-  for (let i = 0; i < points * 2; i += 1) {
-    const r = i % 2 === 0 ? outer : inner;
-    const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
-    path.push(Math.cos(a) * r, Math.sin(a) * r);
+/** White smoke puffs trailing the rocket (mockup variant E), fading with distance. */
+function drawTrail(): Container {
+  const trail = new Container();
+  for (let i = 1; i <= 5; i += 1) {
+    trail.addChild(
+      new Graphics()
+        .circle(-(16 + i * 17) * S, Math.sin(i * 1.7) * 3 * S, (5 + i * 1.8) * S)
+        .fill({ color: GAME_PALETTE.smoke, alpha: 0.9 - i * 0.14 })
+    );
   }
-  return path;
+  return trail;
 }
 
-/** Outer orange star, mid lemon star, white core — the only sharp shape (DESIGN_LANGUAGE § 2). */
-function drawBlast(radius: number): Container {
-  const { outer, mid, core } = GAME_PALETTE.explosion;
-  const root = new Container();
-  root.addChild(
-    new Graphics()
-      .poly(starPoints(10, radius, radius * 0.62))
-      .fill(outer)
-      .stroke(ink(STROKE)),
-    new Graphics()
-      .poly(starPoints(8, radius * 0.62, radius * 0.38))
-      .fill(mid)
-      .stroke(ink(STROKE_SMALL)),
-    new Graphics().circle(0, 0, radius * 0.24).fill(core)
-  );
-  return root;
-}
-
-/** Nose points along +x; fins in the shooter's colour; flame behind. */
-const drawRocket = (rocket: RocketState): Container => {
+/** Mockup variant E rocket: nose along +x, fins and band in the shooter's colour, flame behind. */
+function drawRocket(rocket: RocketState, width: number): Container {
   const { body, nose, flame } = GAME_PALETTE.rocket;
+  const fin = slotColor(rocket.ownerSlot);
   const root = new Container();
-  root.addChild(
-    new Graphics().ellipse(-11, 0, 5, 2.6).fill(flame),
-    new Graphics()
-      .poly([-8, -5, -3, 0, -8, 5])
-      .fill(slotColor(rocket.ownerSlot))
-      .stroke(ink(STROKE_SMALL)),
-    new Graphics().roundRect(-7, -3, 13, 6, 3).fill(body).stroke(ink(STROKE_SMALL)),
-    new Graphics().circle(6, 0, 2.6).fill(nose)
-  );
+  const shape = new Graphics()
+    .circle(-14 * S, 0, 6.5 * S)
+    .fill(flame)
+    .poly([-10 * S, -7 * S, -17 * S, -12 * S, -6 * S, -6 * S])
+    .poly([-10 * S, 7 * S, -17 * S, 12 * S, -6 * S, 6 * S])
+    .fill(fin)
+    .stroke(ink(width))
+    .roundRect(-12 * S, -6.5 * S, 25 * S, 13 * S, 6.5 * S)
+    .fill(body)
+    .stroke(ink(width))
+    .moveTo(9 * S, -6.5 * S)
+    .quadraticCurveTo(20 * S, 0, 9 * S, 6.5 * S)
+    .closePath()
+    .fill(nose)
+    .stroke(ink(width))
+    .rect(-5 * S, -6.5 * S, 4 * S, 13 * S)
+    .fill(fin);
+  root.addChild(drawTrail(), shape);
   return root;
-};
-
-/** Cream crate with a sky ring and a tiny rocket mark; origin bottom-centre. */
-const drawPickup = (size: number): Container => {
-  const root = new Container();
-  const half = size / 2;
-  root.addChild(
-    new Graphics()
-      .roundRect(-half, -size, size, size, 5)
-      .fill(GAME_PALETTE.pickupCrate)
-      .stroke(ink(STROKE)),
-    new Graphics()
-      .circle(0, -half, half * 0.62)
-      .stroke({ width: 2.5, color: GAME_PALETTE.pickupRing }),
-    new Graphics().roundRect(-half * 0.45, -half - 2, half * 0.9, 4, 2).fill(GAME_PALETTE.ink)
-  );
-  return root;
-};
-
-/** Rocket tube on the helmet (0.76 R × 0.47 R past the body edge), pivoting toward the aim. */
-const drawTube = (player: PlayerState): Graphics => {
-  const r = player.height * RADIUS_PER_HEIGHT;
-  const length = r + 0.76 * r;
-  const thick = 0.47 * r;
-  return new Graphics()
-    .roundRect(0, -thick / 2, length, thick, thick / 2)
-    .fill(GAME_PALETTE.helmet)
-    .stroke(ink(STROKE_SMALL))
-    .roundRect(length - 3, -thick / 2, 3, thick, 1.5)
-    .fill(GAME_PALETTE.rocket.tubeCap);
-};
-
-/** Keeps one display object per id in `sprites`: creates new ones, places all, removes stale. */
-function syncById<K, T>(
-  sprites: Map<K, Container>,
-  parent: Container,
-  items: {
-    list: readonly T[];
-    key: (item: T) => K;
-    create: (item: T) => Container;
-    place: (sprite: Container, item: T) => void;
-  }
-): void {
-  const seen = new Set<K>();
-  for (const item of items.list) {
-    const id = items.key(item);
-    seen.add(id);
-    let sprite = sprites.get(id);
-    if (!sprite) {
-      sprite = items.create(item);
-      sprites.set(id, sprite);
-      parent.addChild(sprite);
-    }
-    items.place(sprite, item);
-  }
-  for (const [id, sprite] of sprites) {
-    if (seen.has(id)) continue;
-    sprite.destroy({ children: true });
-    sprites.delete(id);
-  }
 }
 
-function syncBlasts(view: CombatView, combat: CombatState, timeSeconds: number): void {
-  const live = combat.events.filter(
-    (event): event is Extract<CombatEvent, { type: "explosion" }> =>
-      event.type === "explosion" && timeSeconds - event.timeSeconds < BLAST_SECONDS
-  );
-  syncById(view.blasts, view.effects, {
-    list: live,
-    key: (event) => event.seq,
-    create: (event) => drawBlast(event.radius),
-    place: (sprite, event) => {
-      sprite.position.set(event.x, event.y);
-      sprite.scale.set(Math.max(0, 1 - (timeSeconds - event.timeSeconds) / BLAST_SECONDS));
-    },
+function placeRocket(sprite: Container, rocket: RocketState): void {
+  sprite.position.set(rocket.x, rocket.y);
+  sprite.rotation = Math.atan2(rocket.dirY, rocket.dirX);
+  const trail = sprite.children[0];
+  const shown = Math.floor(rocket.age / PUFF_SECONDS);
+  trail?.children.forEach((puff, i) => {
+    puff.visible = i < shown;
   });
+}
+
+/** Cream crate with a sky ring and a rocket mark; origin bottom-centre. */
+function drawPickup(size: number, width: number): Container {
+  const half = size / 2;
+  return new Graphics()
+    .roundRect(-half, -size, size, size, size * 0.24)
+    .fill(GAME_PALETTE.pickupCrate)
+    .stroke(ink(width))
+    .circle(0, -half, half * 0.62)
+    .stroke({ width: size * 0.1, color: GAME_PALETTE.pickupRing })
+    .roundRect(-half * 0.45, -half - size * 0.09, half * 0.9, size * 0.18, size * 0.09)
+    .fill(GAME_PALETTE.ink);
+}
+
+/**
+ * Rocket tube on the helmet (mockup variant E: 26 × 14 with an 8 × 16 cap), pivoting toward the
+ * aim. Style E: ink pass at twice the width, then the fills, so it carries one silhouette line.
+ */
+function drawTube(width: number): Graphics {
+  const tube = (g: Graphics) =>
+    g
+      .roundRect(-3 * S, -7 * S, 26 * S, 14 * S, 6 * S)
+      .roundRect(17 * S, -8 * S, 8 * S, 16 * S, 3.5 * S);
+  return tube(new Graphics())
+    .fill(GAME_PALETTE.ink)
+    .stroke(ink(width * 2))
+    .roundRect(-3 * S, -7 * S, 26 * S, 14 * S, 6 * S)
+    .fill(GAME_PALETTE.helmet)
+    .roundRect(17 * S, -8 * S, 8 * S, 16 * S, 3.5 * S)
+    .fill(GAME_PALETTE.helmetEdge);
+}
+
+function placeTube(sprite: Container, player: PlayerState): void {
+  const helmet = helmetPoint(player);
+  const angle = Math.atan2(player.aimY, player.aimX);
+  const r = player.height * RADIUS_PER_HEIGHT;
+  sprite.position.set(helmet.x + Math.cos(angle) * r * 0.5, helmet.y + Math.sin(angle) * 4 * S);
+  sprite.rotation = angle;
 }
 
 interface PipsLook {
@@ -194,18 +164,14 @@ function drawPips(pips: Graphics, { health, slot, max }: PipsLook): void {
   }
 }
 
-function syncPlayerExtras(view: CombatView, frame: CombatFrame): void {
+function syncPlayerExtras(view: CombatView, frame: CombatFrame, width: OutlineWidth): void {
   const { combat, players, maxHealth } = frame;
   const armed = players.filter((player) => combat.fighters.get(player.id)?.weapon);
-  syncById(view.tubes, view.rockets, {
+  syncDisplayById(view.tubes, view.rockets, {
     list: armed,
-    key: (player) => player.id,
-    create: drawTube,
-    place: (sprite, player) => {
-      const helmet = helmetPoint(player);
-      sprite.position.set(helmet.x, helmet.y);
-      sprite.rotation = Math.atan2(player.aimY, player.aimX);
-    },
+    key: (player) => `${player.id}:${width.step}`,
+    create: () => drawTube(width.width),
+    place: placeTube,
   });
   for (const player of players) {
     const fighter = combat.fighters.get(player.id);
@@ -224,6 +190,43 @@ function syncPlayerExtras(view: CombatView, frame: CombatFrame): void {
   }
 }
 
+interface ShadowCaster {
+  key: string;
+  x: number;
+  /** Bottom of the object (world y). */
+  y: number;
+  width: number;
+}
+
+/** Airborne pickups and rockets cast a contact shadow on the first surface below (§ 4). */
+function shadowCasters(combat: CombatState, pickupSize: number): ShadowCaster[] {
+  const casters: ShadowCaster[] = combat.pickups
+    .filter((pickup) => !pickup.grounded)
+    .map((pickup) => ({ key: `p${pickup.id}`, x: pickup.x, y: pickup.y, width: pickupSize }));
+  for (const rocket of combat.rockets) {
+    casters.push({ key: `r${rocket.id}`, x: rocket.x, y: rocket.y, width: ROCKET_LENGTH });
+  }
+  return casters;
+}
+
+function syncShadows(view: CombatView, frame: CombatFrame): void {
+  syncDisplayById(view.shadowSprites, view.shadows, {
+    list: shadowCasters(frame.combat, frame.pickupSize),
+    key: (caster) => caster.key,
+    create: () => new Graphics().ellipse(0, 0, 1, 1).fill(GAME_PALETTE.ink),
+    place: (sprite, caster) => {
+      const span = { x: caster.x - 2, y: caster.y, w: 4, range: CONTACT_SHADOW_RANGE };
+      const ground = surfaceBelow(frame.terrain, span);
+      const shadow = ground === null ? null : contactShadow(ground - caster.y, caster.width);
+      sprite.visible = shadow !== null;
+      if (!shadow || ground === null) return;
+      sprite.position.set(caster.x, ground);
+      sprite.scale.set(shadow.width / 2, shadow.height / 2);
+      sprite.alpha = shadow.alpha;
+    },
+  });
+}
+
 export interface CombatFrame {
   combat: CombatState;
   players: readonly PlayerState[];
@@ -231,26 +234,28 @@ export interface CombatFrame {
   timeSeconds: number;
   maxHealth: number;
   pickupSize: number;
+  /** Terrain the contact shadows fall on. */
+  terrain: TerrainGrid;
+  /** Camera zoom (screen px per world unit) for the outline width clamp. */
+  zoom: number;
 }
 
 /** Matches the combat layers to the state. Call once per rendered frame. */
 export function syncCombatView(view: CombatView, frame: CombatFrame): void {
-  const { combat, timeSeconds, pickupSize } = frame;
-  syncById(view.pickupSprites, view.pickups, {
+  const { combat, pickupSize, zoom } = frame;
+  const width = outlineWidth("prop", zoom);
+  syncDisplayById(view.pickupSprites, view.pickups, {
     list: combat.pickups,
-    key: (pickup: PickupState) => pickup.id,
-    create: () => drawPickup(pickupSize),
+    key: (pickup: PickupState) => `${pickup.id}:${width.step}`,
+    create: () => drawPickup(pickupSize, width.width),
     place: (sprite, pickup) => sprite.position.set(pickup.x, pickup.y),
   });
-  syncBlasts(view, combat, timeSeconds);
-  syncById(view.rocketSprites, view.rockets, {
+  syncDisplayById(view.rocketSprites, view.rockets, {
     list: combat.rockets,
     key: (rocket) => rocket.id,
-    create: drawRocket,
-    place: (sprite, rocket) => {
-      sprite.position.set(rocket.x, rocket.y);
-      sprite.rotation = Math.atan2(rocket.dirY, rocket.dirX);
-    },
+    create: (rocket) => drawRocket(rocket, width.width),
+    place: placeRocket,
   });
-  syncPlayerExtras(view, frame);
+  syncShadows(view, frame);
+  syncPlayerExtras(view, frame, width);
 }
