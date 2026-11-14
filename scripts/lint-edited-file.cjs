@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Claude Code PostToolUse (Edit|Write|MultiEdit) hook: run `eslint --fix` on the one file the
- * agent just edited and hand the remaining errors back in the same tool round, instead of at
- * pre-commit (lint-staged runs the same `eslint --fix` on `*.{ts,tsx}`).
+ * Edit-time lint hook: run `eslint --fix` on the one file the agent just edited and hand the
+ * remaining errors back in the same tool round, instead of at pre-commit (lint-staged runs the
+ * same `eslint --fix` on `*.{ts,tsx}`). Wired as Claude Code PostToolUse (Edit|Write|MultiEdit)
+ * and Cursor postToolUse (Write).
  *
  * Formatting rides along: the ESLint config includes `prettier/prettier` (via GTS), so the fix
  * pass also applies Prettier. Scope matches lint-staged: `.ts` / `.tsx` files not ignored by
@@ -12,14 +13,17 @@
  * edit. ESLint is resolved from the repo that owns the file, so worktree sessions lint with their
  * own dependencies.
  *
- * Contract: exit 2 + errors on stderr (Claude reads them; the edit already happened);
- * exit 0 + JSON `additionalContext` when the fix pass rewrote the file; exit 0 silent otherwise.
+ * Contract (Claude Code): exit 2 + errors on stderr (Claude reads them; the edit already
+ * happened); exit 0 + JSON `additionalContext` when the fix pass rewrote the file.
+ * Contract (Cursor): exit 0 + JSON `additional_context` with the errors or the rewrite note
+ * (Cursor's exit 2 means "deny", which no longer applies after the write).
+ * Both: exit 0 silent when there is nothing to report.
  * Fails open: any internal problem exits 0, so a broken lint setup never blocks editing.
  */
 
 const fs = require("fs");
 const path = require("path");
-const { parseHookInput, readStdin } = require("./hook-input.cjs");
+const { parseHookInput, readStdin, isCursorInput } = require("./hook-input.cjs");
 
 const LINTED_EXTENSIONS = new Set([".ts", ".tsx"]);
 const ESLINT_CONFIG = "eslint.config.js";
@@ -46,7 +50,12 @@ function findLintRoot(filePath, exists = fs.existsSync) {
  * @returns {string | null} absolute path of a lintable edited file
  */
 function resolveEditedFile(input) {
-  const filePath = input && input.tool_input && input.tool_input.file_path;
+  if (!input) return null;
+  // Claude Code and Cursor postToolUse: tool_input.file_path; Cursor's Write input is not
+  // documented, so `path` and the afterFileEdit top-level `file_path` are accepted too.
+  const toolInput =
+    input.tool_input && typeof input.tool_input === "object" ? input.tool_input : {};
+  const filePath = toolInput.file_path || toolInput.path || input.file_path;
   if (typeof filePath !== "string" || !path.isAbsolute(filePath)) return null;
   return LINTED_EXTENSIONS.has(path.extname(filePath)) ? filePath : null;
 }
@@ -97,18 +106,21 @@ function formatErrors(relPath, errors) {
  * @returns {Promise<{exitCode: number, stderr?: string, stdout?: string}>}
  */
 async function run(raw, deps = {}) {
-  const filePath = resolveEditedFile(parseHookInput(raw));
+  const input = parseHookInput(raw);
+  const filePath = resolveEditedFile(input);
   if (!filePath) return { exitCode: 0 };
   const root = (deps.findRoot || findLintRoot)(filePath);
   if (!root) return { exitCode: 0 };
 
   const outcome = await (deps.lint || lintWithEslint)(filePath, root);
   const relPath = path.relative(root, filePath).split(path.sep).join("/");
-  if (outcome.errors.length > 0) {
-    return { exitCode: 2, stderr: formatErrors(relPath, outcome.errors) };
-  }
-  if (!outcome.fixed) return { exitCode: 0 };
+  const errorText = outcome.errors.length > 0 ? formatErrors(relPath, outcome.errors) : null;
+  if (!errorText && !outcome.fixed) return { exitCode: 0 };
   const note = `eslint --fix reformatted ${relPath}; re-read it before the next edit.`;
+  if (isCursorInput(input)) {
+    return { exitCode: 0, stdout: JSON.stringify({ additional_context: errorText || note }) };
+  }
+  if (errorText) return { exitCode: 2, stderr: errorText };
   return {
     exitCode: 0,
     stdout: JSON.stringify({

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Claude Code Stop hook: before a turn ends, run the repo's `type-check` script when the working
+ * Stop hook (Claude Code Stop, Cursor stop): before a turn ends, run the repo's `type-check` script when the working
  * tree has uncommitted TypeScript changes, and send the agent back to work while it fails.
  * Catches cross-file breaks (renames, changed signatures) that the per-file PostToolUse lint
  * (scripts/lint-edited-file.cjs) cannot see. Tests stay with pre-commit and CI: a lap's
@@ -17,7 +17,9 @@
  * The tsc invocation is read from package.json `scripts["type-check"]` (SSOT) and run with the
  * TypeScript binary through `node`, so Windows needs no `pnpm` / `.cmd` shim.
  *
- * Contract: exit 0 always; JSON `{decision: "block", reason}` on stdout to continue the turn.
+ * Contract: exit 0 always. Claude Code: JSON `{decision: "block", reason}` on stdout continues
+ * the turn. Cursor: JSON `{followup_message}` is submitted as the next user message (only after a
+ * `completed` stop; `loop_limit` in .cursor/hooks.json is the outer bound).
  * Fails open: missing git, node_modules or script → allow the stop.
  */
 
@@ -25,7 +27,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const { parseHookInput, readStdin } = require("./hook-input.cjs");
+const { parseHookInput, readStdin, isCursorInput } = require("./hook-input.cjs");
 
 const STATE_FILE = "claude-type-check-on-stop.json";
 const TYPE_CHECK_SCRIPT = "type-check";
@@ -140,14 +142,41 @@ function readState(file) {
  */
 
 /**
+ * @param {Record<string, any> | null} input
+ * @returns {string | null} Claude Code sends `cwd`; Cursor sends `workspace_roots`
+ */
+function resolveCwd(input) {
+  if (!input) return null;
+  if (typeof input.cwd === "string") return input.cwd;
+  const roots = input.workspace_roots;
+  return Array.isArray(roots) && typeof roots[0] === "string" ? roots[0] : null;
+}
+
+/**
+ * @param {{block: boolean, reason?: string}} result
+ * @param {boolean} cursor
+ * @returns {string} stdout for the caller ("" = allow the stop)
+ */
+function formatStopOutput(result, cursor) {
+  if (!result.block) return "";
+  return JSON.stringify(
+    cursor ? { followup_message: result.reason } : { decision: "block", reason: result.reason }
+  );
+}
+
+/**
  * @param {string} raw stdin text
  * @param {StopDeps} [deps]
- * @returns {{block: boolean, reason?: string, skipped?: string}}
+ * @returns {{block: boolean, reason?: string, skipped?: string, cursor?: boolean}}
  */
 function run(raw, deps = {}) {
   const runGit = deps.runGit || defaultRunGit;
   const input = parseHookInput(raw);
-  const cwd = input && typeof input.cwd === "string" ? input.cwd : null;
+  const cursor = isCursorInput(input);
+  // Cursor also fires stop on aborted or errored turns; only a finished turn gets a follow-up.
+  if (cursor && input.status !== "completed")
+    return { block: false, skipped: "turn not completed", cursor };
+  const cwd = resolveCwd(input);
   if (!cwd) return { block: false, skipped: "no cwd" };
 
   const top = runGit(["rev-parse", "--show-toplevel"], cwd);
@@ -174,16 +203,15 @@ function run(raw, deps = {}) {
     return { block: false };
   }
   save(stateFile, { failed: fingerprint });
-  return { block: true, reason: formatReason(result.output) };
+  return { block: true, reason: formatReason(result.output), cursor };
 }
 
 if (require.main === module) {
   void readStdin().then((raw) => {
     try {
       const result = run(raw);
-      if (result.block) {
-        process.stdout.write(JSON.stringify({ decision: "block", reason: result.reason }));
-      }
+      const out = formatStopOutput(result, Boolean(result.cursor));
+      if (out) process.stdout.write(out);
     } catch {
       // fail open: a broken check never traps the agent in the turn
     }
@@ -191,4 +219,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseChangedPaths, formatReason, run };
+module.exports = { parseChangedPaths, formatReason, formatStopOutput, run };
