@@ -527,7 +527,7 @@ Please choose options for each level (e.g., "1D 2D 3A 4B"):
 
 ## Phase 5: Architecture Compliance (For Refactoring)
 
-Extracted code follows `.claude/rules/architecture.md` § Code placement and § Folder structure (layer choice, downward imports, `@/` alias only). Use existing folders; a new folder needs the whitelist in `projectStructure.config.cjs` (protected — ask first).
+Extracted code follows `.claude/rules/app-code.md` § Code placement and `.claude/rules/architecture.md` § Folder structure (layer choice, downward imports, `@/` alias only). Use existing folders; a new folder needs the whitelist in `projectStructure.config.cjs` (protected — ask first).
 
 ### Architecture Checklist
 

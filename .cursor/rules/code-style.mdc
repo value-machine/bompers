@@ -37,30 +37,14 @@ The single statement of how to name shared code and when a copy must be extracte
 - Files: components `ItemList.tsx`, hooks `useItems.ts`, services `itemService.ts`, types `item.types.ts` (case and suffix only — not destinations).
 - **Generic core, contextual edge:** a reusable control takes its role name from the skill (e.g. `TextInput`); context (`label`, validation, data binding) stays in props, the caller, or a thin wrapper (e.g. `ItemDescriptionField`). No plugin registries or unused ports until a second consumer exists.
 
-## TypeScript
+## TypeScript and styling scope
 
-- No `any`: use a narrow type, `unknown`, or a local interface. Last resort for third-party gaps: `// eslint-disable-next-line @typescript-eslint/no-explicit-any` with a one-line justification.
-- Explicit return types on exported and async functions; JSDoc on exported functions and types (explain *why*, not *what*).
-- Catch errors as `unknown` and narrow; mark intentionally un-awaited promises with `void`.
-- Services are pure functions — no React hooks.
-- Imports: external first, then `@/` internal; `import type` for types; prefer named exports. Before importing a package, confirm it is in `package.json` — types for wrapped libraries often come from the wrapper (e.g. TipTap via `@tiptap/react`).
+TypeScript conventions and the styling-scope table: `.claude/rules/app-code.md` § TypeScript and § Styling scope (loads with `src/**`).
 
 ## Reuse and extraction
 
 - Search for an existing component/hook/utility before adding one, and say which ones you checked.
 - When extracting to a new file, trace **every** usage of each moved state, setter, and function (watch error-clearing callbacks, resets, and setters used in handlers): each either moves with the extraction or is exposed in its return value/props. Then confirm every reference in the original file still resolves.
-
-## Styling scope
-
-Pick the scope of a styling change yourself — global tokens by default, since that is the usual intent — and state the scope you used when reporting the change. Ask only per `.claude/rules/agent-behavior.md` § When to ask (for example, when it conflicts with a recorded design decision).
-
-| Scope | Where | Use for |
-|-------|-------|---------|
-| Global tokens | DTCG token files in `src/shared/theme/tokens/` → `pnpm tokens:build` (guide: `documentation/DOC_THEMING.md`) | Colors, radius, fonts, shadows, motion |
-| Component | Kit variants (`cva`) in `src/components/common/<Name>/<Name>.tsx` | How every usage of a kit component (or one variant) looks |
-| Instance | `className` on one usage (merge with `cn()`) | Layout and spacing only (margin, padding, position, width) — never colors or typography |
-
-`radix-ui` is imported only by kit components in `src/components/common/` (enforced: `stack-port-radix`, `pnpm arch:check`).
 
 ## Complexity
 
