@@ -93,5 +93,10 @@
     "title": "Context-cost audit: slim always-on rules",
     "description": "meta-audit-harness context-cost lens (R1-R9): moved Model A/B promote and PR procedures from git-workflow.md into loop-ship references, cut Related Rules footers (DOC_RULES_INDEX is SSOT), moved Windows-only shell text to documentation/DOC_WINDOWS_SHELL.md, and trimmed testing, agent-behavior, code-style and architecture to pointers. Always-on context about 17.6k to 14.5k tokens (-18%), no information lost (ledger in the lap folder). Follow-ups R10-R12 are separate backlog tasks. From the Claude Code video-lessons review.",
     "status": "done"
+  },
+  {
+    "title": "Level file format and preview kit",
+    "description": "Not blocked by code (coordinate the data shape with the engine foundation's LevelDefinition + content catalog via the orchestrator). Define the level file: one self-contained HTML file with inline SVG, any AI agent can write it, any browser shows it. Shapes carry data- attributes for role (platform, spawn, drop, bounds, collectible) and references by ID only (material, effect, sound, behaviour). Deliver: documentation/game/LEVEL_FORMAT.md (spec + versioning + migration policy), an agent-ready authoring guide, an example level, and a public level kit (served under /level-kit/v1/: preview stylesheet + small preview script that draws a legend and labels when the file is opened outside the app, and a catalog.json placeholder). A level must still render as a plain picture with no network. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md § Levels. ",
+    "status": "done"
   }
 ]
