@@ -1,5 +1,7 @@
 import { FillGradient, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import { traceEmblem } from "@/shared/services/emblemRenderer";
+import { playerEmblemShape } from "@/shared/utils/playerEmblem";
 
 /**
  * Blob shapes in line style E (DESIGN_LANGUAGE § 2–3, mockup variant E). Geometry is the mockup's
@@ -67,22 +69,6 @@ export const tubePath = (g: Graphics, u: number): Graphics =>
   g
     .roundRect(-3 * u, -7 * u, 26 * u, 14 * u, 6 * u)
     .roundRect(17 * u, -8 * u, 8 * u, 16 * u, 3.5 * u);
-
-/** Emblem per slot: ● ▲ ■ ✚ (the second cue next to colour), size `s` ≈ its radius. */
-export function emblemPath(g: Graphics, slot: number, s: number): Graphics {
-  switch (slot % 4) {
-    case 0:
-      return g.circle(0, 0, s);
-    case 1:
-      return g.poly([0, -1.1 * s, 1.05 * s, 0.75 * s, -1.05 * s, 0.75 * s]);
-    case 2:
-      return g.roundRect(-0.85 * s, -0.85 * s, 1.7 * s, 1.7 * s, 0.3 * s);
-    default: {
-      const a = 0.33 * s;
-      return g.roundRect(-a, -s, 2 * a, 2 * s, a * 0.4).roundRect(-s, -a, 2 * s, 2 * a, a * 0.4);
-    }
-  }
-}
 
 const slotColor = (colors: readonly number[], slot: number): number =>
   colors[slot % colors.length] ?? GAME_PALETTE.ink;
@@ -167,7 +153,7 @@ export function drawHelmetDetails(slot: number, m: BlobMetrics): Graphics[] {
     .moveTo(-half * 0.6, top + 7 * u)
     .quadraticCurveTo(-half * 0.2, top - u, half * 0.12, top + 2 * u)
     .stroke({ width: 3.5 * u, color: GAME_PALETTE.gloss, alpha: 0.85, cap: "round" });
-  const emblem = emblemPath(new Graphics(), slot, 6.5 * u).fill(
+  const emblem = traceEmblem(new Graphics(), playerEmblemShape(slot, 6.5 * u)).fill(
     slotColor(GAME_PALETTE.players, slot)
   );
   emblem.position.set(0, (top + rim) / 2 + 3 * u);

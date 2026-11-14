@@ -1,10 +1,5 @@
 [
   {
-    "title": "Lobby and match settings",
-    "description": "Depends on: Match rules. Join screen where 1–4 players claim a slot with any keyboard half or gamepad, settings for match duration and gravity, start/restart flow. Replaces the remaining template UI (absorbs the template 'Make the interface yours' work for the game). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Game sound effects",
     "description": "Depends on: Design language for the game, Combat. Generate SFX with ElevenLabs (jump, land squish, bash, rocket fire, explosion, pickup, hit, elimination, respawn, round start/end) within the orchestrator's credit budget; small Web Audio playback module driven by sim events. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
@@ -20,18 +15,13 @@
     "status": "to-do"
   },
   {
-    "title": "Level picker",
-    "description": "Let players choose the level before a round: the built-in levels in public/levels/ (start-arena, floating-garden) plus imported ones from the session. Fits the lobby flow. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "title": "Move launcher pickups into features/collectibles",
+    "description": "Code cleanup (combat D2, match-rules follow-up): one home for everything that drops from the sky. Move the rocket-launcher crate spawning/pickup from features/combat into features/collectibles next to point orbs; combat keeps weapons and firing. No behaviour change. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
   },
   {
-    "title": "Let loop skills call Claude Code built-in review skills",
-    "description": "Context-cost audit follow-up (R12): have loop-check call the built-in /code-review and loop-build or spec-optimize-performance call /simplify instead of duplicating their checks; /loop and /batch do not overlap loop-orchestrate. Protected files: owner consent.",
-    "status": "to-do"
-  },
-  {
-    "title": "Port feedback hooks to Cursor",
-    "description": "Feedback-hooks follow-up: check the current Cursor hooks docs (afterFileEdit, stop) and port the Claude Code PostToolUse lint/format hook and Stop type-check hook where Cursor supports equivalent behavior; document gaps.",
+    "title": "Port the no-git-writes-on-main guard to Cursor",
+    "description": "Harness: Cursor agents should get the same protection as Claude Code. Add a fail-safe beforeShellExecution hook in .cursor/hooks.json mirroring scripts/deny-git-write-on-main (from the Cursor feedback-hooks lap, #20). Owner follow-up from #20: run the Cursor feedback hooks once in a real Cursor session and fix the tool_input field name if the lint error doesn't come back.",
     "status": "to-do"
   }
 ]

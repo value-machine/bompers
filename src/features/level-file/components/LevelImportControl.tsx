@@ -1,16 +1,23 @@
-import { useRef, type ChangeEvent } from "react";
+import { useImperativeHandle, useRef, type ChangeEvent, type Ref } from "react";
 import { Upload } from "lucide-react";
 import { Alert } from "@/components/common/Alert";
 import { Button } from "@/components/common/Button";
-import type { LevelImportReport } from "@/features/level-file/hooks/useLevelSource";
+import type { LevelImportReport } from "@/features/level-file/hooks/useLevelLibrary";
 
 /** Level files are HTML; a bare .svg with the same root works too. */
 const LEVEL_FILE_ACCEPT = ".html,.htm,.svg,text/html,image/svg+xml";
+
+/** Opens the file picker from code (a menu row chosen with the keyboard). */
+export interface LevelFilePicker {
+  open: () => void;
+}
 
 export interface LevelImportControlProps {
   report: LevelImportReport | null;
   onFile: (file: File) => void;
   onDismiss: () => void;
+  /** Optional handle to open the picker without clicking the button. */
+  pickerRef?: Ref<LevelFilePicker>;
 }
 
 const ReportBody = ({ report }: { report: LevelImportReport }) => {
@@ -36,8 +43,14 @@ const ReportBody = ({ report }: { report: LevelImportReport }) => {
 };
 
 /** "Load level" button (file picker) plus the last import's errors or warnings. */
-export const LevelImportControl = ({ report, onFile, onDismiss }: LevelImportControlProps) => {
+export const LevelImportControl = ({
+  report,
+  onFile,
+  onDismiss,
+  pickerRef,
+}: LevelImportControlProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  useImperativeHandle(pickerRef, () => ({ open: () => inputRef.current?.click() }), []);
   const onChange = (event: ChangeEvent<HTMLInputElement>): void => {
     const file = event.target.files?.[0];
     // Reset so picking the same file again still fires `change` (and restarts the match).

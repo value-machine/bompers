@@ -25,7 +25,7 @@ The structural errors E1–E8 belong to the importer.
 
 Seams for later work:
 
-- **Starting-arena lap:** adds `public/levels/start-arena.html` and points `BUILT_IN_LEVEL_URL` (`level-file`) at it.
+- **Starting-arena lap:** adds `public/levels/start-arena.html` and lists it first in `BUILT_IN_LEVEL_FILES` (`level-file`).
 
 ## Dependencies
 

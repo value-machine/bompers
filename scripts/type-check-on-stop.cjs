@@ -27,7 +27,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const { parseHookInput, readStdin, isCursorInput } = require("./hook-input.cjs");
+const { parseHookInput, readStdin, isCursorInput, resolveCwd } = require("./hook-input.cjs");
 
 const STATE_FILE = "claude-type-check-on-stop.json";
 const TYPE_CHECK_SCRIPT = "type-check";
@@ -140,17 +140,6 @@ function readState(file) {
  *   saveState?: (file: string, state: {passed?: string, failed?: string}) => void,
  * }} StopDeps
  */
-
-/**
- * @param {Record<string, any> | null} input
- * @returns {string | null} Claude Code sends `cwd`; Cursor sends `workspace_roots`
- */
-function resolveCwd(input) {
-  if (!input) return null;
-  if (typeof input.cwd === "string") return input.cwd;
-  const roots = input.workspace_roots;
-  return Array.isArray(roots) && typeof roots[0] === "string" ? roots[0] : null;
-}
 
 /**
  * @param {{block: boolean, reason?: string}} result
