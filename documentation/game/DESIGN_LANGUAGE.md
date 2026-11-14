@@ -224,7 +224,7 @@ Light mode is the daytime arena; dark mode is the same world at dusk (plum night
 
 ### Sound palette (the owner's brief, 2026-11-14)
 
-Every SFX prompt is built from one template: **material + action + palette words + "close-mic, dry, cartoon toy sound effect"**, with an explicit `duration_seconds` (the generator's floor is 0.5 s; shorter targets are trimmed after generation) and `prompt_influence` 0.6. The palette below is the source of the words and materials; the SFX table above says what each sound does.
+Every SFX prompt is built from one template: **material + action + palette words + "close-mic, dry, cartoon sound effect"**, with an explicit `duration_seconds` (the generator's floor is 0.5 s; shorter targets are trimmed after generation) and `prompt_influence` 0.6. The palette below is the source of the words and materials; the SFX table above says what each sound does.
 
 | Family | Sounds | Words | Materials | Space · pitch | Target lengths |
 |--------|--------|-------|-----------|---------------|----------------|
@@ -234,6 +234,8 @@ Every SFX prompt is built from one template: **material + action + palette words
 | Round & UI | pickup, respawn, round start, round end | bright, magical, plinky, bubble, spray | marimba, bubble | dry (10/100) · mid | pickup 0.4 s, respawn 0.6 s, round start 2 s, round end 2 s |
 
 **Anchors** (kept takes from the first batch, "more like this"): jump take 3, tumble-bounce take 3, explosion takes 2 and 3, respawn take 2. Kept but not steering: rocket-fire take 3, explosion take 4, pickup takes 1 and 2.
+
+**Banned prompt words:** "toy" (and "rubber toy"): the generator adds squeaky-toy squeaks to anything it touches. Only the newer SFX model is region-locked for this account; prompts target `eleven_text_to_sound_v2`.
 
 **Post-processing** for every file: trim leading and trailing silence, cut to the target length with a short fade-out, loudness-normalise to −16 LUFS, mono, short mp3.
 
