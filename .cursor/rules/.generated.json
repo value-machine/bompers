@@ -6,14 +6,11 @@
     "agent-behavior.mdc",
     "api-integration.mdc",
     "architecture.mdc",
-    "cloud-functions.mdc",
     "code-style.mdc",
-    "database.mdc",
     "debugging.mdc",
     "file-placement.mdc",
     "git-workflow.mdc",
     "platform.mdc",
-    "project-specific.mdc",
     "security.mdc",
     "testing.mdc"
   ]

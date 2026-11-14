@@ -61,8 +61,6 @@ const DEFAULT_IGNORE_PATTERNS = [
   '.eslintcache', // ESLint cache (auto-generated when lint runs)
   '.pnpm-store/**', // pnpm cache directory
   '.pnpm-store',
-  'supabase/.temp/**', // Supabase CLI temporary files
-  'supabase/.temp',
   '.wrangler/**', // Wrangler local state (Cloudflare Workers)
   '.wrangler',
   '.agents/*.zip', // local skill zips; not a package artifact (D24)

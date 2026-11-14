@@ -22,7 +22,7 @@ Pre-commit and `pnpm test:staged(:live)` are fast feedback, **not** merge-safe; 
 ## Testing documentation SSOT
 
 - **Human + fork onboarding:** `documentation/DOC_TESTING.md` — runners, placement, naming, examples, checklist.
-- **This rule:** test authority philosophy, commit vs merge tiers, coverage expectations, Edge Functions policy.
+- **This rule:** test authority philosophy, commit vs merge tiers, coverage expectations.
 
 ## Runner selection
 
@@ -43,7 +43,6 @@ This repo is **not** test-first by default. Default: add meaningful automated te
 **Do not default to TDD** when:
 
 - UI flows, UI kit components, or layout (manual/browser validation is default — the phase gates in `loop-build`)
-- Supabase RLS, auth, or Edge Functions (see § Edge Functions Testing — manual)
 - The spec is still ambiguous — resolve with user verification first (`.agents/skills/loop-refine/SKILL.md`)
 
 Even in TDD, § Test Authority applies: expected values must trace to a cited ground-truth source, not an ad-hoc re-derivation.
@@ -55,8 +54,4 @@ Cross-link: `.agents/skills/loop-plan/SKILL.md` § Steps 5 (acceptance test firs
 - Test behavior through public APIs (business logic, user flows, error paths, edge cases), not implementation details, third-party code, or trivial getters.
 - **Colocate** unit tests: `Module.ts` → `Module.test.ts(x)` in the same folder. `tests/` holds shared setup only (`setup.ts`, `test-utils.tsx`, future `integration/`, `e2e/`) — not a mirror of `src/`.
 - **Mandatory name pattern:** `"should [expected behavior] when [condition]"` for Vitest `it()` and `scripts/*.test.cjs` `test()` names.
-- Shared helpers from `tests/test-utils`: `renderWithProviders`, `renderHookWithProviders`, `createDefaultAuthContextValue` (`documentation/DOC_TESTING.md` § Shared utilities).
-
-## Edge Functions testing
-
-Edge Functions have no staging and no automated tests: prefer frontend logic, test functions manually before deploying, and re-test in-scope function behavior before production. Policy and release gate: `.claude/rules/cloud-functions.md` § Testing Strategy.
+- Shared helpers from `tests/test-utils`: `renderWithProviders` and `renderHookWithProviders` (`documentation/DOC_TESTING.md` § Shared utilities).

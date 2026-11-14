@@ -266,16 +266,6 @@ module.exports = {
       from: { pathNot: "^src/components/common/" },
       to: { path: "node_modules/radix-ui" },
     },
-    {
-      name: "stack-port-supabase",
-      severity: "error",
-      comment:
-        "Supabase client is a stack secret. New imports must go through src/shared/services/supabaseService.ts.",
-      from: {
-        pathNot: "(^src/shared/services/supabaseService\\.ts$)|(\\.test\\.[jt]sx?$)",
-      },
-      to: { path: "node_modules/@supabase/" },
-    },
 
     // === EXTERNAL DEPENDENCY RULES ===
     {

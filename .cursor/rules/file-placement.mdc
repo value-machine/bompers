@@ -14,7 +14,7 @@ Every file and folder must be allowed by the whitelist in `projectStructure.conf
 ## Conventions the validator does not explain
 
 - **Pages:** `src/pages/<area>/<Name>Page.tsx` — named files, not `index.tsx` (ambiguous editor tabs), and no barrels in `pages/`. Avoid `src/pages/*/components/` unless a page truly has several page-only components.
-- **Backend:** migrations `supabase/migrations/*.sql`; Edge Functions `supabase/functions/<capability>/index.ts`; other runtimes `cloud-functions/<name>/`.
+- **Backend:** runtimes (if ever added) in `cloud-functions/<name>/`.
 - **Agent skills:** `.agents/skills/<name>/SKILL.md` (one per folder; optional `references/` and `patterns.md` where the whitelist permits).
 - **Temporary files:** prefix with `temp_` (planning notes, investigation findings, drafts, one-off test data, migration trackers) so they are easy to find and delete. Not for source, config, permanent docs, or SQL migrations.
 

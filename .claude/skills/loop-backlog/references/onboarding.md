@@ -1,6 +1,6 @@
 # Onboarding (first laps on a fresh fork or the template)
 
-Read by [`loop-backlog`](../SKILL.md) when the top task is one of the four seeded onboarding tasks (Supabase, Hosting, App vision, Interface), when § Still open on a fork applies, or when the owner asks for first-time setup ("initialize the repo", "set up my app", "get me started", "onboard me"). Ported from `start` (v0.42.0). The gates below run **in order** before the first product lap: each gate states what must be true, why, how the agent verifies it, and who acts. A prerequisite the agent can check is checked; an action only the owner can take (an account, a vendor settings page) is named as a requirement and the agent waits for confirmation, then verifies the result.
+Read by [`loop-backlog`](../SKILL.md) when the top task is one of the three seeded onboarding tasks (Hosting, App vision, Interface), when § Still open on a fork applies, or when the owner asks for first-time setup ("initialize the repo", "set up my app", "get me started", "onboard me"). Ported from `start` (v0.42.0). The gates below run **in order** before the first product lap: each gate states what must be true, why, how the agent verifies it, and who acts. A prerequisite the agent can check is checked; an action only the owner can take (an account, a vendor settings page) is named as a requirement and the agent waits for confirmation, then verifies the result.
 
 ## Core behavior
 
@@ -8,21 +8,21 @@ Read by [`loop-backlog`](../SKILL.md) when the top task is one of the four seede
 - The **seeded backlog tasks** (`src/config/app-tasks.json`, UI at `/tasks` via DevTasksFab in local dev) are the onboarding checklist; `loop-backlog` ranks them first because everything else depends on them (skill-loop D41).
 - Validate every step before proceeding.
 - Never claim setup is complete without user confirmation and successful verification checks.
-- **Requirements, not methods (owner decision).** For anything in an external app (GitHub, Supabase, Cloudflare, Google Cloud, an OS, an editor) state the end state needed, why, and how the agent will check it. Do not write click paths, menu names, or CLI flags from memory: vendors change them with every release. If the owner asks how, look up the vendor's current documentation (connector or MCP first, per `.claude/rules/api-integration.md`) and point to that page. The owner takes the action; wait for confirmation, then verify. Commands and docs of this repo may be cited as written. Always pair a requirement the owner must act on with the direct link to its settings page (`.claude/rules/agent-behavior.md` § Handing an action to the owner).
+- **Requirements, not methods (owner decision).** For anything in an external app (GitHub, Cloudflare, an OS, an editor) state the end state needed, why, and how the agent will check it. Do not write click paths, menu names, or CLI flags from memory: vendors change them with every release. If the owner asks how, look up the vendor's current documentation (connector or MCP first, per `.claude/rules/api-integration.md`) and point to that page. The owner takes the action; wait for confirmation, then verify. Commands and docs of this repo may be cited as written. Always pair a requirement the owner must act on with the direct link to its settings page (`.claude/rules/agent-behavior.md` § Handing an action to the owner).
 - **The agent finds the link; this file does not store it.** Links to vendor pages are looked up at the moment they are needed (for the surface the owner uses, from the platform's or vendor's current docs), checked to load, and then handed over. Never copy a deep link from memory or from an old chat.
 
 ## Template repo vs fork (read first)
 
 **Working on this plate-harness template** (improving the harness itself — not building an app from a fork):
 
-- **Skip Supabase (task #1)** and **Cloudflare hosting (task #2)**. No project, no Workers Builds link, no `.env` required for most template work. The app runs locally without auth configured.
-- **App vision (task #3):** may stay **`DRAFT`** while exploring or contributing to the template; do not block template PRs on it unless the change is product-facing. Never replace the template's placeholder text in `DOC_APP_VISION.md` or the seeded tasks in `app-tasks.json`: forks start from them.
+- **Skip Cloudflare hosting (task #1)**. No Workers Builds link and no `.env` required for most template work.
+- **App vision (task #2):** may stay **`DRAFT`** while exploring or contributing to the template; do not block template PRs on it unless the change is product-facing. Never replace the template's placeholder text in `DOC_APP_VISION.md` or the seeded tasks in `app-tasks.json`: forks start from them.
 - **Connect tools:** only what the template work needs (usually GitHub access).
 - **Still do:** prerequisites, branch workflow (SSOT: `src/config/git-workflow.json` + `.claude/rules/git-workflow.md` § Mode-aware branch gate), `pnpm dev`, and the verification checklist (§ Mandatory verification checklist).
 
-**Working on a fork** (someone cloned this to build their own app): full backlog applies — tools connected, Supabase, hosting, vision **`ACTIVE`**, etc.
+**Working on a fork** (someone cloned this to build their own app): full backlog applies — tools connected, hosting, vision **`ACTIVE`**, etc.
 
-When the user says they are on the **template** (or context is clearly harness maintenance), default to the skip list above. Only walk Supabase/Cloudflare gates when they are onboarding a fork or explicitly ask to wire up services.
+When the user says they are on the **template** (or context is clearly harness maintenance), default to the skip list above. Only walk the Cloudflare gate when they are onboarding a fork or explicitly ask to wire up services.
 
 ### Still open on a fork
 
@@ -34,18 +34,17 @@ The check reads the repo's state, so it works the same in every fork and passes 
 
 ## Dev task backlog (onboarding SSOT)
 
-Fresh clones ship four pre-seeded tasks in priority order:
+Fresh clones ship three pre-seeded tasks in priority order:
 
-1. Configure Supabase
-2. Put your app online (Cloudflare hosting)
-3. Define app vision (`documentation/DOC_APP_VISION.md`)
-4. Make the interface yours (name, home page, top bar, theme)
+1. Put your app online (Cloudflare hosting)
+2. Define app vision (`documentation/DOC_APP_VISION.md`)
+3. Make the interface yours (name, home page, top bar, theme)
 
 **Agent task sync (`loop-backlog` + `loop-verdict`):**
 
 - At session start: read `src/config/app-tasks.json`; set relevant task `in-progress` when picking up onboarding work.
 - After completing a step: archive completed tasks (move to `app-tasks-archive.json`) or update descriptions (e.g. note theme tokens skipped).
-- Checks: Supabase env vars present; hosting configured per § Configuration tasks gate; vision doc `ACTIVE`; tab title and top bar no longer say Plate Harness; theme as applicable.
+- Checks: hosting configured per § Configuration tasks gate; vision doc `ACTIVE`; tab title and top bar no longer say Plate Harness; theme as applicable.
 - **Conflict:** `/tasks` UI disk-wins — reconcile with user edits; do not fight pending UI state.
 
 Configuration is via `.env`, README, and docs — there is no in-app setup wizard.
@@ -90,7 +89,7 @@ Requirement: the owner has their own copy of the repo on GitHub (a fork or a cop
 
 **Template repo:** skip this gate unless the user is preparing a fork or the work changes user-facing product behavior. Record in chat that vision can stay **`DRAFT`** for template-only work.
 
-**Fork / app onboarding:** This fork's **product SSOT** is `documentation/DOC_APP_VISION.md` (problem statement, user persona, app's role). It comes early because every later choice (which sign-in providers, which data, how the app looks) reads from it.
+**Fork / app onboarding:** This fork's **product SSOT** is `documentation/DOC_APP_VISION.md` (problem statement, user persona, app's role). It comes early because every later choice (which features, which data, how the app looks) reads from it.
 
 - Read that file **now**. If the status line shows **`ACTIVE`**, continue to the next gate.
 - If it shows **`DRAFT`**, run a short **vision interview**. Say why first, in one line: agents read this page before every product decision, so a few minutes now saves guessing later.
@@ -112,12 +111,10 @@ The agent sets up most of this repo itself, through connections to the services 
 | Requirement | Lets the agent | Verify | Who acts |
 |---|---|---|---|
 | The agent can reach the owner's GitHub repo (sign-in or app access, whichever the owner's coding surface uses) | push branches, open pull requests, read CI and the branch rules (branch workflow gate) | a dry-run push to `origin` succeeds and a read of the repo's branch rules answers | Owner grants access; agent verifies |
-| A Supabase connector, signed in to the owner's Supabase account (the repo ships one in `.mcp.json`) | create or find the project, read keys and auth settings, check migrations and logs | a call that lists the owner's Supabase projects or organizations answers | Owner signs in; agent sets `project_ref` in `.mcp.json` once the project exists (Supabase task) |
 | A Cloudflare connector, signed in to the owner's Cloudflare account | read the Worker, its builds and the account's workers.dev subdomain (hosting task) | a call that lists the account's Workers answers | Owner signs in; agent verifies |
 
 - **Check first, ask second.** List the tools the agent already has and make one test call per row; skip every row that already works.
 - **For each missing row:** say in one line what it lets the agent do for them, then give the link where the owner connects it, found for their coding surface (Claude Code in a terminal or desktop, claude.ai on the web, Cursor) per § Core behavior. Wait, then run the row's check.
-- `.mcp.json` ships the Supabase connector read-only (`read_only=true`). Reading is all onboarding needs; letting the agent apply migrations through it is a **data change** for the owner to decide (`.claude/rules/agent-behavior.md` § When to ask).
 - The owner may decline a connector. Then the matching task runs its manual path (the owner reads values off the dashboard); record which rows were declined in chat. Declining a connector means they will paste values by hand. It is not "this app does not use that service" — that question is § Shipped integrations.
 
 ### 5) Branch workflow gate
@@ -147,11 +144,11 @@ The settings that table lists (rulesets, squash-only merges, auto-merge, branch 
 
 ### 6) App runs gate
 
-The agent checks this itself; no owner action. Start `pnpm dev` and confirm `/` and `/tasks` answer (and `/login` once Supabase is configured). Tell the owner the local URL and that the floating **Tasks** button opens their onboarding checklist. If a route fails, troubleshoot before continuing.
+The agent checks this itself; no owner action. Start `pnpm dev` and confirm `/` and `/tasks` answer. Tell the owner the local URL and that the floating **Tasks** button opens their onboarding checklist. If a route fails, troubleshoot before continuing.
 
 ### 7) Configuration tasks gate (work through backlog)
 
-**Template repo:** skip tasks #1 (Supabase) and #2 (Cloudflare) unless explicitly testing those paths. Archive or leave them `to-do`; do not treat missing `.env` as a failure.
+**Template repo:** skip task #1 (Cloudflare) unless explicitly testing that path. Archive or leave it `to-do`; do not treat missing `.env` as a failure.
 
 **Fork onboarding:** walk through backlog tasks in order. Where § Connect tools gate connected a service, the agent does the reads and checks below through it and asks the owner only for what needs their account. Before each setup block, run § Shipped integrations.
 
@@ -159,71 +156,43 @@ The agent checks this itself; no owner action. Start `pnpm dev` and confirm `/` 
 
 The template ships integrations a fork may not want. Ask once per row, with the question tool, before configuring it. Silence or "I'll set it up myself" keeps the code and continues the setup. Only an explicit "this app does not use X" opens the purge offer.
 
-Ask Supabase first. An explicit no covers Google sign-in, anonymous sessions, and error reporting, because those run on it. Ask the three separately only when Supabase stays.
-
 | Integration | Ask before | Purge removes |
 |---|---|---|
-| Supabase | task #1 setup | `supabase/`, `@/shared/services/supabaseService`, auth that calls it, error reporting |
-| Google sign-in | the Google row, if Supabase stays | the Google provider path only (`documentation/DOC_SUPABASE_GOOGLE_OAUTH.md`, the Google button and `signInWithOAuth` provider `"google"`) |
-| Anonymous sessions | the auth-provider rows, if Supabase stays | the anonymous session call in `useAuthSession` |
-| Error reporting | the same, if Supabase stays | `src/features/error-reporting/` and its call in `src/App.tsx` |
-| Cloudflare hosting | task #2 setup | `wrangler.jsonc`, the Worker deploy scripts, Workers Builds as the preview |
+| Cloudflare hosting | task #1 setup | `wrangler.jsonc`, the Worker deploy scripts, Workers Builds as the preview |
 
 The same offer applies to any other shipped integration that calls an outside service. The UI kit stays: `src/components/common/` and the theme tokens are not on this list.
 
 On an explicit no, offer one choice: purge that code so the fork starts clean, or leave it. Purge only after they accept. Run the removal through [`loop-plan` → `remove-feature.md`](../../loop-plan/references/remove-feature.md) (references gone, not just the obvious files), archive the matching seeded task with the reason, and skip that setup block. A declined purge is recorded in chat and the code stays; skip the setup block anyway. Purging Cloudflare means Stop 2 has no preview — say that in the offer.
 
-**Supabase (task #1) — what must be true:**
-
-| Requirement | Why | Verify | Who acts |
-|---|---|---|---|
-| A Supabase project (one is enough until the app has real users; then isolate staging with a Branching staging branch or a second project) | Until isolated, local and previews share the live database (`documentation/DOC_CLOUDFLARE_WORKERS.md` § Staging backend) | Owner confirms it exists; the project URL answers | Owner |
-| Per project or branch, the URL and the publishable (anon) key | The app reads them at build time | Names only, never values: `.env` has `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (README names the legacy alias) | Owner supplies values; agent writes `.env` if asked |
-| Local `.env` points at the project; once staging is isolated, at staging, never at production | Once there are real users, local work must not write their data | Same check; production keys appear only in the hosting build variables | Owner |
-| Only publishable values in any `VITE_*` variable | These are compiled into the public bundle (`.claude/rules/security.md` § Secrets) | Scan `.env` and docs for secret-shaped names | Agent |
-| The auth providers the app uses are enabled in each project or branch | Sign-in works | `pnpm dev` (restart after `.env` changes), `/login` renders and a sign-in completes | Owner enables; agent verifies |
-| The project's **Site URL** is the app's primary origin (the production host, or the local dev origin until a host exists), not the value Supabase starts with | Auth emails and OAuth fall back to the Site URL, so a wrong one sends users to the wrong place | The project's URL configuration page shows it; a sign-in round trip lands on the right origin | Owner |
-| The project's (or branch's) allowed redirect URLs include the origins that use it: local dev, previews (a wildcard pattern), and the production origin | Auth and OAuth links must return to an allowed origin | A sign-in round trip works locally and on a preview | Owner |
-| Google sign-in, if used | Switching the provider on in Supabase is not enough: it needs a Google OAuth client (ID and secret) that allows the project's Supabase callback URL | `documentation/DOC_SUPABASE_GOOGLE_OAUTH.md` is the SSOT; the project's public auth settings (`/auth/v1/settings` with the publishable key) list `google` as enabled | Owner creates the client; agent verifies |
-| Each project's schema equals `supabase/migrations/` | Parity; no dashboard-only changes (`.claude/rules/database.md` § Environments and migrations) | Migration list from the connector or CLI once migrations exist; n/a before the first migration | Agent applies per that section |
-
-**Hand over exact values (after hosting is connected, or the Worker name and workers.dev subdomain are known).** The owner should only copy and paste, so the agent derives every Supabase URL setting, never asks the owner to work them out, and gives them in one block with the direct link to the project's URL configuration page (`https://supabase.com/dashboard/project/<ref>/auth/url-configuration`):
-
-- Derive the production origin from `wrangler.jsonc` `name` plus the account's workers.dev subdomain (Cloudflare connector, or `documentation/DOC_CLOUDFLARE_WORKERS.md`); a custom domain replaces it. Verify the host answers before handing it over.
-- **Site URL:** the production origin.
-- **Redirect URLs:** for each of the production origin, the preview pattern `https://*-<worker name>.<subdomain>.workers.dev`, and `http://localhost:5173`, list both the bare origin and its `/**` form.
-- **Google, if used:** the Google client's allowed callback is `https://<ref>.supabase.co/auth/v1/callback`, with the link to the Google credentials page the owner acts in (`documentation/DOC_SUPABASE_GOOGLE_OAUTH.md`).
-- Verify by reading the project's auth settings with the Supabase connector when it is available. When it is not, offer the owner a ready-to-send message for the Supabase dashboard assistant ("show my Site URL and the full redirect allow-list") and compare the answer with the block above.
-
-Gate: a sign-in that starts on a preview returns to that preview, and one on production stays on production.
-
-**Hosting (task #2 — Put your app online) — what must be true:**
+**Hosting (task #1 — Put your app online) — what must be true:**
 
 | Requirement | Why | Verify | Who acts |
 |---|---|---|---|
 | A Cloudflare account, and a Worker whose name equals `name` in `wrangler.jsonc` | Workers Builds fails when the names differ | Compare `wrangler.jsonc` with the Worker list (Cloudflare connector, or the owner reads it off) | Owner creates or connects; agent aligns `wrangler.jsonc` |
 | The repo is connected to Workers Builds; production branch `main`; non-production branch builds on for all branches | Per-PR previews are the Stop 2 surface | A PR gets the Cloudflare bot comment with a preview URL | Owner |
-| Build variables: `VITE_SUPABASE_*` set once for production builds and once for preview builds (Cloudflare keeps one set per kind, not one per branch; the same values until staging is isolated, then production vs staging values); no `NODE_VERSION` variable | Previews must reach the right backend; `.node-version` must pick Node | Preview build log shows Node from `.node-version`; the preview signs in | Owner sets; agent verifies |
+| Build variables: any `VITE_*` the app needs set once for production builds and once for preview builds (Cloudflare keeps one set per kind, not one per branch); no `NODE_VERSION` variable | `.node-version` must pick Node | Preview build log shows Node from `.node-version` | Owner sets; agent verifies |
 | Optional custom domain, `account_id` | Fork-specific; the template omits them | `routes` / `account_id` in `wrangler.jsonc` when the owner wants them | Owner decides; agent edits |
 
 The agent's playbook (build settings, troubleshooting) is the **Agent one-shot brief** in `documentation/DOC_CLOUDFLARE_WORKERS.md`; the task description in `src/config/app-tasks.json` is the plain-language summary.
 
-**App vision (task #3):** done in § App vision & goals gate; archive the task once the status is **`ACTIVE`**.
+**Hosting origin.** The production origin is `wrangler.jsonc` `name` plus the account's workers.dev subdomain (Cloudflare connector, or `documentation/DOC_CLOUDFLARE_WORKERS.md`); a custom domain replaces it. Verify the host answers before using it anywhere.
 
-**Interface (task #4):** every visible surface is template placeholder, so a fork never ships it unreviewed. Set the app name from the vision in the tab title and top bar, show the owner the home page and top bar and ask keep or change for each, and remove the harness overview card (paths in the task). Then the design tokens (`documentation/DOC_THEMING.md`), or skip if defaults suffice; offer a starting point from the vision (who the users are, the feel they described) rather than asking the owner to pick colors cold.
+**App vision (task #2):** done in § App vision & goals gate; archive the task once the status is **`ACTIVE`**.
 
-**App identity assets (part of task #4, after the tokens and after hosting, so the origin is known).** The template ships a placeholder icon and no share-preview tags; a fork must not ship either.
+**Interface (task #3):** every visible surface is template placeholder, so a fork never ships it unreviewed. Set the app name from the vision in the tab title and top bar, show the owner the home page and top bar and ask keep or change for each, and remove the harness overview card (paths in the task). Then the design tokens (`documentation/DOC_THEMING.md`), or skip if defaults suffice; offer a starting point from the vision (who the users are, the feel they described) rather than asking the owner to pick colors cold.
+
+**App identity assets (part of task #3, after the tokens and after hosting, so the origin is known).** The template ships a placeholder icon and no share-preview tags; a fork must not ship either.
 
 - **Source mark.** Ask the owner once for a logo file (SVG or PNG). With none, offer a simple monogram or glyph drawn from the vision and the `primary` token, and show it before using it.
 - **Generate into `public/`** (the whitelist already allows these types): `favicon.svg` (colors for light and dark via `prefers-color-scheme`), a real `favicon.ico` (the SPA fallback in `wrangler.jsonc` otherwise answers `/favicon.ico` with `index.html` and a 200), `apple-touch-icon.png` (180px), `icon-192.png` and `icon-512.png`, `manifest.json` (name, icons, `theme_color`, `background_color` from the tokens), and `og-image.png` (1200×630: mark and app name on the theme background). Render the images once with the tools at hand: no new dependency and no committed script (`DOC_DECISION_LOG.md` harness-overview-page D4).
-- **Static tags in `index.html`**, not hoisted from React: link-preview scrapers do not run JavaScript. Add the icon, `apple-touch-icon` and `manifest` links, `theme-color` for light and dark, a meta description from the vision, `og:type`, `og:site_name`, `og:title`, `og:description`, `og:url`, `og:image` (+ width, height, alt) and `twitter:card` `summary_large_image`. `og:url` and `og:image` need absolute URLs: derive the origin as in § Supabase "Hand over exact values" (custom domain if the owner has one) and verify it answers.
+- **Static tags in `index.html`**, not hoisted from React: link-preview scrapers do not run JavaScript. Add the icon, `apple-touch-icon` and `manifest` links, `theme-color` for light and dark, a meta description from the vision, `og:type`, `og:site_name`, `og:title`, `og:description`, `og:url`, `og:image` (+ width, height, alt) and `twitter:card` `summary_large_image`. `og:url` and `og:image` need absolute URLs: derive the origin as in "Hosting origin" above (custom domain if the owner has one) and verify it answers.
 - **Verify.** After `pnpm build`, every linked file exists in `dist/` and the tags are in `dist/index.html`; on the preview, each file answers 200 with an image content type. The owner pastes the preview URL into a chat app or a share-preview checker and confirms the card shows the right name and image (scrapers cache, so a change may need a re-scrape).
 - **Custom domain later:** re-run this block's tag step, since the absolute URLs change.
 - Out of scope: SEO beyond the description (sitemap, structured data, robots rules).
 
 Update `app-tasks.json` as each step completes.
 
-Mobile layout or mobile OAuth on local dev, when the owner needs it: **`documentation/DOC_MOBILE_LOCAL_DEV.md`** (SSOT).
+Mobile layout on local dev, when the owner needs it: **`documentation/DOC_MOBILE_LOCAL_DEV.md`** (SSOT).
 
 ## Mandatory verification checklist
 
@@ -248,7 +217,7 @@ If a check fails, fix it in the smallest safe step and re-run it before final co
 
 Only consider onboarding complete when:
 
-**Template repo:** verification checklist passes and user confirms they are ready — Supabase/Cloudflare/vision **`ACTIVE`** not required.
+**Template repo:** verification checklist passes and user confirms they are ready — Cloudflare/vision **`ACTIVE`** not required.
 
 **Fork / app onboarding:**
 

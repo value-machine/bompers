@@ -29,7 +29,7 @@ When this skill is done, the root cause is proven by evidence (not guessed), the
 
 1. **Intake.** Restate the symptom, the environment and what "fixed" means. Search [`references/patterns.md`](references/patterns.md) for the symptom class before forming hypotheses.
 2. **Reconstruct the event chain** (user action → app behavior → API calls / side effects → failure point). For UI issues, analyze component nesting first.
-3. **Hypotheses:** two or three, each mapped to a link in the chain, each with a predicted observation and a falsification condition, at least one a configuration cause (env, RLS, keys, quotas, dev vs prod).
+3. **Hypotheses:** two or three, each mapped to a link in the chain, each with a predicted observation and a falsification condition, at least one a configuration cause (env, keys, quotas, dev vs prod).
 4. **Instrument and narrow:** targeted logs and one unified ordered list of checks that halves the search space at each step. Each check states what success and failure mean (`debugging` rule § User Testing Instructions). Full procedure: [`references/scientific-method.md`](references/scientific-method.md).
 5. **Iterate on the evidence:** mark hypotheses supported, refuted or uncertain, and shrink the set. After a failed fix, switch to [`references/hypothesis-mode.md`](references/hypothesis-mode.md).
 6. **Fix at the cause** with the reductive strategy (`debugging` rule). Never skip, disable or quarantine a test to get green.
@@ -43,7 +43,7 @@ Output: chain → hypotheses (timezone, locale, clock mocking) → the test assu
 
 **Example 2 — owner-reported bug**
 Input: "login works on desktop, not on my phone".
-Output: hypotheses include an OAuth redirect URL mismatch (configuration). Checks: the redirect in the Supabase dashboard vs the preview URL. Cause proven, and the fix enters the loop as the top task.
+Output: hypotheses include an OAuth redirect URL mismatch (configuration). Checks: the redirect allow-list in the identity provider vs the preview URL. Cause proven, and the fix enters the loop as the top task.
 
 ## Output
 

@@ -38,4 +38,3 @@ A small local multiplayer arena shooter (platformer and/or top-down elements). T
 - What is the goal of the game (fun with friends, a portfolio piece, something to release), and who are the players?
 - On which devices is it played (desktop with keyboard or gamepads, phone, a mix), and how do four people control it on one screen?
 - Does the game live inside this web app, or does the web app only host it?
-- Is the Supabase backend (accounts, database, error reporting) needed at all? Local play suggests not; it has not been stated explicitly.

@@ -1,17 +1,7 @@
 [
   {
-    "title": "Remove Supabase, sign-in and error reporting",
-    "description": "Owner said this app does not use Supabase (local same-screen arena shooter, no accounts). Purge via .agents/skills/loop-plan/references/remove-feature.md: supabase/, @/shared/services/supabaseService, auth that calls it (Google and anonymous sessions), src/features/error-reporting/ and its call in src/App.tsx, plus references in docs, config, env and guidance. Hosting, UI kit and theme stay.",
-    "status": "in-progress"
-  },
-  {
-    "title": "Remove Supabase from rules, skills and protected configs",
-    "description": "Follow-up of the Remove Supabase lap. Protected files, ask the owner for consent per edit: .claude/rules (database, cloud-functions, project-specific, api-integration, security, platform, architecture, testing, git-workflow, file-placement), .agents/skills (vendor-supabase.md, signal-adapter.md, onboarding Supabase gate, research-api and others), .gitignore supabase/.temp, eslint.ignores.js, projectStructure.config.cjs supabase entry, .dependency-cruiser.cjs stack-port-supabase, .claude/settings.json mcp entry.",
-    "status": "to-do"
-  },
-  {
     "title": "Put your app online (Cloudflare hosting)",
-    "description": "Get your app live on the internet with Cloudflare (free tier is fine). Your coding agent does the setup — just ask it to \"do the hosting task\". What you need ready: a Cloudflare account, your Supabase keys already in .env, and (optional) a domain name you own. How it works once set up depends on your git workflow mode (see .claude/rules/git-workflow.md § Mode behavior table, rows staging and production) — by default every pull request gets its own preview link and merging the pull request ships to production. One step happens in the Cloudflare website (connecting your repo); the agent tells you what must be set there and why, waits for you, and checks the result. Agent playbook + troubleshooting: documentation/DOC_CLOUDFLARE_WORKERS.md (see \"Agent one-shot brief\"). If you explicitly say this app does not use Cloudflare, the agent offers to delete that hosting code (there is then no preview link). Agent gate: .agents/skills/loop-backlog/references/onboarding.md § Shipped integrations and § Configuration tasks gate (Hosting).",
+    "description": "Get your app live on the internet with Cloudflare (free tier is fine). Your coding agent does the setup — just ask it to \"do the hosting task\". What you need ready: a Cloudflare account and (optional) a domain name you own. How it works once set up depends on your git workflow mode (see .claude/rules/git-workflow.md § Mode behavior table, rows staging and production) — by default every pull request gets its own preview link and merging the pull request ships to production. One step happens in the Cloudflare website (connecting your repo); the agent tells you what must be set there and why, waits for you, and checks the result. Agent playbook + troubleshooting: documentation/DOC_CLOUDFLARE_WORKERS.md (see \"Agent one-shot brief\"). If you explicitly say this app does not use Cloudflare, the agent offers to delete that hosting code (there is then no preview link). Agent gate: .agents/skills/loop-backlog/references/onboarding.md § Shipped integrations and § Configuration tasks gate (Hosting).",
     "status": "to-do"
   },
   {

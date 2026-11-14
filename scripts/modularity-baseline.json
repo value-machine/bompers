@@ -46,12 +46,6 @@
         "src/components/common/Tabs/Tabs.tsx",
         "src/components/common/Tooltip/Tooltip.tsx"
       ]
-    },
-    {
-      "id": "Supabase",
-      "fileCount": 0,
-      "busywork": "none",
-      "files": []
     }
   ]
 }

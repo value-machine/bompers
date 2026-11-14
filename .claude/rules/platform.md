@@ -12,12 +12,7 @@ Shell trigger and local environment configuration for this repo.
 - Use `VITE_*` names for all client-side environment variables; access via `import.meta.env.VITE_*`. What may be a `VITE_*` value and where secrets live: `.claude/rules/security.md` § Secrets.
 - Real values live in the local environment and CI; `.env.example` holds structure only.
 
-**Supabase Environment Variables (Current):**
-- `VITE_SUPABASE_URL` - Your Supabase project URL
-- `VITE_SUPABASE_PUBLISHABLE_KEY` - Your Supabase anonymous/public key (legacy name: `VITE_SUPABASE_ANON_KEY`)
-- Access in code: `import { getSupabase, isSupabaseConfigured } from "@/shared/services/supabaseService"`
-
-**Server-side secrets:** Edge Function secrets: Supabase Dashboard → Project Settings → Edge Functions → Secrets.
+**Server-side secrets:** Cloudflare settings (`documentation/DOC_CLOUDFLARE_WORKERS.md`).
 
 **Hidden Files:**
 - Some files are not visible to the AI (for example `.env`)
