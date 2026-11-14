@@ -66,7 +66,7 @@ Name any new symbol per `.claude/rules/code-style.md` § Naming.
 - A page that needs its own hooks/services → promote it to a feature; pages stay thin.
 - Validation schemas → `features/*/types/*.schema.ts`; generic validators → `shared/utils/validation/`.
 - State: feature slices `features/*/store/`, composition `store/index.ts`, cross-feature `shared/context/`.
-- Route guards → `routes/guards/`, using `src/features/auth/hooks/useAuth.ts` (no second auth hook in `shared/hooks/`).
+- Route guards (if accounts are ever added) → `routes/guards/`, using the auth feature's hook (no second auth hook in `shared/hooks/`).
 - Notifications/toasts → one `features/notifications/`, not split across common + shared.
 - Error boundaries → `components/common/ErrorBoundary/`; reporting service → `shared/services/`.
 - Keyboard shortcuts: global → one hook in `shared/hooks/`; feature → `features/*/hooks/`.
