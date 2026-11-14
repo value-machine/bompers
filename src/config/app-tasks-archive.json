@@ -118,5 +118,10 @@
     "title": "Level file format and preview kit",
     "description": "Not blocked by code (coordinate the data shape with the engine foundation's LevelDefinition + content catalog via the orchestrator). Define the level file: one self-contained HTML file with inline SVG, any AI agent can write it, any browser shows it. Shapes carry data- attributes for role (platform, spawn, drop, bounds, collectible) and references by ID only (material, effect, sound, behaviour). Deliver: documentation/game/LEVEL_FORMAT.md (spec + versioning + migration policy), an agent-ready authoring guide, an example level, and a public level kit (served under /level-kit/v1/: preview stylesheet + small preview script that draws a legend and labels when the file is opened outside the app, and a catalog.json placeholder). A level must still render as a plain picture with no network. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md § Levels. ",
     "status": "done"
+  },
+  {
+    "title": "Level importer in the game",
+    "description": "Depends on: Game engine foundation, Level file format and preview kit. Parse an imported level HTML file into LevelDefinition (rasterise SVG shapes into terrain cells), validate with readable errors, resolve unknown IDs to safe defaults with warnings, run format-version migrations, and offer import by file pick and drag-and-drop. Lives in features/level-file (file I/O) on top of features/level (domain model). Built-in levels are real files in public/levels/. Generate the kit's catalog.json and reference tables from the content catalog in code during the build, with a drift check in CI so the kit stays in sync as the game grows. Also swaps the kit's preview colours to the Gumdrop Pop palette. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md § Levels. ",
+    "status": "done"
   }
 ]

@@ -1,14 +1,11 @@
-import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
+import type { Rect, Shape2D, Vec2 } from "@/shared/types/gameGeometry.types";
 
 /**
  * The engine's level model. Maps 1:1 onto the level file contract (HTML + inline SVG; importer:
  * a later lap). Holds geometry and gameplay data only; looks, sounds and behaviours are string
  * IDs resolved through the content catalog. Units: world units, origin top-left, y down.
  */
-export type TerrainShape =
-  | { type: "rect"; x: number; y: number; w: number; h: number }
-  | { type: "polygon"; points: readonly Vec2[] }
-  | { type: "circle"; cx: number; cy: number; r: number };
+export type TerrainShape = Shape2D;
 
 /** platform = indestructible terrain; destructible = blasts clear it. */
 export type TerrainRole = "platform" | "destructible";
