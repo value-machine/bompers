@@ -71,7 +71,7 @@ export interface GameRenderer {
 
 export function createGameRenderer(app: Application, state: GameState): GameRenderer {
   const world = new Container({ label: "world" });
-  const backdrop = createBackdropView();
+  const backdrop = createBackdropView(app.renderer);
   const terrain = createTerrainView(state.arena);
   const players = createPlayersView();
   const combat = createCombatView();
