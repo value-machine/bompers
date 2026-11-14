@@ -18,6 +18,32 @@ export interface GameTunables {
   match: {
     durationSeconds: number;
     maxPlayers: number;
+    /** Seconds an eliminated player is out of play before respawning (GDD § 6). */
+    respawnDelaySeconds: number;
+    /** Seconds of spawn protection after a respawn (no damage; free movement and fire). */
+    spawnProtectionSeconds: number;
+    /** Seconds after the round ends before a jump press restarts it (no accidental skip). */
+    restartLockSeconds: number;
+    /** Points (GDD § 5). Knock-off credit uses `combat.killCreditSeconds`. */
+    scoring: {
+      /** Eliminating another player (incl. knocking them out of bounds). */
+      kill: number;
+      /** Touching a point orb. */
+      orb: number;
+      /** Subtracted when a player is eliminated with no credited hitter (falling off alone). */
+      fallPenalty: number;
+    };
+  };
+  /** Point orbs falling from the sky onto the level's collectible points (GDD § 5). */
+  collectibles: {
+    firstDelaySeconds: number;
+    intervalSeconds: number;
+    /** No new orb while this many are in the arena. */
+    maxActive: number;
+    /** An orb appears this far above its point and falls onto it, world units. */
+    dropHeight: number;
+    /** Touch box (square), world units. */
+    size: number;
   };
   /** Player avatar: size, movement feel (GDD § 2) and render squash (DESIGN_LANGUAGE § 6). */
   player: {
