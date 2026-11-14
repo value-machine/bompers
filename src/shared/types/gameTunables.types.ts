@@ -91,13 +91,27 @@ export interface GameTunables {
     staggerSteerScale: number;
     /** Terrain impact speed below which a touch is ignored by the dive, units / s. */
     minTerrainHitSpeed: number;
-    /** Phase-1 prototype: the three candidate dives; `options[activeOption]` is played. */
+    /** Phase-1 prototype: the three candidate dives; `options[DiveState.optionIndex]` is played. */
     options: readonly DiveOptionTunables[];
   };
-  /** Camera framing. Placeholder until the camera lap. */
+  /** Multi-target camera framing (GDD § 2). Rates are 1/s (exponential damping). */
   camera: {
-    /** World units of margin kept around the framed area. */
+    /** World units of margin kept around the framed targets. */
     padding: number;
+    /** Max zoom-in: fewest world units visible vertically (also the single-player view). */
+    minViewHeight: number;
+    /** Central deadzone half-size as a fraction of the visible view; moves inside it don't pan. */
+    deadzone: number;
+    /** Zoom-in is ignored until it exceeds this relative step (stops breathing on small moves). */
+    zoomInDeadband: number;
+    /** Pan damping rate. */
+    followRate: number;
+    /** Zoom-in damping rate (slow, calm). */
+    zoomInRate: number;
+    /** Zoom-out damping rate (fast, so players never leave the screen). */
+    zoomOutRate: number;
+    /** Screen-edge margin in world units that every target keeps on every frame, even mid-ease. */
+    edgeMargin: number;
   };
 }
 
