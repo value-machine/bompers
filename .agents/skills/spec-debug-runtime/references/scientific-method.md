@@ -37,7 +37,7 @@ After a fix lands, closure is the owner's Stop 2 test on the preview (**`loop-ve
 
 Before forming hypotheses or editing code, fill these slots in your working notes and reflect them in the first debug response:
 
-1. **Environment frozen:** Which app runtime, branch, deployed build, Supabase/project ref, user/account, browser/session, and feature flag state is being exercised? If unknown, state how you will prove it first.
+1. **Environment frozen:** Which app runtime, branch, deployed build, project/environment, user/account, browser/session, and feature flag state is being exercised? If unknown, state how you will prove it first.
 2. **Recent-change audit:** Which recent files, migrations, PRs, config changes, deploys, or dashboard edits touched the failing surface or shared dependency?
 3. **Event-chain draft:** What is the shortest user action → app behavior → side effect/API/DB call → failure chain you can reconstruct from current evidence?
 4. **Pattern lookup:** Search [`patterns.md`](patterns.md) for symptom tokens, error codes, subsystem names, and recent-change terms. Record matched pattern names or `no match for: <tokens>`.
@@ -58,7 +58,6 @@ Use these guardrails during every evidence loop:
 - **Stop editing after layer refutation:** If runtime evidence moves the likely cause outside the layer being edited, stop accumulating mitigations there. Keep only changes that improve observability or user-facing clarity and are independently justified by evidence.
 - **Recent changes are suspects:** A bug that appears after a refactor, migration, deploy, dashboard edit, dependency bump, or environment split must include at least one hypothesis tied to that change.
 - **Do not outsource an app-owned failure:** External service instability can be a hypothesis, but it must compete against app-specific request shape, auth path, RLS, schema, config, and recent-change hypotheses.
-- **Supabase stack:** For auth, RLS, Storage, and Edge Function errors, include hypotheses about JWT/session, policies, bucket policies, and request shape against `.claude/rules/security.md` and `.claude/rules/database.md` where relevant.
 
 ---
 

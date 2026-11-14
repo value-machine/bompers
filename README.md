@@ -1,6 +1,6 @@
 # plate-harness
 
-A production-ready harness (boilerplate + agent harness) for building React applications with TypeScript, Vite, Tailwind CSS + shadcn/ui, and Supabase. It enforces strict architectural rules and includes authentication as an example feature.
+A production-ready harness (boilerplate + agent harness) for building React applications with TypeScript, Vite, Tailwind CSS + shadcn/ui. It enforces strict architectural rules.
 
 [![How work moves through the harness: request, brief, plan, build, check, ship, then your verdict, with helper skills and guardrails](public/harness-overview.png)](public/harness-overview.png)
 
@@ -11,12 +11,10 @@ _How work moves through the agent harness, in plain language. The running app se
 - ⚡️ **Vite** - Fast build tool and dev server
 - ⚛️ **React 19** - Latest React with TypeScript
 - 🎨 **shadcn/ui** - Tailwind CSS v4 + Radix components owned in-repo (`src/components/common/`)
-- 🗄️ **Supabase** - Backend-as-a-Service for authentication and database (optional)
 - 🧭 **React Router** - Client-side routing
 - 📏 **ESLint + GTS + Prettier** - Code quality and style enforcement (see [ARCHITECTURE.md](./ARCHITECTURE.md#code-quality-tools))
 - 🧪 **Vitest** - Fast unit testing framework
 - 🏗️ **Strict Architecture** - Enforced folder structure and import rules
-- 🔒 **Authentication** - Complete auth flow (login, signup, logout) - requires Supabase
 
 ## Tech stack (pinned in `package.json`)
 
@@ -24,7 +22,7 @@ _How work moves through the agent harness, in plain language. The running app se
 |------|---------|
 | Runtime / UI | React 19, Tailwind CSS 4 + shadcn/ui (Radix, lucide-react), React Router 7 |
 | Build | Vite 8, TypeScript 6 |
-| Data | TanStack Query 5, Supabase JS 2 |
+| Data | TanStack Query 5 |
 | Quality | ESLint 10, Vitest 4, Prettier 3, dependency-cruiser 17 |
 | Agent onboarding | Root `AGENTS.md` (see [ARCHITECTURE.md](./ARCHITECTURE.md)) |
 
@@ -40,7 +38,6 @@ _How work moves through the agent harness, in plain language. The running app se
 
 ### Optional
 
-- **Supabase Account** (optional) - [Sign up here](https://supabase.com) if you want to use authentication and database features
 - **Graphviz** (optional) - Required only for generating architecture graph visualizations
   - Install: `choco install graphviz` (Windows with Chocolatey) or [download installer](https://graphviz.org/download/)
   - Only needed if you want to run `pnpm arch:graph` to visualize the architecture
@@ -151,25 +148,6 @@ Easiest: tell your coding agent **"set up my app"**. It walks you through these 
 
 Or work through the dev task backlog at `/tasks` yourself (or edit `src/config/app-tasks.json` directly). All sections are optional except what your app needs; configure what you want now and skip or archive the rest.
 
-#### Supabase: sign-in and database (optional) 🔐
-
-**You need:** a Supabase account and one project (the free plan is fine): [supabase.com/dashboard](https://supabase.com/dashboard)
-
-**Done when:**
-
-- [ ] `.env` in the project root holds your project's URL and **publishable** key (never the secret key; this one ends up in the browser):
-
-  ```bash
-  VITE_SUPABASE_URL=your-project-url
-  VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
-  ```
-
-- [ ] The dev server was restarted after the change (`pnpm dev`)
-- [ ] `/login` shows the sign-in panel and a sign-in works
-- [ ] *Google sign-in, if you want it:* a Google OAuth client allows Supabase's callback URL. Requirements: [DOC_SUPABASE_GOOGLE_OAUTH.md](./documentation/DOC_SUPABASE_GOOGLE_OAUTH.md)
-
-With the Supabase connector connected, your agent reads these values from your project itself; without it, the agent tells you which page shows them. (`VITE_SUPABASE_ANON_KEY` still works as the older name for the key.)
-
 #### Put your app online: Cloudflare (optional) 🌐
 
 **You need:** a Cloudflare account (the free plan is fine): [dash.cloudflare.com](https://dash.cloudflare.com)
@@ -183,7 +161,7 @@ Ask your agent to "do the hosting task"; it sets up the rest and checks it. Deta
 
 #### Theme customization (optional) 🎨
 
-Edit the design tokens in `src/shared/theme/tokens/` (W3C DTCG 2025.10 JSON: light and dark color files, a base file, a resolver), then run `pnpm tokens:build`. Radius, density, fonts, shadows and motion are tokens too, and `applyTheme()` restyles at runtime (e.g. per login). Users switch Light / Dark / System with the theme icon at the bottom of the profile menu. Guide: [documentation/DOC_THEMING.md](./documentation/DOC_THEMING.md).
+Edit the design tokens in `src/shared/theme/tokens/` (W3C DTCG 2025.10 JSON: light and dark color files, a base file, a resolver), then run `pnpm tokens:build`. Radius, density, fonts, shadows and motion are tokens too, and `applyTheme()` restyles at runtime. Users switch Light / Dark / System with the color mode toggle in the topbar. Guide: [documentation/DOC_THEMING.md](./documentation/DOC_THEMING.md).
 
 #### App vision
 
@@ -193,11 +171,10 @@ Collaborate with your coding agent to fill [documentation/DOC_APP_VISION.md](./d
 
 - Home: `http://localhost:5173/`
 - Tasks (dev only, via FAB): `http://localhost:5173/tasks`
-- Login (when Supabase configured): use ProfileMenu in the topbar
 
 ### Testing on a physical phone (optional)
 
-Chrome DevTools device mode is enough for width breakpoints; it is **not** enough for mobile OAuth, viewport height, or keyboard issues. To test **local dev on a real device** (Android `adb reverse` + localhost, iOS tunnel/preview), follow [documentation/DOC_MOBILE_LOCAL_DEV.md](./documentation/DOC_MOBILE_LOCAL_DEV.md).
+Chrome DevTools device mode is enough for width breakpoints; it is **not** enough for viewport height, or keyboard issues. To test **local dev on a real device** (Android `adb reverse` + localhost, iOS tunnel/preview), follow [documentation/DOC_MOBILE_LOCAL_DEV.md](./documentation/DOC_MOBILE_LOCAL_DEV.md).
 
 ### You're ready
 
@@ -209,26 +186,14 @@ For detailed installation instructions, see the [Quick Start Guide](#quick-start
 
 ### Features
 
-- ✅ **Authentication**: Supabase authentication (when configured)
 - ✅ **Theme Customization**: Light/dark mode and W3C DTCG design tokens in `src/shared/theme/tokens/` ([guide](./documentation/DOC_THEMING.md))
 - ✅ **Frontend Development**: All UI components and features work independently
-
-### Configuring Supabase Later
-
-The app runs without Supabase. Set it up anytime: ask your agent, or follow [Step 5 § Supabase](#supabase-sign-in-and-database-optional-).
-
 
 ### Troubleshooting
 
 **Dev task backlog not visible?**
 - `/tasks` is dev-only — use the floating button when running `pnpm dev`
 - Production builds show an info message instead of the task list
-
-**Supabase connection failing?**
-- Verify your credentials are correct (check for typos)
-- Ensure your `.env` file is in the project root (not in `src/`)
-- Make sure you've restarted the dev server after creating `.env`
-- Check that your Supabase project is active and not paused
 
 **Environment variables not working?**
 - Vite requires environment variables to start with `VITE_`
@@ -285,9 +250,8 @@ To connect a fork:
 1. Rename `name` in [`wrangler.jsonc`](./wrangler.jsonc).
 2. In the Cloudflare dashboard, connect the repo (Build `pnpm install && pnpm run build`, Deploy `npx wrangler deploy`, Root directory **empty**).
 3. Add build variables: `CLOUDFLARE_ACCOUNT_ID` and your `VITE_*` keys. Do **not** add `NODE_VERSION` — `.node-version` pins Node, and a dashboard `NODE_VERSION` silently overrides it (delete it if it exists).
-4. Add the deployed origin to Supabase Auth URLs.
 
-The template is **fork-safe**: no account id or custom domain is committed. Full checklist, Pages migration mapping, OAuth URLs, and troubleshooting: **[documentation/DOC_CLOUDFLARE_WORKERS.md](./documentation/DOC_CLOUDFLARE_WORKERS.md)**.
+The template is **fork-safe**: no account id or custom domain is committed. Full checklist, Pages migration mapping, and troubleshooting: **[documentation/DOC_CLOUDFLARE_WORKERS.md](./documentation/DOC_CLOUDFLARE_WORKERS.md)**.
 
 ## Architecture
 
@@ -312,15 +276,10 @@ This project follows a strict feature-based architecture. See [ARCHITECTURE.md](
 ```
 src/
 ├── assets/          # Static assets and global styles
-├── components/      # App-level shared UI (Topbar, ProfileMenu, etc.)
+├── components/      # App-level shared UI (Topbar, etc.)
 │   └── common/
 ├── config/          # App config (e.g. dev task JSON)
-├── features/        # Feature modules (auth, tasks, etc.)
-│   ├── auth/
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   ├── services/
-│   │   └── types/
+├── features/        # Feature modules (tasks, etc.)
 │   └── tasks/
 ├── layouts/         # Layout components
 ├── pages/           # Route-level page components (subfolder per page)

@@ -28,7 +28,6 @@ Central navigation for plate-harness documentation. For authoritative rules and 
 | **TanStack Query** | [DOC_TANSTACK_QUERY.md](./DOC_TANSTACK_QUERY.md) |
 | **Testing (runners, placement, patterns)** | [DOC_TESTING.md](./DOC_TESTING.md) |
 | **Feature-local README enforcement** | [DOC_FEATURE_LOCAL_README.md](./DOC_FEATURE_LOCAL_README.md) |
-| **Supabase: Sign in with Google (dashboard setup)** | [DOC_SUPABASE_GOOGLE_OAUTH.md](./DOC_SUPABASE_GOOGLE_OAUTH.md) |
 | **Mobile local dev (physical device)** | [DOC_MOBILE_LOCAL_DEV.md](./DOC_MOBILE_LOCAL_DEV.md) |
 | **Cloudflare Workers deployment** | [DOC_CLOUDFLARE_WORKERS.md](./DOC_CLOUDFLARE_WORKERS.md) |
 | **Windows shell (PowerShell, Git Bash)** | [DOC_WINDOWS_SHELL.md](./DOC_WINDOWS_SHELL.md) |
@@ -50,7 +49,6 @@ Central navigation for plate-harness documentation. For authoritative rules and 
 | **Dev task backlog / onboarding checklist** | `src/config/app-tasks.json` + `src/features/tasks/README.md` |
 | **App vision & goals (problem, persona, app role)** | `documentation/DOC_APP_VISION.md` |
 | **Agent workflow layers** | `documentation/DOC_AGENT_WORKFLOW_LAYERS.md` |
-| **Supabase + Google OAuth (dashboard / Google Cloud)** | `documentation/DOC_SUPABASE_GOOGLE_OAUTH.md` |
 | **Mobile local dev on physical device** | `documentation/DOC_MOBILE_LOCAL_DEV.md` |
 | **Cloudflare Workers deployment** | `documentation/DOC_CLOUDFLARE_WORKERS.md` + `wrangler.jsonc` |
 | **Testing (runners, colocation, patterns)** | `documentation/DOC_TESTING.md` |

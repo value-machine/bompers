@@ -22,7 +22,6 @@ Format: [`meta-write-skill/references/port-map-format.md`](../../meta-write-skil
 | `plan` | ## Conflict & compliance checklist | kept | SKILL.md § Steps 6; template § Conflict & compliance |
 | `plan` | ## Gate examples | moved | references/plan-template.md § Gate examples |
 | `plan` | ### Frontend (this stack: Vite + React + Tailwind/shadcn-ui) | moved | references/plan-template.md § Gate examples |
-| `plan` | ### Backend / Supabase | moved | references/plan-template.md § Gate examples |
 | `plan` | ### Repo quality | moved | references/plan-template.md § Gate examples |
 | `plan` | ## Notes during development (mandatory empty section) | moved | references/plan-template.md; filled by loop-build |
 | `plan` | ## Decisions made (mandatory empty section) | moved | references/plan-template.md; filled by loop-build |
@@ -93,7 +92,7 @@ Format: [`meta-write-skill/references/port-map-format.md`](../../meta-write-skil
 | `api-integrate` | ## Phase 1 — Schema / contract (what exists) | moved | references/research-api.md |
 | `api-integrate` | ### Output template | moved | references/research-api.md |
 | `api-integrate` | ## Phase 2 — Sample / wire shape (what values look like) | moved | references/research-api.md |
-| `api-integrate` | ## Worked examples | moved | references/research-api.md + references/vendor-supabase.md |
+| `api-integrate` | ## Worked examples | moved | references/research-api.md |
 | `api-integrate` | ## Related | moved | references/research-api.md intro (api-integration rule, dont-reinvent-the-wheel) |
 | `pattern-review` | ## Proactive obligation (agents) | moved | architecture rule § Pattern risk (trigger, skill-loop D56) + references/review-precedent.md |
 | `pattern-review` | ## What this is NOT | moved | references/review-precedent.md intro |

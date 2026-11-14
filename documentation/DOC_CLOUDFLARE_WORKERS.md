@@ -10,15 +10,14 @@ Deploy this Vite + React SPA to **Cloudflare Workers** with static assets, using
 |--------|----------------|
 | **GitHub (this repo)** | Source + `wrangler.jsonc`. `ci.yml` runs type-check / lint / related tests / build on every PR and push to `develop`, and the full test suite weekly. Rulesets depend on git-workflow mode (`src/config/git-workflow.json`) — see ruleset table below. **No deploy workflow. No `CLOUDFLARE_API_TOKEN` secret.** Production per `.claude/rules/git-workflow.md` § Mode behavior table → **production** (C: merging the PR; A/B: Promote workflow fast-forwards `main` to `develop`). |
 | **Cloudflare Workers Builds** | Builds and deploys on push. `main` → production; every other branch → its own preview (Model C relies on these per-PR previews; A/B also use `develop` as the stable staging preview). Account, build command, and `VITE_*`/`CLOUDFLARE_ACCOUNT_ID` env live in the dashboard connection. |
-| **Supabase** | One project by default: local dev, previews and production share it, so a preview can read and write live data. Rows carry an `environment` tag (`local`, `staging`, `production`). Isolate staging before real users arrive (§ Staging backend). Auth URLs include every deployed origin. |
 
 Push → Cloudflare builds & deploys. GitHub blocks bad merges. There is no GitHub → Cloudflare deploy step.
 
 ## Agent one-shot brief (fork setup)
 
-For coding agents completing the **"Put your app online (Cloudflare hosting)"** task from `src/config/app-tasks.json`. Run it after the user's Supabase env vars exist. Run it as a lap through the loop (`.agents/skills/router/SKILL.md`); onboarding gates: `.agents/skills/loop-backlog/references/onboarding.md`. Branch model: read `src/config/git-workflow.json`; apply `.claude/rules/git-workflow.md` § Mode-aware branch gate. The **user** confirms success — do not claim done without their test.
+For coding agents completing the **"Put your app online (Cloudflare hosting)"** task from `src/config/app-tasks.json`. Run it as a lap through the loop (`.agents/skills/router/SKILL.md`); onboarding gates: `.agents/skills/loop-backlog/references/onboarding.md`. Branch model: read `src/config/git-workflow.json`; apply `.claude/rules/git-workflow.md` § Mode-aware branch gate. The **user** confirms success — do not claim done without their test.
 
-**Target:** GitHub = CI gate only (`ci.yml` on every PR, push to `develop` and a weekly full run; rulesets per mode table below; **no** deploy workflow; **no** `CLOUDFLARE_API_TOKEN` secret). Cloudflare Workers Builds = sole deploy path (`main` → production; per-branch previews — required for Model C, optional in A; `develop` → stable staging preview in A/B). Same Supabase project for preview and production.
+**Target:** GitHub = CI gate only (`ci.yml` on every PR, push to `develop` and a weekly full run; rulesets per mode table below; **no** deploy workflow; **no** `CLOUDFLARE_API_TOKEN` secret). Cloudflare Workers Builds = sole deploy path (`main` → production; per-branch previews — required for Model C, optional in A; `develop` → stable staging preview in A/B).
 
 **Discover first (ask the user when unknown):**
 
@@ -26,7 +25,7 @@ For coding agents completing the **"Put your app online (Cloudflare hosting)"** 
 - Cloudflare **org** `account_id` (not a personal account) — dashboard, or `pnpm exec wrangler whoami`.
 - Production custom domain (optional) with DNS on Cloudflare.
 - Any old Cloudflare **Pages** project to retire once the Worker serves the domain.
-- All build-time `VITE_*` keys (from `.env`): at minimum `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`.
+- All build-time `VITE_*` keys (from `.env`): only if the app uses any.
 - On the fork, the CI check is job name `test`. Find its `integration_id` with `gh api repos/OWNER/REPO/rulesets` (classic branch protection returns 404 — use the rulesets API).
 
 **Implement (fork commits):**
@@ -46,13 +45,11 @@ For coding agents completing the **"Put your app online (Cloudflare hosting)"** 
 
 **Dashboard hand-off (agent usually cannot do via API — Workers Builds needs a user API token, not wrangler OAuth):** give the user exact click-path → Cloudflare → **Workers & Pages → Create → Workers → Connect to Git** → Production branch `main`; Build command `pnpm install && pnpm run build`; Deploy command `npx wrangler deploy`; **Root directory EMPTY** (a stale value causes `root directory not found`); Build variables `CLOUDFLARE_ACCOUNT_ID`, plus every `VITE_*` the app needs; **do NOT set `NODE_VERSION`** — `.node-version` is the Node SSOT and a dashboard `NODE_VERSION` overrides it (stale `NODE_VERSION=20` breaks wrangler 4; `preinstall` fails fast with a fix hint); enable **non-production branch builds** for `develop` (stable staging) and optional per-`feature/*` previews.
 
-**Auth:** add the production URL + a wildcard preview pattern (e.g. `https://*.<your-subdomain>.workers.dev/**`) to Supabase **Authentication → URL configuration** (Site URL + Redirect URLs), so per-branch preview URLs keep working without per-branch edits. For Google, add matching JavaScript origins and callback paths per [DOC_SUPABASE_GOOGLE_OAUTH.md](./DOC_SUPABASE_GOOGLE_OAUTH.md) (include the app's `/auth/callback` route).
-
 **Retire old Pages:** after the Worker serves the domain, disable auto-deploy on the old Pages project, then delete it.
 
 **Gotchas:** `account_id` is required in `wrangler.jsonc` when multiple CF accounts are visible; the live site must load `/assets/*.js` in view-source (not `/src/main.tsx`); `pnpm deploy` is an emergency local path only.
 
-**Gates:** `pnpm lint`, `pnpm type-check`, `pnpm build`, `pnpm validate:structure` pass; a PR with a failing lint stays blocked until CI is green; Workers Builds shows green on latest `main` and on the PR's preview build; login works on production and on the branch preview.
+**Gates:** `pnpm lint`, `pnpm type-check`, `pnpm build`, `pnpm validate:structure` pass; a PR with a failing lint stays blocked until CI is green; Workers Builds shows green on latest `main` and on the PR's preview build; the app loads on production and on the branch preview.
 
 ## What is configured in this repo
 
@@ -91,41 +88,13 @@ In the Cloudflare dashboard → **Workers & Pages → Create → Workers → Con
 | Build command | `pnpm install && pnpm run build` |
 | Deploy command | `npx wrangler deploy` |
 | **Root directory** | **EMPTY (repo root)** — a stale root directory causes `Failed: root directory not found` |
-| Build variables | `CLOUDFLARE_ACCOUNT_ID=<your account id>`, plus build-time `VITE_*` (e.g. `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`). **Never `NODE_VERSION`** — it overrides `.node-version`; delete it if present, on both the **Production** and the **Previews** tab (each tab has its own build variables; preview builds use Previews) |
+| Build variables | `CLOUDFLARE_ACCOUNT_ID=<your account id>`, plus any build-time `VITE_*`. **Never `NODE_VERSION`** — it overrides `.node-version`; delete it if present, on both the **Production** and the **Previews** tab (each tab has its own build variables; preview builds use Previews) |
 
 Then enable **non-production branch builds**: Model C — **all branches** (each PR's preview is its staging; worktree branch names vary, so do not filter by prefix); Model A/B — `develop` (stable staging URL), optionally per-`feature/*` previews. Check the Workers Builds plan's build minutes and concurrency: every pushed branch costs a build.
 
 > `VITE_*` variables are embedded at **build time**. Workers Builds does **not** share runtime and build env vars — set every `VITE_*` your app needs in the build variables, or production will load an app with missing config.
 
-### Staging backend (optional until the app has real users)
-
-The harness starts with **one Supabase project** shared by local dev, previews and production (owner decision, signals-backend D10). The free plan allows two active projects across all your apps, and Supabase Branching is a paid feature. What that costs you: a preview can read and write live data, a migration applied for a PR is live at once, and an Edge Function deploy reaches every environment. So migrations stay backwards-compatible and are tested on a scratch Postgres first (`.claude/rules/database.md` § Environments and migrations).
-
-Isolate staging **before real users or sensitive data arrive**. Pick one:
-
-- **Supabase Branching** (paid plan; [docs](https://supabase.com/docs/guides/deployment/branching), [pricing](https://supabase.com/pricing)). A branch is its own Supabase instance with its own URL and keys. A persistent staging branch has a stable URL, so fixed preview build variables fit. Per-PR preview branches get new keys each time, which fixed Cloudflare variables do not follow (verify before relying on it).
-- **A second project** (free while you have an active slot).
-
-Either way:
-
-1. **Build variables:** in Workers Builds, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` to the production values for production builds and to the staging values for preview builds. Cloudflare keeps one set per kind of build ([docs](https://developers.cloudflare.com/workers/ci-cd/builds/api-reference/)), so this is a one-time setting that every future preview branch inherits. If the dashboard exposes only one set, switch on the branch name in the build command instead.
-2. **Schema parity:** build every environment only from `supabase/migrations/`, never by clicking in a dashboard. Compare each environment's applied-migration list with the files, and apply with the Supabase connector or the Supabase CLI (owner's choice; `supabase/README.md`).
-3. **Order for a PR:** apply its migrations and deploy its Edge Functions to staging while the PR is open, test on the preview URL, merge, then apply the same migrations and functions to production. Keep migrations backwards-compatible (add before you remove): the free plan has no point-in-time recovery.
-4. **Data:** staging holds fake or seed data only. Do not copy production rows into it.
-5. **Auth:** set each environment's Site URL to its own primary origin, add the preview wildcard to the staging environment's redirect URLs (and use staging Google OAuth origins or a staging client); production keeps only its own origin.
-
-**Free-plan caveats:** inactive free projects pause after about a week (restore it before testing a preview). All open PRs share one staging database, so PRs with conflicting migrations collide; serialize them.
-
-### 3. Supabase auth URLs
-
-Add the deployed origins to Supabase **Authentication → URL configuration** (Site URL + Redirect URLs), e.g.:
-
-- `https://<your-worker>.<subdomain>.workers.dev/**` (production)
-- a wildcard preview pattern for branch builds, e.g. `https://*.<your-subdomain>.workers.dev/**` — add this to the project the previews use (§ Staging backend); once staging is isolated, to staging only, and keep production to its own origin(s)
-
-For Google OAuth, also add those origins to Google Cloud **Authorized JavaScript origins** and the callback path. Full checklist: [DOC_SUPABASE_GOOGLE_OAUTH.md](./DOC_SUPABASE_GOOGLE_OAUTH.md).
-
-### 4. Verify
+### 3. Verify
 
 After a push, confirm in the dashboard that Workers Builds shows a green build, then open the live URL. **View source** and confirm it loads built assets (`/assets/*.js`), not `/src/main.tsx` — the latter is the Pages-style dev/MIME-type symptom indicating the build/serve config is wrong.
 

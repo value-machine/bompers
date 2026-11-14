@@ -13,40 +13,32 @@ src/
 │   └── common/          # Reusable UI components (pure components)
 │       ├── Button/
 │       └── Input/        # (kit primitives only; no feature imports, enforced by ESLint)
-├── config/              # Configuration files (app-tasks JSON, legal URLs)
+├── config/              # Configuration files (app-tasks JSON, git workflow)
 ├── features/            # Feature modules (business logic)
-│   ├── auth/
-│   │   ├── components/  # Feature-specific UI components
-│   │   ├── hooks/       # React hooks for feature logic
-│   │   ├── services/    # Pure functions, API calls
-│   │   └── types/       # TypeScript types for feature
 │   ├── harness-overview/ # /harness overview route + home-page welcome card (deletable)
 │   └── tasks/           # Dev-only task backlog (/tasks)
 ├── layouts/             # App shell: wires features into page chrome
 │   ├── MainLayout/      # Main layout component
-│   ├── ProfileMenu/     # Account menu; uses auth profile hooks
-│   └── Topbar/          # Top bar hosting ProfileMenu
+│   └── Topbar/          # Top bar hosting the color mode toggle
 ├── pages/               # Route-level page components
 ├── shared/              # Shared across features
-│   ├── context/         # React contexts (AuthContext, QueryProvider)
+│   ├── context/         # React contexts (ColorModeContext, QueryProvider)
 │   ├── hooks/           # Cross-feature hooks
-│   ├── services/        # Shared services (Supabase client)
-│   ├── utils/           # Shared utility functions (redirectUtils, queryKeys, etc.)
+│   ├── utils/           # Shared utility functions (cn, queryClient, etc.)
 │   └── theme/           # DTCG token source (tokens/), token contract + applyTheme, color mode, layout class names
 ├── index.css            # Tailwind v4 setup + token wiring (values: shared/theme/tokens, W3C DTCG)
 ```
 
 ## Server State Management (TanStack Query)
 
-Server state (user profiles, config, API data) is managed by **TanStack Query**. It provides caching, deduplication, and stale-while-revalidate. The app wraps content in `QueryProvider` (see `App.tsx`).
+Server state (config, API data) is managed by **TanStack Query**. It provides caching, deduplication, and stale-while-revalidate. The app wraps content in `QueryProvider` (see `App.tsx`).
 
-**Provider hierarchy:** `QueryProvider` → `AuthProvider` → `BrowserRouter` → routes
+**Provider hierarchy:** `QueryProvider` → `BrowserRouter` → routes
 
 **Key conventions:**
 
-- **Query keys:** Shared keys in `src/shared/utils/queryKeys.ts`; add per-feature `api/keys.ts` when a feature grows beyond shared keys
-- **Auth boundary:** On logout, `queryClient.clear()` in `authService.logout` (before `signOut()`)
-- **Features:** `useUserProfileQuery` (auth); mutations follow the canonical-merge pattern (`setQueryData` on success) in `DOC_TANSTACK_QUERY.md`. `/tasks` dev backlog intentionally uses local state + fetch (not TanStack).
+- **Query keys:** Per-feature `api/keys.ts`; add `src/shared/utils/queryKeys.ts` only when features share a resource
+- **Features:** mutations follow the canonical-merge pattern (`setQueryData` on success) in `DOC_TANSTACK_QUERY.md`. `/tasks` dev backlog intentionally uses local state + fetch (not TanStack).
 
 See `documentation/DOC_TANSTACK_QUERY.md` for full reference.
 
@@ -74,12 +66,11 @@ Use **`@/`** path aliases only — never relative parent imports (`../`). Full m
 ```typescript
 // ✅ Good
 import { Button } from "@/components/common/Button";
-import { useAuth } from "@/features/auth/hooks/useAuth";
-import { getSupabase } from "@/shared/services/supabaseService";
+import { cn } from "@/shared/utils/cn";
 
 // ❌ Bad
 import { Button } from "../../../components/common/Button";
-import { useAuth } from "../../hooks/useAuth";
+import { cn } from "../../../shared/utils/cn";
 ```
 
 ## Feature Structure
@@ -98,39 +89,39 @@ features/[feature-name]/
 └── utils/          # Feature-specific utility functions (optional)
 ```
 
-### Example: Auth Feature
+### Example: Items Feature (illustrative)
 
-**Types** (`types/auth.types.ts`):
+**Types** (`types/item.types.ts`):
 ```typescript
-export interface User {
+export interface Item {
   id: string;
-  email: string;
+  name: string;
 }
 ```
 
-**Service** (`services/authService.ts`):
+**Service** (`services/itemService.ts`):
 ```typescript
 // Pure functions, no React hooks
-export const login = async (credentials) => {
-  // Call Supabase, return data
+export const fetchItems = async (): Promise<Item[]> => {
+  // Call the API, return data
 };
 ```
 
-**Hook** (`hooks/useAuth.ts`):
+**Hook** (`hooks/useItems.ts`):
 ```typescript
 // Uses React hooks, calls services
-export const useAuth = () => {
-  const [user, setUser] = useState(null);
-  // Call authService.login()
+export const useItems = () => {
+  const [items, setItems] = useState<Item[]>([]);
+  // Call itemService.fetchItems()
 };
 ```
 
-**Component** (`components/LoginForm.tsx`):
+**Component** (`components/ItemList.tsx`):
 ```typescript
 // UI only, uses hooks
-export const LoginForm = () => {
-  const { login } = useAuth();
-  // Render form
+export const ItemList = () => {
+  const { items } = useItems();
+  // Render list
 };
 ```
 
@@ -158,7 +149,7 @@ export const HomePage = () => {
 | Route-level component | `src/pages/` |
 | Layout wrapper | `src/layouts/` |
 | Global state (Context) | `src/shared/context/` |
-| Shared service (Supabase, data providers) | `src/shared/services/` |
+| Shared service (data providers) | `src/shared/services/` |
 | Shared utility (cross-feature) | `src/shared/utils/` |
 
 ### Examples
@@ -167,20 +158,18 @@ export const HomePage = () => {
 
 ```typescript
 // Illustration of import direction, not a required filename.
-import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useItems } from "@/features/items/hooks/useItems";
 import { Button } from "@/components/common/Button";
-
-import { fetchUserProfile } from "@/features/auth/services/userProfileService";
 ```
 
 **❌ Incorrect:**
 
 ```typescript
 // Component importing a service (use a hook)
-import { fetchUserProfile } from "@/features/auth/services/userProfileService";
+import { fetchItems } from "@/features/items/services/itemService";
 
 // src/components/common/Button/Button.tsx
-import { useAuth } from "@/features/auth/hooks/useAuth"; // Common component importing a feature
+import { useItems } from "@/features/items/hooks/useItems"; // Common component importing a feature
 ```
 
 ## Code Quality Tools
@@ -335,19 +324,15 @@ These rules are defined in `eslint.config.js` using GTS's flat config format.
 
 ## TypeScript Path Aliases
 
-`@/*` → `src/*` is the only alias (`tsconfig.app.json`, mirrored in `vite.config.ts` / `vitest.config.ts`). Mirror the filesystem: `@/components/common/Button`, `@/shared/utils/queryKeys`, `@/features/auth/hooks/useAuth`. Never use `../` parent imports.
+`@/*` → `src/*` is the only alias (`tsconfig.app.json`, mirrored in `vite.config.ts` / `vitest.config.ts`). Mirror the filesystem: `@/components/common/Button`, `@/shared/utils/cn`, `@/features/<feature>/hooks/<hook>`. Never use `../` parent imports.
 
 ## API Integration
 
 This harness supports connecting to external APIs:
 
-- **Supabase**: For authentication (configure via `.env` — see README and dev task backlog)
-- **Supabase database**: schema, RLS and the signals tables (error logs, feedback, bugs) live in `supabase/migrations/`; access model in `supabase/README.md`
-- **Error reporting**: `src/features/error-reporting/` sends browser errors to `error_logs` (see its README)
+No backend or external API is configured: the app is a local, same-screen game. Add one only through the loop.
 
 **Researching a new external API before wiring it up?** See `.claude/rules/api-integration.md` (principles) and `.agents/skills/loop-plan/references/research-api.md` (MCP-first, schema→sample procedure) — this bullet describes *what's configured*, not *how to research* a new vendor/API.
-
-Both services are optional. The services are initialized in `shared/services/` and can be used directly in feature services.
 
 ## Dev task backlog
 
@@ -357,7 +342,7 @@ Local development includes an in-repo task backlog for coding agents and develop
 - **UI:** `/tasks` route (dev-only) via `DevTasksFab`
 - **API:** `vite-plugin-dev-tasks.ts` — `/__dev/tasks` endpoints (serve mode only)
 
-Fresh clones ship onboarding tasks (Supabase, Hosting, App vision, Theme). See `src/features/tasks/README.md` and `.agents/skills/loop-backlog/SKILL.md` (onboarding gates: `references/onboarding.md`).
+Fresh clones ship onboarding tasks (Hosting, App vision, Theme). See `src/features/tasks/README.md` and `.agents/skills/loop-backlog/SKILL.md` (onboarding gates: `references/onboarding.md`).
 
 ## Best Practices
 
@@ -367,7 +352,7 @@ Fresh clones ship onboarding tasks (Supabase, Hosting, App vision, Theme). See `
 4. **Types in feature folders**: Keep types close to where they're used
 5. **Shared code in shared/**: Only put truly shared code here
 6. **Common components are reusable**: No business logic, just UI
-7. **Connect to APIs directly**: Use Supabase services directly in feature services
+7. **Connect to APIs directly**: Call APIs from feature services
 
 ## Adding a New Feature
 

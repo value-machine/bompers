@@ -4,9 +4,9 @@ Project memory for coding agents (Cursor, Claude Code, Codex, and other AGENTS.m
 
 ## Project
 
-**plate-harness** — Vite + React 19 + TypeScript + Tailwind/shadcn-ui + Supabase + TanStack Query harness (boilerplate + agent harness) with strict, enforced architecture.
+**plate-harness** — Vite + React 19 + TypeScript + Tailwind/shadcn-ui + TanStack Query harness (boilerplate + agent harness) with strict, enforced architecture.
 
-- **Stack:** Vite 8, React 19, TypeScript 6 (strict), Tailwind CSS 4 + shadcn/ui (Radix, lucide-react), TanStack Query 5, Supabase 2, React Router 7, Vitest 4, ESLint 10 + GTS + Prettier, Husky + lint-staged, dependency-cruiser. Pin versions in `package.json`.
+- **Stack:** Vite 8, React 19, TypeScript 6 (strict), Tailwind CSS 4 + shadcn/ui (Radix, lucide-react), TanStack Query 5, React Router 7, Vitest 4, ESLint 10 + GTS + Prettier, Husky + lint-staged, dependency-cruiser. Pin versions in `package.json`.
 - **Package manager:** `pnpm@9.15.4` (enforced via `packageManager` field — do **not** use npm or yarn).
 
 ## Workflow — agent skills
@@ -60,10 +60,7 @@ The pre-commit hook rebuilds both mirrors from staged sources (`agent-sync.confi
 
 | Path | Description |
 |------|-------------|
-| `.claude/rules/database.md` | SQL migration best practices for the configured relational database (this fork: Supabase/PostgreSQL; not client queries or TanStack) · `paths: ["**/migrations/**/*.sql"]` |
-| `.claude/rules/cloud-functions.md` | When to use Edge Functions vs frontend, function organization, and architecture guidelines · `paths: ["**/supabase/functions/**", "cloud-functions/**"]` |
-| `.claude/rules/project-specific.md` | Supabase Edge Function rate limiting (Postgres rate_limits). Not a home for other hosts. · `paths: ["**/supabase/functions/**/*.ts"]` |
-| `.claude/rules/api-integration.md` | Principles for researching an external API, vendor, or backend before writing integration code (MCP-first, doc-freshness, POC-before-code) · `paths: ["**/services/**", "**/lib/**", "**/supabase/functions/**", "cloud-functions/**"]` |
+| `.claude/rules/api-integration.md` | Principles for researching an external API, vendor, or backend before writing integration code (MCP-first, doc-freshness, POC-before-code) · `paths: ["**/services/**", "**/lib/**", "cloud-functions/**"]` |
 
 ## Where things live
 
@@ -81,9 +78,8 @@ The pre-commit hook rebuilds both mirrors from staged sources (`agent-sync.confi
 | App vision | `documentation/DOC_APP_VISION.md` |
 | Agent workflow layers | `documentation/DOC_AGENT_WORKFLOW_LAYERS.md` |
 | Frontend hosting (Cloudflare Workers) | `documentation/DOC_CLOUDFLARE_WORKERS.md` + `wrangler.jsonc` |
-| Edge / cloud functions deploys | `.claude/rules/cloud-functions.md` |
 
-Deploy functions yourself when a change requires it, and verify the deploy succeeded (`.claude/rules/cloud-functions.md`). Hand-off checklist before shipping: `.agents/skills/loop-check/SKILL.md` § Steps 5.
+Hand-off checklist before shipping: `.agents/skills/loop-check/SKILL.md` § Steps 5.
 
 ## Defaults
 

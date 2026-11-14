@@ -23,8 +23,6 @@ User-level and plugin skills the loop may hand to. Read by [`../SKILL.md`](../SK
 
 | Situation | Skill (name) |
 |-----------|----------------|
-| Any Supabase product (Auth, DB, Edge, Realtime, Storage, MCP, migrations) | `supabase` |
-| Postgres query/schema performance, pooling, RLS performance | `supabase-postgres-best-practices` |
 | Cloudflare platform routing (“what product do I use?”) | `cloudflare` |
 | Wrangler CLI commands and config | `wrangler` |
 | Workers code author/review, anti-patterns | `workers-best-practices` |

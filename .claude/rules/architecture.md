@@ -22,7 +22,7 @@ When a step matches a heavy-operation trigger — N+1 / per-row queries, unbound
 2. Design a cheaper option first (narrower query + index, pagination, server-side aggregation, caching via query keys, batching, virtualization, memoization, `startTransition`); prefer the reductive option (`.claude/rules/debugging.md` § Reductive Strategy).
 3. Implement the cheaper option and record the trade-off in the plan or PR summary. Do not ship the expensive path silently. Ask only when the choice falls on `.claude/rules/agent-behavior.md` § When to ask (for example, paid usage or a data or irreversible change).
 
-Tools: CWV symptoms → `web-perf` plugin skill; structural fix → `.agents/skills/spec-optimize-performance/SKILL.md`; stack-native fixes → `.agents/skills/spec-optimize-performance/SKILL.md`; indexes → `.claude/rules/database.md`.
+Tools: CWV symptoms → `web-perf` plugin skill; structural fix → `.agents/skills/spec-optimize-performance/SKILL.md`; stack-native fixes → `.agents/skills/spec-optimize-performance/SKILL.md`.
 
 ### Layer consistency (workaround guard)
 
@@ -54,7 +54,7 @@ Find the real layout with `ls src/`. Allowed paths: `projectStructure.config.cjs
 - `shared/` — reused by 2+ features.
 - `layouts/` — app shell; may compose features.
 
-Backend: Supabase Edge Functions in `supabase/functions/<name>/index.ts` (shared code in `_shared/`); other runtimes in `cloud-functions/<service>/` (see `.claude/rules/cloud-functions.md`).
+Backend runtimes (if ever added) live in `cloud-functions/<service>/`.
 
 **Path aliases (SSOT):** `@/*` → `src/*` is the only alias (`tsconfig.app.json`). Mirror the filesystem (`@/shared/utils/<module>`, `@/features/<feature>/hooks/<hook>`). No `../` parent imports, no bare aliases like `@shared`.
 
@@ -66,7 +66,7 @@ Name any new symbol per `.claude/rules/code-style.md` § Naming.
 - A page that needs its own hooks/services → promote it to a feature; pages stay thin.
 - Validation schemas → `features/*/types/*.schema.ts`; generic validators → `shared/utils/validation/`.
 - State: feature slices `features/*/store/`, composition `store/index.ts`, cross-feature `shared/context/`.
-- Route guards → `routes/guards/`, using `src/features/auth/hooks/useAuth.ts` (no second auth hook in `shared/hooks/`).
+- Route guards (if accounts are ever added) → `routes/guards/`, using the auth feature's hook (no second auth hook in `shared/hooks/`).
 - Notifications/toasts → one `features/notifications/`, not split across common + shared.
 - Error boundaries → `components/common/ErrorBoundary/`; reporting service → `shared/services/`.
 - Keyboard shortcuts: global → one hook in `shared/hooks/`; feature → `features/*/hooks/`.

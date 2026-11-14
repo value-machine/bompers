@@ -212,7 +212,7 @@ test('cursor-rules mirror converts paths to globs and no paths to alwaysApply', 
       'agent-sync.config.json': BOTH_CONFIG,
       '.claude/rules/always.md': '# Always\nBe brief.\n',
       '.claude/rules/edge.md':
-        "---\npaths:\n  - 'supabase/functions/**/*.ts'\n  - src/api/**\n---\nUse Deno.\n",
+        "---\npaths:\n  - 'server/functions/**/*.ts'\n  - src/api/**\n---\nUse Deno.\n",
     },
     repo => {
       assert.equal(run(repo.dir).status, 0);
@@ -222,7 +222,7 @@ test('cursor-rules mirror converts paths to globs and no paths to alwaysApply', 
       );
       assert.equal(
         read(repo.dir, '.cursor/rules/edge.mdc'),
-        '---\nglobs: ["supabase/functions/**/*.ts", "src/api/**"]\nalwaysApply: false\n---\nUse Deno.\n',
+        '---\nglobs: ["server/functions/**/*.ts", "src/api/**"]\nalwaysApply: false\n---\nUse Deno.\n',
       );
       assert.equal(
         existsSync(join(repo.dir, '.claude/skills')),

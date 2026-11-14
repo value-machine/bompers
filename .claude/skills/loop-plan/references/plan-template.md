@@ -94,8 +94,6 @@ Optional sections when relevant: Source / context, User stories (from `BRIEF.md`
 ## Gate examples
 
 - **Frontend (Vite + React + Tailwind / shadcn-ui):** expected UI present; primary flows work; loading / error / empty states; responsive where relevant (browser MCP when available).
-- **Edge Functions:** invoke locally or deployed and verify the response (`.claude/rules/cloud-functions.md`).
-- **Database:** migration applied to a test or staging DB; schema verified; RLS tested with representative roles.
 - **Repo quality:** lint, type-check and the tests the change touches pass at each phase boundary; the acceptance test passes at the last one.
 
 ## Example phase overview
