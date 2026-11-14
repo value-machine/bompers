@@ -1,5 +1,30 @@
 [
   {
+    "title": "Configure Supabase",
+    "description": "Set up the backend: one Supabase project with the auth providers you use enabled, its Site URL set to the app's primary origin, and its URL and publishable key available as VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (local .env, plus the hosting build variables for main and for previews). Before the app has real users, isolate staging from production with a Supabase Branching staging branch or a second project (documentation/DOC_CLOUDFLARE_WORKERS.md § Staging backend). Your coding agent lists the exact requirements, checks the result, and tells you what only you can do. For Google sign-in, requirements are in documentation/DOC_SUPABASE_GOOGLE_OAUTH.md. If you explicitly say this app does not use Supabase, Google sign-in, anonymous sessions, or error reporting, the agent offers to delete that code. Agent gate: .agents/skills/loop-backlog/references/onboarding.md § Shipped integrations and § Configuration tasks gate (Supabase). Result: archived, the owner said this app does not use Supabase (local same-screen game); code removed by the Remove Supabase task.",
+    "status": "done"
+  },
+  {
+    "title": "In-app feedback widget",
+    "description": "A small signed-in feedback form that writes to app_feedback with the page and environment. Depends on: Signals backend task. Result: archived, the owner said this app does not use Supabase (local same-screen game); code removed by the Remove Supabase task.",
+    "status": "done"
+  },
+  {
+    "title": "Admin signals view and switch the signal adapter on",
+    "description": "An admin-only view (role claim) to triage error clusters and feedback, and turn on loop-backlog's signal adapter so open signals become ranked backlog tasks. Depends on: Signals backend, error capture and feedback widget tasks. Result: archived, the owner said this app does not use Supabase (local same-screen game); code removed by the Remove Supabase task.",
+    "status": "done"
+  },
+  {
+    "title": "Add a db:push-staging script or fix the adapter reference",
+    "description": "The signal adapter (.agents/skills/loop-backlog/references/signal-adapter.md) tells the agent to run `pnpm run db:push-staging`, which does not exist. Either add a script that applies supabase/migrations to the staging project with a pinned Supabase CLI (needs project linking, which the owner must set up), or change the adapter to say the connector or CLI applies migrations. Protected file edit: needs owner approval. Context: documentation/DOC_DECISION_LOG.md § signals-backend D8. Result: archived, the owner said this app does not use Supabase (local same-screen game); code removed by the Remove Supabase task.",
+    "status": "done"
+  },
+  {
+    "title": "Decide whether the app uses anonymous sign-ins",
+    "description": "The app asks Supabase for an anonymous session on every visit and Supabase refuses (anonymous_provider_disabled, HTTP 422), twice per page load. Either enable anonymous sign-ins in the project (anonymous users get the authenticated role, so the feedback policy would admit them; review RLS first) or remove the call. Auth permission model: needs an owner decision. Result: archived, the owner said this app does not use Supabase (local same-screen game); code removed by the Remove Supabase task.",
+    "status": "done"
+  },
+  {
     "title": "Define app vision",
     "description": "Collaborate with the coding agent to fill documentation/DOC_APP_VISION.md (problem, persona, app role). Replace placeholder bullets with real prose and change Vision status from DRAFT to ACTIVE when complete. Agent gate: .agents/skills/loop-backlog/references/onboarding.md § App vision & goals gate. Result: DOC_APP_VISION.md is ACTIVE, written from the owner game design document (local same-screen arena shooter).",
     "status": "done"
