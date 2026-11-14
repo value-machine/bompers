@@ -146,3 +146,94 @@ describe("gameSim level settings", () => {
     expect(state.players[0]?.grounded).toBe(true);
   });
 });
+
+describe("gameSim — dive headbutt", () => {
+  // Acceptance test of the dive-headbutt lap (BRIEF.md § Success check).
+  it("should land one typed dive hit and knock the opponent away when player 1 fires toward them", () => {
+    const state = createGameState({
+      level: {
+        ...level,
+        spawns: [
+          { x: 300, y: 320 },
+          { x: 360, y: 320 },
+        ],
+      },
+      tunables: DEFAULT_GAME_TUNABLES,
+    });
+    stepGame(state, keys(), dt);
+    const hits = [];
+    let victimFarthestX = 0;
+    for (let i = 0; i < 90; i += 1) {
+      // Fire + right for the first steps only (one press), then hands off.
+      stepGame(state, i < 3 ? keys("KeyF", "KeyD") : keys(), dt);
+      hits.push(...state.dive.hits);
+      victimFarthestX = Math.max(victimFarthestX, state.players[1]!.x);
+    }
+    expect(hits).toHaveLength(1);
+    // Player 2 spawns facing right, away from the attacker: a back hit.
+    expect(hits[0]).toMatchObject({
+      attackerSlot: 0,
+      victimSlot: 1,
+      kind: "contact",
+      source: "dive",
+      zone: "back",
+      damage: DEFAULT_GAME_TUNABLES.combat.hitDamage.contact.back,
+    });
+    expect(state.combat.fighters.get("p1")?.health).toBe(
+      DEFAULT_GAME_TUNABLES.combat.maxHealth - DEFAULT_GAME_TUNABLES.combat.hitDamage.contact.back
+    );
+    expect(hits[0]!.impulse.x).toBeGreaterThan(0);
+    expect(victimFarthestX).toBeGreaterThan(360 + 100);
+  });
+
+  const closeSpawns = () => {
+    const state = createGameState({
+      level: {
+        ...level,
+        spawns: [
+          { x: 300, y: 320 },
+          { x: 360, y: 320 },
+        ],
+      },
+      tunables: DEFAULT_GAME_TUNABLES,
+    });
+    stepGame(state, keys(), dt);
+    return state;
+  };
+  /** Player 1 presses fire + right once, then the sim runs until the dive hits (or gives up). */
+  const diveUntilHit = (state: ReturnType<typeof createGameState>): void => {
+    for (let i = 0; i < 90 && (i < 3 || state.dive.hits.length === 0); i += 1) {
+      stepGame(state, i < 3 ? keys("KeyF", "KeyD") : keys(), dt);
+    }
+  };
+
+  it("should score the kill and give the victim a fresh dive and no tumble when a dive takes the last chunk", () => {
+    const state = closeSpawns();
+    const victim = state.players[1]!;
+    state.combat.fighters.get(victim.id)!.health = 1;
+    diveUntilHit(state);
+    expect(state.dive.hits).toHaveLength(1);
+    expect(state.rules.scores[0]).toBe(DEFAULT_GAME_TUNABLES.match.scoring.kill);
+    expect(state.rules.respawnAt.has(victim.id)).toBe(true);
+    stepFor(state, respawnDelay + 0.05);
+    expect(state.rules.respawnAt.has(victim.id)).toBe(false);
+    expect(victim.tumbleSeconds).toBe(0);
+    expect(state.dive.motions[victim.id]).toMatchObject({ phase: "idle", stagger: 0, cooldown: 0 });
+    expect(state.combat.fighters.get(victim.id)!.invulnerableUntil).toBeGreaterThan(
+      state.timeSeconds
+    );
+  });
+
+  it("should not bump or hit a player who is waiting to respawn", () => {
+    const state = closeSpawns();
+    const waiting = state.players[1]!;
+    state.rules.respawnAt.set(waiting.id, state.timeSeconds + 10);
+    const before = { x: waiting.x, y: waiting.y };
+    for (let i = 0; i < 90; i += 1) {
+      stepGame(state, i < 3 ? keys("KeyF", "KeyD") : keys(), dt);
+      expect(state.dive.hits).toHaveLength(0);
+    }
+    expect({ x: waiting.x, y: waiting.y }).toEqual(before);
+    expect(state.players[0]!.x).toBeGreaterThan(360);
+  });
+});

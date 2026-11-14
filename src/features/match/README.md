@@ -9,9 +9,9 @@ One round of the game (timed round, scoring, respawn and spawn protection, winne
 | Layer      | Path                       | Purpose                                                                                                                                                                                                                                       |
 | ---------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Services   | `services/gameSim.ts`      | `GameState`, `createGameState({ level, tunables })`, `stepGame(state, inputs, dt)` — pure, no DOM; mutates and returns `state`                                                                                                                |
-| Services   | `services/matchRules.ts`   | Step 5: out of bounds → elimination, scoring from combat's `playerEliminated` events (by `seq`) and collected orbs, respawn queue, spawn protection; `roundWinners`, `roundResultLabel`, `isRestartPress` |
+| Services   | `services/matchRules.ts`   | Step 5: out of bounds → elimination, scoring from combat's `playerEliminated` events (by `seq`) and collected orbs, respawn queue (a respawn also resets the player's dive, `resetDive`), spawn protection; `roundWinners`, `roundResultLabel`, `isRestartPress` |
 | Services   | `services/spawnChoice.ts`  | `chooseSpawnIndex` — the spawn whose nearest active opponent is farthest (pure)                                                                                                                                                                    |
-| Services   | `services/gameRenderer.ts` | Scene graph per DESIGN_LANGUAGE § 5: `world` (camera transform: terrain → pickups, point orbs → effects → rockets → players (protected ones blink) → combat overlay) and `hud`; only players in play are drawn and framed; `renderGame` per frame frames the camera with `computeCameraView` (`settings: state.tunables.camera`) |
+| Services   | `services/gameRenderer.ts` | Scene graph per DESIGN_LANGUAGE § 5: `world` (camera transform: terrain → pickups, point orbs → effects → rockets → dive impact pops → players (protected ones blink; dive pose overlays) → combat overlay) and `hud`; only players in play are drawn and framed; `renderGame` per frame frames the camera with `computeCameraView` (`settings: state.tunables.camera`) |
 | Services   | `services/hudRenderer.ts`  | HUD (DESIGN_LANGUAGE § 7, simplified): timer card, one card per player (emblem chip, health chunks, score), round-result banner; fixed canvas colours only                                                                                         |
 | Hooks      | `hooks/useGameSession.ts`  | `useGameSession(app, level)`: a new level object restarts the match. Per Pixi ticker frame: sample input → restart check → `advanceFixedStep` → N × `stepGame` → `renderGame`; a restart (jump after the round ended) rebuilds state and renderer on the same level; full teardown in cleanup |
 | Components | `components/GameView.tsx`  | Canvas host (`usePixiApp`), the level from `level-file`'s `useLevelSource` + "Load level" control, drop a level file anywhere on the game (`useFileDrop`), controls hint (canvas ink on a cream pill, never theme tokens); "Load level" sits below the HUD card row |
@@ -20,8 +20,8 @@ One round of the game (timed round, scoring, respawn and spawn protection, winne
 Systems order in `stepGame` (new concepts slot into their number):
 
 1. `joinSlots` — a connected input slot without a player gets one (the lobby lap replaces this with explicit joining)
-2. `stepPlayers` — player feature
-3. `stepCombat` — combat feature: rockets (unarmed fire: hook for the dive lap), blasts (damage, impulse, `clearCircle`), pickups
+2. `stepPlayers` — player feature; 2b. `resolveBodyContacts` — player feature (blob-vs-blob bounce among the players in play; its contacts feed 3b)
+3. `stepCombat` — combat feature: rockets, blasts (damage, impulse, `clearCircle`), pickups; unarmed fire goes through its `unarmedAttack` hook to the dive's `requestDive`; 3b. `stepDives` — dive feature (the unarmed attack; hits go through combat's `applyHit`, a hard hit starts the player feature's tumble)
 4. `stepCollectibles` — collectibles feature: point orbs; each orb collected scores `match.scoring.orb`
 5. `stepMatchRules` — leaving `level.bounds` emits `playerEliminated` (cause `out-of-bounds`, credit to the last hitter within `combat.killCreditSeconds`); new eliminations score; eliminated players wait `respawnDelaySeconds` out of play, then respawn at the spawn farthest from the opponents in play (a level without spawns: the middle of its bounds) with `invulnerableUntil = now + spawnProtectionSeconds`
 6. `roundTimer` — at 0 the round ends, `winners` is fixed and steps 1–5 stop
@@ -32,7 +32,7 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 
 ## Dependencies
 
-- `level`, `level-file`, `arena`, `player`, `camera`, `combat`, `collectibles` through their `api/` files.
+- `level`, `level-file`, `arena`, `player`, `camera`, `combat`, `dive`, `collectibles` through their `api/` files.
 - Shared engine: `gameLoop`, `gameInputService`, `usePixiApp`, `gameTunables`, `gamePalette`, `gameInput.types`.
 - Mounted by `src/pages/GamePage.tsx` at `/`.
 

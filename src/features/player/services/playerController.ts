@@ -4,6 +4,7 @@ import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
 import { rectHitsSolid, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { PlayerState } from "@/features/player/types/player.types";
+import { bounceTumble, endTumble, isTumbling, tickTumble } from "@/features/player/services/tumble";
 
 /**
  * Player controller system (sim step 2): blob movement feel (GDD § 2). Per step:
@@ -47,6 +48,17 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     lastWallDir: 1,
     wallCoyoteTimer: 0,
     wallJumpLockTimer: 0,
+    steerScale: 1,
+    gravityScale: 1,
+    jumpLocked: false,
+    terrainHitX: 0,
+    terrainHitY: 0,
+    terrainHitSpeedX: 0,
+    terrainHitSpeedY: 0,
+    tumbleSeconds: 0,
+    tumbleBouncesLeft: 0,
+    tumbleBounceCount: 0,
+    lastTumbleBounceSpeed: 0,
     groundBelowY: null,
     jumpCount: 0,
     wallJumpCount: 0,
@@ -68,6 +80,10 @@ export function placePlayer(player: PlayerState, at: Vec2): void {
   player.wallDir = 0;
   player.wallCoyoteTimer = 0;
   player.wallJumpLockTimer = 0;
+  player.steerScale = 1;
+  player.gravityScale = 1;
+  player.jumpLocked = false;
+  endTumble(player);
 }
 
 export const playerBody = (player: PlayerState): Rect => ({
@@ -100,7 +116,11 @@ function snapAfterHit(player: PlayerState, hit: { axis: Axis; direction: number 
  * Moves along one axis in sub-steps of at most half a cell (no tunnelling) and stops at the
  * first solid cell. Returns true when it hit terrain.
  */
-function moveAxis(player: PlayerState, move: { axis: Axis; delta: number }, terrain: TerrainGrid) {
+export function moveAxis(
+  player: PlayerState,
+  move: { axis: Axis; delta: number },
+  terrain: TerrainGrid
+) {
   const { axis, delta } = move;
   const maxStep = terrain.cellSize / 2;
   const steps = Math.ceil(Math.abs(delta) / maxStep);
@@ -156,10 +176,14 @@ function horizontalRate(player: PlayerState, target: number, p: PlayerTunables):
 /** Steers vx toward the input speed. During a wall-jump lock the launch momentum is kept. */
 function applyHorizontal(player: PlayerState, input: PlayerInput, args: StepPlayersArgs): void {
   const p = args.tunables.player;
+  // steerScale 0 (an ability owns the motion): velocity and facing are left alone.
+  if (player.steerScale <= 0) return;
   if (input.moveX !== 0) player.facing = input.moveX > 0 ? 1 : -1;
   if (player.wallJumpLockTimer > 0) return;
   const target = input.moveX * p.runSpeed;
-  player.vx = approach(player.vx, target, horizontalRate(player, target, p) * args.dt);
+  const tumbleSteer = isTumbling(player) ? args.tunables.tumble.steerScale : 1;
+  const rate = horizontalRate(player, target, p) * player.steerScale * tumbleSteer;
+  player.vx = approach(player.vx, target, rate * args.dt);
 }
 
 // ── Jump ─────────────────────────────────────────────────────────────────────
@@ -175,7 +199,7 @@ function launch(player: PlayerState, vy: number): void {
 
 /** Fires a buffered jump off the ground (or within coyote time), else off a wall. */
 function applyJump(player: PlayerState, p: PlayerTunables): void {
-  if (player.jumpBufferTimer <= 0) return;
+  if (player.jumpBufferTimer <= 0 || player.jumpLocked || isTumbling(player)) return;
   if (player.grounded || player.coyoteTimer > 0) {
     launch(player, -p.jumpSpeed);
     player.jumpCount += 1;
@@ -196,21 +220,42 @@ function applyJump(player: PlayerState, p: PlayerTunables): void {
 /** Gravity, capped by terminal speed — or by wall-slide speed when pushing into a wall. */
 function applyGravity(player: PlayerState, input: PlayerInput, args: StepPlayersArgs): void {
   const { world, player: p } = args.tunables;
-  player.vy = Math.min(player.vy + world.gravity * args.dt, world.maxFallSpeed);
+  const gravity = world.gravity * player.gravityScale;
+  player.vy = Math.min(player.vy + gravity * args.dt, world.maxFallSpeed);
   const pushingIntoWall = player.wallDir !== 0 && Math.sign(input.moveX) === player.wallDir;
   if (pushingIntoWall && !player.grounded) player.vy = Math.min(player.vy, p.wallSlideSpeed);
   if (player.jumpRising && player.vy >= 0) player.jumpRising = false;
 }
 
+const hitDirection = (hit: boolean, speed: number): -1 | 0 | 1 => {
+  if (!hit) return 0;
+  return speed > 0 ? 1 : -1;
+};
+
+/** Records which axes terrain blocked this step and how fast the blob was going. */
+function reportTerrainHit(
+  player: PlayerState,
+  hit: { x: boolean; speedX: number; y: boolean; speedY: number }
+): void {
+  player.terrainHitX = hitDirection(hit.x, hit.speedX);
+  player.terrainHitSpeedX = hit.x ? Math.abs(hit.speedX) : 0;
+  player.terrainHitY = hitDirection(hit.y, hit.speedY);
+  player.terrainHitSpeedY = hit.y ? Math.abs(hit.speedY) : 0;
+}
+
 /** Axis-separated movement against the terrain; counts a landing on the step feet touch down. */
 function applyMotion(player: PlayerState, args: StepPlayersArgs): void {
   const { terrain, dt } = args;
-  if (moveAxis(player, { axis: "x", delta: player.vx * dt }, terrain)) player.vx = 0;
+  const speedX = player.vx;
+  const hitX = moveAxis(player, { axis: "x", delta: player.vx * dt }, terrain);
+  if (hitX) player.vx = 0;
   const wasGrounded = player.grounded;
   const impactSpeed = player.vy;
   const hitY = moveAxis(player, { axis: "y", delta: player.vy * dt }, terrain);
   player.grounded = hitY && impactSpeed > 0;
   if (hitY) player.vy = 0;
+  reportTerrainHit(player, { x: hitX, speedX, y: hitY, speedY: impactSpeed });
+  bounceTumble(player, args.tunables);
   if (player.grounded && !wasGrounded) {
     player.landCount += 1;
     player.lastLandingSpeed = impactSpeed;
@@ -253,6 +298,7 @@ function updateContacts(player: PlayerState, args: StepPlayersArgs): void {
     player.wallDir !== 0 ? p.coyoteTime : Math.max(0, player.wallCoyoteTimer - dt);
   player.jumpBufferTimer = Math.max(0, player.jumpBufferTimer - dt);
   player.wallJumpLockTimer = Math.max(0, player.wallJumpLockTimer - dt);
+  tickTumble(player, dt);
 }
 
 /** Advances every player one fixed step. Mutates the players in place. */
