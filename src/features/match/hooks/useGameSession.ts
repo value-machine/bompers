@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { Application, Ticker } from "pixi.js";
+import { waitForGameFont } from "@/shared/utils/gameFont";
 import { advanceFixedStep, createFixedStepClock } from "@/shared/services/gameLoop";
 import { createGameInputReader } from "@/shared/services/gameInputService";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
@@ -50,6 +51,83 @@ const warnAboutLevel = ({ levelWarnings }: GameState): void => {
 const backPressed = (menus: readonly MenuInput[], previous: readonly MenuInput[]): boolean =>
   menus.some((menu, index) => menu.back && previous[index]?.back !== true);
 
+/** How long a session waits for Fredoka before it starts with the fallback face (visual-pass D5). */
+const FONT_WAIT_MS = 1500;
+
+/** Starts matches of `setup` on a live app; returns the teardown. */
+function startSession(
+  app: Application,
+  setup: MatchSetup,
+  exitRef: { current: () => void }
+): () => void {
+  const { level, tunables, inputSources } = setup;
+  const stepSeconds = 1 / tunables.sim.stepHz;
+  const sound = createMatchSound(window);
+  /** A fresh round on the same level and settings; its first frame cues the round start. */
+  const startRound = (): { state: GameState; renderer: GameRenderer } => {
+    const state = createGameState({ level, tunables });
+    warnAboutLevel(state);
+    sound.newRound();
+    return { state, renderer: createGameRenderer(app, state) };
+  };
+  let round = startRound();
+  const input = createGameInputReader(window, inputSources);
+  let clock = createFixedStepClock();
+  let previousInputs: PlayerInputs = [];
+  let previousMenus: MenuInput[] = input.sampleMenus();
+
+  /** True when this frame's back press (round over, past the lock) left for the lobby. */
+  const exitIfPressed = (): boolean => {
+    const menus = input.sampleMenus();
+    const pressed = backPressed(menus, previousMenus);
+    previousMenus = menus;
+    if (!pressed || !isPastRestartLock(roundLockOf(round.state))) return false;
+    exitRef.current();
+    return true;
+  };
+
+  /** True when this frame's jump press restarted the round (that press is then consumed). */
+  const restartIfPressed = (inputs: PlayerInputs): boolean => {
+    const restart = isRestartPress({
+      ...roundLockOf(round.state),
+      inputs,
+      previous: previousInputs,
+    });
+    if (!restart) return false;
+    clearStage(app);
+    round = startRound();
+    return true;
+  };
+
+  const onFrame = (ticker: Ticker): void => {
+    const frameSeconds = ticker.deltaMS / 1000;
+    const advance = advanceFixedStep(clock, frameSeconds, {
+      stepSeconds,
+      maxSteps: tunables.sim.maxStepsPerFrame,
+    });
+    clock = advance.clock;
+    if (exitIfPressed()) return;
+    const inputs = input.sample();
+    const restarted = restartIfPressed(inputs);
+    previousInputs = inputs;
+    if (restarted) return;
+    for (let i = 0; i < advance.steps; i += 1) stepGame(round.state, inputs, stepSeconds);
+    sound.hear(round.state);
+    renderGame(round.renderer, { state: round.state, app, dt: frameSeconds });
+  };
+
+  app.ticker.add(onFrame);
+  return () => {
+    input.dispose();
+    sound.dispose();
+    // usePixiApp's cleanup runs first on unmount and destroys the app (ticker, stage, children);
+    // only a still-live app (a session restart on the same app) needs manual teardown.
+    if (!isAppAlive(app)) return;
+    app.ticker.remove(onFrame);
+    clearStage(app);
+  };
+}
+
 /**
  * Runs matches of `setup` on a ready Pixi app (nothing until it is ready; a new setup object
  * restarts the match): input → fixed steps of `stepGame` → render, once per Pixi ticker
@@ -67,71 +145,15 @@ export function useGameSession(
 
   useEffect(() => {
     if (!app) return undefined;
-    const { level, tunables, inputSources } = setup;
-    const stepSeconds = 1 / tunables.sim.stepHz;
-    const sound = createMatchSound(window);
-    /** A fresh round on the same level and settings; its first frame cues the round start. */
-    const startRound = (): { state: GameState; renderer: GameRenderer } => {
-      const state = createGameState({ level, tunables });
-      warnAboutLevel(state);
-      sound.newRound();
-      return { state, renderer: createGameRenderer(app, state) };
-    };
-    let round = startRound();
-    const input = createGameInputReader(window, inputSources);
-    let clock = createFixedStepClock();
-    let previousInputs: PlayerInputs = [];
-    let previousMenus: MenuInput[] = input.sampleMenus();
-
-    /** True when this frame's back press (round over, past the lock) left for the lobby. */
-    const exitIfPressed = (): boolean => {
-      const menus = input.sampleMenus();
-      const pressed = backPressed(menus, previousMenus);
-      previousMenus = menus;
-      if (!pressed || !isPastRestartLock(roundLockOf(round.state))) return false;
-      exitRef.current();
-      return true;
-    };
-
-    /** True when this frame's jump press restarted the round (that press is then consumed). */
-    const restartIfPressed = (inputs: PlayerInputs): boolean => {
-      const restart = isRestartPress({
-        ...roundLockOf(round.state),
-        inputs,
-        previous: previousInputs,
-      });
-      if (!restart) return false;
-      clearStage(app);
-      round = startRound();
-      return true;
-    };
-
-    const onFrame = (ticker: Ticker): void => {
-      const frameSeconds = ticker.deltaMS / 1000;
-      const advance = advanceFixedStep(clock, frameSeconds, {
-        stepSeconds,
-        maxSteps: tunables.sim.maxStepsPerFrame,
-      });
-      clock = advance.clock;
-      if (exitIfPressed()) return;
-      const inputs = input.sample();
-      const restarted = restartIfPressed(inputs);
-      previousInputs = inputs;
-      if (restarted) return;
-      for (let i = 0; i < advance.steps; i += 1) stepGame(round.state, inputs, stepSeconds);
-      sound.hear(round.state);
-      renderGame(round.renderer, { state: round.state, app, dt: frameSeconds });
-    };
-
-    app.ticker.add(onFrame);
+    let cancelled = false;
+    let stop: (() => void) | null = null;
+    // Pixi Text rasterises with the face available at creation: wait for Fredoka first.
+    void waitForGameFont(FONT_WAIT_MS).then(() => {
+      if (!cancelled && isAppAlive(app)) stop = startSession(app, setup, exitRef);
+    });
     return () => {
-      input.dispose();
-      sound.dispose();
-      // usePixiApp's cleanup runs first on unmount and destroys the app (ticker, stage, children);
-      // only a still-live app (a session restart on the same app) needs manual teardown.
-      if (!isAppAlive(app)) return;
-      app.ticker.remove(onFrame);
-      clearStage(app);
+      cancelled = true;
+      stop?.();
     };
   }, [app, setup]);
 }

@@ -7,6 +7,7 @@ import {
   getCellInfo,
   isSolidAt,
   rectHitsSolid,
+  surfaceBelow,
   takeDirtyChunks,
 } from "@/features/arena/services/terrainGrid";
 
@@ -76,5 +77,12 @@ describe("terrainGrid", () => {
   it("should start with every chunk dirty so the first render draws everything", () => {
     const grid = createTerrainGrid({ cellSize: 8, widthCells: 33, heightCells: 16 });
     expect(takeDirtyChunks(grid)).toEqual([0, 1, 2]);
+  });
+
+  it("should find the top of the first surface under a span when it is within range", () => {
+    const grid = buildTerrainFromLevel(level);
+    expect(surfaceBelow(grid, { x: 20, y: 40, w: 10, range: 240 })).toBe(100);
+    expect(surfaceBelow(grid, { x: 20, y: 40, w: 10, range: 30 })).toBeNull();
+    expect(surfaceBelow(grid, { x: 900, y: 40, w: 10, range: 240 })).toBeNull();
   });
 });

@@ -14,6 +14,7 @@ export {
   type ClearedCells,
   isSolidAt,
   rectHitsSolid,
+  surfaceBelow,
 } from "@/features/arena/services/terrainGrid";
 export { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 export {
@@ -21,6 +22,12 @@ export {
   syncTerrainView,
   type TerrainView,
 } from "@/features/arena/services/terrainRenderer";
+export {
+  createBackdropView,
+  syncBackdropView,
+  type BackdropFrame,
+  type BackdropView,
+} from "@/features/arena/services/backdropRenderer";
 
 /** The arena slice of the game state (declared here: types/ may not import another feature). */
 export interface ArenaState {

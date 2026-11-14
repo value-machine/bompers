@@ -29,3 +29,14 @@ export function shapeContains(shape: Shape2D, p: Vec2): boolean {
   }
   return polygonWinding(shape.points, p) !== 0;
 }
+
+/** Flat [x, y, …] path of a star centred on 0,0 with its first point straight up. */
+export function starPoints(points: number, outer: number, inner: number): number[] {
+  const path: number[] = [];
+  for (let i = 0; i < points * 2; i += 1) {
+    const r = i % 2 === 0 ? outer : inner;
+    const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+    path.push(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  return path;
+}
