@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { mapPlayerInputs } from "@/shared/utils/gameInputMapping";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
+import { applyHit } from "@/features/combat/api/combatApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
 
 const level: LevelDefinition = {
@@ -69,24 +70,32 @@ describe("gameSim", () => {
     });
   });
 
-  it("should respawn a player whose last health chunk was bashed off", () => {
+  it("should respawn a player whose last health chunk was lost to a hit", () => {
     const state = stepGame(newGame(), keys(), dt);
-    const [attacker, victim] = state.players;
-    attacker!.x = 300;
-    victim!.x = 336;
-    victim!.y = attacker!.y = 320;
+    const victim = state.players[1]!;
+    victim.x = 300;
     state.combat.fighters.get("p1")!.health = 1;
-    // Keyboard-1 fire is KeyF; aim defaults to facing right.
-    stepGame(state, keys("KeyF"), dt);
+    applyHit(
+      { ...state, players: state.players },
+      {
+        victimSlot: 1,
+        attackerSlot: 0,
+        kind: "contact",
+        source: "dive",
+        contactPoint: { x: 300, y: 300 },
+        direction: { x: -1, y: 0 },
+      }
+    );
+    stepGame(state, keys(), dt);
     expect(state.combat.events).toContainEqual(
       expect.objectContaining({
         type: "playerEliminated",
         victimSlot: 1,
         byPlayerSlot: 0,
-        cause: "bash",
+        cause: "dive",
       })
     );
-    expect(victim!.x).toBe(600);
+    expect(victim.x).toBe(600);
     expect(state.combat.fighters.get("p1")!.health).toBe(DEFAULT_GAME_TUNABLES.combat.maxHealth);
   });
 

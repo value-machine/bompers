@@ -63,7 +63,7 @@ export interface GameTunables {
       breathSeconds: number;
     };
   };
-  /** Health, bash, rocket launcher, explosions and weapon drops (GDD § 3). */
+  /** Health, hits, rocket launcher, explosions and weapon drops (GDD § 3). */
   combat: {
     /** Health chunks per player; 0 eliminates. */
     maxHealth: number;
@@ -71,17 +71,14 @@ export interface GameTunables {
     killCreditSeconds: number;
     /** Seconds sim events stay readable in `combat.events`. */
     eventRetentionSeconds: number;
-    /** Unarmed attack on the fire button. */
-    bash: {
-      /** Max distance between body centres, world units. */
-      range: number;
-      /** Min cosine between aim and the direction to the target (0.5 = 60° each side). */
-      coneCos: number;
-      /** Seconds between bashes. */
-      cooldown: number;
-      /** Knockback speed along the hit direction, units / s, plus an upward lift. */
-      knockbackSpeed: number;
-      knockbackLift: number;
+    /**
+     * Health chunks a hit removes, per hit kind and per zone of the victim it lands on
+     * (front = toward the victim's facing, back = behind it). Pure configuration: 0 = the hit
+     * only bounces. `contact` is body hits (the unarmed dive), `blast` is explosions.
+     */
+    hitDamage: {
+      contact: { front: number; back: number };
+      blast: { front: number; back: number };
     };
     rocket: {
       /** Flight speed, units / s (straight line, no gravity). */

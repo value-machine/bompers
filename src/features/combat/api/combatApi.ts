@@ -3,16 +3,25 @@ export type {
   CombatEvent,
   CombatEventBody,
   CombatState,
-  DamageCause,
   EliminationCause,
   FighterState,
   HeldWeapon,
+  Hit,
+  HitKind,
+  HitSource,
+  HitZone,
   PickupState,
   RocketState,
 } from "@/features/combat/types/combat.types";
+export type { UnarmedAttackHook, UnarmedFirePress } from "@/features/combat/services/attacks";
 export { stepCombat, type StepCombatArgs } from "@/features/combat/services/combatSim";
 export {
+  applyHit,
+  classifyHitZone,
   createCombatState,
+  hitDamageFor,
+  type HitResult,
+  type HitWorld,
   eliminateFighter,
   isFighterEliminated,
   respawnFighter,

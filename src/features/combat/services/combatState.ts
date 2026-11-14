@@ -1,17 +1,20 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
-import type { Rect } from "@/shared/types/gameGeometry.types";
+import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
 import type { TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import type {
   CombatEventBody,
   CombatState,
-  DamageCause,
   EliminationCause,
   FighterState,
+  Hit,
+  HitKind,
+  HitZone,
 } from "@/features/combat/types/combat.types";
 
 /**
- * Combat state bookkeeping: creation, the event log, fighters (health, elimination, respawn).
+ * Combat state bookkeeping: creation, the event log, fighters (health, hits, elimination,
+ * respawn).
  * Pure TS; every function mutates the combat slice it is given.
  */
 /** What every combat system reads during one step. */
@@ -84,41 +87,6 @@ export function fighterFor(
 export const isFighterEliminated = (combat: CombatState, playerId: string): boolean =>
   combat.fighters.get(playerId)?.eliminated === true;
 
-export interface DamageArgs {
-  combat: CombatState;
-  victim: FighterState;
-  byPlayerSlot: number | null;
-  cause: DamageCause;
-  timeSeconds: number;
-}
-
-/**
- * Removes exactly one health chunk unless the victim is protected or already out. At 0 the
- * fighter is flagged eliminated (match step 4 respawns it). Returns whether damage landed.
- */
-export function damageFighter(args: DamageArgs): boolean {
-  const { combat, victim, byPlayerSlot, cause, timeSeconds } = args;
-  if (victim.eliminated || timeSeconds < victim.invulnerableUntil) return false;
-  victim.health = Math.max(0, victim.health - 1);
-  victim.lastHitBySlot = byPlayerSlot;
-  victim.lastHitAt = timeSeconds;
-  const victimSlot = victim.slot;
-  emitCombatEvent(
-    combat,
-    { type: "playerHit", victimSlot, byPlayerSlot, cause, healthLeft: victim.health },
-    timeSeconds
-  );
-  if (victim.health === 0) {
-    victim.eliminated = true;
-    emitCombatEvent(
-      combat,
-      { type: "playerEliminated", victimSlot, byPlayerSlot, cause },
-      timeSeconds
-    );
-  }
-  return true;
-}
-
 export interface EliminateArgs {
   combat: CombatState;
   player: PlayerState;
@@ -158,4 +126,95 @@ export function respawnFighter(
   fighter.weapon = null;
   fighter.attackCooldown = 0;
   fighter.lastHitBySlot = null;
+}
+
+// ── Hits ─────────────────────────────────────────────────────────────────────
+
+/**
+ * The one damage path for every attack (rockets, the dive): zone → damage from the
+ * `combat.hitDamage` table → health, spawn protection, `playerHit` / `playerEliminated` events.
+ * No attack hard-codes its damage; changing the rules (e.g. front hits only bounce, back hits
+ * deal 4) is a tunables edit. Knockback and impulses stay with each attack.
+ */
+export type HitWorld = Pick<CombatContext, "combat" | "players" | "tunables" | "timeSeconds">;
+
+export interface HitResult {
+  /** False when the victim was protected, already eliminated or not in play. */
+  landed: boolean;
+  zone: HitZone;
+  damage: number;
+}
+
+/**
+ * Front when the hit travels against the victim's facing (it meets their face), back when it
+ * travels the same way (it comes from behind). A purely vertical hit counts as front.
+ */
+export function classifyHitZone(victimFacing: -1 | 1, direction: Vec2): HitZone {
+  return direction.x * victimFacing > 0 ? "back" : "front";
+}
+
+/** Chunks a hit of this kind removes on this zone (configuration only). */
+export const hitDamageFor = (
+  table: HitWorld["tunables"]["combat"]["hitDamage"],
+  kind: HitKind,
+  zone: HitZone
+): number => table[kind][zone];
+
+const playerInSlot = (world: HitWorld, slot: number): PlayerState | undefined =>
+  world.players.find((player) => player.slot === slot);
+
+function emitHit(world: HitWorld, hit: Hit, result: HitResult & { healthLeft: number }): void {
+  emitCombatEvent(
+    world.combat,
+    {
+      type: "playerHit",
+      victimSlot: hit.victimSlot,
+      byPlayerSlot: hit.attackerSlot,
+      source: hit.source,
+      kind: hit.kind,
+      zone: result.zone,
+      damage: result.damage,
+      healthLeft: result.healthLeft,
+      x: hit.contactPoint.x,
+      y: hit.contactPoint.y,
+    },
+    world.timeSeconds
+  );
+}
+
+function eliminate(world: HitWorld, hit: Hit, fighter: FighterState): void {
+  fighter.eliminated = true;
+  emitCombatEvent(
+    world.combat,
+    {
+      type: "playerEliminated",
+      victimSlot: hit.victimSlot,
+      byPlayerSlot: hit.attackerSlot,
+      cause: hit.source,
+    },
+    world.timeSeconds
+  );
+}
+
+/**
+ * Applies one hit to the player in `hit.victimSlot`. Respects `invulnerableUntil`, records the
+ * attacker for elimination credit, and at 0 health flags the fighter eliminated (match step 4
+ * respawns it) with a `playerEliminated` event.
+ */
+export function applyHit(world: HitWorld, hit: Hit): HitResult {
+  const { combat, tunables, timeSeconds } = world;
+  const victim = playerInSlot(world, hit.victimSlot);
+  const zone = victim ? classifyHitZone(victim.facing, hit.direction) : "front";
+  const damage = hitDamageFor(tunables.combat.hitDamage, hit.kind, zone);
+  if (!victim) return { landed: false, zone, damage: 0 };
+  const fighter = fighterFor(combat, victim, tunables);
+  if (fighter.eliminated || timeSeconds < fighter.invulnerableUntil) {
+    return { landed: false, zone, damage: 0 };
+  }
+  fighter.health = Math.max(0, fighter.health - damage);
+  fighter.lastHitBySlot = hit.attackerSlot;
+  fighter.lastHitAt = timeSeconds;
+  emitHit(world, hit, { landed: true, zone, damage, healthLeft: fighter.health });
+  if (fighter.health === 0) eliminate(world, hit, fighter);
+  return { landed: true, zone, damage };
 }

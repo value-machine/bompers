@@ -1,3 +1,5 @@
+import type { Vec2 } from "@/shared/types/gameGeometry.types";
+
 /**
  * Combat slice of the game state (GDD § 3): per-player fighter state keyed by player `id`,
  * rockets in flight, weapon pickups, and the sim event log other systems read (sound, match
@@ -19,9 +21,9 @@ export interface FighterState {
   /** Sim time (s) until which the player takes no damage (spawn protection; set by match rules). */
   invulnerableUntil: number;
   weapon: HeldWeapon | null;
-  /** Fire held on the previous step (edge detection: one bash / shot per press). */
+  /** Fire held on the previous step (edge detection: one action per press). */
   prevFire: boolean;
-  /** Seconds until the next bash / shot is allowed. */
+  /** Seconds until the next shot is allowed. */
   attackCooldown: number;
   /** Who hit this player last and when (sim seconds), for elimination credit. */
   lastHitBySlot: number | null;
@@ -51,8 +53,26 @@ export interface PickupState {
   grounded: boolean;
 }
 
-export type DamageCause = "rocket" | "bash";
-export type EliminationCause = DamageCause | "out-of-bounds";
+/** What dealt a hit. The dive lap owns "dive"; new attacks add their source here. */
+export type HitSource = "rocket" | "dive";
+export type EliminationCause = HitSource | "out-of-bounds";
+/** Damage table row a hit uses (`combat.hitDamage`): body contact or explosion. */
+export type HitKind = "contact" | "blast";
+/** Where on the victim a hit lands, relative to the victim's facing. */
+export type HitZone = "front" | "back";
+
+/** One hit for `applyHit`. Knockback / impulse stays with the attack; this is damage only. */
+export interface Hit {
+  victimSlot: number;
+  /** null for environment damage. */
+  attackerSlot: number | null;
+  kind: HitKind;
+  source: HitSource;
+  /** World point where the hit landed (for effects). */
+  contactPoint: Vec2;
+  /** Direction the hit travels, from the attacker / blast into the victim (need not be unit). */
+  direction: Vec2;
+}
 
 /** Sim events. The sound lap maps `type` (and the material IDs) to sounds; match rules read hits / eliminations. */
 export type CombatEventBody =
@@ -60,8 +80,14 @@ export type CombatEventBody =
       type: "playerHit";
       victimSlot: number;
       byPlayerSlot: number | null;
-      cause: DamageCause;
+      source: HitSource;
+      kind: HitKind;
+      zone: HitZone;
+      /** Chunks removed (0 = a configured bounce-only hit). */
+      damage: number;
       healthLeft: number;
+      x: number;
+      y: number;
     }
   | {
       type: "playerEliminated";
@@ -69,7 +95,6 @@ export type CombatEventBody =
       byPlayerSlot: number | null;
       cause: EliminationCause;
     }
-  | { type: "bash"; slot: number; x: number; y: number; hit: boolean }
   | { type: "rocketFired"; slot: number; x: number; y: number; dirX: number; dirY: number }
   | { type: "explosion"; byPlayerSlot: number; x: number; y: number; radius: number }
   | {

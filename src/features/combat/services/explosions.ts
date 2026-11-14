@@ -4,14 +4,15 @@ import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatal
 import { playerBody, type PlayerState } from "@/features/player/api/playerApi";
 import { bodyCenter, distanceToRect, unitBetween } from "@/features/combat/services/combatGeometry";
 import {
-  damageFighter,
+  applyHit,
   emitCombatEvent,
   fighterFor,
   type CombatContext,
 } from "@/features/combat/services/combatState";
 
 /**
- * Explosions (GDD § 2 Rocket Jumping, § 3): exactly one chunk off every OTHER player in range,
+ * Explosions (GDD § 2 Rocket Jumping, § 3): a `blast` hit (1 chunk by default, from any side)
+ * on every OTHER player in range,
  * a radial impulse on everyone in range (the shooter too — damage-free rocket jumps), and a
  * crater in destructible terrain with the material's destroy effect / sound as events.
  */
@@ -23,31 +24,32 @@ export interface Blast {
 
 const UP: Vec2 = { x: 0, y: -1 };
 
-/** Pushes one player away from the blast; returns false when out of range. */
-function pushPlayer(ctx: CombatContext, player: PlayerState, at: Vec2): boolean {
+/** Pushes one player away from the blast; returns the push direction, or null when out of range. */
+function pushPlayer(ctx: CombatContext, player: PlayerState, at: Vec2): Vec2 | null {
   const { radius, impulse, minFalloff } = ctx.tunables.combat.explosion;
   const distance = distanceToRect(at, playerBody(player));
-  if (distance > radius) return false;
+  if (distance > radius) return null;
   const falloff = Math.max(minFalloff, 1 - distance / radius);
   const direction = unitBetween(at, bodyCenter(player), UP);
   player.vx += direction.x * impulse * falloff;
   player.vy += direction.y * impulse * falloff;
   player.grounded = false;
-  return true;
+  return direction;
 }
 
 function hitPlayers(ctx: CombatContext, blast: Blast): void {
   for (const player of ctx.players) {
     const fighter = fighterFor(ctx.combat, player, ctx.tunables);
     if (fighter.eliminated) continue;
-    if (!pushPlayer(ctx, player, blast.at)) continue;
-    if (player.id === blast.ownerId) continue;
-    damageFighter({
-      combat: ctx.combat,
-      victim: fighter,
-      byPlayerSlot: blast.ownerSlot,
-      cause: "rocket",
-      timeSeconds: ctx.timeSeconds,
+    const direction = pushPlayer(ctx, player, blast.at);
+    if (!direction || player.id === blast.ownerId) continue;
+    applyHit(ctx, {
+      victimSlot: player.slot,
+      attackerSlot: blast.ownerSlot,
+      kind: "blast",
+      source: "rocket",
+      contactPoint: blast.at,
+      direction,
     });
   }
 }

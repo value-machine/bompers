@@ -45,7 +45,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     maxHealth: 4,
     killCreditSeconds: 4,
     eventRetentionSeconds: 1,
-    bash: { range: 46, coneCos: 0.35, cooldown: 0.4, knockbackSpeed: 700, knockbackLift: 380 },
+    // Body hits from behind hurt more; explosions stay exactly 1 chunk from any side (GDD § 3).
+    hitDamage: { contact: { front: 1, back: 2 }, blast: { front: 1, back: 1 } },
     // 6 rockets, no time limit: the count stays legible without a HUD timer (combat D5).
     rocket: {
       speed: 950,

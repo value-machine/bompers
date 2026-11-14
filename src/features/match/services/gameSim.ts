@@ -29,7 +29,7 @@ import {
  * Systems order (each later concept slots into its numbered place):
  *   1. joinSlots       — a connected input slot without a player gets one
  *   2. stepPlayers     — player feature: controller + terrain collision
- *   3. stepCombat      — combat feature: bash / rockets, blasts (damage, impulse, clearCircle), pickups
+ *   3. stepCombat      — combat feature: rockets (unarmed fire: hook for the dive lap), blasts (damage, impulse, clearCircle), pickups
  *   4. respawnPlayers  — out of bounds or eliminated by combat → back to a spawn point, full health
  *                        (spawn choice, protection and scoring: match-rules lap)
  *   5. roundTimer      — counts down; at 0 the round ends and systems 1–4 stop

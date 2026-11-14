@@ -4,7 +4,7 @@ Brief: `BRIEF.md` · Decisions: `DECISIONS.md`
 
 ## Acceptance test (first, failing)
 
-`src/features/combat/services/combatSim.test.ts`: no self-damage, exactly 1 chunk per hit, impulse direction / falloff, rocket-jump height gain over a full jump, no tunnelling at max speed (1-cell wall, player), clearCircle only on destructible + material event IDs, bash damage + knockback, pickup fall → land → collect → ammo runs out, invulnerability blocks damage, elimination event at 0.
+`src/features/combat/services/combatSim.test.ts`: no self-damage, exactly 1 chunk per hit, impulse direction / falloff, rocket-jump height gain over a full jump, no tunnelling at max speed (1-cell wall, player), clearCircle only on destructible + material event IDs, unarmed hook (D11); `combatState.test.ts`: zones, damage table incl. bounce-only config, protection, elimination (D10); pickup fall → land → collect → ammo runs out, invulnerability blocks damage, elimination event at 0.
 
 ## Phases
 
@@ -25,6 +25,7 @@ No new dependency. New files only under `src/features/combat/` (api, services, t
 ## Check summary
 
 - Gates: type-check, lint (0 errors; the 9 warnings predate the lap), `test:run` 150/150, build, validate:structure, feature-size, feature-docs, arch:check (no new violations).
-- Acceptance test: `combatSim.test.ts` 17/17; `gameSim.test.ts` adds out-of-bounds elimination and bash-elimination respawn.
+- Acceptance tests: `combatSim.test.ts` 17/17 and `combatState.test.ts` 8/8; `gameSim.test.ts` adds out-of-bounds elimination and hit-elimination respawn.
+- Scope change (D10–D11) applied after the first check: bash removed, `applyHit` + `unarmedAttack` hook added (in `combatState.ts` / `attacks.ts`; the services layer stays within its 10-file budget); gates re-run.
 - Headless Chromium (placeholder level, keyboard P1): launcher drops at 3 s and lands on the dirt; P1 walks over it and gets the tube; S+F rocket-jumps ≈ 260 px up and leaves a crater; W+D+F blasts a corner off the right dirt plateau; F at P2 removes one chunk (pale pip) and the blast throws P2 off the edge → out of bounds → respawn with full health. No console errors from combat (one pre-existing Pixi warning from the player helmet drawing).
 - Not verified: gamepad aiming, four players.

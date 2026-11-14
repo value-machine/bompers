@@ -7,12 +7,14 @@ import type { LevelDefinition, LevelDrop } from "@/features/level/api/levelApi";
 import { createPlayer, stepPlayers, type PlayerState } from "@/features/player/api/playerApi";
 import { stepCombat } from "@/features/combat/services/combatSim";
 import {
+  applyHit,
   createCombatState,
   eliminateFighter,
   fighterFor,
   type CombatContext,
 } from "@/features/combat/services/combatState";
 import { explode } from "@/features/combat/services/explosions";
+import { stepAttacks } from "@/features/combat/services/attacks";
 import type { CombatEvent, CombatState } from "@/features/combat/types/combat.types";
 
 // Cell size 8. Stone floor top y = 320 (x 0–1200). Thin stone wall x 800–808 (y 0–320).
@@ -159,6 +161,19 @@ describe("combat — rockets and explosions", () => {
     expect(health(world, 1)).toBe(C.maxHealth - 1);
     expect(health(world, 2)).toBe(C.maxHealth - 1);
     expect(health(world, 0)).toBe(C.maxHealth);
+  });
+
+  it("should remove exactly one chunk when the blast hits a victim from behind", () => {
+    const world = createWorld({
+      at: [
+        { x: 100, y: FLOOR_Y },
+        { x: 300, y: FLOOR_Y },
+      ],
+    });
+    world.players[1]!.facing = -1; // faces left, blast comes from the left → front
+    explode(world.ctx(), { at: { x: 320, y: FLOOR_Y - 14 }, ownerSlot: 0, ownerId: "p0" }); // from the right → back
+    expect(health(world, 1)).toBe(C.maxHealth - 1);
+    expect(eventsOfLive(world.combat, "playerHit")[0]).toMatchObject({ zone: "back", damage: 1 });
   });
 
   it("should never damage the shooter when the shooter stands in their own blast", () => {
@@ -311,52 +326,36 @@ describe("combat — rockets", () => {
   });
 });
 
-describe("combat — bash", () => {
-  it("should remove one chunk and knock the target away when bashing within range", () => {
+describe("combat — unarmed fire", () => {
+  it("should call the unarmed-attack hook once per press only while the player is unarmed", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    const calls: number[] = [];
+    const press = (fire: boolean): void =>
+      stepAttacks(world.ctx(), [{ ...EMPTY_PLAYER_INPUT, connected: true, fire }], {
+        dt,
+        unarmedAttack: ({ attacker }) => calls.push(attacker.slot),
+      });
+    press(true);
+    press(true);
+    expect(calls).toEqual([0]);
+    arm(world, 0);
+    press(false);
+    press(true);
+    expect(calls).toEqual([0]);
+  });
+
+  it("should do nothing when an unarmed player presses fire next to another player", () => {
     const world = createWorld({
       at: [
         { x: 200, y: FLOOR_Y },
         { x: 236, y: FLOOR_Y },
       ],
     });
-    world.step([{ aimX: 1, fire: true }]);
-    expect(health(world, 1)).toBe(C.maxHealth - 1);
-    expect(world.players[1]!.vx).toBeGreaterThan(0);
-    expect(world.players[1]!.vy).toBeLessThan(0);
-    expect(eventsOf(world, "bash")[0]?.hit).toBe(true);
-  });
-
-  it("should miss when the target is behind the aim or out of range", () => {
-    const behind = createWorld({
-      at: [
-        { x: 200, y: FLOOR_Y },
-        { x: 170, y: FLOOR_Y },
-      ],
-    });
-    behind.step([{ aimX: 1, fire: true }]);
-    expect(health(behind, 1)).toBe(C.maxHealth);
-    const far = createWorld({
-      at: [
-        { x: 200, y: FLOOR_Y },
-        { x: 200 + C.bash.range + 10, y: FLOOR_Y },
-      ],
-    });
-    far.step([{ aimX: 1, fire: true }]);
-    expect(health(far, 1)).toBe(C.maxHealth);
-    expect(eventsOf(far, "bash")[0]?.hit).toBe(false);
-  });
-
-  it("should bash once per press and respect the cooldown when fire is pressed repeatedly", () => {
-    const world = createWorld({
-      at: [
-        { x: 200, y: FLOOR_Y },
-        { x: 236, y: FLOOR_Y },
-      ],
-    });
-    world.step([{ aimX: 1, fire: true }], 10); // held: one bash
-    world.step([{ aimX: 1 }]);
-    world.step([{ aimX: 1, fire: true }]); // inside cooldown: ignored
-    expect(eventsOf(world, "bash")).toHaveLength(1);
+    const before = { ...world.players[1]! };
+    world.step([{ aimX: 1, fire: true }], 10);
+    expect(health(world, 1)).toBe(C.maxHealth);
+    expect(world.players[1]!.x).toBe(before.x);
+    expect(world.seen).toEqual([]);
   });
 });
 
@@ -381,8 +380,8 @@ describe("combat — pickups", () => {
     }
     expect(eventsOf(world, "rocketFired")).toHaveLength(C.rocket.ammo);
     expect(world.combat.fighters.get("p0")!.weapon).toBeNull();
-    shoot(world, { aimX: -1 }, 2);
-    expect(eventsOf(world, "bash")).toHaveLength(1);
+    shoot(world, { aimX: -1 }, Math.ceil(C.rocket.fireCooldown / dt) + 1);
+    expect(eventsOf(world, "rocketFired")).toHaveLength(C.rocket.ammo);
   });
 
   it("should not drop more than maxActive pickups when nobody collects them", () => {
@@ -400,7 +399,14 @@ describe("combat — out of bounds", () => {
         { x: 236, y: FLOOR_Y },
       ],
     });
-    world.step([{ aimX: 1, fire: true }]);
+    applyHit(world.ctx(), {
+      victimSlot: 1,
+      attackerSlot: 0,
+      kind: "contact",
+      source: "dive",
+      contactPoint: { x: 222, y: FLOOR_Y - 14 },
+      direction: { x: 1, y: 0 },
+    });
     eliminateFighter({
       combat: world.combat,
       player: world.players[1]!,

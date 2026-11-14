@@ -18,7 +18,7 @@ Systems order in `stepGame` (new concepts slot into their number):
 
 1. `joinSlots` — a connected input slot without a player gets one (the lobby lap replaces this with explicit joining)
 2. `stepPlayers` — player feature
-3. `stepCombat` — combat feature: bash / rockets, blasts (damage, impulse, `clearCircle`), pickups
+3. `stepCombat` — combat feature: rockets (unarmed fire: hook for the dive lap), blasts (damage, impulse, `clearCircle`), pickups
 4. `respawnPlayers` — leaving `level.bounds` emits `playerEliminated` (cause `out-of-bounds`, credit to a recent hitter); out-of-bounds or combat-eliminated players go back to their slot's spawn with full health (spawn choice, protection and scoring: match-rules lap)
 5. `roundTimer` — at 0 the round ends and steps 1–4 stop
 
