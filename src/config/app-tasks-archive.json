@@ -163,5 +163,25 @@
     "title": "Trim skill descriptions with trigger tests",
     "description": "Context-cost audit follow-up (R11): shorten the .agents/skills/*/SKILL.md descriptions that are listed in every session (about 3.5k tokens; target about -0.8k) and verify with meta-write-skill trigger tests that the right skill still triggers. Protected files: owner consent.",
     "status": "done"
+  },
+  {
+    "title": "Lobby and match settings",
+    "description": "Depends on: Match rules. Join screen where 1–4 players claim a slot with any keyboard half or gamepad, settings for match duration and gravity, start/restart flow. Replaces the remaining template UI (absorbs the template 'Make the interface yours' work for the game). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Level picker",
+    "description": "Let players choose the level before a round: the built-in levels in public/levels/ (start-arena, floating-garden) plus imported ones from the session. Fits the lobby flow. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Let loop skills call Claude Code built-in review skills",
+    "description": "Context-cost audit follow-up (R12): have loop-check call the built-in /code-review and loop-build or spec-optimize-performance call /simplify instead of duplicating their checks; /loop and /batch do not overlap loop-orchestrate. Protected files: owner consent.",
+    "status": "done"
+  },
+  {
+    "title": "Port feedback hooks to Cursor",
+    "description": "Feedback-hooks follow-up: check the current Cursor hooks docs (afterFileEdit, stop) and port the Claude Code PostToolUse lint/format hook and Stop type-check hook where Cursor supports equivalent behavior; document gaps.",
+    "status": "done"
   }
 ]

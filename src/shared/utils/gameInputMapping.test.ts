@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  inputSourceKey,
+  INPUT_DEVICES,
   mapGamepadInput,
   mapKeyboardInput,
+  mapMenuInputs,
   mapPlayerInputs,
 } from "@/shared/utils/gameInputMapping";
 
@@ -54,5 +57,33 @@ describe("gameInputMapping", () => {
     expect(inputs[1]?.moveX).toBe(1);
     expect(inputs[2]).toMatchObject({ connected: true, fire: true });
     expect(inputs[3]?.connected).toBe(false);
+  });
+
+  it("should report an empty slot as disconnected when its source is null", () => {
+    const inputs = mapPlayerInputs({ heldKeys: new Set(["KeyD"]), gamepads: [] }, [
+      null,
+      { kind: "keyboard", layout: "left" },
+    ]);
+    expect(inputs[0]?.connected).toBe(false);
+    expect(inputs[1]).toMatchObject({ connected: true, moveX: 1 });
+  });
+
+  it("should map menu buttons per device when keys and a pad are held", () => {
+    const menus = mapMenuInputs({
+      heldKeys: new Set(["Space", "Backspace", "ArrowDown"]),
+      gamepads: [null, pad([0, 0.9, 0, 0], [1])],
+    });
+    expect(menus).toHaveLength(INPUT_DEVICES.length);
+    expect(menus[0]).toMatchObject({ present: true, confirm: true, back: false });
+    expect(menus[1]).toMatchObject({ present: true, down: true, back: true, confirm: false });
+    expect(menus[2]?.present).toBe(false);
+    expect(menus[3]).toMatchObject({ present: true, down: true, back: true });
+  });
+
+  it("should give every device a distinct key when listing the input devices", () => {
+    const keys = INPUT_DEVICES.map(inputSourceKey);
+    expect(new Set(keys).size).toBe(INPUT_DEVICES.length);
+    expect(keys[0]).toBe("keyboard:left");
+    expect(keys[5]).toBe("gamepad:3");
   });
 });
