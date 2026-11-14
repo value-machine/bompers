@@ -46,11 +46,6 @@ export const PLACEHOLDER_LEVEL: LevelDefinition = {
     { at: { x: 448, y: -40 }, itemIds: ["rocket-launcher"] },
     { at: { x: 832, y: -40 }, itemIds: ["rocket-launcher"] },
   ],
-  // Point orbs hover over the plateaus and the middle of the main platform.
-  collectibles: [
-    { at: { x: 640, y: 440 }, itemId: "point-orb" },
-    { at: { x: 448, y: 296 }, itemId: "point-orb" },
-    { at: { x: 832, y: 296 }, itemId: "point-orb" },
-  ],
+  collectibles: [],
   bounds: { x: -320, y: -480, w: 1920, h: 1360 },
 };
