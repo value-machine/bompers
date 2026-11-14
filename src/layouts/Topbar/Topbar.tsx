@@ -2,8 +2,8 @@ import { Link } from "react-router-dom";
 import { ColorModeToggle } from "./ColorModeToggle";
 
 /**
- * Topbar component that is always visible.
- * This component is designed to be reusable across all apps.
+ * Game top bar: the Bompers title (home link) and the color-mode toggle.
+ * Kept minimal so the arena gets the screen; game menus belong to the lobby.
  */
 export const Topbar = () => {
   return (
@@ -11,7 +11,7 @@ export const Topbar = () => {
       <div className="flex h-toolbar items-center px-4 sm:px-6">
         <div className="flex-1 font-heading text-xl font-bold">
           <Link to="/" className="text-primary no-underline">
-            Plate Harness
+            Bompers
           </Link>
         </div>
 
