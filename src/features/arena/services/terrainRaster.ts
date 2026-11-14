@@ -1,4 +1,4 @@
-import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import { shapeContains } from "@/shared/utils/shapeGeometry";
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import type { LevelDefinition, TerrainPiece, TerrainShape } from "@/features/level/api/levelApi";
 import type { TerrainGrid } from "@/features/arena/types/arena.types";
@@ -13,31 +13,6 @@ import {
  * Builds the terrain grid from a level's terrain shapes: a cell is filled when its centre lies
  * inside a shape (level file contract). Pieces apply in order, later ones overwrite.
  */
-function polygonContains(points: readonly Vec2[], p: Vec2): boolean {
-  let inside = false;
-  for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
-    const a = points[i]!;
-    const b = points[j]!;
-    const crosses =
-      a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x;
-    if (crosses) inside = !inside;
-  }
-  return inside;
-}
-
-/** Even-odd point-in-shape test. */
-export function shapeContains(shape: TerrainShape, p: Vec2): boolean {
-  if (shape.type === "rect") {
-    return p.x >= shape.x && p.x < shape.x + shape.w && p.y >= shape.y && p.y < shape.y + shape.h;
-  }
-  if (shape.type === "circle") {
-    const dx = p.x - shape.cx;
-    const dy = p.y - shape.cy;
-    return dx * dx + dy * dy <= shape.r * shape.r;
-  }
-  return polygonContains(shape.points, p);
-}
-
 function shapeBounds(shape: TerrainShape) {
   if (shape.type === "rect") return { x: shape.x, y: shape.y, w: shape.w, h: shape.h };
   if (shape.type === "circle") {

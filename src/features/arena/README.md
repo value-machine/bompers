@@ -9,7 +9,7 @@ The terrain runtime: turns a level's terrain shapes into a cell grid, answers co
 | Layer | Path | Purpose |
 |-------|------|---------|
 | Types | `types/arena.types.ts` | `TerrainGrid` (byte cells holding a slot index; `slots` = material ID + destructible + look token; slot 0 = empty), `TerrainCellSlot` |
-| Services | `services/terrainRaster.ts` | `buildTerrainFromLevel(level)`: rasterises rect, polygon and circle shapes (a cell fills when its centre is inside; later pieces overwrite); `shapeContains` |
+| Services | `services/terrainRaster.ts` | `buildTerrainFromLevel(level)`: rasterises rect, polygon and circle shapes (a cell fills when its centre is inside, `shapeContains` from `src/shared/utils/shapeGeometry.ts`, non-zero rule; later pieces overwrite) |
 | Services | `services/terrainGrid.ts` | Grid queries: `getCellInfo`, `isSolidAt`, `rectHitsSolid`, `clearCircle` (destructible cells only), `takeDirtyChunks` |
 | Services | `services/terrainRenderer.ts` | Render layer: one Pixi `Graphics` per 16×16-cell chunk; redraws dirty chunks only; flat fill per material look (placeholder) |
 | API | `api/arenaApi.ts` | Public seam + `ArenaState` and `createArenaState(level)` |

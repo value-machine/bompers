@@ -494,6 +494,11 @@ module.exports = {
           name: "documentation",
           children: [{ name: "*.md" }],
         },
+        // Built-in level files (same format players import), served at /levels/ (game-orchestration D4)
+        {
+          name: "levels",
+          children: [{ name: "*.html" }],
+        },
         // Level kit, served at /level-kit/v1/ (documentation/game/LEVEL_FORMAT.md § 9); a new format version adds a sibling "v2" entry
         {
           name: "level-kit",

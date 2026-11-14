@@ -13,7 +13,7 @@ export type {
 export {
   DEFAULT_LEVEL_SETTINGS,
   DEFAULT_MATERIAL_BY_ROLE,
+  DEFAULT_POINT_ITEMS,
   LEVEL_FORMAT_VERSION,
   normalizeLevelDefinition,
 } from "@/features/level/services/levelDefinition";
-export { PLACEHOLDER_LEVEL } from "@/features/level/services/placeholderLevel";

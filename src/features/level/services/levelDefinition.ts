@@ -24,6 +24,12 @@ export const DEFAULT_MATERIAL_BY_ROLE: Readonly<Record<TerrainRole, string>> = {
   destructible: "dirt",
 };
 
+/** Items a drop point / collectible spawn produces when the file names none (or none known). */
+export const DEFAULT_POINT_ITEMS: Readonly<{ drop: readonly string[]; collectible: string }> = {
+  drop: ["rocket-launcher"],
+  collectible: "point-orb",
+};
+
 const MIN_SPAWNS = 2;
 
 const knownOrWarn = (

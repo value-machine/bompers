@@ -20,3 +20,9 @@ export interface Circle {
   y: number;
   radius: number;
 }
+
+/** A filled 2D shape in world space (level terrain: the SVG rect / polygon / circle subset). */
+export type Shape2D =
+  | { type: "rect"; x: number; y: number; w: number; h: number }
+  | { type: "polygon"; points: readonly Vec2[] }
+  | { type: "circle"; cx: number; cy: number; r: number };

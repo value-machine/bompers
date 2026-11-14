@@ -61,8 +61,8 @@ The game (`/`) is a PixiJS v8 canvas driven by our own pure-TS simulation (DOC_A
 
 **Rules of the map**
 
-- Features talk only through `features/<x>/api/<x>Api.ts` (dependency-cruiser `no-cross-feature-internals`). Direction: `match → level, player, camera, arena`; `player → arena`; `arena → level, content-catalog`; `level → content-catalog`; `camera` and `content-catalog` import no game feature.
-- The engine runs only on a normalised `LevelDefinition` plus the content catalog, never on a file format. Levels reference looks, sounds and behaviours by catalog ID; unknown IDs become a safe default plus a warning.
+- Features talk only through `features/<x>/api/<x>Api.ts` (dependency-cruiser `no-cross-feature-internals`). Direction: `match → level, level-file, player, camera, arena`; `level-file → level, content-catalog`; `player → arena`; `arena → level, content-catalog`; `level → content-catalog`; `camera` and `content-catalog` import no game feature.
+- The engine runs only on a normalised `LevelDefinition` plus the content catalog, never on a file format; `level-file` imports level files (built-ins in `public/levels/`) and generates the public kit's catalog (`pnpm level-kit:sync`, drift-checked in CI). Levels reference looks, sounds and behaviours by catalog ID; unknown IDs become a safe default plus a warning.
 - Only `match` knows `GameState`. Systems take the slices they need (options object), so a new concept adds one slice, one system call at its number, and one render layer.
 - Simulation code (`services/` sims) has no DOM, clock or randomness source of its own; it mutates the state it is given. Pixi code lives only in `*Renderer.ts` services, `usePixiApp` and `useGameSession`.
 - Systems order (`features/match/services/gameSim.ts`): 1 join slots · 2 players · 3 *(combat)* · 4 out-of-bounds · 5 round timer. The camera runs per rendered frame, outside the sim.

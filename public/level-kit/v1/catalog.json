@@ -1,6 +1,7 @@
 {
-  "$comment": "PLACEHOLDER. The level importer lap generates this file from the content catalog in src/ during the build; until then it is hand-written. Spec: documentation/game/LEVEL_FORMAT.md.",
+  "$comment": "GENERATED from the content catalog in the game code by `pnpm level-kit:sync`. Do not edit. Spec: documentation/game/LEVEL_FORMAT.md.",
   "formatVersion": 1,
+  "catalogVersion": 1,
   "defaults": {
     "cellSize": 8,
     "gravity": 1,
@@ -10,38 +11,89 @@
       "destructible": "dirt"
     },
     "items": {
-      "drop": ["rocket-launcher"],
+      "drop": [
+        "rocket-launcher"
+      ],
       "collectible": "point-orb"
     }
+  },
+  "fallbackIds": {
+    "material": "stone",
+    "effect": "none",
+    "sound": "none",
+    "behavior": null,
+    "item": null
   },
   "material": [
     {
       "id": "stone",
-      "label": "Stone",
+      "name": "Stone",
+      "description": "Indestructible base terrain. Keeps the map playable.",
       "destructible": false,
-      "effect": "none",
-      "sound": "thud"
+      "durability": 0,
+      "friction": 1,
+      "bounce": 0,
+      "lookToken": "stone",
+      "impactSoundId": "thud",
+      "destroySoundId": "none",
+      "destroyEffectId": "none"
     },
     {
       "id": "dirt",
-      "label": "Dirt",
+      "name": "Dirt",
+      "description": "Destructible terrain. One rocket blast clears it.",
       "destructible": true,
-      "effect": "dust-burst",
-      "sound": "crumble"
+      "durability": 1,
+      "friction": 1,
+      "bounce": 0,
+      "lookToken": "dirt",
+      "impactSoundId": "thud",
+      "destroySoundId": "crumble",
+      "destroyEffectId": "dust-burst"
     }
   ],
   "effect": [
-    { "id": "none", "label": "No effect" },
-    { "id": "dust-burst", "label": "Dust burst" }
+    {
+      "id": "none",
+      "name": "None",
+      "description": "No effect."
+    },
+    {
+      "id": "dust-burst",
+      "name": "Dust burst",
+      "description": "Cell-coloured debris and dust where terrain is cleared."
+    }
   ],
   "sound": [
-    { "id": "none", "label": "Silent" },
-    { "id": "thud", "label": "Thud" },
-    { "id": "crumble", "label": "Crumble" }
+    {
+      "id": "none",
+      "name": "None",
+      "description": "Silent."
+    },
+    {
+      "id": "thud",
+      "name": "Thud",
+      "description": "Something lands on or hits terrain."
+    },
+    {
+      "id": "crumble",
+      "name": "Crumble",
+      "description": "Terrain breaks apart."
+    }
   ],
   "behavior": [],
   "item": [
-    { "id": "rocket-launcher", "label": "Rocket launcher", "use": "drop" },
-    { "id": "point-orb", "label": "Point orb", "use": "collectible" }
+    {
+      "id": "rocket-launcher",
+      "name": "Rocket launcher",
+      "description": "The MVP weapon: fires rockets from the helmet.",
+      "category": "pickup"
+    },
+    {
+      "id": "point-orb",
+      "name": "Point orb",
+      "description": "Falls from the roof; picking it up scores points.",
+      "category": "collectible"
+    }
   ]
 }

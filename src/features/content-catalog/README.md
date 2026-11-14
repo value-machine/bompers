@@ -15,12 +15,11 @@ The one registry of content IDs a level may reference: materials, effects, sound
 Starter IDs: materials `stone` (indestructible), `dirt` (destructible); effects `none`, `dust-burst`; sounds `none`, `thud`, `crumble`; items `rocket-launcher` (pickup), `point-orb` (collectible); behaviors none yet.
 
 Seams for later work:
-- **New content:** add an entry here (ID = key), then its look in `src/shared/config/gamePalette.ts` (`materialLooks[lookToken]`), its sound in the audio module, its effect in the effects layer.
-- **Level importer lap:** writes `exportCatalog()` to the kit's `catalog.json` with a script.
+- **New content:** add an entry here (ID = key), run `pnpm level-kit:sync` (kit `catalog.json` + ID tables; CI fails until you do), then its look in `src/shared/config/gamePalette.ts` (`materialLooks[lookToken]`), its sound in the audio module, its effect in the effects layer.
 
 ## Dependencies
 
-- None. Consumed by `level` (normalisation) and `arena` (material behaviour and look).
+- None. Consumed by `level` (normalisation), `level-file` (importer, kit export) and `arena` (material behaviour and look).
 
 ## Decisions
 
