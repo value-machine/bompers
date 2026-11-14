@@ -93,5 +93,10 @@
     "title": "Context-cost audit: slim always-on rules",
     "description": "meta-audit-harness context-cost lens (R1-R9): moved Model A/B promote and PR procedures from git-workflow.md into loop-ship references, cut Related Rules footers (DOC_RULES_INDEX is SSOT), moved Windows-only shell text to documentation/DOC_WINDOWS_SHELL.md, and trimmed testing, agent-behavior, code-style and architecture to pointers. Always-on context about 17.6k to 14.5k tokens (-18%), no information lost (ledger in the lap folder). Follow-ups R10-R12 are separate backlog tasks. From the Claude Code video-lessons review.",
     "status": "done"
+  },
+  {
+    "title": "Game engine foundation",
+    "description": "Blocking for all gameplay tasks. Add pixi.js@8.23.0 (renderer only; orchestrator call, see DOC_APP_VISION.md § Engine). Build the game shell: a canvas page at `/` (replacing the template home), a Pixi lifecycle hook safe under StrictMode, a fixed-timestep loop (e.g. 120 Hz) driving a pure-TS simulation `step(state, inputs, dt)` with no DOM, an input layer for up to 4 players (keyboard for 2 + Gamepad API for 4), a grid-based terrain module (solid/empty cells, collision queries, circle-clear for blasts, chunked redraw), a level data format (platforms, destructible vs solid, spawn points, drop points, out-of-bounds zone) and one tunables/config module (gravity, match duration). A placeholder box per player proves input → sim → render. Writes the module map (feature split per bounded concept, shared engine code) so later threads can work in parallel without overlap. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "done"
   }
 ]

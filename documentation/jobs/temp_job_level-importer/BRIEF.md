@@ -23,9 +23,9 @@ Picking or dropping the kit's `example-level.html` on the game page restarts the
 | Feature area | Loop today | Hook point | Ride / new |
 |---|---|---|---|
 | level-file | Not found | new feature | new — file format ≠ level model (bounded context) |
-| level | model + normalise; placeholder TS level | `DEFAULT_POINT_ITEMS`; placeholder removed (dead after the built-in file) | ride |
+| level | model + normalise; placeholder TS level | placeholder removed (dead after the built-in file); defaults come from `CATALOG_DEFAULTS` | ride |
 | match | `useGameSession(app)` plays the placeholder | `useGameSession(app, level)`; `GameView` mounts the control + drop | ride |
-| arena | private even-odd `shapeContains` | uses `src/shared/utils/shapeGeometry.ts` (non-zero, spec § 4) | ride |
+| arena | private `shapeContains` (non-zero since 3991968) | uses `src/shared/utils/shapeGeometry.ts` (non-zero, spec § 4) | ride |
 | shared | — | `Shape2D`, `shapeContains`, `useFileDrop` | new |
 | kit / CI / structure | hand-written catalog.json | generated + `level-kit:check` | ride (ci.yml, .husky, projectStructure approved by the orchestrator, game-orchestration D4) |
 
@@ -35,9 +35,9 @@ Cut into laps: none.
 
 ## Decisions
 - D1 New feature `level-file` rather than growing `level` (layer budget, separate concept).
-- D2 Terrain sorted destructible-first so "platform wins on overlap" holds with the engine's later-wins raster.
-- D3 Point-in-shape moved to shared with the non-zero rule (spec); arena behaviour changes only for self-intersecting polygons.
-- D4 catalog.json keeps the kit shape (`formatVersion`, `defaults`, per-kind arrays) with full entries, so preview.js is unchanged.
+- D2 (superseded) Terrain sorted destructible-first: dropped after the engine's 3991968, whose raster itself keeps platform cells over destructibles.
+- D3 Point-in-shape moved to `src/shared/utils/shapeGeometry.ts` (2 consumers: importer, raster), non-zero rule (spec).
+- D4 catalog.json = `exportCatalog()` (kit shape since 3991968) plus a generated-file `$comment`; preview.js unchanged.
 - D5 Kit script loads the TS export through Vite (`ssrLoadModule`, ~2 s), no new dependency.
 - D6 preview.css forces the kit sky over a file's inline background, like the role fills.
 

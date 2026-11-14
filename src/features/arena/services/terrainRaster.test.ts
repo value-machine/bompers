@@ -68,21 +68,64 @@ describe("terrainRaster", () => {
     expect(rows[5]).toBe("#####.....");
   });
 
-  it("should let a later piece overwrite an earlier one and keep its material", () => {
-    const level = levelWith([
-      {
-        shape: { type: "rect", x: 0, y: 0, w: 100, h: 10 },
-        role: "destructible",
-        materialId: "dirt",
-      },
-      { shape: { type: "rect", x: 0, y: 0, w: 20, h: 10 }, role: "platform", materialId: "stone" },
-    ]);
-    const grid = buildTerrainFromLevel(level);
+  it("should keep platform cells when a later destructible piece overlaps them", () => {
+    const grid = buildTerrainFromLevel(
+      levelWith([
+        {
+          shape: { type: "rect", x: 0, y: 0, w: 20, h: 10 },
+          role: "platform",
+          materialId: "stone",
+        },
+        {
+          shape: { type: "rect", x: 0, y: 0, w: 100, h: 10 },
+          role: "destructible",
+          materialId: "dirt",
+        },
+      ])
+    );
     expect(getCellInfo(grid, 0, 0)).toMatchObject({ materialId: "stone", destructible: false });
     expect(getCellInfo(grid, 5, 0)).toMatchObject({
       materialId: "dirt",
       destructible: true,
       lookToken: "dirt",
     });
+  });
+
+  it("should let the later piece set the material when two pieces share a role", () => {
+    const grid = buildTerrainFromLevel(
+      levelWith([
+        {
+          shape: { type: "rect", x: 0, y: 0, w: 100, h: 10 },
+          role: "destructible",
+          materialId: "dirt",
+        },
+        {
+          shape: { type: "rect", x: 0, y: 0, w: 20, h: 10 },
+          role: "destructible",
+          materialId: "stone",
+        },
+      ])
+    );
+    expect(getCellInfo(grid, 0, 0)).toMatchObject({ materialId: "stone", destructible: false });
+  });
+
+  it("should fill a self-overlapping polygon's overlap by the non-zero rule", () => {
+    // One outline tracing two clockwise boxes that overlap at x 40–60: winding 2 there, still filled.
+    const points = [
+      { x: 0, y: 40 },
+      { x: 60, y: 40 },
+      { x: 60, y: 60 },
+      { x: 0, y: 60 },
+      { x: 0, y: 40 },
+      { x: 40, y: 40 },
+      { x: 100, y: 40 },
+      { x: 100, y: 60 },
+      { x: 40, y: 60 },
+      { x: 40, y: 40 },
+    ];
+    const rows = filled(
+      levelWith([{ shape: { type: "polygon", points }, role: "platform", materialId: "stone" }])
+    );
+    expect(rows[4]).toBe("##########");
   });
 });

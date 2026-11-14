@@ -1,13 +1,9 @@
 import {
+  CATALOG_DEFAULTS,
   hasCatalogEntry,
   type ContentKind,
 } from "@/features/content-catalog/api/contentCatalogApi";
-import {
-  DEFAULT_MATERIAL_BY_ROLE,
-  DEFAULT_POINT_ITEMS,
-  type TerrainPiece,
-  type TerrainRole,
-} from "@/features/level/api/levelApi";
+import type { TerrainPiece, TerrainRole } from "@/features/level/api/levelApi";
 import { addWarning, type LevelIssueLog } from "@/features/level-file/services/levelFileIssues";
 import { CATALOG_ID_RE } from "@/features/level-file/services/levelFileRoot";
 import type { LevelRole, RoleElement } from "@/features/level-file/types/levelFile.types";
@@ -161,7 +157,7 @@ export function readTerrainRefs(
   item: RoleElement & { role: TerrainRole },
   log: LevelIssueLog
 ): Omit<TerrainPiece, "shape" | "role"> {
-  const fallback = DEFAULT_MATERIAL_BY_ROLE[item.role];
+  const fallback = CATALOG_DEFAULTS.material[item.role];
   const materialId =
     readRef(
       item,
@@ -199,7 +195,7 @@ export function checkPointBehavior(item: RoleElement, log: LevelIssueLog): void 
 /** `data-items` of a drop point: known IDs, else the default drop items. */
 export function readDropItems(item: RoleElement, log: LevelIssueLog): string[] {
   const raw = item.el.getAttribute("data-items");
-  if (raw === null) return [...DEFAULT_POINT_ITEMS.drop];
+  if (raw === null) return [...CATALOG_DEFAULTS.items.drop];
   const spec: RefSpec = { attr: "data-items", kind: "item", instead: "left out" };
   const known = raw
     .trim()
@@ -208,14 +204,14 @@ export function readDropItems(item: RoleElement, log: LevelIssueLog): string[] {
     .map((id) => checkRef(item, { spec, raw: id }, log))
     .filter((id): id is string => id !== undefined);
   if (known.length > 0) return known;
-  const fallback = DEFAULT_POINT_ITEMS.drop.join(" ");
+  const fallback = CATALOG_DEFAULTS.items.drop.join(" ");
   addWarning(log, "W4", `${item.name}: no known item in data-items; using "${fallback}".`);
-  return [...DEFAULT_POINT_ITEMS.drop];
+  return [...CATALOG_DEFAULTS.items.drop];
 }
 
 /** `data-item` of a collectible spawn, else the default collectible. */
 export function readCollectibleItem(item: RoleElement, log: LevelIssueLog): string {
-  const fallback = DEFAULT_POINT_ITEMS.collectible;
+  const fallback = CATALOG_DEFAULTS.items.collectible;
   return (
     readRef(item, { attr: "data-item", kind: "item", instead: `using "${fallback}"` }, log) ??
     fallback

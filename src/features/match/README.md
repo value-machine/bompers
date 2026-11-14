@@ -6,9 +6,9 @@ One round of the game, and the composition root of the game features: the `GameS
 
 ## Structure
 
-| Layer      | Path                       | Purpose                                                                                                                           |
-| ---------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Services   | `services/gameSim.ts`      | `GameState`, `createGameState({ level, tunables })`, `stepGame(state, inputs, dt)` — pure, no DOM; mutates and returns `state`    |
+| Layer      | Path                       | Purpose                                                                                                                                                                            |
+| ---------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Services   | `services/gameSim.ts`      | `GameState`, `createGameState({ level, tunables })`, `stepGame(state, inputs, dt)` — pure, no DOM; mutates and returns `state`                                                     |
 | Services   | `services/gameRenderer.ts` | Scene graph per DESIGN_LANGUAGE § 5: `world` (camera transform: terrain → shadows, pickups, effects, rockets (reserved) → players) and `hud` (round timer); `renderGame` per frame |
 | Hooks      | `hooks/useGameSession.ts`  | `useGameSession(app, level)`: a new level object restarts the match. Per Pixi ticker frame: sample input → `advanceFixedStep` → N × `stepGame` → `renderGame`; full teardown in cleanup                |
 | Components | `components/GameView.tsx`  | Canvas host (`usePixiApp`), the level from `level-file`'s `useLevelSource` + "Load level" control, drop a level file anywhere on the game (`useFileDrop`), controls hint                                                                                        |

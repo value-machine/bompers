@@ -1,7 +1,6 @@
 {
   "$comment": "GENERATED from the content catalog in the game code by `pnpm level-kit:sync`. Do not edit. Spec: documentation/game/LEVEL_FORMAT.md.",
   "formatVersion": 1,
-  "catalogVersion": 1,
   "defaults": {
     "cellSize": 8,
     "gravity": 1,
@@ -17,83 +16,65 @@
       "collectible": "point-orb"
     }
   },
-  "fallbackIds": {
-    "material": "stone",
-    "effect": "none",
-    "sound": "none",
-    "behavior": null,
-    "item": null
-  },
   "material": [
     {
       "id": "stone",
-      "name": "Stone",
-      "description": "Indestructible base terrain. Keeps the map playable.",
+      "label": "Stone",
       "destructible": false,
       "durability": 0,
       "friction": 1,
       "bounce": 0,
       "lookToken": "stone",
-      "impactSoundId": "thud",
-      "destroySoundId": "none",
-      "destroyEffectId": "none"
+      "effect": "none",
+      "sound": "thud"
     },
     {
       "id": "dirt",
-      "name": "Dirt",
-      "description": "Destructible terrain. One rocket blast clears it.",
+      "label": "Dirt",
       "destructible": true,
       "durability": 1,
       "friction": 1,
       "bounce": 0,
       "lookToken": "dirt",
-      "impactSoundId": "thud",
-      "destroySoundId": "crumble",
-      "destroyEffectId": "dust-burst"
+      "effect": "dust-burst",
+      "sound": "crumble"
     }
   ],
   "effect": [
     {
       "id": "none",
-      "name": "None",
-      "description": "No effect."
+      "label": "No effect"
     },
     {
       "id": "dust-burst",
-      "name": "Dust burst",
-      "description": "Cell-coloured debris and dust where terrain is cleared."
+      "label": "Dust burst"
     }
   ],
   "sound": [
     {
       "id": "none",
-      "name": "None",
-      "description": "Silent."
+      "label": "Silent"
     },
     {
       "id": "thud",
-      "name": "Thud",
-      "description": "Something lands on or hits terrain."
+      "label": "Thud"
     },
     {
       "id": "crumble",
-      "name": "Crumble",
-      "description": "Terrain breaks apart."
+      "label": "Crumble"
     }
   ],
   "behavior": [],
   "item": [
     {
       "id": "rocket-launcher",
-      "name": "Rocket launcher",
-      "description": "The MVP weapon: fires rockets from the helmet.",
-      "category": "pickup"
+      "label": "Rocket launcher",
+      "use": "drop"
     },
     {
       "id": "point-orb",
-      "name": "Point orb",
-      "description": "Falls from the roof; picking it up scores points.",
-      "category": "collectible"
+      "label": "Point orb",
+      "use": "collectible"
     }
   ]
 }

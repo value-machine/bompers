@@ -1,15 +1,10 @@
-import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import {
+  CATALOG_DEFAULTS,
+  LEVEL_FORMAT_VERSION,
   exportCatalog,
   type CatalogEntryByKind,
   type ContentKind,
 } from "@/features/content-catalog/api/contentCatalogApi";
-import {
-  DEFAULT_LEVEL_SETTINGS,
-  DEFAULT_MATERIAL_BY_ROLE,
-  DEFAULT_POINT_ITEMS,
-  LEVEL_FORMAT_VERSION,
-} from "@/features/level/api/levelApi";
 
 /**
  * The public level kit's generated parts, built from the content catalog and level defaults in
@@ -20,32 +15,21 @@ const KIT_DIR = `public/level-kit/v${LEVEL_FORMAT_VERSION}`;
 const KINDS: readonly ContentKind[] = ["material", "effect", "sound", "behavior", "item"];
 const CATALOG_IDS_BLOCK = "catalog-ids";
 
-/** The kit's catalog.json: format version, defaults a file may rely on, then IDs per kind. */
+/** The kit's catalog.json: `exportCatalog()` (format version, defaults, IDs per kind) as is. */
 export function buildKitCatalog(): Record<string, unknown> {
-  const catalog = exportCatalog();
   return {
     $comment:
       "GENERATED from the content catalog in the game code by `pnpm level-kit:sync`. Do not edit. Spec: documentation/game/LEVEL_FORMAT.md.",
-    formatVersion: LEVEL_FORMAT_VERSION,
-    catalogVersion: catalog.catalogVersion,
-    defaults: {
-      cellSize: DEFAULT_LEVEL_SETTINGS.cellSize,
-      gravity: DEFAULT_LEVEL_SETTINGS.gravity,
-      matchDuration: DEFAULT_GAME_TUNABLES.match.durationSeconds,
-      material: { ...DEFAULT_MATERIAL_BY_ROLE },
-      items: { drop: [...DEFAULT_POINT_ITEMS.drop], collectible: DEFAULT_POINT_ITEMS.collectible },
-    },
-    fallbackIds: catalog.fallbackIds,
-    ...catalog.entries,
+    ...exportCatalog(),
   };
 }
 
 const roleDefaults = (kind: ContentKind, id: string): string[] => {
   const roles =
     kind === "material"
-      ? Object.entries(DEFAULT_MATERIAL_BY_ROLE).filter(([, m]) => m === id)
+      ? Object.entries(CATALOG_DEFAULTS.material).filter(([, m]) => m === id)
       : kind === "item"
-        ? Object.entries(DEFAULT_POINT_ITEMS).filter(([, v]) => [v].flat().includes(id))
+        ? Object.entries(CATALOG_DEFAULTS.items).filter(([, v]) => [v].flat().includes(id))
         : [];
   return roles.map(([role]) => `default for ${role}`);
 };
@@ -53,22 +37,22 @@ const roleDefaults = (kind: ContentKind, id: string): string[] => {
 function entryNotes<K extends ContentKind>(kind: K, entry: CatalogEntryByKind[K]): string {
   const facts: string[] = [];
   if ("destructible" in entry) facts.push(entry.destructible ? "destructible" : "indestructible");
-  if ("category" in entry) facts.push(entry.category === "pickup" ? "drop pickup" : "collectible");
+  if ("effect" in entry) facts.push(`effect \`${entry.effect}\`, sound \`${entry.sound}\``);
+  if ("use" in entry) facts.push(`use: ${entry.use}`);
   return [...facts, ...roleDefaults(kind, entry.id)].join(", ");
 }
 
 /** Markdown table of every catalog ID, for AUTHORING.md and LEVEL_FORMAT.md. */
 export function renderCatalogIdTable(): string {
-  const { entries } = exportCatalog();
+  const entries = exportCatalog();
   const rows = KINDS.flatMap((kind) => {
     const list = entries[kind] as CatalogEntryByKind[typeof kind][];
     if (list.length === 0) return [`| ${kind} | — | none yet; leave it out | |`];
     return list.map(
-      (entry) =>
-        `| ${kind} | \`${entry.id}\` | ${entry.name}: ${entry.description} | ${entryNotes(kind, entry)} |`
+      (entry) => `| ${kind} | \`${entry.id}\` | ${entry.label} | ${entryNotes(kind, entry)} |`
     );
   });
-  return ["| Kind | ID | What it is | Notes |", "|---|---|---|---|", ...rows].join("\n");
+  return ["| Kind | ID | Label | Notes |", "|---|---|---|---|", ...rows].join("\n");
 }
 
 const markers = (block: string) => ({

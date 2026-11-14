@@ -8,35 +8,52 @@ import {
 describe("contentCatalog", () => {
   it("should resolve a known material when the ID exists", () => {
     const resolved = resolveCatalogEntry("material", "dirt");
-    expect(resolved.fallback).toBe(false);
+    expect(resolved.isFallback).toBe(false);
     expect(resolved.entry?.destructible).toBe(true);
   });
 
   it("should fall back to stone and flag it when a material ID is unknown", () => {
     const resolved = resolveCatalogEntry("material", "lava");
-    expect(resolved).toMatchObject({ fallback: true, entry: { id: "stone" } });
+    expect(resolved).toMatchObject({ isFallback: true, entry: { id: "stone" } });
   });
 
   it("should resolve to no entry when an unknown kind has no fallback", () => {
-    expect(resolveCatalogEntry("behavior", "spin")).toEqual({ entry: null, fallback: true });
+    expect(resolveCatalogEntry("behavior", "spin")).toEqual({ entry: null, isFallback: true });
   });
 
   it("should not treat object prototype keys as catalog IDs", () => {
-    expect(resolveCatalogEntry("material", "toString").fallback).toBe(true);
+    expect(resolveCatalogEntry("material", "toString").isFallback).toBe(true);
   });
 
-  it("should export plain JSON that round-trips and lists every starter ID", () => {
+  it("should export plain JSON in the kit catalog shape with every starter ID", () => {
     const exported = exportCatalog();
     expect(JSON.parse(JSON.stringify(exported))).toEqual(exported);
-    expect(exported.entries.material.map((m) => m.id)).toEqual(["stone", "dirt"]);
-    expect(exported.entries.item.map((i) => i.id)).toEqual(["rocket-launcher", "point-orb"]);
-    exported.entries.material[0]!.name = "changed";
-    expect(CONTENT_CATALOG.material.stone?.name).toBe("Stone");
+    expect(exported.formatVersion).toBe(1);
+    expect(exported.defaults.material).toEqual({ platform: "stone", destructible: "dirt" });
+    expect(exported.defaults.items).toEqual({
+      drop: ["rocket-launcher"],
+      collectible: "point-orb",
+    });
+    expect(exported.material.map((m) => m.id)).toEqual(["stone", "dirt"]);
+    expect(exported.item.map((i) => i.id)).toEqual(["rocket-launcher", "point-orb"]);
+    expect(exported.behavior).toEqual([]);
+    exported.material[0]!.label = "changed";
+    expect(CONTENT_CATALOG.material.stone?.label).toBe("Stone");
   });
 
-  it("should key every entry by its own ID", () => {
+  it("should key every entry by a kebab-case ID equal to its key", () => {
     for (const entries of Object.values(CONTENT_CATALOG)) {
-      for (const [key, entry] of Object.entries(entries)) expect(entry.id).toBe(key);
+      for (const [key, entry] of Object.entries(entries)) {
+        expect(entry.id).toBe(key);
+        expect(key).toMatch(/^[a-z][a-z0-9-]{0,63}$/);
+      }
+    }
+  });
+
+  it("should only reference effect and sound IDs that exist when a material names defaults", () => {
+    for (const material of Object.values(CONTENT_CATALOG.material)) {
+      expect(resolveCatalogEntry("effect", material.effect).isFallback).toBe(false);
+      expect(resolveCatalogEntry("sound", material.sound).isFallback).toBe(false);
     }
   });
 });
