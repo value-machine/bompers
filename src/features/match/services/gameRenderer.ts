@@ -1,4 +1,4 @@
-import { Container, Graphics, Text, type Application } from "pixi.js";
+import { Container, Text, type Application } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import {
   createTerrainView,
@@ -21,12 +21,12 @@ import type { GameState } from "@/features/match/services/gameSim";
  * Composes the render layers. Scene graph:
  *   stage
  *   ├─ world   (camera transform; world units)
- *   │  ├─ backdrop (level area)
- *   │  ├─ terrain  (arena)
- *   │  ├─ players  (player)
- *   │  └─ (combat effects — reserved)
+ *   │  ├─ terrain   (arena)
+ *   │  ├─ (shadows, pickups, effects, rockets — reserved, in that order)
+ *   │  └─ players   (player; drawn last so effects sit under player outlines)
  *   └─ hud     (screen units: round timer)
- * Each feature owns its layer's create/sync pair; this file only orders and drives them.
+ * Order follows DESIGN_LANGUAGE.md § 5. Each feature owns its layer's create/sync pair; this
+ * file only orders and drives them. Sky / parallax backgrounds come with the visual pass.
  */
 export interface GameRenderer {
   world: Container;
@@ -38,16 +38,12 @@ export interface GameRenderer {
 
 export function createGameRenderer(app: Application, state: GameState): GameRenderer {
   const world = new Container({ label: "world" });
-  const { level } = state.arena;
-  const backdrop = new Graphics()
-    .rect(0, 0, level.widthCells * level.cellSize, level.heightCells * level.cellSize)
-    .fill(GAME_PALETTE.outOfBounds);
   const terrain = createTerrainView(state.arena.terrain);
   const players = createPlayersView();
-  world.addChild(backdrop, terrain.container, players.container);
+  world.addChild(terrain.container, players.container);
 
   const hud = new Container({ label: "hud" });
-  const timer = new Text({ text: "", style: { fill: GAME_PALETTE.hudText, fontSize: 28 } });
+  const timer = new Text({ text: "", style: { fill: GAME_PALETTE.ink, fontSize: 28 } });
   timer.anchor.set(0.5, 0);
   hud.addChild(timer);
 
@@ -74,12 +70,7 @@ export function renderGame(
 
   renderer.camera = computeCameraView({
     targets: state.players.map((player) => ({ x: player.x, y: player.y })),
-    bounds: {
-      x: 0,
-      y: 0,
-      width: level.widthCells * level.cellSize,
-      height: level.heightCells * level.cellSize,
-    },
+    bounds: { x: 0, y: 0, w: level.worldSize.w, h: level.worldSize.h },
     viewport,
     previous: renderer.camera,
     padding: state.tunables.camera.padding,

@@ -73,8 +73,8 @@ export function placePlayer(player: PlayerState, at: Vec2): void {
 export const playerBody = (player: PlayerState): Rect => ({
   x: player.x - player.width / 2,
   y: player.y - player.height,
-  width: player.width,
-  height: player.height,
+  w: player.width,
+  h: player.height,
 });
 
 // ── Collision ────────────────────────────────────────────────────────────────
@@ -223,8 +223,8 @@ function applyMotion(player: PlayerState, args: StepPlayersArgs): void {
 function probeWall(player: PlayerState, terrain: TerrainGrid): -1 | 0 | 1 {
   if (player.grounded) return 0;
   const body = playerBody(player);
-  const strip = { y: body.y + 2, width: 1, height: body.height - 4 };
-  if (rectHitsSolid(terrain, { ...strip, x: body.x + body.width })) return 1;
+  const strip = { y: body.y + 2, w: 1, h: body.h - 4 };
+  if (rectHitsSolid(terrain, { ...strip, x: body.x + body.w })) return 1;
   if (rectHitsSolid(terrain, { ...strip, x: body.x - 1 })) return -1;
   return 0;
 }
@@ -236,7 +236,7 @@ function scanGroundBelow(player: PlayerState, terrain: TerrainGrid): number | nu
   const body = playerBody(player);
   const firstRow = Math.ceil(player.y / size) * size;
   for (let top = firstRow; top <= player.y + GROUND_SCAN_RANGE; top += size) {
-    if (rectHitsSolid(terrain, { x: body.x, y: top, width: body.width, height: 1 })) return top;
+    if (rectHitsSolid(terrain, { x: body.x, y: top, w: body.w, h: 1 })) return top;
   }
   return null;
 }

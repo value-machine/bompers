@@ -2,27 +2,35 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES, type GameTunables } from "@/shared/config/gameTunables";
 import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import type { PlayerInput } from "@/shared/types/gameInput.types";
-import { buildTerrainFromLevel, type LevelData } from "@/features/arena/api/arenaApi";
+import { buildTerrainFromLevel } from "@/features/arena/api/arenaApi";
+import type { Rect } from "@/shared/types/gameGeometry.types";
+import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { createPlayer, stepPlayers } from "@/features/player/services/playerController";
 import type { PlayerState } from "@/features/player/types/player.types";
 
 // Cell size 8. Floor top at y = 320 (x 300 has only the floor below and open sky above). Short wall x 480–496 (y 240–320). Tall wall x 640–656
 // (y 0–320). Ledge platform x 80–240, top y = 160.
-const level: LevelData = {
-  id: "test",
-  name: "Test",
-  cellSize: 8,
-  widthCells: 100,
-  heightCells: 50,
-  blocks: [
-    { x: 0, y: 40, width: 100, height: 4, kind: "solid" },
-    { x: 60, y: 30, width: 2, height: 10, kind: "solid" },
-    { x: 80, y: 0, width: 2, height: 40, kind: "solid" },
-    { x: 10, y: 20, width: 20, height: 2, kind: "solid" },
+const stone = (rect: Rect) => ({
+  shape: { type: "rect" as const, ...rect },
+  role: "platform" as const,
+  materialId: "stone",
+});
+
+const level: LevelDefinition = {
+  formatVersion: 1,
+  meta: { levelId: "t", title: "T" },
+  settings: { cellSize: 8, gravity: 1 },
+  worldSize: { w: 800, h: 400 },
+  terrain: [
+    stone({ x: 0, y: 320, w: 800, h: 32 }),
+    stone({ x: 480, y: 240, w: 16, h: 80 }),
+    stone({ x: 640, y: 0, w: 16, h: 320 }),
+    stone({ x: 80, y: 160, w: 160, h: 16 }),
   ],
-  spawnPoints: [],
-  dropPoints: [],
-  outOfBounds: { x: 0, y: 0, width: 800, height: 400 },
+  spawns: [],
+  drops: [],
+  collectibles: [],
+  bounds: { x: 0, y: 0, w: 800, h: 400 },
 };
 
 const FLOOR_Y = 320;
