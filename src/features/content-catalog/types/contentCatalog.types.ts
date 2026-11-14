@@ -1,14 +1,14 @@
 /**
  * Content catalog types: the IDs a level may reference. Every entry is plain, JSON-serialisable
- * data keyed by a stable kebab-case ID, so the level kit can ship the catalog as catalog.json.
+ * data keyed by a stable kebab-case ID; field names match the level kit's catalog.json
+ * (documentation/game/LEVEL_FORMAT.md § 6, § 9) so the kit file is generated from code.
  */
 export type ContentKind = "material" | "effect" | "sound" | "behavior" | "item";
 
 interface CatalogEntryBase {
   id: string;
   /** Human-readable name for level authors. */
-  name: string;
-  description: string;
+  label: string;
 }
 
 /** What a terrain shape is made of: how it behaves, looks and sounds. */
@@ -23,10 +23,10 @@ export interface MaterialEntry extends CatalogEntryBase {
   bounce: number;
   /** Key into the game palette's material looks. */
   lookToken: string;
-  /** Default sound / effect IDs when a shape doesn't set its own. */
-  impactSoundId: string;
-  destroySoundId: string;
-  destroyEffectId: string;
+  /** Default effect ID when cells are destroyed (a shape's data-effect overrides it). */
+  effect: string;
+  /** Default sound ID when cells are hit or destroyed (a shape's data-sound overrides it). */
+  sound: string;
 }
 
 export type EffectEntry = CatalogEntryBase;
@@ -34,8 +34,8 @@ export type SoundEntry = CatalogEntryBase;
 export type BehaviorEntry = CatalogEntryBase;
 
 export interface ItemEntry extends CatalogEntryBase {
-  /** "pickup": weapon / power-up from drops; "collectible": points. */
-  category: "pickup" | "collectible";
+  /** Where the item appears: from drop points, or as a collectible. */
+  use: "drop" | "collectible";
 }
 
 export interface CatalogEntryByKind {
@@ -50,15 +50,24 @@ export type ContentCatalog = {
   [K in ContentKind]: Readonly<Record<string, CatalogEntryByKind[K]>>;
 };
 
-/** Result of resolving an ID: `fallback` is true when the ID was unknown. */
-export interface ResolvedEntry<K extends ContentKind> {
-  entry: CatalogEntryByKind[K] | null;
-  fallback: boolean;
+/** Defaults a level falls back to (catalog.json `defaults`). */
+export interface CatalogDefaults {
+  cellSize: number;
+  gravity: number;
+  /** Seconds. */
+  matchDuration: number;
+  material: { platform: string; destructible: string };
+  items: { drop: string[]; collectible: string };
 }
 
-/** Plain-JSON export (catalog.json of the level kit). */
-export interface ExportedCatalog {
-  catalogVersion: number;
-  fallbackIds: Record<ContentKind, string | null>;
-  entries: { [K in ContentKind]: CatalogEntryByKind[K][] };
+/** Result of resolving an ID: `isFallback` is true when the ID was unknown. */
+export interface ResolvedEntry<K extends ContentKind> {
+  entry: CatalogEntryByKind[K] | null;
+  isFallback: boolean;
 }
+
+/** Plain-JSON export: the shape of the level kit's catalog.json. */
+export type ExportedCatalog = {
+  formatVersion: number;
+  defaults: CatalogDefaults;
+} & { [K in ContentKind]: CatalogEntryByKind[K][] };

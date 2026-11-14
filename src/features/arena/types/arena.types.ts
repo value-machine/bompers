@@ -3,6 +3,8 @@
  * index into `TerrainGrid.slots`; slot 0 is always empty.
  */
 export interface TerrainCellSlot {
+  /** The level role that filled the cell; a platform cell is never overwritten by a destructible one. */
+  role: "platform" | "destructible";
   materialId: string;
   /** role "destructible" AND a destructible material. */
   destructible: boolean;

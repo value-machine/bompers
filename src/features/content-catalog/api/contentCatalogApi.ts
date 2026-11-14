@@ -1,6 +1,7 @@
-/** Public seam of the content catalog: ID lookup with fallback, and the JSON export. */
+/** Public seam of the content catalog: ID lookup with fallback, defaults, and the JSON export. */
 export type {
   BehaviorEntry,
+  CatalogDefaults,
   CatalogEntryByKind,
   ContentCatalog,
   ContentKind,
@@ -12,9 +13,10 @@ export type {
   SoundEntry,
 } from "@/features/content-catalog/types/contentCatalog.types";
 export {
-  CATALOG_VERSION,
+  CATALOG_DEFAULTS,
   CONTENT_CATALOG,
   FALLBACK_IDS,
+  LEVEL_FORMAT_VERSION,
   exportCatalog,
   hasCatalogEntry,
   resolveCatalogEntry,

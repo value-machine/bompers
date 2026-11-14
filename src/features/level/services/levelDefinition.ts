@@ -1,60 +1,95 @@
+import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import {
-  resolveCatalogEntry,
+  CATALOG_DEFAULTS,
+  LEVEL_FORMAT_VERSION,
+  hasCatalogEntry,
   type ContentKind,
 } from "@/features/content-catalog/api/contentCatalogApi";
 import type {
   LevelDefinition,
+  LevelDrop,
   LevelSettings,
   NormalizedLevel,
   TerrainPiece,
-  TerrainRole,
 } from "@/features/level/types/levelDefinition.types";
 
 /**
- * Level defaults and normalisation. The engine runs only on a normalised level: every ID it
- * holds exists in the content catalog. Unknown IDs never crash; they are replaced (or dropped)
- * and reported as warnings for the author.
+ * Level defaults and normalisation (documentation/game/LEVEL_FORMAT.md § 7 warnings that apply to
+ * a parsed level). The engine runs only on a normalised level: every ID it holds exists in the
+ * content catalog. Nothing throws; each correction adds a warning naming its path.
  */
-export const LEVEL_FORMAT_VERSION = 1;
+export { LEVEL_FORMAT_VERSION };
 
-export const DEFAULT_LEVEL_SETTINGS: LevelSettings = { cellSize: 8, gravity: 1 };
-
-export const DEFAULT_MATERIAL_BY_ROLE: Readonly<Record<TerrainRole, string>> = {
-  platform: "stone",
-  destructible: "dirt",
+export const DEFAULT_LEVEL_SETTINGS: LevelSettings = {
+  cellSize: CATALOG_DEFAULTS.cellSize,
+  gravity: CATALOG_DEFAULTS.gravity,
 };
 
 const MIN_SPAWNS = 2;
 
-const knownOrWarn = (
-  ref: { kind: ContentKind; id: string | undefined; where: string },
-  warnings: string[]
-): string | undefined => {
-  if (ref.id === undefined) return undefined;
-  const { entry, fallback } = resolveCatalogEntry(ref.kind, ref.id);
-  if (!fallback) return ref.id;
-  warnings.push(
-    `${ref.where}: unknown ${ref.kind} "${ref.id}", using ${entry ? `"${entry.id}"` : "none"}`
-  );
-  return entry?.id;
-};
+type Warnings = string[];
 
-function normalizePiece(piece: TerrainPiece, index: number, warnings: string[]): TerrainPiece {
-  const where = `terrain[${index}]`;
-  let materialId = piece.materialId;
-  if (resolveCatalogEntry("material", materialId).fallback) {
-    materialId = DEFAULT_MATERIAL_BY_ROLE[piece.role];
+/** Keeps a known optional reference; drops an unknown one (the material's default applies). */
+function knownRef(
+  ref: { kind: ContentKind; id: string | undefined; where: string },
+  warnings: Warnings
+): string | undefined {
+  if (ref.id === undefined || hasCatalogEntry(ref.kind, ref.id)) return ref.id;
+  warnings.push(`${ref.where}: unknown ${ref.kind} "${ref.id}", using the default`);
+  return undefined;
+}
+
+/** A setting value if it passes `valid`, else the default plus a warning (W8). */
+function checkedSetting<T>(
+  value: T | undefined,
+  rule: { valid: (v: T) => boolean; fallback: T; where: string },
+  warnings: Warnings
+): T {
+  if (value === undefined) return rule.fallback;
+  if (rule.valid(value)) return value;
+  warnings.push(`${rule.where}: out of range, using the default`);
+  return rule.fallback;
+}
+
+const isPositiveInteger = (v: number): boolean => Number.isInteger(v) && v >= 1;
+
+function normalizeSettings(settings: Partial<LevelSettings>, warnings: Warnings): LevelSettings {
+  const cellSize = checkedSetting(
+    settings.cellSize,
+    {
+      valid: isPositiveInteger,
+      fallback: DEFAULT_LEVEL_SETTINGS.cellSize,
+      where: "settings.cellSize",
+    },
+    warnings
+  );
+  const gravity = checkedSetting(
+    settings.gravity,
+    { valid: (v) => v > 0, fallback: DEFAULT_LEVEL_SETTINGS.gravity, where: "settings.gravity" },
+    warnings
+  );
+  const matchDurationS = checkedSetting<number | undefined>(
+    settings.matchDurationS,
+    {
+      valid: (v) => v !== undefined && isPositiveInteger(v),
+      fallback: undefined,
+      where: "settings.matchDurationS",
+    },
+    warnings
+  );
+  return { cellSize, gravity, ...(matchDurationS !== undefined && { matchDurationS }) };
+}
+
+/** W4: unknown material → role default; unknown effect / sound / behavior → dropped. */
+function normalizePiece(piece: TerrainPiece, where: string, warnings: Warnings): TerrainPiece {
+  let { materialId } = piece;
+  if (!hasCatalogEntry("material", materialId)) {
+    materialId = CATALOG_DEFAULTS.material[piece.role];
     warnings.push(`${where}: unknown material "${piece.materialId}", using "${materialId}"`);
   }
-  const material = resolveCatalogEntry("material", materialId).entry;
-  if (piece.role === "destructible" && material && !material.destructible) {
-    warnings.push(
-      `${where}: role "destructible" with indestructible material "${materialId}" stays solid`
-    );
-  }
-  const effectId = knownOrWarn({ kind: "effect", id: piece.effectId, where }, warnings);
-  const soundId = knownOrWarn({ kind: "sound", id: piece.soundId, where }, warnings);
-  const behaviorId = knownOrWarn({ kind: "behavior", id: piece.behaviorId, where }, warnings);
+  const effectId = knownRef({ kind: "effect", id: piece.effectId, where }, warnings);
+  const soundId = knownRef({ kind: "sound", id: piece.soundId, where }, warnings);
+  const behaviorId = knownRef({ kind: "behavior", id: piece.behaviorId, where }, warnings);
   return {
     shape: piece.shape,
     role: piece.role,
@@ -65,28 +100,53 @@ function normalizePiece(piece: TerrainPiece, index: number, warnings: string[]):
   };
 }
 
-const knownItems = (itemIds: readonly string[], where: string, warnings: string[]): string[] =>
-  itemIds.filter((id) => knownOrWarn({ kind: "item", id, where }, warnings) !== undefined);
+/** W4: unknown items are removed; a drop left with none gets the default drop items. */
+function normalizeDrop(drop: LevelDrop, where: string, warnings: Warnings): LevelDrop {
+  const known = drop.itemIds.filter((id) => knownRef({ kind: "item", id, where }, warnings));
+  return { at: drop.at, itemIds: known.length > 0 ? known : [...CATALOG_DEFAULTS.items.drop] };
+}
 
-/** Returns a copy whose IDs all exist in the catalog, plus warnings for each correction. */
+const knownItemOrDefault = (itemId: string, where: string, warnings: Warnings): string =>
+  knownRef({ kind: "item", id: itemId, where }, warnings) ?? CATALOG_DEFAULTS.items.collectible;
+
+/** W5: points outside the bounds are ignored. */
+function insideBounds<T>(
+  list: readonly T[],
+  args: { pointOf: (item: T) => Vec2; level: LevelDefinition; name: string },
+  warnings: Warnings
+): T[] {
+  const { x, y, w, h } = args.level.bounds;
+  return list.filter((item, i) => {
+    const p = args.pointOf(item);
+    const inside = p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h;
+    if (!inside) warnings.push(`${args.name}[${i}]: outside bounds, ignored`);
+    return inside;
+  });
+}
+
+/** Returns a copy the engine can run on, plus a warning for each correction. */
 export function normalizeLevelDefinition(level: LevelDefinition): NormalizedLevel {
-  const warnings: string[] = [];
-  if (level.spawns.length < MIN_SPAWNS) {
-    warnings.push(`spawns: ${level.spawns.length} given, at least ${MIN_SPAWNS} expected`);
+  const warnings: Warnings = [];
+  const spawns = insideBounds(level.spawns, { pointOf: (p) => p, level, name: "spawns" }, warnings);
+  if (spawns.length < MIN_SPAWNS) {
+    warnings.push(`spawns: ${spawns.length} valid, at least ${MIN_SPAWNS} expected`);
   }
+  const drops = insideBounds(level.drops, { pointOf: (d) => d.at, level, name: "drops" }, warnings);
+  const collectibles = insideBounds(
+    level.collectibles,
+    { pointOf: (c) => c.at, level, name: "collectibles" },
+    warnings
+  );
   const normalized: LevelDefinition = {
     ...level,
-    settings: { ...DEFAULT_LEVEL_SETTINGS, ...level.settings },
-    terrain: level.terrain.map((piece, i) => normalizePiece(piece, i, warnings)),
-    drops: level.drops
-      .map((drop, i) => ({
-        at: drop.at,
-        itemIds: knownItems(drop.itemIds, `drops[${i}]`, warnings),
-      }))
-      .filter((drop) => drop.itemIds.length > 0),
-    collectibles: level.collectibles.filter(
-      (c, i) => knownItems([c.itemId], `collectibles[${i}]`, warnings).length > 0
-    ),
+    settings: normalizeSettings(level.settings, warnings),
+    terrain: level.terrain.map((piece, i) => normalizePiece(piece, `terrain[${i}]`, warnings)),
+    spawns,
+    drops: drops.map((drop, i) => normalizeDrop(drop, `drops[${i}]`, warnings)),
+    collectibles: collectibles.map((c, i) => ({
+      at: c.at,
+      itemId: knownItemOrDefault(c.itemId, `collectibles[${i}]`, warnings),
+    })),
   };
   return { level: normalized, warnings };
 }
