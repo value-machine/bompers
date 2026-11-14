@@ -1,21 +1,6 @@
 {
   "features": [
     {
-      "key": "harness-overview",
-      "inboundCount": 2,
-      "wiringCount": 2,
-      "inbound": [
-        "src/pages/HarnessOverviewPage.tsx",
-        "src/pages/HomePage.tsx"
-      ],
-      "wiring": [
-        "src/pages/HarnessOverviewPage.tsx",
-        "src/pages/HomePage.tsx"
-      ],
-      "outboundFeatures": [],
-      "outboundStack": []
-    },
-    {
       "key": "tasks",
       "inboundCount": 2,
       "wiringCount": 1,
