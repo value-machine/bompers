@@ -1,0 +1,190 @@
+/*
+ * Bompers level kit v1 — preview stylesheet.
+ * Loaded by a level file opened in a browser; the game never reads it.
+ * Spec: documentation/game/LEVEL_FORMAT.md
+ *
+ * Palette: Gumdrop Pop (documentation/game/DESIGN_LANGUAGE.md § 1) as custom
+ * properties; selectors stay the same when the palette changes. The level
+ * picture always uses the daytime world colours; dark mode only changes the
+ * page around it (dusk UI tokens).
+ */
+:root {
+  --lk-bg: #fff6e6;
+  --lk-ink: #2b1d3a;
+  --lk-muted: #6b5a7d;
+  --lk-panel: #ffffff;
+  --lk-line: rgba(43, 29, 58, 0.16);
+  --lk-grid: rgba(43, 29, 58, 0.08);
+  --lk-grid-major: rgba(43, 29, 58, 0.18);
+  --lk-sky: linear-gradient(#8fd6ff, #fff1cf);
+  --lk-outline: #2b1d3a;
+  --lk-platform: #5a3f7a;
+  --lk-platform-edge: #2b1d3a;
+  --lk-destructible: #f4ad55;
+  --lk-destructible-edge: #b9722a;
+  --lk-spawn: #2ed0a0;
+  --lk-drop: #ff8a1f;
+  --lk-collectible: #ff8fc8;
+  --lk-bounds: #ff4f3a;
+  --lk-warn: #a8580a;
+  --lk-font: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --lk-bg: #1d1428;
+    --lk-ink: #fff6e6;
+    --lk-muted: #c4b6d6;
+    --lk-panel: #2b1d3a;
+    --lk-line: rgba(255, 246, 230, 0.14);
+    --lk-warn: #ffc15e;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--lk-bg);
+  color: var(--lk-ink);
+  font: 14px/1.4 var(--lk-font);
+}
+
+body.lk-ready {
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* The level itself: scale to the page width, keep aspect ratio. */
+svg[data-level-format] {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(100vh - 32px);
+  /* !important: the kit look wins over the file's own inline background, like the role fills. */
+  background: var(--lk-sky) !important;
+  border-radius: 8px;
+}
+
+/* Roles: CSS wins over presentation attributes, so the kit restyles
+   any agent's colours consistently. */
+svg[data-level-format] [data-role='platform'] {
+  fill: var(--lk-platform);
+  stroke: var(--lk-platform-edge);
+  stroke-width: 2;
+}
+svg[data-level-format] [data-role='destructible'] {
+  fill: var(--lk-destructible);
+  stroke: var(--lk-destructible-edge);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+svg[data-level-format] [data-role='spawn'] {
+  fill: var(--lk-spawn);
+  stroke: var(--lk-outline);
+  stroke-width: 2;
+}
+svg[data-level-format] [data-role='drop'] {
+  fill: var(--lk-drop);
+  stroke: var(--lk-outline);
+  stroke-width: 2;
+}
+svg[data-level-format] [data-role='collectible'] {
+  fill: var(--lk-collectible);
+  stroke: var(--lk-outline);
+  stroke-width: 2;
+}
+svg[data-level-format] [data-role='bounds'] {
+  fill: none;
+  stroke: var(--lk-bounds);
+  stroke-width: 3;
+  stroke-dasharray: 14 8;
+}
+
+/* Overlays added by preview.js */
+.lk-grid-minor {
+  stroke: var(--lk-grid);
+}
+.lk-grid-major {
+  stroke: var(--lk-grid-major);
+}
+.lk-grid-layer[hidden] {
+  display: none;
+}
+.lk-label {
+  font: 600 14px var(--lk-font);
+  fill: #2b1d3a;
+  paint-order: stroke;
+  stroke: #fff6e6;
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.lk-drop-ray {
+  stroke: var(--lk-drop);
+  stroke-width: 2;
+  stroke-dasharray: 4 6;
+  opacity: 0.6;
+}
+
+/* Panel */
+.lk-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: var(--lk-panel);
+  border: 1px solid var(--lk-line);
+  border-radius: 8px;
+}
+.lk-meta h1 {
+  margin: 0 0 2px;
+  font-size: 18px;
+}
+.lk-meta p {
+  margin: 0;
+  color: var(--lk-muted);
+}
+.lk-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lk-legend li {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.lk-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex: none;
+}
+.lk-swatch-point {
+  border-radius: 50%;
+}
+.lk-swatch-bounds {
+  background: none !important;
+  border: 2px dashed var(--lk-bounds);
+  box-sizing: border-box;
+}
+.lk-controls label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+}
+.lk-issues {
+  flex-basis: 100%;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--lk-warn);
+}
+.lk-issues:empty {
+  display: none;
+}

@@ -121,6 +121,10 @@ jobs:
         if: env.RELEASE_PR != 'true'
         run: pnpm validate:structure
 
+      - name: Level kit in sync with the content catalog
+        if: env.RELEASE_PR != 'true'
+        run: pnpm level-kit:check
+
       - name: Agent config mirrors in sync (.claude/skills, .cursor/rules)
         if: env.RELEASE_PR != 'true'
         run: node scripts/sync-agent-config.mjs --check

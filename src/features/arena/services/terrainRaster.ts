@@ -1,4 +1,4 @@
-import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import { shapeContains } from "@/shared/utils/shapeGeometry";
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import type { LevelDefinition, TerrainPiece, TerrainShape } from "@/features/level/api/levelApi";
 import type { TerrainGrid } from "@/features/arena/types/arena.types";
@@ -15,34 +15,6 @@ import {
  * when its centre lies inside a shape; polygons use the non-zero rule; where shapes overlap a
  * platform wins over a destructible, and between equal roles the later piece sets the material.
  */
-const crossSign = (a: Vec2, b: Vec2, p: Vec2): number =>
-  (b.x - a.x) * (p.y - a.y) - (p.x - a.x) * (b.y - a.y);
-
-/** Non-zero winding number test. */
-function polygonContains(points: readonly Vec2[], p: Vec2): boolean {
-  let winding = 0;
-  for (let i = 0; i < points.length; i += 1) {
-    const a = points[i]!;
-    const b = points[(i + 1) % points.length]!;
-    if (a.y <= p.y && b.y > p.y && crossSign(a, b, p) > 0) winding += 1;
-    else if (a.y > p.y && b.y <= p.y && crossSign(a, b, p) < 0) winding -= 1;
-  }
-  return winding !== 0;
-}
-
-/** Point-in-shape test (rect half-open like cells; circle inclusive; polygon non-zero). */
-export function shapeContains(shape: TerrainShape, p: Vec2): boolean {
-  if (shape.type === "rect") {
-    return p.x >= shape.x && p.x < shape.x + shape.w && p.y >= shape.y && p.y < shape.y + shape.h;
-  }
-  if (shape.type === "circle") {
-    const dx = p.x - shape.cx;
-    const dy = p.y - shape.cy;
-    return dx * dx + dy * dy <= shape.r * shape.r;
-  }
-  return polygonContains(shape.points, p);
-}
-
 function shapeBounds(shape: TerrainShape) {
   if (shape.type === "rect") return { x: shape.x, y: shape.y, w: shape.w, h: shape.h };
   if (shape.type === "circle") {

@@ -11,10 +11,10 @@ One round of the game (timed round, scoring, respawn and spawn protection, winne
 | Services   | `services/gameSim.ts`      | `GameState`, `createGameState({ level, tunables })`, `stepGame(state, inputs, dt)` — pure, no DOM; mutates and returns `state`                                                                                                                |
 | Services   | `services/matchRules.ts`   | Step 5: out of bounds → elimination, scoring from combat's `playerEliminated` events (by `seq`) and collected orbs, respawn queue, spawn protection; `roundWinners`, `roundResultLabel`, `isRestartPress` |
 | Services   | `services/spawnChoice.ts`  | `chooseSpawnIndex` — the spawn whose nearest active opponent is farthest (pure)                                                                                                                                                                    |
-| Services   | `services/gameRenderer.ts` | Scene graph per DESIGN_LANGUAGE § 5: `world` (camera transform: terrain → pickups, point orbs → effects → rockets → players (protected ones blink) → combat overlay) and `hud`; only players in play are drawn and framed; `renderGame` per frame |
+| Services   | `services/gameRenderer.ts` | Scene graph per DESIGN_LANGUAGE § 5: `world` (camera transform: terrain → pickups, point orbs → effects → rockets → players (protected ones blink) → combat overlay) and `hud`; only players in play are drawn and framed; `renderGame` per frame frames the camera with `computeCameraView` (`settings: state.tunables.camera`) |
 | Services   | `services/hudRenderer.ts`  | HUD (DESIGN_LANGUAGE § 7, simplified): timer card, one card per player (emblem chip, health chunks, score), round-result banner; fixed canvas colours only                                                                                         |
-| Hooks      | `hooks/useGameSession.ts`  | Per Pixi ticker frame: sample input → restart check → `advanceFixedStep` → N × `stepGame` → `renderGame`; a restart rebuilds state and renderer; full teardown in cleanup                                                                   |
-| Components | `components/GameView.tsx`  | Canvas host (`usePixiApp`) + controls hint (canvas ink, not a theme token)                                                                                                                                                                    |
+| Hooks      | `hooks/useGameSession.ts`  | `useGameSession(app, level)`: a new level object restarts the match. Per Pixi ticker frame: sample input → restart check → `advanceFixedStep` → N × `stepGame` → `renderGame`; a restart (jump after the round ended) rebuilds state and renderer on the same level; full teardown in cleanup |
+| Components | `components/GameView.tsx`  | Canvas host (`usePixiApp`), the level from `level-file`'s `useLevelSource` + "Load level" control, drop a level file anywhere on the game (`useFileDrop`), controls hint (canvas ink on a cream pill, never theme tokens); "Load level" sits below the HUD card row |
 | API        | `api/matchApi.ts`          | Simulation entry for other consumers (lobby, tests)                                                                                                                                                                                           |
 
 Systems order in `stepGame` (new concepts slot into their number):
@@ -32,7 +32,7 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 
 ## Dependencies
 
-- `level`, `arena`, `player`, `camera`, `combat`, `collectibles` through their `api/` files.
+- `level`, `level-file`, `arena`, `player`, `camera`, `combat`, `collectibles` through their `api/` files.
 - Shared engine: `gameLoop`, `gameInputService`, `usePixiApp`, `gameTunables`, `gamePalette`, `gameInput.types`.
 - Mounted by `src/pages/GamePage.tsx` at `/`.
 

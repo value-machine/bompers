@@ -172,10 +172,12 @@ function syncTimer(view: HudView, frame: HudFrame, scale: number): void {
   view.timer.root.position.set(frame.viewport.width / 2, (CARD.top + TIMER.h / 2) * scale);
 }
 
-/** Card centre for a slot: P1, P2 from the left edge; P3, P4 from the right edge. */
+/** Card centre for a slot: P1, P2 on the left, P3, P4 on the right, reading left to right. */
 function cardCentre(slot: number, frame: HudFrame, scale: number): { x: number; y: number } {
   const step = (CARD.w + CARD.gap) * scale;
-  const fromEdge = (CARD.margin + CARD.w / 2) * scale + (slot % 2) * step;
+  // Left: P1 at the edge, P2 inside. Right: P3 inside, P4 at the edge.
+  const steps = slot < 2 ? slot % 2 : 1 - (slot % 2);
+  const fromEdge = (CARD.margin + CARD.w / 2) * scale + steps * step;
   const x = slot < 2 ? fromEdge : frame.viewport.width - fromEdge;
   return { x, y: (CARD.top + CARD.h / 2) * scale };
 }

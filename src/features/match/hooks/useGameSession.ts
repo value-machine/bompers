@@ -3,7 +3,7 @@ import type { Application, Ticker } from "pixi.js";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { advanceFixedStep, createFixedStepClock } from "@/shared/services/gameLoop";
 import { createGameInputReader } from "@/shared/services/gameInputService";
-import { PLACEHOLDER_LEVEL } from "@/features/level/api/levelApi";
+import type { LevelDefinition } from "@/features/level/api/levelApi";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import { createGameState, stepGame, type GameState } from "@/features/match/services/gameSim";
 import {
@@ -18,22 +18,23 @@ const isAppAlive = (app: Application): boolean =>
   (app.ticker as Ticker | null) !== null && (app.stage as Application["stage"] | null) !== null;
 
 /**
- * Runs matches on a ready Pixi app: input → fixed steps of `stepGame` → render, once per
- * Pixi ticker frame. After a round ends, a jump press (past the restart lock) starts a fresh
- * round on the same level and settings. Everything is created in the effect and torn down in
+ * Runs matches of `level` on a ready Pixi app (nothing until both are ready; a new level
+ * object restarts the match): input → fixed steps of `stepGame` → render, once per Pixi
+ * ticker frame. After a round ends, a jump press (past the restart lock) starts a fresh round
+ * on the same level and settings. Everything is created in the effect and torn down in
  * its cleanup, so a StrictMode remount starts a clean session.
  */
 const clearStage = (app: Application): void => {
   app.stage.removeChildren().forEach((child) => child.destroy({ children: true }));
 };
 
-export function useGameSession(app: Application | null): void {
+export function useGameSession(app: Application | null, level: LevelDefinition | null): void {
   useEffect(() => {
-    if (!app) return undefined;
+    if (!app || !level) return undefined;
     const tunables = DEFAULT_GAME_TUNABLES;
     const stepSeconds = 1 / tunables.sim.stepHz;
     const startRound = (): { state: GameState; renderer: GameRenderer } => {
-      const state = createGameState({ level: PLACEHOLDER_LEVEL, tunables });
+      const state = createGameState({ level, tunables });
       return { state, renderer: createGameRenderer(app, state) };
     };
     let round = startRound();
@@ -84,5 +85,5 @@ export function useGameSession(app: Application | null): void {
       app.ticker.remove(onFrame);
       clearStage(app);
     };
-  }, [app]);
+  }, [app, level]);
 }
