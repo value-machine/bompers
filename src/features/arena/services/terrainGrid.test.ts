@@ -1,56 +1,67 @@
 import { describe, expect, it } from "vitest";
-import { TERRAIN_CELL, type LevelData } from "@/features/arena/types/arena.types";
+import type { LevelDefinition } from "@/features/level/api/levelApi";
+import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 import {
-  buildTerrainFromLevel,
   clearCircle,
   createTerrainGrid,
-  getCell,
+  getCellInfo,
   isSolidAt,
   rectHitsSolid,
   takeDirtyChunks,
 } from "@/features/arena/services/terrainGrid";
 
-const level: LevelData = {
-  id: "test",
-  name: "Test",
-  cellSize: 10,
-  widthCells: 40,
-  heightCells: 20,
-  blocks: [
-    { x: 0, y: 10, width: 40, height: 2, kind: "destructible" },
-    { x: 0, y: 12, width: 40, height: 2, kind: "solid" },
+const level: LevelDefinition = {
+  formatVersion: 1,
+  meta: { levelId: "t", title: "T" },
+  settings: { cellSize: 10, gravity: 1 },
+  worldSize: { w: 400, h: 200 },
+  terrain: [
+    {
+      shape: { type: "rect", x: 0, y: 100, w: 400, h: 20 },
+      role: "destructible",
+      materialId: "dirt",
+    },
+    { shape: { type: "rect", x: 0, y: 120, w: 400, h: 20 }, role: "platform", materialId: "stone" },
   ],
-  spawnPoints: [{ x: 50, y: 100 }],
-  dropPoints: [],
-  outOfBounds: { x: -100, y: -100, width: 600, height: 400 },
+  spawns: [],
+  drops: [],
+  collectibles: [],
+  bounds: { x: -100, y: -100, w: 600, h: 400 },
 };
 
 describe("terrainGrid", () => {
-  it("should fill the cells a level's blocks describe", () => {
-    const grid = buildTerrainFromLevel(level);
-    expect(getCell(grid, 5, 10)).toBe(TERRAIN_CELL.destructible);
-    expect(getCell(grid, 5, 12)).toBe(TERRAIN_CELL.solid);
-    expect(getCell(grid, 5, 9)).toBe(TERRAIN_CELL.empty);
-  });
-
   it("should read cells outside the grid as empty", () => {
     const grid = buildTerrainFromLevel(level);
-    expect(getCell(grid, -1, 11)).toBe(TERRAIN_CELL.empty);
+    expect(getCellInfo(grid, -1, 11)).toBeNull();
     expect(isSolidAt(grid, 9999, 115)).toBe(false);
   });
 
   it("should report a rect that overlaps terrain but not one that only touches its top", () => {
     const grid = buildTerrainFromLevel(level);
-    expect(rectHitsSolid(grid, { x: 20, y: 80, width: 10, height: 20 })).toBe(false);
-    expect(rectHitsSolid(grid, { x: 20, y: 80, width: 10, height: 21 })).toBe(true);
+    expect(rectHitsSolid(grid, { x: 20, y: 80, w: 10, h: 20 })).toBe(false);
+    expect(rectHitsSolid(grid, { x: 20, y: 80, w: 10, h: 21 })).toBe(true);
   });
 
-  it("should remove destructible cells but keep solid cells when a circle is blasted", () => {
+  it("should remove destructible cells but keep platform cells when a circle is blasted", () => {
     const grid = buildTerrainFromLevel(level);
     const removed = clearCircle(grid, { x: 200, y: 115, radius: 25 });
     expect(removed).toBeGreaterThan(0);
-    expect(getCell(grid, 20, 11)).toBe(TERRAIN_CELL.empty);
-    expect(getCell(grid, 20, 12)).toBe(TERRAIN_CELL.solid);
+    expect(getCellInfo(grid, 20, 11)).toBeNull();
+    expect(getCellInfo(grid, 20, 12)?.materialId).toBe("stone");
+  });
+
+  it("should keep a destructible-role cell whose material is indestructible", () => {
+    const grid = buildTerrainFromLevel({
+      ...level,
+      terrain: [
+        {
+          shape: { type: "rect", x: 0, y: 100, w: 40, h: 10 },
+          role: "destructible",
+          materialId: "stone",
+        },
+      ],
+    });
+    expect(clearCircle(grid, { x: 20, y: 105, radius: 30 })).toBe(0);
   });
 
   it("should mark only the touched chunks dirty when a circle is blasted", () => {

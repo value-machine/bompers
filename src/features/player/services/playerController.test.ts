@@ -2,27 +2,34 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES, type GameTunables } from "@/shared/config/gameTunables";
 import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import type { PlayerInput } from "@/shared/types/gameInput.types";
-import { buildTerrainFromLevel, type LevelData } from "@/features/arena/api/arenaApi";
+import { buildTerrainFromLevel } from "@/features/arena/api/arenaApi";
+import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { createPlayer, stepPlayers } from "@/features/player/services/playerController";
 import type { PlayerState } from "@/features/player/types/player.types";
 
 // Cell size 8. Floor top at y = 320 (x 300 has only the floor below and open sky above). Short wall x 480–496 (y 240–320). Tall wall x 640–656
 // (y 0–320). Ledge platform x 80–240, top y = 160.
-const level: LevelData = {
-  id: "test",
-  name: "Test",
-  cellSize: 8,
-  widthCells: 100,
-  heightCells: 50,
-  blocks: [
-    { x: 0, y: 40, width: 100, height: 4, kind: "solid" },
-    { x: 60, y: 30, width: 2, height: 10, kind: "solid" },
-    { x: 80, y: 0, width: 2, height: 40, kind: "solid" },
-    { x: 10, y: 20, width: 20, height: 2, kind: "solid" },
+const stone = (x: number, y: number, w: number, h: number): LevelDefinition["terrain"][number] => ({
+  shape: { type: "rect", x, y, w, h },
+  role: "platform",
+  materialId: "stone",
+});
+
+const level: LevelDefinition = {
+  formatVersion: 1,
+  meta: { levelId: "t", title: "T" },
+  settings: { cellSize: 8, gravity: 1 },
+  worldSize: { w: 800, h: 400 },
+  terrain: [
+    stone(0, 320, 800, 32),
+    stone(480, 240, 16, 80),
+    stone(640, 0, 16, 320),
+    stone(80, 160, 160, 16),
   ],
-  spawnPoints: [],
-  dropPoints: [],
-  outOfBounds: { x: 0, y: 0, width: 800, height: 400 },
+  spawns: [],
+  drops: [],
+  collectibles: [],
+  bounds: { x: 0, y: 0, w: 800, h: 400 },
 };
 
 const FLOOR_Y = 320;
