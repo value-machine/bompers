@@ -1,7 +1,7 @@
 /**
  * Shared reader for agent hook input (JSON on stdin), used by every hook script in scripts/.
  * Claude Code wires them in .claude/settings.json `hooks` (contract: code.claude.com/docs/en/hooks);
- * Cursor wires the feedback hooks in .cursor/hooks.json (contract: cursor.com/docs/agent/hooks).
+ * Cursor wires them in .cursor/hooks.json (contract: cursor.com/docs/agent/hooks).
  */
 
 /**
@@ -39,4 +39,17 @@ function isCursorInput(input) {
   return Boolean(input && typeof input.cursor_version === "string");
 }
 
-module.exports = { parseHookInput, readStdin, isCursorInput };
+/**
+ * Directory the hook event happened in. Claude Code sends `cwd`; Cursor sends `cwd` on
+ * beforeShellExecution and only `workspace_roots` on other events.
+ * @param {Record<string, any> | null} input
+ * @returns {string | null}
+ */
+function resolveCwd(input) {
+  if (!input) return null;
+  if (typeof input.cwd === "string" && input.cwd !== "") return input.cwd;
+  const roots = input.workspace_roots;
+  return Array.isArray(roots) && typeof roots[0] === "string" ? roots[0] : null;
+}
+
+module.exports = { parseHookInput, readStdin, isCursorInput, resolveCwd };

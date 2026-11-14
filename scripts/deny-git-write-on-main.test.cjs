@@ -1,7 +1,7 @@
 const { describe, test } = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("path");
-const { decide, tokenize } = require("./deny-git-write-on-main.cjs");
+const { decide, tokenize, run } = require("./deny-git-write-on-main.cjs");
 
 const ROOT = path.resolve("/repo");
 const OTHER = path.resolve("/repo/other");
@@ -103,5 +103,76 @@ describe("deny-git-write-on-main", () => {
 
   test("should keep quoted strings as single tokens", () => {
     assert.deepEqual(tokenize('git commit -m "a && b"'), ["git", "commit", "-m", "a && b"]);
+  });
+});
+
+describe("deny-git-write-on-main (Cursor beforeShellExecution)", () => {
+  const cursorInput = (command, extra = {}) =>
+    JSON.stringify({
+      hook_event_name: "beforeShellExecution",
+      cursor_version: "2.0.0",
+      workspace_roots: [ROOT],
+      command,
+      cwd: ROOT,
+      sandbox: false,
+      ...extra,
+    });
+  const answer = (res) => JSON.parse(res.stdout);
+
+  test("should deny with a message and exit 0 when a Cursor command commits on main", () => {
+    const res = run(cursorInput('git commit -m "x"'), onMain);
+    assert.equal(res.exitCode, 0);
+    assert.equal(answer(res).permission, "deny");
+    assert.match(answer(res).agent_message, /never commit or push to `main`/);
+    assert.equal(answer(res).user_message, answer(res).agent_message);
+  });
+
+  test("should deny when a Cursor command pushes to main from a feature branch", () => {
+    assert.equal(
+      answer(run(cursorInput("git push origin HEAD:main"), onFeature)).permission,
+      "deny"
+    );
+  });
+
+  test("should allow when a Cursor git write targets a feature branch", () => {
+    const res = run(cursorInput("git commit -m x && git push -u origin HEAD"), onFeature);
+    assert.equal(res.exitCode, 0);
+    assert.deepEqual(answer(res), { permission: "allow" });
+  });
+
+  test("should allow when a Cursor command is not a git write", () => {
+    assert.deepEqual(answer(run(cursorInput("pnpm test && git status"), onMain)), {
+      permission: "allow",
+    });
+  });
+
+  test("should use workspace_roots when Cursor sends no cwd", () => {
+    const get = branchesAt({ [ROOT]: "main", [OTHER]: "feature/x" });
+    const res = run(cursorInput("git commit -m x", { cwd: "" }), get);
+    assert.equal(answer(res).permission, "deny");
+  });
+
+  test("should allow when the guard crashes on Cursor input", () => {
+    const crash = () => {
+      throw new Error("git not found");
+    };
+    const res = run(cursorInput("git commit -m x"), crash);
+    assert.equal(res.exitCode, 0);
+    assert.deepEqual(answer(res), { permission: "allow" });
+  });
+
+  test("should keep the Claude Code answer as exit 2 on stderr when a commit targets main", () => {
+    assert.deepEqual(run(hookInput("git commit -m x"), onMain), {
+      exitCode: 2,
+      stderr: `${decide(hookInput("git commit -m x"), onMain).reason}\n`,
+    });
+    assert.deepEqual(run(hookInput("git status"), onMain), { exitCode: 0 });
+  });
+
+  test("should still throw on Claude Code input when the guard crashes", () => {
+    const crash = () => {
+      throw new Error("boom");
+    };
+    assert.throws(() => run(hookInput("git commit -m x"), crash), /boom/);
   });
 });
