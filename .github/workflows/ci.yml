@@ -61,7 +61,7 @@ jobs:
       RELEASE_PR: ${{ github.event_name == 'workflow_dispatch' && startsWith(github.ref_name, 'release-please--') }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # The related-tests run diffs against the PR base or the previous push.
           fetch-depth: 0
@@ -72,11 +72,11 @@ jobs:
 
       - name: Setup pnpm
         if: env.RELEASE_PR != 'true'
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
         if: env.RELEASE_PR != 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: "pnpm"
