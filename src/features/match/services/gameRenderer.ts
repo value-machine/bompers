@@ -43,8 +43,8 @@ import { createHudView, syncHudView, type HudView } from "@/features/match/servi
  *   ├─ backdrop (screen units: sky, sun, parallax hills and clouds — arena)
  *   ├─ world   (camera transform; world units)
  *   │  ├─ terrain   (arena: solid slabs, destructible tiles)
- *   │  ├─ contact shadows: pickups and rockets (combat), players (player)
- *   │  ├─ pickups (combat), point orbs (collectibles)
+ *   │  ├─ contact shadows: weapon crates (collectibles), rockets (combat), players (player)
+ *   │  ├─ weapon crates, point orbs (collectibles)
  *   │  ├─ effects (debris, explosions, rocket-hit pops — effects), rockets (+ trails — combat)
  *   │  ├─ dive effects (dive impact pops)   (dive)
  *   │  ├─ players   (player; above effects so they never cover a player outline; protected
@@ -80,10 +80,11 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const dive = createDiveView();
   world.addChild(
     terrain.container,
-    combat.shadows,
+    collectibles.shadows.container,
+    combat.shadows.container,
     players.shadows,
-    combat.pickups,
-    collectibles.container,
+    collectibles.crates,
+    collectibles.orbs,
     effects.layer,
     combat.rockets,
     dive.effects,
@@ -145,6 +146,8 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
   syncCollectiblesView(renderer.collectibles, {
     collectibles: state.collectibles,
     size: state.tunables.collectibles.size,
+    crateSize: state.tunables.combat.drops.size,
+    terrain: state.arena.terrain,
     nowMs,
     zoom,
   });
@@ -153,7 +156,6 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     players: inPlay,
     timeSeconds: state.timeSeconds,
     maxHealth: state.tunables.combat.maxHealth,
-    pickupSize: state.tunables.combat.drops.size,
     terrain: state.arena.terrain,
     zoom,
   });

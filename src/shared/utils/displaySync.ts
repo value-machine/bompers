@@ -2,7 +2,7 @@ import type { Container } from "pixi.js";
 
 /**
  * Keeps one display object per key in `sprites` (render layers of entities that come and go:
- * rockets, pickups, orbs, effects): creates missing ones, places all, destroys stale ones.
+ * rockets, weapon crates, orbs, effects): creates missing ones, places all, destroys stale ones.
  * Keys can carry a look version (for example `${id}:${outlineStep}`) so a sprite is rebuilt when
  * its look changes.
  */

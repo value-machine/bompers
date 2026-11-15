@@ -25,7 +25,7 @@ The unarmed attack (GDD § 3 "Ongewapende aanval", the "bomp"): fire makes a blo
 
 ## Dependencies
 
-- `combat` via `api/combatApi.ts` (`applyHit`, `CombatState`).
+- `combat` via `api/combatApi.ts` (`applyHit`, `CombatState`); `diveSim.test.ts` steps combat too (`createCombatState()`, `stepCombat` without crates — those moved to `collectibles`).
 - `player` via `api/playerApi.ts` (`PlayerState`, `BodyContact`, `BlobPoseOverlay`, `reactToHit`, `isTumbling`).
 - Shared: `gameTunables` (`dive` section), `gamePalette`, `gameInput.types`, `gameInputMapping`, `gameGeometry.types`; `pixi.js` in the renderer.
 - Consumed by `match` only.

@@ -25,7 +25,7 @@ Seams for later work:
 
 - `level` (`LevelDefinition`) and `content-catalog` (`resolveCatalogEntry` for material behaviour and look) through their `api/` files.
 - `pixi.js` (renderer only), `src/shared/config/gamePalette.ts`, `src/shared/types/gameGeometry.types.ts`.
-- Consumed by `player` (collision queries), `combat` (blasts, rocket / pickup collision) and `match` (state + render composition).
+- Consumed by `player` (collision queries), `combat` (blasts, rocket collision), `collectibles` (weapon-crate landing, crate shadows) and `match` (state + render composition).
 
 ## Decisions
 

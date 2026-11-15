@@ -23,7 +23,7 @@ function createHitWorld(tunables: GameTunables = DEFAULT_GAME_TUNABLES): {
   ];
   const victim = players[1]!;
   victim.facing = 1;
-  const combat = createCombatState(tunables);
+  const combat = createCombatState();
   for (const player of players) fighterFor(combat, player, tunables);
   return { world: { combat, players, tunables, timeSeconds: 10 }, victim };
 }

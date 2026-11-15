@@ -34,6 +34,3 @@ export function unitBetween(from: Vec2, to: Vec2, fallback: Vec2): Vec2 {
   const length = Math.hypot(dx, dy);
   return length < 1e-6 ? fallback : { x: dx / length, y: dy / length };
 }
-
-export const rectsOverlap = (a: Rect, b: Rect): boolean =>
-  a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
