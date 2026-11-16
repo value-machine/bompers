@@ -45,9 +45,12 @@ export type EffectEntry = CatalogEntryBase;
 export type SoundEntry = CatalogEntryBase;
 export type BehaviorEntry = CatalogEntryBase;
 
+/** The point role an item belongs to: dropped from drop points, or placed as a collectible. */
+export type ItemUse = "drop" | "collectible";
+
 export interface ItemEntry extends CatalogEntryBase {
   /** Where the item appears: from drop points, or as a collectible. */
-  use: "drop" | "collectible";
+  use: ItemUse;
 }
 
 export interface CatalogEntryByKind {

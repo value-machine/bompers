@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CONTENT_CATALOG,
   exportCatalog,
+  itemUseOf,
   resolveCatalogEntry,
 } from "@/features/content-catalog/services/contentCatalog";
 
@@ -28,6 +29,13 @@ describe("contentCatalog", () => {
 
   it("should resolve to no entry when an unknown kind has no fallback", () => {
     expect(resolveCatalogEntry("behavior", "spin")).toEqual({ entry: null, isFallback: true });
+  });
+
+  it("should give each item's point role and null when the ID is not an item", () => {
+    expect(itemUseOf("rocket-launcher")).toBe("drop");
+    expect(itemUseOf("dive-reset")).toBe("collectible");
+    expect(itemUseOf("stone")).toBeNull();
+    expect(itemUseOf("toString")).toBeNull();
   });
 
   it("should not treat object prototype keys as catalog IDs", () => {

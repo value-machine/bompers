@@ -17,7 +17,7 @@ You are writing **one HTML file** that holds **one inline `<svg>`**. The SVG is 
    - `data-color` (optional): any named colour from § Catalog IDs, on any material (pink ice, green cardboard, …). Leave it out for the material's own colour. No hex values.
    Players read the behaviour from the surface pattern the game draws, not from the colour: breakable terrain shows a seam grid, ice shows gloss streaks and a white rim.
 5. Reference other content **by ID only**, never describe it: `data-items` (space-separated) on `drop`, `data-item` on `collectible`. Optional on terrain: `data-effect`, `data-sound`, `data-behavior`. IDs are lowercase-kebab. Every current ID is in § Catalog IDs below (also `/level-kit/v2/catalog.json`).
-   Unknown IDs don't break the level; they fall back to the default with a warning.
+   Unknown IDs, or an item on the wrong role (a drop item on a `collectible`, a collectible item on a `drop`), don't break the level; they fall back to the default with a warning.
 6. Optional level settings on the root: `data-gravity` (multiplier, `1` = normal, `0.6` = floaty), `data-match-duration` (seconds), `data-cell-size` (terrain sample spacing, default `4`). Metadata: `data-author`, `data-agent` (your name, e.g. `claude`, `gemini`, `chatgpt`), `data-level-id`, `data-description`.
 7. Give every shape a `fill` so the file looks right with no network. The game ignores `fill`: it paints terrain with `data-color` (the hex per colour is in `catalog.json`).
 8. Design sense: spawns sit just above ground (centre ~24 units above the surface), not inside terrain and not over a pit. Leave the side edges open so players can fall off. Keep `bounds` a bit larger than the terrain so players fly before they die. Snap terrain to multiples of 8.
