@@ -18,7 +18,7 @@ import type { DiveHit, DivePhase } from "@/features/dive/types/dive.types";
 // Cell size 8. Floor top y = 320. Thin wall (one cell) x 600–608, y 0–320. Open sky elsewhere.
 const stone = (rect: Rect) => ({
   shape: { type: "rect" as const, ...rect },
-  role: "platform" as const,
+
   materialId: "stone",
 });
 const level: LevelDefinition = {

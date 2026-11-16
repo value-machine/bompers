@@ -14,7 +14,7 @@ import type {
  * them here. New content = a new entry here (plus its look / sound where that kind is drawn or
  * played). IDs are never renamed or reused once shipped (LEVEL_FORMAT.md § 6).
  */
-export const LEVEL_FORMAT_VERSION = 1;
+export const LEVEL_FORMAT_VERSION = 2;
 
 export const CONTENT_CATALOG: ContentCatalog = {
   material: {
@@ -25,21 +25,58 @@ export const CONTENT_CATALOG: ContentCatalog = {
       durability: 0,
       friction: 1,
       bounce: 0,
-      lookToken: "stone",
+      surface: "plain",
+      defaultColor: "plum",
       effect: "none",
       sound: "thud",
     },
-    dirt: {
-      id: "dirt",
-      label: "Dirt",
+    earth: {
+      id: "earth",
+      label: "Earth",
       destructible: true,
       durability: 1,
       friction: 1,
       bounce: 0,
-      lookToken: "dirt",
+      surface: "breakable",
+      defaultColor: "clay",
       effect: "dust-burst",
       sound: "crumble",
     },
+    cardboard: {
+      id: "cardboard",
+      label: "Cardboard",
+      destructible: true,
+      durability: 1,
+      friction: 1,
+      bounce: 0,
+      surface: "breakable",
+      defaultColor: "cardboard",
+      effect: "dust-burst",
+      sound: "crumble",
+    },
+    ice: {
+      id: "ice",
+      label: "Ice",
+      destructible: false,
+      durability: 0,
+      friction: 0.12,
+      bounce: 0,
+      surface: "ice",
+      defaultColor: "frost",
+      effect: "none",
+      sound: "thud",
+    },
+  },
+  // Any colour goes on any material; RGB per ID in gamePalette.terrainSwatches.
+  color: {
+    plum: { id: "plum", label: "Plum" },
+    slate: { id: "slate", label: "Slate" },
+    cardboard: { id: "cardboard", label: "Cardboard" },
+    clay: { id: "clay", label: "Clay" },
+    moss: { id: "moss", label: "Moss" },
+    mint: { id: "mint", label: "Mint" },
+    frost: { id: "frost", label: "Frost" },
+    rose: { id: "rose", label: "Rose" },
   },
   effect: {
     none: { id: "none", label: "No effect" },
@@ -75,13 +112,14 @@ export const CATALOG_DEFAULTS: CatalogDefaults = {
   cellSize: 8,
   gravity: 1,
   matchDuration: DEFAULT_GAME_TUNABLES.match.durationSeconds,
-  material: { platform: "stone", destructible: "dirt" },
+  material: "stone",
   items: { drop: ["rocket-launcher"], collectible: "point-orb" },
 };
 
 /** What an unknown ID resolves to per kind, when no role default applies (null = none). */
 export const FALLBACK_IDS: Readonly<Record<ContentKind, string | null>> = {
-  material: CATALOG_DEFAULTS.material.platform,
+  material: CATALOG_DEFAULTS.material,
+  color: null,
   effect: "none",
   sound: "none",
   behavior: null,
@@ -111,6 +149,7 @@ export function exportCatalog(): ExportedCatalog {
     formatVersion: LEVEL_FORMAT_VERSION,
     defaults: structuredClone(CATALOG_DEFAULTS),
     material: values("material"),
+    color: values("color"),
     effect: values("effect"),
     sound: values("sound"),
     behavior: values("behavior"),

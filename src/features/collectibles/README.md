@@ -31,3 +31,4 @@ Everything that drops from the sky (combat D2, match-rules D2). **Point orbs** (
 - An orb falls onto its authored point and hovers there, without terrain collision, so a blasted floor never strands one (match-rules D2).
 - Players waiting to respawn are not passed in, so they cannot collect.
 - Orbs and crates share one touch test (`skyDrops.firstToucher`); combat no longer has a `rectsOverlap`, so there is one copy.
+- Test levels list terrain as `{ shape, materialId }` only: terrain has no role since level format 2 (material-system D5).

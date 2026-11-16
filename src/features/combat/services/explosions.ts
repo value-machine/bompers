@@ -68,7 +68,7 @@ function hitPlayers(ctx: CombatContext, blast: Blast): void {
 function blastTerrain(ctx: CombatContext, at: Vec2): void {
   const radius = ctx.tunables.combat.explosion.craterRadius;
   const cleared = clearCircle(ctx.terrain, { x: at.x, y: at.y, radius });
-  for (const [materialId, cells] of Object.entries(cleared.byMaterial)) {
+  for (const { materialId, colorId, cells } of cleared.byLook) {
     const material = resolveCatalogEntry("material", materialId).entry;
     emitCombatEvent(
       ctx.combat,
@@ -77,6 +77,7 @@ function blastTerrain(ctx: CombatContext, at: Vec2): void {
         x: at.x,
         y: at.y,
         materialId,
+        colorId,
         cells,
         effectId: material?.effect ?? "none",
         soundId: material?.sound ?? "none",

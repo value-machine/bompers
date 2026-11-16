@@ -2,7 +2,11 @@ import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInput, PlayerInputs } from "@/shared/types/gameInput.types";
 import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
-import { rectHitsSolid, type TerrainGrid } from "@/features/arena/api/arenaApi";
+import {
+  groundFrictionBelow,
+  rectHitsSolid,
+  type TerrainGrid,
+} from "@/features/arena/api/arenaApi";
 import type { PlayerState } from "@/features/player/types/player.types";
 import { bounceTumble, endTumble, isTumbling, tickTumble } from "@/features/player/services/tumble";
 
@@ -173,6 +177,16 @@ function horizontalRate(player: PlayerState, target: number, p: PlayerTunables):
   return target === 0 ? p.airDecel : p.airAccel;
 }
 
+/**
+ * Grip of the ground under the feet (the material's friction: ice ≈ 0.1, others 1); 1 in the
+ * air. Scales grounded acceleration, braking and turning, so a blob on ice keeps sliding.
+ */
+function groundGrip(player: PlayerState, terrain: TerrainGrid): number {
+  if (!player.grounded) return 1;
+  const body = playerBody(player);
+  return groundFrictionBelow(terrain, { x: body.x, y: player.y, w: body.w });
+}
+
 /** Steers vx toward the input speed. During a wall-jump lock the launch momentum is kept. */
 function applyHorizontal(player: PlayerState, input: PlayerInput, args: StepPlayersArgs): void {
   const p = args.tunables.player;
@@ -182,7 +196,8 @@ function applyHorizontal(player: PlayerState, input: PlayerInput, args: StepPlay
   if (player.wallJumpLockTimer > 0) return;
   const target = input.moveX * p.runSpeed;
   const tumbleSteer = isTumbling(player) ? args.tunables.tumble.steerScale : 1;
-  const rate = horizontalRate(player, target, p) * player.steerScale * tumbleSteer;
+  const grip = groundGrip(player, args.terrain);
+  const rate = horizontalRate(player, target, p) * player.steerScale * tumbleSteer * grip;
   player.vx = approach(player.vx, target, rate * args.dt);
 }
 

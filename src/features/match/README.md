@@ -48,3 +48,4 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 - Spawn protection only blocks damage (combat), the player moves and fires freely; blink + dashed ring per DESIGN_LANGUAGE § 6 (match-rules D5).
 - Round end: every top scorer wins (a draw lists them); restart by a jump press after `restartLockSeconds`; that press is consumed, so nobody jumps on the first frame of the new round (match-rules D6). A back press after the lock returns to the lobby (lobby D5).
 - HUD drawn on the canvas with fixed canvas colours, never theme tokens (match-rules D7).
+- Test levels list terrain as `{ shape, materialId }` only: terrain has no role since level format 2 (material-system D5).

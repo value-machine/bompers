@@ -3,7 +3,11 @@
  * data keyed by a stable kebab-case ID; field names match the level kit's catalog.json
  * (documentation/game/LEVEL_FORMAT.md § 6, § 9) so the kit file is generated from code.
  */
-export type ContentKind = "material" | "effect" | "sound" | "behavior" | "item";
+import type { MaterialSurface } from "@/shared/types/terrainSurface.types";
+
+export type { MaterialSurface };
+
+export type ContentKind = "material" | "color" | "effect" | "sound" | "behavior" | "item";
 
 interface CatalogEntryBase {
   id: string;
@@ -11,24 +15,31 @@ interface CatalogEntryBase {
   label: string;
 }
 
-/** What a terrain shape is made of: how it behaves, looks and sounds. */
+/**
+ * What a terrain shape is made of: how it behaves and sounds, and the surface pattern that shows
+ * the behaviour. Colour is a separate axis (`color` kind); any colour goes on any material.
+ */
 export interface MaterialEntry extends CatalogEntryBase {
-  /** Blasts can clear it (only when the shape's role is also "destructible"). */
+  /** Blasts clear its cells. */
   destructible: boolean;
   /** Hits to clear one cell (1 = one blast). Used by combat later. */
   durability: number;
-  /** 0 = ice … 1 = grippy. Used by the player controller later. */
+  /** 0 = ice … 1 = grippy. Scales the blob's grounded acceleration and braking. */
   friction: number;
   /** 0 = dead stop … 1 = full bounce. */
   bounce: number;
-  /** Key into the game palette's material looks. */
-  lookToken: string;
+  /** Surface pattern drawn over the colour (the non-colour cue for the behaviour). */
+  surface: MaterialSurface;
+  /** Colour ID used when a shape names none. */
+  defaultColor: string;
   /** Default effect ID when cells are destroyed (a shape's data-effect overrides it). */
   effect: string;
   /** Default sound ID when cells are hit or destroyed (a shape's data-sound overrides it). */
   sound: string;
 }
 
+/** A named terrain colour; its RGB lives in the game palette (`terrainSwatches`). */
+export type ColorEntry = CatalogEntryBase;
 export type EffectEntry = CatalogEntryBase;
 export type SoundEntry = CatalogEntryBase;
 export type BehaviorEntry = CatalogEntryBase;
@@ -40,6 +51,7 @@ export interface ItemEntry extends CatalogEntryBase {
 
 export interface CatalogEntryByKind {
   material: MaterialEntry;
+  color: ColorEntry;
   effect: EffectEntry;
   sound: SoundEntry;
   behavior: BehaviorEntry;
@@ -56,7 +68,8 @@ export interface CatalogDefaults {
   gravity: number;
   /** Seconds. */
   matchDuration: number;
-  material: { platform: string; destructible: string };
+  /** Material of a terrain shape without `data-material`. */
+  material: string;
   items: { drop: string[]; collectible: string };
 }
 

@@ -32,10 +32,12 @@ describe("levelKitExport", () => {
 
   it("should flag a file as stale when its generated block lags behind", () => {
     const plan = planLevelKitSync((p) =>
-      p.endsWith("AUTHORING.md") ? readRepoFile(p).replace("`dirt`", "`mud`") : readRepoFile(p)
+      p.endsWith("AUTHORING.md")
+        ? readRepoFile(p).replace("| material | `earth`", "| material | `mud`")
+        : readRepoFile(p)
     );
     expect(plan.filter((f) => f.current !== f.expected).map((f) => f.path)).toEqual([
-      "public/level-kit/v1/AUTHORING.md",
+      "public/level-kit/v2/AUTHORING.md",
     ]);
   });
 

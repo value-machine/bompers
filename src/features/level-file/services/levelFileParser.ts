@@ -7,7 +7,6 @@ import {
   type LevelDefinition,
   type LevelDrop,
   type TerrainPiece,
-  type TerrainRole,
 } from "@/features/level/api/levelApi";
 import {
   checkPointBehavior,
@@ -57,10 +56,9 @@ const ofRole = <R extends RoleElement["role"]>(items: readonly RoleElement[], ..
 
 /** Terrain pieces in document order (the raster resolves overlaps, LEVEL_FORMAT § 4). */
 function readTerrain(items: readonly RoleElement[], log: LevelIssueLog): TerrainPiece[] {
-  return ofRole(items, "platform", "destructible").flatMap((item) => {
+  return ofRole(items, "terrain").flatMap((item) => {
     const shape = readShape(item, log);
-    const role: TerrainRole = item.role;
-    return shape ? [{ shape, role, ...readTerrainRefs(item, log) }] : [];
+    return shape ? [{ shape, ...readTerrainRefs(item, log) }] : [];
   });
 }
 

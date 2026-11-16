@@ -5,6 +5,7 @@ import {
   clearCircle,
   createTerrainGrid,
   getCellInfo,
+  groundFrictionBelow,
   isSolidAt,
   rectHitsSolid,
   surfaceBelow,
@@ -19,10 +20,10 @@ const level: LevelDefinition = {
   terrain: [
     {
       shape: { type: "rect", x: 0, y: 100, w: 400, h: 20 },
-      role: "destructible",
-      materialId: "dirt",
+
+      materialId: "earth",
     },
-    { shape: { type: "rect", x: 0, y: 120, w: 400, h: 20 }, role: "platform", materialId: "stone" },
+    { shape: { type: "rect", x: 0, y: 120, w: 400, h: 20 }, materialId: "stone" },
   ],
   spawns: [],
   drops: [],
@@ -43,27 +44,61 @@ describe("terrainGrid", () => {
     expect(rectHitsSolid(grid, { x: 20, y: 80, w: 10, h: 21 })).toBe(true);
   });
 
-  it("should remove destructible cells but keep platform cells when a circle is blasted", () => {
+  it("should remove breakable cells but keep unbreakable cells when a circle is blasted", () => {
     const grid = buildTerrainFromLevel(level);
     const cleared = clearCircle(grid, { x: 200, y: 115, radius: 25 });
     expect(cleared.removed).toBeGreaterThan(0);
-    expect(cleared.byMaterial).toEqual({ dirt: cleared.removed });
+    expect(cleared.byLook).toEqual([
+      { materialId: "earth", colorId: "clay", cells: cleared.removed },
+    ]);
     expect(getCellInfo(grid, 20, 11)).toBeNull();
     expect(getCellInfo(grid, 20, 12)?.materialId).toBe("stone");
   });
 
-  it("should keep a destructible-role cell whose material is indestructible", () => {
+  it("should keep ice cells whatever their colour when a circle is blasted", () => {
+    const grid = buildTerrainFromLevel({
+      ...level,
+      terrain: [
+        { shape: { type: "rect", x: 0, y: 100, w: 40, h: 10 }, materialId: "ice", colorId: "clay" },
+      ],
+    });
+    expect(clearCircle(grid, { x: 20, y: 105, radius: 30 }).removed).toBe(0);
+  });
+
+  it("should report each colour of a material separately when a blast clears both", () => {
     const grid = buildTerrainFromLevel({
       ...level,
       terrain: [
         {
-          shape: { type: "rect", x: 0, y: 100, w: 40, h: 10 },
-          role: "destructible",
-          materialId: "stone",
+          shape: { type: "rect", x: 0, y: 100, w: 20, h: 10 },
+          materialId: "earth",
+          colorId: "rose",
+        },
+        {
+          shape: { type: "rect", x: 20, y: 100, w: 20, h: 10 },
+          materialId: "earth",
+          colorId: "mint",
         },
       ],
     });
-    expect(clearCircle(grid, { x: 20, y: 105, radius: 30 }).removed).toBe(0);
+    const cleared = clearCircle(grid, { x: 20, y: 105, radius: 30 });
+    expect(cleared.byLook).toEqual([
+      { materialId: "earth", colorId: "rose", cells: 2 },
+      { materialId: "earth", colorId: "mint", cells: 2 },
+    ]);
+  });
+
+  it("should read low friction under the feet when standing on ice", () => {
+    const grid = buildTerrainFromLevel({
+      ...level,
+      terrain: [
+        { shape: { type: "rect", x: 0, y: 100, w: 200, h: 10 }, materialId: "ice" },
+        { shape: { type: "rect", x: 200, y: 100, w: 200, h: 10 }, materialId: "stone" },
+      ],
+    });
+    expect(groundFrictionBelow(grid, { x: 40, y: 100, w: 20 })).toBeCloseTo(0.12);
+    expect(groundFrictionBelow(grid, { x: 240, y: 100, w: 20 })).toBe(1);
+    expect(groundFrictionBelow(grid, { x: 40, y: 60, w: 20 })).toBe(1);
   });
 
   it("should mark only the touched chunks dirty when a circle is blasted", () => {

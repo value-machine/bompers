@@ -61,7 +61,7 @@ export function upgradeFormatVersion(
   addError(
     log,
     "E2",
-    `Format v${version} can't be upgraded: no migration from v${migrated.missingStep}.`
+    `Format v${version} can't be upgraded: no migration from v${migrated.missingStep}. Rewrite the level for format v${toVersion} (LEVEL_FORMAT.md).`
   );
   return false;
 }

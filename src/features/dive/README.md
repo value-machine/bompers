@@ -38,3 +38,4 @@ The unarmed attack (GDD § 3 "Ongewapende aanval", the "bomp"): fire makes a blo
 - A head-on clash has no special rule: both reflect equally, both ricochet and both take the front-zone damage (dive-headbutt D6). Ricochets are applied before pushes so the result does not depend on player order.
 - One dive per airtime; the charge returns on ground contact or on a hit (dive-headbutt D7).
 - A wall bonk stuns for 30 frames (250 ms), down from the prototype's 54, to stay fair (dive-headbutt D9).
+- Test levels list terrain as `{ shape, materialId }` only: terrain has no role since level format 2 (material-system D5).

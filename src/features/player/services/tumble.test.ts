@@ -16,10 +16,10 @@ const level: LevelDefinition = {
   terrain: [
     {
       shape: { type: "rect", x: 0, y: 320, w: 1200, h: 32 },
-      role: "platform",
+
       materialId: "stone",
     },
-    { shape: { type: "rect", x: 600, y: 0, w: 16, h: 320 }, role: "platform", materialId: "stone" },
+    { shape: { type: "rect", x: 600, y: 0, w: 16, h: 320 }, materialId: "stone" },
   ],
   spawns: [],
   drops: [],

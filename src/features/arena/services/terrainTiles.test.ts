@@ -11,16 +11,18 @@ import { readTile, tileCellsFor } from "@/features/arena/services/terrainTiles";
 function dirtGrid() {
   const grid = createTerrainGrid({ cellSize: 8, widthCells: 12, heightCells: 6 });
   const dirt = slotFor(grid, {
-    role: "destructible",
-    materialId: "dirt",
+    materialId: "earth",
+    colorId: "clay",
     destructible: true,
-    lookToken: "dirt",
+    friction: 1,
+    surface: "breakable",
   });
   const stone = slotFor(grid, {
-    role: "platform",
     materialId: "stone",
+    colorId: "plum",
     destructible: false,
-    lookToken: "stone",
+    friction: 1,
+    surface: "plain",
   });
   for (let cy = 2; cy < 4; cy += 1) {
     for (let cx = 0; cx < 12; cx += 1) setCellSlot(grid, { cx, cy, slot: dirt });

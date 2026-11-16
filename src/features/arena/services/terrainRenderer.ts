@@ -1,90 +1,84 @@
 import { Container, Graphics } from "pixi.js";
-import { GAME_PALETTE } from "@/shared/config/gamePalette";
-import { DESIGN_SCALE, outlineWidth } from "@/shared/utils/outlineWidth";
-import type { LevelDefinition, TerrainShape } from "@/features/level/api/levelApi";
+import { GAME_PALETTE, terrainSwatch } from "@/shared/config/gamePalette";
+import { outlineWidth } from "@/shared/utils/outlineWidth";
+import type { LevelDefinition } from "@/features/level/api/levelApi";
 import type { TerrainGrid } from "@/features/arena/types/arena.types";
 import { takeDirtyChunks } from "@/features/arena/services/terrainGrid";
 import { pieceCellSlot } from "@/features/arena/services/terrainRaster";
 import { readTile, tileCellsFor, type TileState } from "@/features/arena/services/terrainTiles";
+import {
+  drawBreakableMasks,
+  drawSlabFill,
+  drawSlabInk,
+  type SlabPiece,
+} from "@/features/arena/services/terrainSurfaces";
 
 /**
- * Terrain layer (DESIGN_LANGUAGE § 2–3, § 5 step 3), back to front:
- * - **Solid slabs** (indestructible pieces): drawn once from the level's shapes (visual-pass D2) as
- *   rounded plum slabs with a lighter top lip. Style E silhouette: an ink pass of every slab
- *   stroked at twice the outline width, then the fills on top, so only one outer line shows. The
- *   ink pass redraws when the zoom-clamped width changes step.
- * - **Destructible tiles** (honey): one `Graphics` per grid chunk, redrawn only when the sim marks
- *   the chunk dirty (plus its neighbours, whose tiles share the crater edge). Intact tiles are
- *   rounded squares with a grid line and a centre pip; partly blasted tiles show their remaining
- *   cells stepped; tiles next to a crater crack. No ink outline on cells.
+ * Terrain layer (DESIGN_LANGUAGE § 2–3, § 5 step 3). Every material draws as the same rounded
+ * slab with a top lip in its piece's colour swatch (material-system D3); behaviour shows through
+ * the surface pattern, never the colour. Back to front:
+ * - **Ink:** style E silhouette — every slab stroked at twice the outline width, fills on top, so
+ *   one outer line shows. Unbreakable slabs' ink is drawn as is; breakable slabs' ink is clipped
+ *   by a mask of their standing cells grown by the outline width. Redrawn when the zoom-clamped
+ *   width changes step.
+ * - **Fills:** unbreakable slabs (with ice gloss) drawn once; breakable slabs clipped by a mask of
+ *   their standing cells (rebuilt when the sim marks chunks dirty), so a crater cuts the slab.
+ * - **Seams:** one `Graphics` per grid chunk over breakable cells: seam lines between intact tiles,
+ *   a centre pip per intact tile, cracks next to a crater. Redrawn only when dirty (plus
+ *   neighbours) and cached as a texture.
  */
 export interface TerrainView {
   container: Container;
   solidInk: Graphics;
   solidFill: Graphics;
+  breakableInk: Graphics;
+  breakableFill: Graphics;
+  masks: { cells: Graphics; ink: Graphics };
   chunks: Graphics[];
-  solids: readonly SolidPiece[];
+  solids: readonly SlabPiece[];
+  breakables: readonly SlabPiece[];
   /** Cells at level load: a cell that was filled and is empty now is a crater (cracks). */
   initial: Uint8Array;
   tileCells: number;
   /** Outline step the ink pass was drawn at (null before the first draw). */
   inkStep: number | null;
+  /** Ink width the ink mask was grown by. */
+  inkWidth: number;
 }
 
-interface SolidPiece {
-  shape: TerrainShape;
-  fill: number;
-  lip: number;
-}
+/** Tile look relative to the tile edge (mockup: 26-unit cell, 1.8 pip). */
+const TILE = { pip: 1.8 / 26, line: 0.9, crack: 1.1, pipAlpha: 0.5 };
 
-/** Mockup numbers at the reference blob, scaled to the game (visual-pass D1). */
-const SLAB = { radius: 14 * DESIGN_SCALE, lipInset: 6 * DESIGN_SCALE, lipTop: 4 * DESIGN_SCALE };
-const LIP_HEIGHT = 9 * DESIGN_SCALE;
-/** Tile look relative to the tile edge (mockup: 26-unit cell, 5 corner, 1.8 pip). */
-const TILE = { corner: 5 / 26, pip: 1.8 / 26, line: 0.9, crack: 1.1, pipAlpha: 0.5 };
-
-const lookOf = (lookToken: string) =>
-  GAME_PALETTE.materialLooks[lookToken] ?? GAME_PALETTE.fallbackLook;
-
-function solidPieces(level: LevelDefinition): SolidPiece[] {
-  return level.terrain.flatMap((piece) => {
+function slabPieces(level: LevelDefinition): { solids: SlabPiece[]; breakables: SlabPiece[] } {
+  const solids: SlabPiece[] = [];
+  const breakables: SlabPiece[] = [];
+  for (const piece of level.terrain) {
     const slot = pieceCellSlot(piece);
-    if (slot.destructible) return [];
-    const look = lookOf(slot.lookToken);
-    return [{ shape: piece.shape, fill: look.fill, lip: look.accent }];
-  });
+    const slab = { shape: piece.shape, swatch: terrainSwatch(slot.colorId), surface: slot.surface };
+    (slot.destructible ? breakables : solids).push(slab);
+  }
+  return { solids, breakables };
 }
 
-function slabPath(g: Graphics, shape: TerrainShape): Graphics {
-  if (shape.type === "rect") {
-    const radius = Math.min(SLAB.radius, shape.w / 2, shape.h / 2);
-    return g.roundRect(shape.x, shape.y, shape.w, shape.h, radius);
-  }
-  if (shape.type === "circle") return g.circle(shape.cx, shape.cy, shape.r);
-  return g.poly(shape.points.flatMap((p) => [p.x, p.y]));
-}
-
-function drawSolidInk(g: Graphics, solids: readonly SolidPiece[], width: number): void {
-  g.clear();
-  for (const { shape } of solids) {
-    // Stroke only: the fills cover the inside, so an ink fill would be pure overdraw.
-    slabPath(g, shape).stroke({ width: width * 2, color: GAME_PALETTE.ink, join: "round" });
-  }
-}
-
-/** Fills, then the lip along the top of rect slabs tall enough to carry one. */
-function drawSolidFill(g: Graphics, solids: readonly SolidPiece[]): void {
-  for (const { shape, fill } of solids) slabPath(g, shape).fill(fill);
-  for (const { shape, lip } of solids) {
-    if (shape.type !== "rect" || shape.h < LIP_HEIGHT * 2) continue;
-    g.roundRect(
-      shape.x + SLAB.lipInset,
-      shape.y + SLAB.lipTop,
-      shape.w - SLAB.lipInset * 2,
-      LIP_HEIGHT,
-      LIP_HEIGHT / 2
-    ).fill(lip);
-  }
+/** The layer graphics in draw order; breakable ink and fills are clipped by the cell masks. */
+function createLayers(grid: TerrainGrid) {
+  const container = new Container({ label: "terrain" });
+  const solidInk = new Graphics({ label: "solid-ink" });
+  const solidFill = new Graphics({ label: "solid-fill" });
+  const breakableInk = new Graphics({ label: "breakable-ink" });
+  const breakableFill = new Graphics({ label: "breakable-fill" });
+  const masks = {
+    cells: new Graphics({ label: "breakable-cell-mask" }),
+    ink: new Graphics({ label: "breakable-ink-mask" }),
+  };
+  breakableFill.mask = masks.cells;
+  breakableInk.mask = masks.ink;
+  const seams = new Container({ label: "breakable-seams" });
+  const chunks = Array.from({ length: grid.chunksX * grid.chunksY }, () => new Graphics());
+  seams.addChild(...chunks);
+  container.addChild(solidInk, breakableInk, solidFill, breakableFill, seams);
+  container.addChild(masks.cells, masks.ink);
+  return { container, solidInk, solidFill, breakableInk, breakableFill, masks, chunks };
 }
 
 export function createTerrainView(arena: {
@@ -92,24 +86,18 @@ export function createTerrainView(arena: {
   level: LevelDefinition;
 }): TerrainView {
   const grid = arena.terrain;
-  const container = new Container({ label: "terrain" });
-  const solidInk = new Graphics({ label: "solid-ink" });
-  const solidFill = new Graphics({ label: "solid-fill" });
-  const cells = new Container({ label: "destructible-cells" });
-  const chunks = Array.from({ length: grid.chunksX * grid.chunksY }, () => new Graphics());
-  cells.addChild(...chunks);
-  container.addChild(solidInk, solidFill, cells);
-  const solids = solidPieces(arena.level);
-  drawSolidFill(solidFill, solids);
+  const layers = createLayers(grid);
+  const { solids, breakables } = slabPieces(arena.level);
+  drawSlabFill(layers.solidFill, solids);
+  drawSlabFill(layers.breakableFill, breakables);
   return {
-    container,
-    solidInk,
-    solidFill,
-    chunks,
+    ...layers,
     solids,
+    breakables,
     initial: grid.cells.slice(),
     tileCells: tileCellsFor(grid.cellSize),
     inkStep: null,
+    inkWidth: 0,
   };
 }
 
@@ -119,7 +107,10 @@ interface TileDraw {
   size: number;
   cellSize: number;
   k: number;
-  color: number;
+  seam: number;
+  /** The tiles right of and below are intact breakable tiles too (seam lines go between). */
+  right: boolean;
+  below: boolean;
 }
 
 /** Zig-zag crack across the tile centre (mockup path, scaled to the tile). */
@@ -140,24 +131,16 @@ function drawCrack(g: Graphics, { x, y, size }: TileDraw): void {
     });
 }
 
+/** Seams between intact tiles and a centre pip; cracks on intact tiles next to a crater. */
 function drawTile(g: Graphics, tile: TileState, at: TileDraw): void {
-  const { x, y, size, cellSize, k, color } = at;
-  if (tile.intact) {
-    g.roundRect(x, y, size, size, size * TILE.corner)
-      .fill(color)
-      .stroke({ width: TILE.line, color: GAME_PALETTE.cellLine });
-    g.circle(x + size / 2, y + size / 2, size * TILE.pip).fill({
-      color: GAME_PALETTE.cellLine,
-      alpha: TILE.pipAlpha,
-    });
-  } else {
-    tile.filled.forEach((on, i) => {
-      if (on) g.rect(x + (i % k) * cellSize, y + Math.floor(i / k) * cellSize, cellSize, cellSize);
-    });
-    g.fill(color);
-  }
+  if (!tile.intact) return;
+  const { x, y, size, seam } = at;
+  if (at.right) g.moveTo(x + size, y).lineTo(x + size, y + size);
+  if (at.below) g.moveTo(x, y + size).lineTo(x + size, y + size);
+  if (at.right || at.below) g.stroke({ width: TILE.line, color: seam });
+  g.circle(x + size / 2, y + size / 2, size * TILE.pip).fill({ color: seam, alpha: TILE.pipAlpha });
   // Cracks mark the intact tiles around a crater; the crater edge itself shows stepped cells.
-  if (tile.cracked && tile.intact) drawCrack(g, at);
+  if (tile.cracked) drawCrack(g, at);
 }
 
 /** Tile range whose origin cell lies in the chunk (each tile is drawn by exactly one chunk). */
@@ -207,10 +190,18 @@ function drawChunkTiles(
       const tile = readTile(grid, view.initial, { tx, ty, k });
       const slotInfo = grid.slots[tile.slot];
       if (!slotInfo || tile.filled.every((on) => !on)) continue;
-      const look = lookOf(slotInfo.lookToken);
-      const color = (tx + ty) % 3 === 0 ? look.accent : look.fill;
-      const at = { x: tx * size, y: ty * size, size, cellSize: grid.cellSize, k, color };
-      drawTile(graphics, tile, at);
+      const intactAt = (dx: number, dy: number): boolean =>
+        readTile(grid, view.initial, { tx: tx + dx, ty: ty + dy, k }).intact;
+      drawTile(graphics, tile, {
+        x: tx * size,
+        y: ty * size,
+        size,
+        cellSize: grid.cellSize,
+        k,
+        seam: terrainSwatch(slotInfo.colorId).seam,
+        right: tile.intact && intactAt(1, 0),
+        below: tile.intact && intactAt(0, 1),
+      });
       drawn += 1;
     }
   }
@@ -236,12 +227,21 @@ function chunksToRedraw(grid: TerrainGrid): Set<number> {
   return redraw;
 }
 
-/** Redraws what changed: dirty chunks, and the slab ink when the outline step changed. */
+/** Redraws what changed: dirty chunks and the breakable masks, and the ink on an outline step. */
 export function syncTerrainView(view: TerrainView, grid: TerrainGrid, zoom: number): void {
   const outline = outlineWidth("terrain", zoom);
-  if (outline.step !== view.inkStep) {
-    drawSolidInk(view.solidInk, view.solids, outline.width);
+  const stepChanged = outline.step !== view.inkStep;
+  if (stepChanged) {
+    drawSlabInk(view.solidInk, view.solids, outline.width);
+    drawSlabInk(view.breakableInk, view.breakables, outline.width);
     view.inkStep = outline.step;
+    view.inkWidth = outline.width;
   }
-  for (const index of chunksToRedraw(grid)) drawChunk(view, grid, index);
+  const redraw = chunksToRedraw(grid);
+  if (stepChanged || redraw.size > 0) {
+    const any = drawBreakableMasks(grid, view.masks, view.inkWidth);
+    view.breakableFill.visible = any;
+    view.breakableInk.visible = any;
+  }
+  for (const index of redraw) drawChunk(view, grid, index);
 }

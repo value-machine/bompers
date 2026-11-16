@@ -19,10 +19,11 @@ export interface TerrainGridSize {
 }
 
 const EMPTY_SLOT: TerrainCellSlot = {
-  role: "platform",
   materialId: "",
+  colorId: "",
   destructible: false,
-  lookToken: "",
+  friction: 1,
+  surface: "plain",
 };
 
 export function createTerrainGrid(size: TerrainGridSize): TerrainGrid {
@@ -44,14 +45,10 @@ export function createTerrainGrid(size: TerrainGridSize): TerrainGrid {
   };
 }
 
-/** Index of the slot for this material / destructibility, added on first use. */
+/** Index of the slot for this material + colour, added on first use. */
 export function slotFor(grid: TerrainGrid, slot: TerrainCellSlot): number {
   const found = grid.slots.findIndex(
-    (s, i) =>
-      i > 0 &&
-      s.role === slot.role &&
-      s.materialId === slot.materialId &&
-      s.destructible === slot.destructible
+    (s, i) => i > 0 && s.materialId === slot.materialId && s.colorId === slot.colorId
   );
   if (found > 0) return found;
   grid.slots.push(slot);
@@ -134,18 +131,30 @@ export function surfaceBelow(
   return null;
 }
 
-/** What a blast removed: total cells and the count per material ID (for destroy effects / sounds). */
+/** Cells of one material + colour a blast removed. */
+export interface ClearedLook {
+  materialId: string;
+  colorId: string;
+  cells: number;
+}
+
+/** What a blast removed: total cells and the count per material + colour (destroy effects / sounds). */
 export interface ClearedCells {
   removed: number;
-  byMaterial: Record<string, number>;
+  byLook: ClearedLook[];
+}
+
+function tallyLook(bySlot: Map<number, ClearedLook>, slot: number, info: TerrainCellSlot): void {
+  const look = bySlot.get(slot) ?? { materialId: info.materialId, colorId: info.colorId, cells: 0 };
+  look.cells += 1;
+  bySlot.set(slot, look);
 }
 
 /**
  * Blasts a circle out of the terrain: destructible cells whose centre lies inside become empty;
- * other cells stay. Returns what was removed, per material.
+ * other cells stay. Returns what was removed, per material + colour.
  */
 export function clearCircle(grid: TerrainGrid, circle: Circle): ClearedCells {
-  const size = grid.cellSize;
   const range = cellRangeOf(grid, {
     x: circle.x - circle.radius,
     y: circle.y - circle.radius,
@@ -153,20 +162,41 @@ export function clearCircle(grid: TerrainGrid, circle: Circle): ClearedCells {
     h: circle.radius * 2,
   });
   const radiusSq = circle.radius * circle.radius;
-  const cleared: ClearedCells = { removed: 0, byMaterial: {} };
+  const bySlot = new Map<number, ClearedLook>();
   for (let cy = range.minY; cy <= range.maxY; cy += 1) {
     for (let cx = range.minX; cx <= range.maxX; cx += 1) {
-      const info = getCellInfo(grid, cx, cy);
-      if (info?.destructible !== true) continue;
-      const dx = (cx + 0.5) * size - circle.x;
-      const dy = (cy + 0.5) * size - circle.y;
+      const slot = getCellSlot(grid, cx, cy);
+      const info = grid.slots[slot];
+      if (slot === EMPTY_CELL || info?.destructible !== true) continue;
+      const dx = (cx + 0.5) * grid.cellSize - circle.x;
+      const dy = (cy + 0.5) * grid.cellSize - circle.y;
       if (dx * dx + dy * dy > radiusSq) continue;
       setCellSlot(grid, { cx, cy, slot: EMPTY_CELL });
-      cleared.removed += 1;
-      cleared.byMaterial[info.materialId] = (cleared.byMaterial[info.materialId] ?? 0) + 1;
+      tallyLook(bySlot, slot, info);
     }
   }
-  return cleared;
+  const byLook = [...bySlot.values()];
+  return { removed: byLook.reduce((sum, look) => sum + look.cells, 0), byLook };
+}
+
+/**
+ * Friction of the ground directly under a span (the row of cells just below `y`): the average
+ * over the solid cells there, 1 when there are none. Ice under the feet makes the blob slide.
+ */
+export function groundFrictionBelow(
+  grid: TerrainGrid,
+  span: { x: number; y: number; w: number }
+): number {
+  const range = cellRangeOf(grid, { x: span.x, y: span.y, w: span.w, h: 1 });
+  let sum = 0;
+  let count = 0;
+  for (let cx = range.minX; cx <= range.maxX; cx += 1) {
+    const info = getCellInfo(grid, cx, range.minY);
+    if (!info) continue;
+    sum += info.friction;
+    count += 1;
+  }
+  return count === 0 ? 1 : sum / count;
 }
 
 /** Returns the dirty chunk indices and clears the set (called by the renderer). */

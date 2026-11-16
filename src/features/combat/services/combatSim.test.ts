@@ -27,18 +27,18 @@ const level: LevelDefinition = {
   terrain: [
     {
       shape: { type: "rect", x: 0, y: 320, w: 1200, h: 32 },
-      role: "platform",
+
       materialId: "stone",
     },
-    { shape: { type: "rect", x: 800, y: 0, w: 8, h: 320 }, role: "platform", materialId: "stone" },
+    { shape: { type: "rect", x: 800, y: 0, w: 8, h: 320 }, materialId: "stone" },
     {
       shape: { type: "rect", x: 400, y: 160, w: 160, h: 24 },
-      role: "destructible",
-      materialId: "dirt",
+
+      materialId: "earth",
     },
     {
       shape: { type: "rect", x: 400, y: 184, w: 160, h: 8 },
-      role: "platform",
+
       materialId: "stone",
     },
   ],
@@ -322,7 +322,7 @@ describe("combat — rockets", () => {
     const destroyed = eventsOfLive(world.combat, "terrainDestroyed");
     expect(destroyed).toHaveLength(1);
     expect(destroyed[0]).toMatchObject({
-      materialId: "dirt",
+      materialId: "earth",
       effectId: "dust-burst",
       soundId: "crumble",
     });
