@@ -162,6 +162,8 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     zoom,
     hits: frame.hits,
     helmet: state.tunables.feel.helmet,
+    feet: state.tunables.feel.feet,
+    crouch: state.tunables.player.crouch,
   });
   syncDiveView(renderer.dive, state.dive);
   syncCollectiblesView(renderer.collectibles, {

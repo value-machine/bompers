@@ -2,7 +2,9 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import type { LevelLibraryEntry } from "@/features/level-file/api/levelFileApi";
 import type { MatchSetup } from "@/features/match/api/matchApi";
+import { useAudioEngine, useSoundSettings, withVolumeStep } from "@/features/sound/api/soundApi";
 import {
+  channelOfVolumeRow,
   createLobbyState,
   reduceLobby,
   selectedLevelId,
@@ -25,7 +27,10 @@ export interface Lobby {
   selectedLevel: LevelLibraryEntry | null;
   /** Display values for the screen. */
   view: LobbyView;
-  /** Runs one action (any input path) and returns the effect the screen must carry out. */
+  /**
+   * Runs one action (any input path) and returns the effect the screen must carry out. Volume
+   * effects are applied here, to the app's sound settings.
+   */
   dispatch: (action: LobbyAction) => LobbyEffect;
   /** What the match needs for a round with the current players, level and settings. */
   matchSetup: () => MatchSetup | null;
@@ -45,13 +50,25 @@ export function useLobby(levels: readonly LevelLibraryEntry[]): Lobby {
   );
   const contextRef = useRef(context);
   contextRef.current = context;
+  const engine = useAudioEngine();
+  const sound = useSoundSettings(engine);
 
-  const dispatch = useCallback((action: LobbyAction): LobbyEffect => {
-    const result = reduceLobby(stateRef.current, action, contextRef.current);
-    stateRef.current = result.state;
-    setState(result.state);
-    return result.effect;
-  }, []);
+  const dispatch = useCallback(
+    (action: LobbyAction): LobbyEffect => {
+      const result = reduceLobby(stateRef.current, action, contextRef.current);
+      stateRef.current = result.state;
+      setState(result.state);
+      const { effect } = result;
+      if (effect !== null && typeof effect === "object") {
+        const channel = channelOfVolumeRow(effect.row);
+        engine.updateSettings((settings) =>
+          withVolumeStep(settings, { channel, step: effect.step, wrap: effect.wrap })
+        );
+      }
+      return effect;
+    },
+    [engine]
+  );
 
   const levelId = selectedLevelId(state, context);
   const selectedLevel = levels.find((entry) => entry.id === levelId) ?? null;
@@ -72,6 +89,7 @@ export function useLobby(levels: readonly LevelLibraryEntry[]): Lobby {
     tunables: DEFAULT_GAME_TUNABLES,
     context,
     level: selectedLevel?.level ?? null,
+    sound,
   });
 
   return { state, context, selectedLevel, view, dispatch, matchSetup };

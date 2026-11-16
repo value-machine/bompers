@@ -3,6 +3,7 @@ import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
 import {
   eliminateFighter,
+  maxWeaponRecoil,
   respawnFighter,
   type CombatEvent,
   type CombatState,
@@ -92,13 +93,17 @@ export interface StepMatchRulesArgs {
 
 /**
  * How far past the level bounds' sides and top the kill lines lie, derived from movement
- * (open-map-edges D1a). The fastest single launch is a jump plus a point-blank blast (a rocket
- * jump off a jump): it climbs `v² / 2g`. The margin is twice that, room for a second full launch
+ * (open-map-edges D1a). The fastest single launch is a jump plus a point-blank blast and the
+ * strongest weapon recoil (a rocket jump off a jump, jumps-and-recoil D2; one shot per launch,
+ * homing-missiles D5): it climbs `v² / 2g`. The margin
+ * is twice that, room for a second full launch
  * chained on top; it is also the 45° flight range `v² / g` of that launch, so it covers sideways
  * flights too. Uses the match's effective gravity (engine × lobby × level).
  */
 export function outOfBoundsMargin(tunables: GameTunables): number {
-  const launchSpeed = tunables.player.jumpSpeed + tunables.combat.explosion.impulse;
+  const { combat } = tunables;
+  const recoil = maxWeaponRecoil(tunables);
+  const launchSpeed = tunables.player.jumpSpeed + combat.explosion.impulse + recoil;
   return (launchSpeed * launchSpeed) / tunables.world.gravity;
 }
 

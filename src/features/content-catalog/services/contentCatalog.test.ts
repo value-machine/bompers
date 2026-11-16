@@ -35,7 +35,11 @@ describe("contentCatalog", () => {
       collectible: "point-orb",
     });
     expect(exported.material.map((m) => m.id)).toEqual(["stone", "dirt"]);
-    expect(exported.item.map((i) => i.id)).toEqual(["rocket-launcher", "point-orb"]);
+    expect(exported.item.map((i) => i.id)).toEqual([
+      "rocket-launcher",
+      "homing-launcher",
+      "point-orb",
+    ]);
     expect(exported.behavior).toEqual([]);
     exported.material[0]!.label = "changed";
     expect(CONTENT_CATALOG.material.stone?.label).toBe("Stone");

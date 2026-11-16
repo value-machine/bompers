@@ -1,8 +1,9 @@
 import {
-  createSoundPlayer,
+  FINAL_MUSIC_SECONDS,
+  musicTrackFor,
   readSoundCues,
+  type AudioEngine,
   type SoundCursor,
-  type SoundHost,
   type SoundSnapshot,
 } from "@/features/sound/api/soundApi";
 import { isInPlay } from "@/features/match/services/matchRules";
@@ -23,6 +24,7 @@ export function soundSnapshotOf(state: GameState): SoundSnapshot {
         landCount: player.landCount,
         lastLandingSpeed: player.lastLandingSpeed,
         tumbleBounceCount: player.tumbleBounceCount,
+        crouchCount: player.crouchCount,
         inPlay: isInPlay(state.rules, player),
         divePhase: dive?.phase ?? "idle",
         diveBonked: dive?.bonked ?? false,
@@ -33,25 +35,32 @@ export function soundSnapshotOf(state: GameState): SoundSnapshot {
   };
 }
 
-/** A session's sound: plays each frame's cues; `newRound` makes the next frame cue the round start. */
+/**
+ * A session's sound on the app's audio engine: plays each frame's cues and the round's music
+ * (match loop, the final piece in the last 30 s, silence once ended); `newRound` makes the next
+ * frame cue the round start. Dispose fades the music out; the engine itself lives on.
+ */
 export interface MatchSound {
   hear(state: GameState): void;
   newRound(): void;
   dispose(): void;
 }
 
-export function createMatchSound(host: SoundHost): MatchSound {
-  const player = createSoundPlayer(host);
+export function createMatchSound(engine: AudioEngine): MatchSound {
   let cursor: SoundCursor | null = null;
   return {
     hear: (state) => {
       const heard = readSoundCues(cursor, soundSnapshotOf(state));
       cursor = heard.cursor;
-      heard.cues.forEach(player.play);
+      heard.cues.forEach(engine.playCue);
+      const { round } = state;
+      // The final piece starts in time with the clock, so it lands on the round end.
+      const offset = Math.max(0, FINAL_MUSIC_SECONDS - round.remainingSeconds);
+      engine.playMusic(musicTrackFor(round), offset);
     },
     newRound: () => {
       cursor = null;
     },
-    dispose: () => player.dispose(),
+    dispose: () => engine.playMusic(null),
   };
 }
