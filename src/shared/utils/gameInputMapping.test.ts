@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  GAMEPAD_DEADZONE,
   inputSourceKey,
   INPUT_DEVICES,
   mapGamepadInput,
@@ -23,6 +24,7 @@ describe("gameInputMapping", () => {
       aimY: -1,
       jump: true,
       fire: true,
+      pause: false,
       crouch: false,
     });
   });
@@ -58,7 +60,8 @@ describe("gameInputMapping", () => {
 
   it("should aim with the right stick when it is pushed", () => {
     const input = mapGamepadInput(pad([0.8, 0, 0, -1], [0]));
-    expect(input).toMatchObject({ moveX: 0.8, aimX: 0, aimY: -1, jump: true, fire: false });
+    expect(input).toMatchObject({ aimX: 0, aimY: -1, jump: true, fire: false });
+    expect(input.moveX).toBeCloseTo((0.8 - GAMEPAD_DEADZONE) / (1 - GAMEPAD_DEADZONE));
   });
 
   it("should return one input per slot with keyboards first when using the default sources", () => {
@@ -98,5 +101,44 @@ describe("gameInputMapping", () => {
     expect(new Set(keys).size).toBe(INPUT_DEVICES.length);
     expect(keys[0]).toBe("keyboard:left");
     expect(keys[5]).toBe("gamepad:3");
+  });
+
+  describe("gamepad sticks and pause", () => {
+    it("should ramp move speed from zero when the stick just passes the deadzone", () => {
+      const x = GAMEPAD_DEADZONE + 0.15;
+      const expected = (x - GAMEPAD_DEADZONE) / (1 - GAMEPAD_DEADZONE);
+      expect(mapGamepadInput(pad([x, 0, 0, 0])).moveX).toBeCloseTo(expected);
+      expect(mapGamepadInput(pad([1, 0, 0, 0])).moveX).toBe(1);
+    });
+
+    it("should not creep sideways when the left stick points up with slight drift", () => {
+      expect(mapGamepadInput(pad([0.2, -1, 0, 0])).moveX).toBe(0);
+    });
+
+    it("should keep the aim stick's true direction when it is pushed near an axis", () => {
+      const input = mapGamepadInput(pad([0, 0, 0.2, -0.9]));
+      expect(input.aimX / input.aimY).toBeCloseTo(0.2 / -0.9);
+    });
+
+    it("should clamp the aim to the unit circle when a stick reports a square corner", () => {
+      const input = mapGamepadInput(pad([0, 0, 1, 1]));
+      expect(Math.hypot(input.aimX, input.aimY)).toBeCloseTo(1);
+    });
+
+    it("should ignore aim stick noise inside the radial deadzone", () => {
+      const input = mapGamepadInput(pad([0.9, 0, 0.15, 0.15]));
+      expect(input).toMatchObject({ aimX: input.moveX, aimY: 0 });
+    });
+
+    it("should report pause when a pad's Start button is held", () => {
+      expect(mapGamepadInput(pad([0, 0, 0, 0], [9])).pause).toBe(true);
+      expect(mapGamepadInput(pad([0, 0, 0, 0], [0])).pause).toBe(false);
+    });
+
+    it("should report pause for both keyboard halves when Escape is held", () => {
+      const inputs = mapPlayerInputs({ heldKeys: new Set(["Escape"]), gamepads: [] });
+      expect(inputs[0]?.pause).toBe(true);
+      expect(inputs[1]?.pause).toBe(true);
+    });
   });
 });

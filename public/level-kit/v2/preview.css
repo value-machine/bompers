@@ -1,5 +1,5 @@
 /*
- * Bompers level kit v1 — preview stylesheet.
+ * Bompers level kit v2 — preview stylesheet.
  * Loaded by a level file opened in a browser; the game never reads it.
  * Spec: documentation/game/LEVEL_FORMAT.md
  *
@@ -18,10 +18,12 @@
   --lk-grid-major: rgba(43, 29, 58, 0.18);
   --lk-sky: linear-gradient(#8fd6ff, #fff1cf);
   --lk-outline: #2b1d3a;
-  --lk-platform: #5a3f7a;
-  --lk-platform-edge: #2b1d3a;
-  --lk-destructible: #f4ad55;
-  --lk-destructible-edge: #b9722a;
+  --lk-terrain: #5a3f7a;
+  --lk-terrain-edge: #2b1d3a;
+  --lk-earth: #c4673f;
+  --lk-cardboard: #c99a62;
+  --lk-ice: #a8cfe6;
+  --lk-ice-rim: #ffffff;
   --lk-spawn: #2ed0a0;
   --lk-drop: #ff8a1f;
   --lk-collectible: #ff8fc8;
@@ -67,16 +69,27 @@ svg[data-level-format] {
 
 /* Roles: CSS wins over presentation attributes, so the kit restyles
    any agent's colours consistently. */
-svg[data-level-format] [data-role='platform'] {
-  fill: var(--lk-platform);
-  stroke: var(--lk-platform-edge);
+/* Terrain: fill = the material's default colour until preview.js paints data-color from
+   catalog.json. The stroke shows behaviour, as in the game: dashed = breakable, white = ice. */
+svg[data-level-format] [data-role='terrain'] {
+  fill: var(--lk-terrain);
+  stroke: var(--lk-terrain-edge);
   stroke-width: 2;
 }
-svg[data-level-format] [data-role='destructible'] {
-  fill: var(--lk-destructible);
-  stroke: var(--lk-destructible-edge);
-  stroke-width: 2;
+svg[data-level-format] [data-role='terrain'][data-material='earth'] {
+  fill: var(--lk-earth);
+}
+svg[data-level-format] [data-role='terrain'][data-material='cardboard'] {
+  fill: var(--lk-cardboard);
+}
+svg[data-level-format] [data-role='terrain'][data-material='earth'],
+svg[data-level-format] [data-role='terrain'][data-material='cardboard'] {
   stroke-dasharray: 6 4;
+}
+svg[data-level-format] [data-role='terrain'][data-material='ice'] {
+  fill: var(--lk-ice);
+  stroke: var(--lk-ice-rim);
+  stroke-width: 3;
 }
 svg[data-level-format] [data-role='spawn'] {
   fill: var(--lk-spawn);

@@ -507,12 +507,12 @@ module.exports = {
             { name: "music", children: [{ name: "*.mp3" }] },
           ],
         },
-        // Level kit, served at /level-kit/v1/ (documentation/game/LEVEL_FORMAT.md § 9); a new format version adds a sibling "v2" entry
+        // Level kit, served at /level-kit/v2/ (documentation/game/LEVEL_FORMAT.md § 9). v1 was replaced, not kept beside it: the owner waived compatibility (material-system D10, owner consent for this entry)
         {
           name: "level-kit",
           children: [
             {
-              name: "v1",
+              name: "v2",
               children: [
                 { name: "*.html" },
                 { name: "*.css" },

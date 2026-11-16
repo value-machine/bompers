@@ -3,7 +3,7 @@ import {
   hasCatalogEntry,
   type ContentKind,
 } from "@/features/content-catalog/api/contentCatalogApi";
-import type { TerrainPiece, TerrainRole } from "@/features/level/api/levelApi";
+import type { TerrainPiece } from "@/features/level/api/levelApi";
 import { addWarning, type LevelIssueLog } from "@/features/level-file/services/levelFileIssues";
 import { CATALOG_ID_RE } from "@/features/level-file/services/levelFileRoot";
 import type { LevelRole, RoleElement } from "@/features/level-file/types/levelFile.types";
@@ -18,10 +18,9 @@ const TERRAIN_TAGS = ["rect", "polygon", "circle"] as const;
 const ROLE_RULES: Readonly<
   Record<LevelRole, { tags: readonly string[]; attrs: readonly string[] }>
 > = {
-  platform: { tags: TERRAIN_TAGS, attrs: ["data-material", "data-behavior"] },
-  destructible: {
+  terrain: {
     tags: TERRAIN_TAGS,
-    attrs: ["data-material", "data-effect", "data-sound", "data-behavior"],
+    attrs: ["data-material", "data-color", "data-effect", "data-sound", "data-behavior"],
   },
   spawn: { tags: ["circle"], attrs: ["data-behavior"] },
   drop: { tags: ["circle"], attrs: ["data-items", "data-behavior"] },
@@ -152,18 +151,23 @@ function checkRef(
 const readRef = (item: RoleElement, spec: RefSpec, log: LevelIssueLog): string | undefined =>
   checkRef(item, { spec, raw: item.el.getAttribute(spec.attr) }, log);
 
-/** Terrain piece references; the material falls back to the role default. */
+/** Terrain piece references; the material falls back to the default, the colour to the material's. */
 export function readTerrainRefs(
-  item: RoleElement & { role: TerrainRole },
+  item: RoleElement & { role: "terrain" },
   log: LevelIssueLog
-): Omit<TerrainPiece, "shape" | "role"> {
-  const fallback = CATALOG_DEFAULTS.material[item.role];
+): Omit<TerrainPiece, "shape"> {
+  const fallback = CATALOG_DEFAULTS.material;
   const materialId =
     readRef(
       item,
       { attr: "data-material", kind: "material", instead: `using "${fallback}"` },
       log
     ) ?? fallback;
+  const colorId = readRef(
+    item,
+    { attr: "data-color", kind: "color", instead: "using the material's" },
+    log
+  );
   const effectId = readRef(
     item,
     { attr: "data-effect", kind: "effect", instead: "using the material's" },
@@ -181,6 +185,7 @@ export function readTerrainRefs(
   );
   return {
     materialId,
+    ...(colorId !== undefined && { colorId }),
     ...(effectId !== undefined && { effectId }),
     ...(soundId !== undefined && { soundId }),
     ...(behaviorId !== undefined && { behaviorId }),

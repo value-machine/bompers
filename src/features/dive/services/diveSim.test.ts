@@ -18,7 +18,7 @@ import type { DiveHit, DivePhase } from "@/features/dive/types/dive.types";
 // Cell size 8. Floor top y = 320. Thin wall (one cell) x 600–608, y 0–320. Open sky elsewhere.
 const stone = (rect: Rect) => ({
   shape: { type: "rect" as const, ...rect },
-  role: "platform" as const,
+
   materialId: "stone",
 });
 const level: LevelDefinition = {
@@ -138,14 +138,22 @@ describe("stepDives timeline", () => {
     expect(player.y - y).toBeLessThan(400 * D.windupSpeedScale * D.windupSeconds + 1);
   });
 
-  it("should snap the dive to 8 directions when the aim is analog", () => {
-    const sim = createSim([100]);
-    const player = sim.players[0]!;
-    liftTo(player, 150);
-    sim.step([{ fire: true, aimX: 1, aimY: -0.3 }]);
-    stepsUntilPhaseChange(sim);
-    expect(player.vx).toBeCloseTo(D.launchSpeed);
-    expect(player.vy).toBeCloseTo(0);
+  it("should snap the dive to the nearest of 16 directions (22.5° steps) when the aim is analog", () => {
+    // [aim, expected dive angle]: −16.7° → −22.5°, −5.7° → 0°, −60° → −67.5° (y is down).
+    const cases: [InputPatch, number][] = [
+      [{ aimX: 1, aimY: -0.3 }, -Math.PI / 8],
+      [{ aimX: 1, aimY: -0.1 }, 0],
+      [{ aimX: 0.5, aimY: -Math.sqrt(3) / 2 }, (-3 * Math.PI) / 8],
+    ];
+    for (const [aim, angle] of cases) {
+      const sim = createSim([100]);
+      const player = sim.players[0]!;
+      liftTo(player, 150);
+      sim.step([{ fire: true, ...aim }]);
+      stepsUntilPhaseChange(sim);
+      expect(player.vx).toBeCloseTo(Math.cos(angle) * D.launchSpeed);
+      expect(player.vy).toBeCloseTo(Math.sin(angle) * D.launchSpeed);
+    }
   });
 
   it("should ignore steering and jump while the dive travels", () => {

@@ -1,0 +1,14 @@
+---
+globs: ["src/features/**/services/*Renderer.ts", "src/features/**/services/*Pose.ts", "src/features/sound/**", "src/features/effects/**", "src/features/camera/**", "src/shared/config/gameTunables.ts", "src/shared/config/gameJuice.ts", "documentation/game/**"]
+alwaysApply: false
+---
+
+# Game Juice
+
+Every game moment's feedback (sound, squash and stretch, flash, shake, hit-stop, effects) comes from one scale, so the game keeps one feel as elements are added.
+
+- **Scale SSOT:** `src/shared/config/gameJuice.ts` — impact tiers, timing windows, squash band. **Guideline:** `documentation/game/GAME_JUICE.md` (principles, moment ledger, new-element checklist).
+- A moment picks a tier; never invent a shake, flash or hit-stop number. Durations stay inside their window; squash stays inside the band. `gameJuice.test.ts` enforces the tunables.
+- Every moment gets at least one sound and one visual channel; feedback is render only.
+- A lap that adds or changes a game element runs `.agents/skills/spec-apply-game-juice/SKILL.md` (juice table in the plan, ledger row in the build).
+- Changing a tier value or a window is a change to a recorded decision: ask (`.claude/rules/agent-behavior.md` § When to ask).

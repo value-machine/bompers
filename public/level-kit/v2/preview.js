@@ -1,5 +1,5 @@
 /*
- * Bompers level kit v1 — preview script.
+ * Bompers level kit v2 — preview script.
  * Adds a legend, labels, a terrain-grid overlay and soft validation when a
  * level file is opened in a browser. Never required: without it the level
  * still renders as a plain picture. The game never runs this file.
@@ -9,20 +9,20 @@
   'use strict';
 
   var SVG_NS = 'http://www.w3.org/2000/svg';
-  var FORMAT = 1;
+  var FORMAT = 2;
   var DEFAULT_CELL = 8;
   var ROLES = [
-    { role: 'platform', label: 'Platform', point: false },
-    { role: 'destructible', label: 'Destructible', point: false },
+    { role: 'terrain', label: 'Terrain', point: false },
     { role: 'spawn', label: 'Spawn', point: true },
     { role: 'drop', label: 'Drop point', point: true },
     { role: 'collectible', label: 'Collectible', point: true },
     { role: 'bounds', label: 'Bounds', point: false },
   ];
   var SHAPES = { rect: 1, polygon: 1, circle: 1 };
-  var TERRAIN = { platform: 1, destructible: 1 };
+  var TERRAIN = { terrain: 1 };
   var REF_KIND = {
     'data-material': 'material',
+    'data-color': 'color',
     'data-effect': 'effect',
     'data-sound': 'sound',
     'data-behavior': 'behavior',
@@ -121,7 +121,7 @@
     if ((counts.bounds || 0) !== 1) issues.push('Exactly one bounds <rect> is required (found ' + (counts.bounds || 0) + ').');
     if ((counts.spawn || 0) < 2) issues.push('At least 2 spawn points are required (found ' + (counts.spawn || 0) + ').');
     else if (counts.spawn < 4) issues.push('Fewer than 4 spawn points: 4-player rounds will share spawns.');
-    if (!counts.platform && !counts.destructible) issues.push('No terrain: add at least one platform or destructible shape.');
+    if (!counts.terrain) issues.push('No terrain: add at least one data-role="terrain" shape.');
     if (!counts.drop) issues.push('No drop points: weapons have nowhere to fall from.');
     return { issues: issues, counts: counts };
   }
@@ -224,6 +224,20 @@
       });
   }
 
+  /** Paints terrain the way the game does: data-color, else the material's default colour. */
+  function paintTerrain(nodes, catalog) {
+    var colors = {};
+    (catalog.color || []).forEach(function (c) { colors[c.id] = c; });
+    var materials = {};
+    (catalog.material || []).forEach(function (m) { materials[m.id] = m; });
+    nodes.forEach(function (node) {
+      if (!TERRAIN[node.getAttribute('data-role')]) return;
+      var material = materials[node.getAttribute('data-material') || catalog.defaults.material];
+      var color = colors[node.getAttribute('data-color')] || (material && colors[material.defaultColor]);
+      if (color) node.style.fill = color.fill;
+    });
+  }
+
   function init() {
     var root = document.querySelector('svg[data-level-format]');
     if (!root) return;
@@ -243,7 +257,9 @@
     showIssues(ui.issues, result.issues);
 
     loadCatalog(function (catalog) {
-      if (catalog) showIssues(ui.issues, validate(root, nodes, catalog).issues);
+      if (!catalog) return;
+      paintTerrain(nodes, catalog);
+      showIssues(ui.issues, validate(root, nodes, catalog).issues);
     });
   }
 

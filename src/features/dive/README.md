@@ -16,7 +16,7 @@ The unarmed attack (GDD § 3 "Ongewapende aanval", the "bomp"): fire makes a blo
 
 ## How it works
 
-- **Dive:** 12 frames of wind-up (hang, crouch, direction locked, 8-way), then up to 30 frames dead straight at 900 units / s with no gravity, no steering and no cancel. One dive per airtime.
+- **Dive:** 12 frames of wind-up (hang, crouch, direction locked, 16-way: 22.5° steps), then up to 30 frames dead straight at 900 units / s with no gravity, no steering and no cancel. One dive per airtime.
 - The dive **never moves a player**. It writes velocity at events (launch, bonk, strike) and the controller's motion modifiers (`steerScale`, `gravityScale`, `jumpLocked`) every step; `stepPlayers` does all movement and terrain collision, so a dive cannot tunnel.
 - A **hit** = a `BodyContact` from `resolveBodyContacts` (player feature) where the attacker is travelling toward the other at `dive.minHitSpeed` or more. The body collision has already exchanged the momentum; the dive adds the strike on the victim (push + upward pop + a short steering stagger) and the **ricochet** on the attacker (pops straight up, dive ready again at once).
 - **Hurt reaction:** the strike calls the player feature's `reactToHit` with the impulse it gave. A hard hit (impulse at least `tumble.minImpulse`, or any back hit) sends the victim into a tumble: it ricochets off floors and walls. A tumbling blob cannot start a dive. The attacker itself never bounces off terrain.
@@ -38,3 +38,5 @@ The unarmed attack (GDD § 3 "Ongewapende aanval", the "bomp"): fire makes a blo
 - A head-on clash has no special rule: both reflect equally, both ricochet and both take the front-zone damage (dive-headbutt D6). Ricochets are applied before pushes so the result does not depend on player order.
 - One dive per airtime; the charge returns on ground contact or on a hit (dive-headbutt D7).
 - A wall bonk stuns for 30 frames (250 ms), down from the prototype's 54, to stay fair (dive-headbutt D9).
+- Test levels list terrain as `{ shape, materialId }` only: terrain has no role since level format 2 (material-system D5).
+- The dive aim snaps to 16 directions (22.5°), up from 8, for finer headbutt aim. Keyboard aim (four direction keys) still only reaches the 8 main ones; sticks reach all 16. The owner accepted that keyboard players don't get the in-between angles (dive-16-ways D1, 2026-11-16).

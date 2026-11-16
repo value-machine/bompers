@@ -41,13 +41,28 @@ Rules:
 | Sun | `#fff6a8` | Flat disc, no outline. |
 | Clouds | `#ffffff` with `#bfe3f5` 4-unit edge | Far layer: soft edge colour instead of ink, so it reads as background. |
 | Far hills / near hills | `#bfe8d0` / `#9fd8b8` | No outline. Parallax 0.2 / 0.4. |
-| Solid terrain (indestructible) | `#5a3f7a` body, `#7d5fa6` top lip | Plum stone. |
-| Destructible cell | `#f4ad55`, every third cell `#f7bd6c` | Honey wafer. |
-| Destructible grid line / pip | `#b9722a` | 2-unit lines between cells, one centre pip per cell (50 % alpha). |
+| Terrain | one swatch per piece (§ Terrain swatches) | Every material uses the same slab look; the swatch is chosen per piece. |
+| Breakable seams / pips | the swatch's seam colour | 0.9-unit lines between intact 16-unit tiles, one centre pip per tile (50 % alpha). |
+| Ice gloss and rim | `#ffffff` | Two 45° streaks (60 % alpha) and an inner rim (75 % alpha). |
 | Crack (cells next to a crater) | `#2b1d3a` | 2-unit zig-zag. |
-| Helmet shell | `#fff4e2`, rocket tube cap `#d9c7ae` | Same for every player. |
+| Helmet shell | `#fff4e2`; weapon tubes are the same cream, with an accent muzzle light (§ 9) | Same for every player. |
 | Eye white / pupil | `#ffffff` / `#2b1d3a` | |
 | Contact shadow | `#2b1d3a` at 28 % alpha max | See § 4. |
+
+### Terrain swatches
+
+Named colours a level puts on any material (`data-color`; catalog kind `color`). Code: `gamePalette.terrainSwatches`.
+
+| ID | Body | Lip | Seam | Default for |
+|----|------|-----|------|-------------|
+| `plum` | `#5a3f7a` | `#7d5fa6` | `#3e2a56` | stone |
+| `slate` | `#4f6178` | `#71849c` | `#36445a` | |
+| `cardboard` | `#c99a62` | `#ddb682` | `#8f6636` | cardboard |
+| `clay` | `#c4673f` | `#dc8a62` | `#8c4426` | earth |
+| `moss` | `#5f8f3e` | `#82b05c` | `#3f6427` | |
+| `mint` | `#3aa889` | `#67c7aa` | `#247a62` | |
+| `frost` | `#a8cfe6` | `#dff1fa` | `#6b97b8` | ice |
+| `rose` | `#c95a86` | `#e384a8` | `#8f3a5d` | |
 
 ### Effects
 
@@ -59,9 +74,10 @@ Rules:
 | Smoke puffs (trail, landing dust) | `#ffffff`, ink edge at 30–60 % alpha |
 | Hit flash | `#ffffff` |
 | Homing missile body / seeker light / trail | `#c9a7ff` / `#e0103f` (blinks 6 Hz) / `#d9c4ff`; fins in the shooter's body colour |
-| Weapon pickup crate | `#fff4e2` with a `#8fd6ff` ring; homing launcher: `#b08cff` ring and twin-pod mark |
+| Weapon pickup crate | `#fff4e2`; its face shows the weapon's tube silhouette in ink inside a ring in the weapon accent (§ 9) |
 | Point collectible (falls from the roof) | `#ff8fc8` bubblegum star |
 | Timer warning (last 10 s) | `#ff8a1f` |
+| Weapon accents (§ 9) | rocket launcher sky `#8fd6ff`; homing launcher lilac `#b08cff`; planned: flamethrower ember `#ff8a1f` |
 
 ---
 
@@ -70,22 +86,21 @@ Rules:
 - Everything is built from circles, ellipses and rounded rectangles. The only sharp shape is the explosion star.
 - **Blob:** a soft egg, not a perfect circle.
   - Body: half-width R and height 1.94 R (the reference size; R = 30 world units in the style mockup). The widest point sits slightly below the middle, so the bottom is a little fuller and flatter than the top. Build it from four cubic curves (top, two sides, bottom), so squash and stretch deform one smooth shape.
-  - Feet: two ellipses 0.4 R × 0.25 R, centred 0.45 R left and right of centre. The body overlaps the top half of each foot, so the feet look tucked under. Fill them with the body shade. Helmet: a dome over the top 45 % of the body, 4 units wider than the body, cream with a white gloss stroke and the emblem in the middle. Rocket tube: a rounded rect (0.76 R × 0.47 R) on the helmet, pivoting toward the aim direction. Eyes sit under the helmet rim and look toward the aim direction.
-- **Terrain:** solid pieces are big rounded slabs (corner radius 14 units) with a lighter lip on top. Destructible pieces are square cells on the engine's destruction grid (28 units in the mockup) with 6-unit corners.
+  - Feet: two ellipses 0.4 R × 0.25 R, centred 0.45 R left and right of centre. The body overlaps the top half of each foot, so the feet look tucked under. Fill them with the body shade. Helmet: a dome over the top 45 % of the body, 4 units wider than the body, cream with a white gloss stroke and the emblem in the middle. Weapon tube: a silhouette per weapon on the helmet (§ 9), pivoting toward the aim direction; the rocket tube is a rounded rect (0.76 R × 0.47 R) with a cap. Eyes sit under the helmet rim and look toward the aim direction.
+- **Terrain:** every piece, whatever its material, is a big rounded slab (corner radius 14 units) with a lighter lip on top, in its colour swatch. A blast cuts stepped craters out of a breakable slab along the engine's destruction grid.
 - **Props and pickups:** chunky and short; nothing thinner than 0.2 R.
 
-### Destructible vs indestructible: the rule
+### Material behaviour: the rule (owner, material-system D1)
 
-Players must see at a glance what they can blast:
+Colour is free: any swatch on any material. Players read behaviour at a glance from the **surface pattern**, never from colour:
 
-| | Indestructible | Destructible |
-|---|---|---|
-| Hue | cool plum | warm honey |
-| Surface | smooth, one lip highlight | visible cell grid with pips |
-| Silhouette | one continuous rounded slab | stepped edges made of cells |
-| When hit | nothing changes | cells disappear, neighbours crack, cell-coloured debris flies |
+| | Solid (`stone`) | Breakable (`earth`, `cardboard`) | Slippery (`ice`) |
+|---|---|---|---|
+| Surface | smooth, one lip highlight | seam grid between 16-unit tiles, one pip per tile | two white gloss streaks and a white inner rim |
+| Silhouette | one continuous rounded slab | the same slab; craters cut stepped edges | the same slab |
+| When hit | nothing changes | cells disappear, neighbours crack, swatch-coloured debris flies | nothing changes |
 
-Never give a destructible cell a plum tone or an indestructible slab a grid, even for decoration.
+Never draw seams on an unbreakable piece or gloss on a non-slippery one, even for decoration. A new behaviour gets its own pattern before it ships.
 
 ---
 
@@ -97,7 +112,7 @@ Never give a destructible cell a plum tone or an indestructible slab a grid, eve
   - Then draw the coloured parts on top with no stroke.
   - Only the outer half of the ink stroke stays visible, which is the silhouette line. That is two passes of the same shapes and no filters.
   - Cache the shape geometry per pose if needed.
-- **Width in world units (visible part):** characters 3.5, solid terrain slab 3.5, rockets and pickups 2, effect stars 3. Destructible cells have no ink outline. They use their own grid line (`#b9722a`, 1.6 units) so they stay distinct from solid terrain (§ 2 rule).
+- **Width in world units (visible part):** characters 3.5, terrain slab 3.5 (every material), rockets and pickups 2, effect stars 3. A breakable slab keeps its outer line next to standing cells; crater edges are stepped cells with no ink line.
 - **Zoom rule:** the on-screen line is `clamp(worldWidth × zoom, minPx, maxPx)`. Convert back to world width per frame (`screenWidth / zoom`) when drawing. When the camera zooms far out, the line stays readable instead of shrinking to a hairline; zoomed in, it doesn't turn into a thick border.
 
   | Line | world width | minPx | maxPx |
@@ -135,7 +150,7 @@ Back to front:
 
 1. Sky gradient, sun
 2. Far hills, clouds, near hills (parallax)
-3. Solid terrain, then destructible cells
+3. Terrain: ink pass, slab fills (breakable slabs clipped to their standing cells), then seams, pips and cracks
 4. Contact shadows
 5. Pickups and collectibles
 6. **Effects:** smoke, rocket trails, explosions, debris
@@ -150,7 +165,7 @@ Back to front:
 
 ## 6. Motion and squash
 
-Squash and stretch keep area roughly constant (`sx × sy` between 0.94 and 1.0). Numbers are starting values; the movement task tunes them in its config module.
+Squash and stretch keep area roughly constant (`sx × sy` between 0.93 and 1.01, each axis 0.75–1.25). Numbers are starting values; the movement task tunes them in its config module. Tiers, timing windows and the per-moment channel ledger for all feedback: [`GAME_JUICE.md`](GAME_JUICE.md).
 
 | Moment | Shape | Timing |
 |--------|-------|--------|
@@ -164,6 +179,7 @@ Squash and stretch keep area roughly constant (`sx × sy` between 0.94 and 1.0).
 - Feet move on their own (tunables `feel.feet`): running, the lifted foot swings forward in an arc and tips its toe up; in the air the feet trail the horizontal speed and droop while rising, flare while falling, with a springy lag; a landing spreads them, a jump pulls them in. While wall-sliding, and a moment after a wall-jump (`wallJumpHoldSeconds`), both feet turn their soles to the wall, the near foot higher.
 - The helmet sits on its own spring (it wobbles after landings and shots).
 - Rocket fire: the body recoils 4 units away from the aim, tube kicks back 3 units.
+- Muzzle ready light (§ 9): after a shot the accent dot on each muzzle drops to 15 % alpha and climbs back to full as the fire cooldown runs out; full = ready to fire.
 - **Hit:** 3 frames (50 ms) of white body fill, silhouette outline unchanged, 3 px screen shake for 80 ms.
 - **Explosion:** pops in at full size on frame 1 (no fade-in), shrinks and clears in 250 ms; 6 px screen shake for 120 ms. Debris: 5–8 cell-coloured squares with the cell grid-line colour as a thin edge, spinning outward.
 - **Elimination:** blob pops into 6 droplets of its body colour plus a small confetti burst, 300 ms.
@@ -178,7 +194,7 @@ Squash and stretch keep area roughly constant (`sx × sy` between 0.94 and 1.0).
 - **Typeface:** Fredoka (OFL), weights 400–700, used for menus, HUD and in-game text.
 - **Loading:** one Google Fonts link in `index.html` (`family=Fredoka:wght@400..700&display=swap`), the way the app already loads fonts. Pixi `Text` uses the browser's fonts, so the game waits for `document.fonts.load("700 20px Fredoka")` before creating text objects, or the first labels render in the fallback face. Self-hosting would need a font package (a new dependency); not worth it until offline play matters.
 - **Layout (at 1280 × 720, scale with the viewport):** four player cards across the top, two at each side; timer centred between them.
-- **Player card:** 228 × 70, white `#fffaf0` fill, one 3 px ink outline around the card (same silhouette idea as the characters), 18 px corners, tilted ±1.5° (alternating). Inside: a 50 × 50 chip in the player colour with the emblem in ink; `P1`…`P4` label (Fredoka 700, 20 px); four health chunks (22 × 20 pills, 7 px corners, no outline); score (Fredoka 700, 30 px) with a small `PTS` caption (600, 11 px, letter-spacing 0.12 em, `#8a7a99`).
+- **Player card:** 228 × 86, white `#fffaf0` fill, one 3 px ink outline around the card (same silhouette idea as the characters), 18 px corners, tilted ±1.5° (alternating). Inside: a 50 × 50 chip in the player colour with the emblem in ink; `P1`…`P4` label (Fredoka 700, 20 px); four health chunks (22 × 20 pills, 7 px corners, no outline); under them, while armed, the ammo row: one 10 px high pill per shot (5 px corners, 3 px gaps) across the health-row width, filled in the weapon accent, spent ones pale `#e9dfd0`, hidden when unarmed; score (Fredoka 700, 30 px) with a small `PTS` caption (600, 11 px, letter-spacing 0.12 em, `#8a7a99`).
 - **Health chunks:** full = player colour; lost = pale `#e9dfd0`. A chunk that is lost pops out (scale 1.3 → 0, 150 ms) before the empty pill shows.
 - **Timer:** 140 × 70 ink `#2b1d3a` card, lemon `#ffd43b` numerals (Fredoka 700, 42 px). Last 10 seconds: numerals turn `#ff8a1f` and pulse once per second.
 - **Menus and app chrome** use the theme tokens below, so buttons, cards and dialogs match the HUD.
@@ -206,6 +222,8 @@ Light mode is the daytime arena; dark mode is the same world at dusk (plum night
 ---
 
 ## 8. Audio identity
+
+Which moments get a sound, how loud and when it ducks the music: [`GAME_JUICE.md`](GAME_JUICE.md) § 2, § 5.
 
 **Toy-box pop.** Everything sounds like a squishy, rubbery toy: short, bright, a little silly, never harsh. Explosions are big cartoon "BOOMF"s with a confetti-crackle tail, not realistic bass rumble. Music is upbeat ukulele and marimba with slap bass and hand claps, around 128 BPM, major key, built from short loops plus stingers. Each player's sounds are pitched slightly differently (P1 0, P2 +2, P3 −2, P4 +4 semitones) so four blobs never sound identical. Mix: player actions above music; explosions duck the music by about 4 dB for 300 ms.
 
@@ -261,6 +279,33 @@ No extra round start / end stingers: the round-start and round-end SFX play ther
 **Post-processing:** loops cut to exactly 32 bars (60.0 s) with 10–20 ms edge fades so the seam does not click; the final piece cut to 30.0 s with a 150 ms tail fade; one fixed gain to −16 LUFS (no time-varying normaliser, which would bend a loop seam), limiter at −1.5 dBTP, stereo mp3 128 kbps, in `public/audio/music/`.
 
 **Cost:** 15 credits per second of music (60 s = 900).
+
+---
+
+## 9. Weapon identity
+
+The owner picked this system on 2026-11-16 (lap weapon-visuals, direction A of three; the mockup page is not part of the repo). Each question a player asks from the couch has one signal, and it looks the same on the blob, the crate and the HUD.
+
+| Question | Signal | Where |
+|---|---|---|
+| Which one is me? | Body colour + helmet emblem (§ 1), unchanged | Blob, HUD chip |
+| Which team? (team modes only) | Helmet shell: light cream vs dark plum. Light against dark survives every colour-blind view and uses no player hue. Built when a team mode exists. | Helmet, HUD card tab |
+| Which weapon? | **Tube silhouette** on the helmet, one per weapon (part of the ink outline, so it reads at couch zoom) + the weapon **accent** | Helmet tube, crate face, HUD ammo pills |
+| What's in the crate? | The same tube silhouette in ink inside a ring in the weapon accent | Crate |
+| Shots left? | HUD ammo row in the accent (§ 7). No empty-weapon look: the tube disappears at 0 ammo | HUD |
+| Ready to fire? | An accent light on the muzzle cap fades out while a shot recharges and is full when ready | Helmet tube |
+
+| Weapon | Tube silhouette | Accent | Projectile |
+|---|---|---|---|
+| Rocket launcher | capped tube (§ 2) | sky `#8fd6ff` | cream body, ink nose, fins in the shooter colour (§ 1) |
+| Homing launcher | twin pod (a short mount and two stacked pods) | lilac `#b08cff` | lilac hull, cherry seeker light blinking 6 Hz, lilac trail, shooter-colour fins (§ 1; owner passed this look with #39) |
+| Flamethrower (planned) | flared nozzle with a pilot flame | ember `#ff8a1f` | short stream of ember and yellow puffs |
+
+Rules:
+
+- Weapon accents never reuse a player body colour (§ 1 player hues are reserved). The tube shape is the first cue, so an accent close to a player hue (ember vs tomato) stays readable.
+- A new weapon adds a tube shape (`src/shared/utils/weaponTube.ts`) and one `weaponLooks` entry (`gamePalette.ts`). The crate, tube and ammo row follow from those two.
+- The helmet emblem always stays the player's; weapons never replace it.
 
 ---
 

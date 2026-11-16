@@ -12,8 +12,8 @@ export interface LevelIssue {
   message: string;
 }
 
-/** Every `data-role` value format v1 knows. */
-export type LevelRole = "platform" | "destructible" | "spawn" | "drop" | "collectible" | "bounds";
+/** Every `data-role` value the current format knows. */
+export type LevelRole = "terrain" | "spawn" | "drop" | "collectible" | "bounds";
 
 /** A role element that passed the structural checks (W1–W3), with its readable name. */
 export interface RoleElement {

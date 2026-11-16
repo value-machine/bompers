@@ -12,6 +12,8 @@ export {
   clearCircle,
   getCellInfo,
   type ClearedCells,
+  type ClearedLook,
+  groundFrictionBelow,
   isSolidAt,
   rectHitsSolid,
   surfaceBelow,

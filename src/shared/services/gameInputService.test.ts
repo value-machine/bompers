@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createGameInputReader, type GameInputReader } from "@/shared/services/gameInputService";
 
 const press = (type: "keydown" | "keyup", code: string, repeat = false): void => {
@@ -7,7 +7,10 @@ const press = (type: "keydown" | "keyup", code: string, repeat = false): void =>
 
 describe("gameInputService", () => {
   let reader: GameInputReader | null = null;
-  afterEach(() => reader?.dispose());
+  afterEach(() => {
+    reader?.dispose();
+    vi.unstubAllGlobals();
+  });
 
   it("should report a held key until it is released", () => {
     reader = createGameInputReader(window);
@@ -45,5 +48,23 @@ describe("gameInputService", () => {
     const inputs = reader.sample();
     expect(inputs[0]?.connected).toBe(false);
     expect(inputs[1]?.moveX).toBe(-1);
+  });
+
+  it("should follow a pad that is unplugged and plugged back in mid-match", () => {
+    const pad = (connected: boolean) => ({
+      connected,
+      axes: [1, 0, 0, 0],
+      buttons: Array.from({ length: 17 }, () => ({ pressed: false })),
+    });
+    let pads: unknown[] = [pad(true)];
+    vi.stubGlobal("navigator", { getGamepads: () => pads });
+    reader = createGameInputReader(window, [{ kind: "gamepad", padIndex: 0 }]);
+    expect(reader.sample()[0]).toMatchObject({ connected: true, moveX: 1 });
+    pads = [null];
+    expect(reader.sample()[0]).toMatchObject({ connected: false, moveX: 0 });
+    pads = [pad(false)];
+    expect(reader.sample()[0]?.connected).toBe(false);
+    pads = [pad(true)];
+    expect(reader.sample()[0]).toMatchObject({ connected: true, moveX: 1 });
   });
 });

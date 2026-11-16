@@ -1,9 +1,8 @@
 import { Container, Graphics } from "pixi.js";
-import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import { GAME_PALETTE, terrainSwatch } from "@/shared/config/gamePalette";
 import { starPoints } from "@/shared/utils/shapeGeometry";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 import { DESIGN_SCALE, outlineWidth } from "@/shared/utils/outlineWidth";
-import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import type { CombatEvent } from "@/features/combat/api/combatApi";
 
 /**
@@ -69,11 +68,6 @@ const drawPop = (width: number): Container =>
     .fill(GAME_PALETTE.hitFlash)
     .stroke(inkStroke(width));
 
-const lookOfMaterial = (materialId: string) => {
-  const token = resolveCatalogEntry("material", materialId).entry?.lookToken ?? "";
-  return GAME_PALETTE.materialLooks[token] ?? GAME_PALETTE.fallbackLook;
-};
-
 /** Deterministic 0..1 noise from an event seq and a piece index (no RNG in render). */
 const noise = (seq: number, i: number): number => {
   const x = Math.sin(seq * 12.9898 + i * 78.233) * 43758.5453;
@@ -83,15 +77,15 @@ const noise = (seq: number, i: number): number => {
 /** 5–8 cell-coloured squares with a grid-line edge (DESIGN_LANGUAGE § 6 Explosion debris). */
 function drawDebris(event: EventOf<"terrainDestroyed">): Container {
   const root = new Container();
-  const look = lookOfMaterial(event.materialId);
+  const swatch = terrainSwatch(event.colorId);
   const count = 5 + (event.seq % 4);
   const half = DEBRIS.size / 2;
   for (let i = 0; i < count; i += 1) {
     root.addChild(
       new Graphics()
         .roundRect(-half, -half, DEBRIS.size, DEBRIS.size, DEBRIS.size * 0.25)
-        .fill(i % 3 === 0 ? look.accent : look.fill)
-        .stroke({ width: 0.8, color: GAME_PALETTE.cellLine })
+        .fill(i % 3 === 0 ? swatch.lip : swatch.fill)
+        .stroke({ width: 0.8, color: swatch.seam })
     );
   }
   return root;

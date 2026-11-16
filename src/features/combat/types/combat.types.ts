@@ -107,6 +107,8 @@ export type CombatEventBody =
       x: number;
       y: number;
       materialId: string;
+      /** Catalog colour of the destroyed cells (debris colour). */
+      colorId: string;
       cells: number;
       /** From the content catalog's material entry. */
       effectId: string;

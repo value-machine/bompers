@@ -1,15 +1,19 @@
+import type { MaterialSurface } from "@/shared/types/terrainSurface.types";
+
 /**
- * What one kind of terrain cell is: its material and whether blasts clear it. Cells store an
- * index into `TerrainGrid.slots`; slot 0 is always empty.
+ * What one kind of terrain cell is: material behaviour (from the catalog) plus the piece's
+ * colour. Cells store an index into `TerrainGrid.slots`; slot 0 is always empty.
  */
 export interface TerrainCellSlot {
-  /** The level role that filled the cell; a platform cell is never overwritten by a destructible one. */
-  role: "platform" | "destructible";
   materialId: string;
-  /** role "destructible" AND a destructible material. */
+  /** Catalog colour ID (palette `terrainSwatches`); looks only. */
+  colorId: string;
+  /** Blasts clear it (the material's `destructible`). */
   destructible: boolean;
-  /** Palette key from the material's catalog entry. */
-  lookToken: string;
+  /** 0 = ice … 1 = grippy (the material's `friction`). */
+  friction: number;
+  /** Surface pattern the renderer draws (the material's `surface`). */
+  surface: MaterialSurface;
 }
 
 export const EMPTY_CELL = 0;

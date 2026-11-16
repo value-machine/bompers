@@ -3,6 +3,7 @@ import {
   CATALOG_DEFAULTS,
   LEVEL_FORMAT_VERSION,
   hasCatalogEntry,
+  resolveCatalogEntry,
   type ContentKind,
 } from "@/features/content-catalog/api/contentCatalogApi";
 import type {
@@ -80,20 +81,32 @@ function normalizeSettings(settings: Partial<LevelSettings>, warnings: Warnings)
   return { cellSize, gravity, ...(matchDurationS !== undefined && { matchDurationS }) };
 }
 
-/** W4: unknown material → role default; unknown effect / sound / behavior → dropped. */
+/** The material's default colour (stone's when the material has no entry). */
+const defaultColorOf = (materialId: string): string =>
+  resolveCatalogEntry("material", materialId).entry?.defaultColor ?? "plum";
+
+/**
+ * W4: unknown material → the default material; unknown or missing colour → the material's
+ * default colour; unknown effect / sound / behavior → dropped.
+ */
 function normalizePiece(piece: TerrainPiece, where: string, warnings: Warnings): TerrainPiece {
   let { materialId } = piece;
   if (!hasCatalogEntry("material", materialId)) {
-    materialId = CATALOG_DEFAULTS.material[piece.role];
+    materialId = CATALOG_DEFAULTS.material;
     warnings.push(`${where}: unknown material "${piece.materialId}", using "${materialId}"`);
+  }
+  let colorId = piece.colorId ?? defaultColorOf(materialId);
+  if (!hasCatalogEntry("color", colorId)) {
+    colorId = defaultColorOf(materialId);
+    warnings.push(`${where}: unknown color "${piece.colorId}", using "${colorId}"`);
   }
   const effectId = knownRef({ kind: "effect", id: piece.effectId, where }, warnings);
   const soundId = knownRef({ kind: "sound", id: piece.soundId, where }, warnings);
   const behaviorId = knownRef({ kind: "behavior", id: piece.behaviorId, where }, warnings);
   return {
     shape: piece.shape,
-    role: piece.role,
     materialId,
+    colorId,
     ...(effectId !== undefined && { effectId }),
     ...(soundId !== undefined && { soundId }),
     ...(behaviorId !== undefined && { behaviorId }),

@@ -13,7 +13,7 @@ import {
 /**
  * Builds the terrain grid from a level's terrain shapes (LEVEL_FORMAT.md § 4): a cell is filled
  * when its centre lies inside a shape; polygons use the non-zero rule; where shapes overlap a
- * platform wins over a destructible, and between equal roles the later piece sets the material.
+ * an unbreakable material wins over a breakable one, and between equals the later piece wins.
  */
 function shapeBounds(shape: TerrainShape) {
   if (shape.type === "rect") return { x: shape.x, y: shape.y, w: shape.w, h: shape.h };
@@ -27,17 +27,24 @@ function shapeBounds(shape: TerrainShape) {
   return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
 }
 
-/** What a piece fills: its role plus the material's behaviour and look (catalog). */
+const UNKNOWN_MATERIAL = {
+  id: "",
+  defaultColor: "",
+  destructible: false,
+  friction: 1,
+  surface: "plain",
+} as const;
+
+/** What a piece fills: the material's behaviour (catalog) plus the piece's colour. */
 export function pieceCellSlot(piece: TerrainPiece): TerrainCellSlot {
-  const { entry } = resolveCatalogEntry("material", piece.materialId);
-  if (!entry) {
-    return { role: piece.role, materialId: piece.materialId, destructible: false, lookToken: "" };
-  }
+  // Unknown IDs resolve to the fallback material (stone); the normaliser already warned.
+  const entry = resolveCatalogEntry("material", piece.materialId).entry ?? UNKNOWN_MATERIAL;
   return {
-    role: piece.role,
     materialId: entry.id,
-    destructible: piece.role === "destructible" && entry.destructible,
-    lookToken: entry.lookToken,
+    colorId: piece.colorId ?? entry.defaultColor,
+    destructible: entry.destructible,
+    friction: entry.friction,
+    surface: entry.surface,
   };
 }
 
@@ -47,12 +54,14 @@ const slotOfPiece = (grid: TerrainGrid, piece: TerrainPiece): number =>
 
 function rasterizePiece(grid: TerrainGrid, piece: TerrainPiece): void {
   const slot = slotOfPiece(grid, piece);
+  const breakable = grid.slots[slot]?.destructible === true;
   const size = grid.cellSize;
   const range = cellRangeOf(grid, shapeBounds(piece.shape));
   for (let cy = range.minY; cy <= range.maxY; cy += 1) {
     for (let cx = range.minX; cx <= range.maxX; cx += 1) {
       if (!shapeContains(piece.shape, { x: (cx + 0.5) * size, y: (cy + 0.5) * size })) continue;
-      if (piece.role === "destructible" && getCellInfo(grid, cx, cy)?.role === "platform") continue;
+      // An unbreakable cell is never overwritten by a breakable piece (LEVEL_FORMAT § 4).
+      if (breakable && getCellInfo(grid, cx, cy)?.destructible === false) continue;
       setCellSlot(grid, { cx, cy, slot });
     }
   }

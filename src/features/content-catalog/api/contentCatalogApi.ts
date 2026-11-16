@@ -2,6 +2,7 @@
 export type {
   BehaviorEntry,
   CatalogDefaults,
+  ColorEntry,
   CatalogEntryByKind,
   ContentCatalog,
   ContentKind,
@@ -9,6 +10,7 @@ export type {
   ExportedCatalog,
   ItemEntry,
   MaterialEntry,
+  MaterialSurface,
   ResolvedEntry,
   SoundEntry,
 } from "@/features/content-catalog/types/contentCatalog.types";

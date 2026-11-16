@@ -18,6 +18,8 @@ interface KeyboardLayout {
   down: readonly string[];
   jump: readonly string[];
   fire: readonly string[];
+  /** Match only: pause / start (both halves share Escape). */
+  pause: readonly string[];
   /** Menu only: join / choose / start. */
   confirm: readonly string[];
   /** Menu only: leave / back to the lobby. */
@@ -32,6 +34,7 @@ export const KEYBOARD_LAYOUTS: Record<KeyboardLayoutId, KeyboardLayout> = {
     down: ["KeyS"],
     jump: ["KeyW", "Space"],
     fire: ["KeyF"],
+    pause: ["Escape"],
     confirm: ["Space", "KeyF"],
     back: ["KeyQ"],
   },
@@ -42,6 +45,7 @@ export const KEYBOARD_LAYOUTS: Record<KeyboardLayoutId, KeyboardLayout> = {
     down: ["ArrowDown"],
     jump: ["ArrowUp"],
     fire: ["Slash", "Numpad0", "Enter"],
+    pause: ["Escape"],
     confirm: ["Enter", "Slash", "Numpad0"],
     back: ["Backspace"],
   },
@@ -74,6 +78,11 @@ export const GAME_KEY_CODES: ReadonlySet<string> = new Set(
   Object.values(KEYBOARD_LAYOUTS).flatMap((layout) => Object.values(layout).flat())
 );
 
+/**
+ * Stick deadzone (0–1). Move uses it per axis on x, so a stick pushed up does not creep
+ * sideways; aim uses it radially, so the aim keeps the stick's true direction. Both rescale
+ * the rest of the range to 0–1, so speed ramps from zero just past the deadzone.
+ */
 export const GAMEPAD_DEADZONE = 0.25;
 
 /** Standard-mapping button indices. */
@@ -103,6 +112,7 @@ export const EMPTY_PLAYER_INPUT: PlayerInput = {
   aimY: 0,
   jump: false,
   fire: false,
+  pause: false,
   crouch: false,
 };
 
@@ -128,26 +138,37 @@ export function mapKeyboardInput(
     aimY,
     jump: anyHeld(held, layout.jump),
     fire: anyHeld(held, layout.fire),
+    pause: anyHeld(held, layout.pause),
     crouch: down,
   };
 }
 
-const applyDeadzone = (value: number): number => (Math.abs(value) < GAMEPAD_DEADZONE ? 0 : value);
-
 const pressed = (pad: GamepadSnapshot, index: number): boolean => pad.buttons[index] === true;
 
-const stick = (pad: GamepadSnapshot, xAxis: number) => ({
-  x: applyDeadzone(pad.axes[xAxis] ?? 0),
-  y: applyDeadzone(pad.axes[xAxis + 1] ?? 0),
-});
+/** Rescales the part of `magnitude` past the deadzone to 0–1. */
+const pastDeadzone = (magnitude: number): number =>
+  Math.min(1, Math.max(0, (magnitude - GAMEPAD_DEADZONE) / (1 - GAMEPAD_DEADZONE)));
+
+/** Axial deadzone on one axis, rescaled. */
+const axisPastDeadzone = (value: number): number =>
+  Math.sign(value) * pastDeadzone(Math.abs(value));
+
+/** Radial deadzone on one stick (`xAxis`, `xAxis + 1`), rescaled and clamped to the unit circle. */
+function stickPastDeadzone(pad: GamepadSnapshot, xAxis: number): { x: number; y: number } {
+  const x = pad.axes[xAxis] ?? 0;
+  const y = pad.axes[xAxis + 1] ?? 0;
+  const magnitude = Math.hypot(x, y);
+  const scale = magnitude > 0 ? pastDeadzone(magnitude) / magnitude : 0;
+  return { x: x * scale, y: y * scale };
+}
 
 /** Maps one gamepad snapshot (or its absence) to input. Right stick aims; left stick otherwise. */
 export function mapGamepadInput(pad: GamepadSnapshot | null): PlayerInput {
   if (!pad) return EMPTY_PLAYER_INPUT;
   const dpadX = axisFrom(pressed(pad, PAD_BUTTON.dpadLeft), pressed(pad, PAD_BUTTON.dpadRight));
-  const move = stick(pad, 0);
-  const aim = stick(pad, 2);
-  const moveX = dpadX !== 0 ? dpadX : move.x;
+  const moveX = dpadX !== 0 ? dpadX : axisPastDeadzone(pad.axes[0] ?? 0);
+  const move = stickPastDeadzone(pad, 0);
+  const aim = stickPastDeadzone(pad, 2);
   const usesAimStick = aim.x !== 0 || aim.y !== 0;
   const fireButtons = [PAD_BUTTON.rt, PAD_BUTTON.rb, PAD_BUTTON.x];
   return {
@@ -157,6 +178,7 @@ export function mapGamepadInput(pad: GamepadSnapshot | null): PlayerInput {
     aimY: usesAimStick ? aim.y : move.y,
     jump: pressed(pad, PAD_BUTTON.a),
     fire: fireButtons.some((button) => pressed(pad, button)),
+    pause: pressed(pad, PAD_BUTTON.start),
     crouch: pressed(pad, PAD_BUTTON.dpadDown) || stickCrouches(move),
   };
 }

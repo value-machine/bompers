@@ -20,13 +20,26 @@ const base: LevelDefinition = {
 const rect = { type: "rect" as const, x: 0, y: 0, w: 8, h: 8 };
 
 describe("levelDefinition", () => {
-  it("should replace an unknown material with the role default and warn", () => {
+  it("should replace an unknown material with the default material and warn", () => {
     const { level, warnings } = normalizeLevelDefinition({
       ...base,
-      terrain: [{ shape: rect, role: "destructible", materialId: "jelly" }],
+      terrain: [{ shape: rect, materialId: "jelly" }],
     });
-    expect(level.terrain[0]?.materialId).toBe("dirt");
-    expect(warnings).toEqual(['terrain[0]: unknown material "jelly", using "dirt"']);
+    expect(level.terrain[0]).toMatchObject({ materialId: "stone", colorId: "plum" });
+    expect(warnings).toEqual(['terrain[0]: unknown material "jelly", using "stone"']);
+  });
+
+  it("should fill the material's colour when a piece names none or an unknown one", () => {
+    const { level, warnings } = normalizeLevelDefinition({
+      ...base,
+      terrain: [
+        { shape: rect, materialId: "ice" },
+        { shape: rect, materialId: "cardboard", colorId: "teal" },
+        { shape: rect, materialId: "earth", colorId: "mint" },
+      ],
+    });
+    expect(level.terrain.map((p) => p.colorId)).toEqual(["frost", "cardboard", "mint"]);
+    expect(warnings).toEqual(['terrain[1]: unknown color "teal", using "cardboard"']);
   });
 
   it("should drop unknown effect, sound and behavior references so the material default applies", () => {
@@ -35,7 +48,7 @@ describe("levelDefinition", () => {
       terrain: [
         {
           shape: rect,
-          role: "platform",
+
           materialId: "stone",
           effectId: "boom",
           soundId: "dust-burst",
@@ -43,7 +56,7 @@ describe("levelDefinition", () => {
         },
       ],
     });
-    expect(level.terrain[0]).toEqual({ shape: rect, role: "platform", materialId: "stone" });
+    expect(level.terrain[0]).toEqual({ shape: rect, materialId: "stone", colorId: "plum" });
     expect(warnings).toHaveLength(3);
   });
 
