@@ -12,7 +12,7 @@ import { applyHit, type CombatState } from "@/features/combat/api/combatApi";
 /**
  * Dive headbutt system (sim step 3b, after players, body contacts and combat). Unarmed fire
  * (combat's `unarmedAttack` hook → `requestDive`) makes the blob dive
- * headfirst along its 8-way aim: idle → wind-up (hang and crouch) → travel (dead straight, no
+ * headfirst along its 16-way aim: idle → wind-up (hang and crouch) → travel (dead straight, no
  * gravity, no steering) → recovery. Terrain always ends the dive: a head-on hit is a short stun
  * ("bonk"), a glancing one a plain recovery; it never bounces. A body contact while travelling
  * toward someone is a hit: the body collision already exchanged the momentum; the dive adds
@@ -44,8 +44,11 @@ export const RECENT_HIT_SECONDS = 0.25;
 const EPSILON = 1e-9;
 /** Share of the sideways speed kept on a head-on terrain bonk. */
 const BONK_SLIDE_KEEP = 0.3;
-/** The aim is snapped to 8 directions so the dive line is always readable. */
-const AIM_STEP = Math.PI / 4;
+/**
+ * The aim is snapped to 16 directions (22.5° steps) so the dive line stays readable. Keyboard aim
+ * only produces the 8 main ones; sticks reach all 16 (owner, 2026-11-16).
+ */
+const AIM_STEP = Math.PI / 8;
 
 export const createDiveState = (): DiveState => ({ motions: {}, hits: [], recentHits: [] });
 
@@ -82,7 +85,7 @@ export function resetDive(dive: DiveState, player: PlayerState): void {
 
 // ── Phase changes ────────────────────────────────────────────────────────────
 
-/** Unit dive direction: the player's aim snapped to 8 ways. */
+/** Unit dive direction: the player's aim snapped to 16 ways. */
 function diveDirection(player: PlayerState): Vec2 {
   const angle = Math.round(Math.atan2(player.aimY, player.aimX) / AIM_STEP) * AIM_STEP;
   return { x: Math.cos(angle), y: Math.sin(angle) };
