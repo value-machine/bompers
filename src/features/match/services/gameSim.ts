@@ -49,7 +49,7 @@ import {
  *   1. joinSlots       — a connected input slot without a player gets one
  *   2. stepPlayers     — player feature: controller + terrain collision
  *   2b. bodyContacts   — player feature: blob-vs-blob bounce; the contacts feed step 3b
- *   3. stepCombat      — combat feature: rockets, blasts (damage, impulse, clearCircle);
+ *   3. stepCombat      — combat feature: rockets, blasts (damage, impulse, clearCrater);
  *                        unarmed fire goes through its `unarmedAttack` hook to the dive
  *   3a. stepWeaponCrates — collectibles feature: weapon crates drop, fall, land and get taken;
  *                        combat's `takeWeaponPickups` arms the collector

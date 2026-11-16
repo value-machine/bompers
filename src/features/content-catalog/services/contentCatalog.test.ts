@@ -9,7 +9,16 @@ describe("contentCatalog", () => {
   it("should resolve a known material when the ID exists", () => {
     const resolved = resolveCatalogEntry("material", "earth");
     expect(resolved.isFallback).toBe(false);
-    expect(resolved.entry?.destructible).toBe(true);
+    expect(resolved.entry?.toughness).toBe(1);
+  });
+
+  it("should make cardboard softer than earth and stone and ice unbreakable when toughness is read", () => {
+    const toughness = (id: string): number | null | undefined =>
+      resolveCatalogEntry("material", id).entry?.toughness;
+    expect(toughness("cardboard")).toBe(0.7);
+    expect(toughness("earth")).toBe(1);
+    expect(toughness("stone")).toBeNull();
+    expect(toughness("ice")).toBeNull();
   });
 
   it("should fall back to stone and flag it when a material ID is unknown", () => {

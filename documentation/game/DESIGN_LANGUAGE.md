@@ -87,7 +87,7 @@ Named colours a level puts on any material (`data-color`; catalog kind `color`).
 - **Blob:** a soft egg, not a perfect circle.
   - Body: half-width R and height 1.94 R (the reference size; R = 30 world units in the style mockup). The widest point sits slightly below the middle, so the bottom is a little fuller and flatter than the top. Build it from four cubic curves (top, two sides, bottom), so squash and stretch deform one smooth shape.
   - Feet: two ellipses 0.4 R × 0.25 R, centred 0.45 R left and right of centre. The body overlaps the top half of each foot, so the feet look tucked under. Fill them with the body shade. Helmet: a dome over the top 45 % of the body, 4 units wider than the body, cream with a white gloss stroke and the emblem in the middle. Weapon tube: a silhouette per weapon on the helmet (§ 9), pivoting toward the aim direction; the rocket tube is a rounded rect (0.76 R × 0.47 R) with a cap. Eyes sit under the helmet rim and look toward the aim direction.
-- **Terrain:** every piece, whatever its material, is a big rounded slab (corner radius 14 units) with a lighter lip on top, in its colour swatch. A blast cuts stepped craters out of a breakable slab along the engine's destruction grid.
+- **Terrain:** every piece, whatever its material, is a big rounded slab (corner radius 14 units) with a lighter lip on top, in its colour swatch. A blast cuts stepped craters out of a breakable slab along the engine's destruction grid; a softer material (lower toughness, e.g. cardboard) opens a wider crater from the same blast.
 - **Props and pickups:** chunky and short; nothing thinner than 0.2 R.
 
 ### Material behaviour: the rule (owner, material-system D1)
