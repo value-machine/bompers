@@ -37,6 +37,7 @@ import {
   type FeelState,
 } from "@/features/effects/api/effectsApi";
 import { prefersReducedMotion } from "@/shared/utils/reducedMotion";
+import { blastReach } from "@/shared/utils/blastPower";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import {
   createCollectiblesView,
@@ -57,9 +58,9 @@ import { createHudView, syncHudView, type HudView } from "@/features/match/servi
  *   stage
  *   ├─ backdrop (screen units: sky, sun, parallax hills and clouds — arena)
  *   ├─ world   (camera transform; world units)
- *   │  ├─ terrain   (arena: solid slabs, destructible tiles)
+ *   │  ├─ terrain   (arena: solid slabs, breakable tiles)
  *   │  ├─ contact shadows: weapon crates (collectibles), rockets (combat), players (player)
- *   │  ├─ weapon crates, point orbs (collectibles)
+ *   │  ├─ weapon crates, headbutt resets, point orbs (collectibles)
  *   │  ├─ effects (debris, explosions, rocket-hit pops — effects), rockets (+ trails — combat)
  *   │  ├─ dive effects (dive impact pops)   (dive)
  *   │  ├─ players   (player; above effects so they never cover a player outline; protected
@@ -106,6 +107,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     combat.shadows.container,
     players.shadows,
     collectibles.crates,
+    collectibles.refills.container,
     collectibles.orbs,
     effects.layer,
     combat.rockets,
@@ -185,6 +187,7 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     collectibles: state.collectibles,
     size: state.tunables.collectibles.size,
     crateSize: state.tunables.combat.drops.size,
+    diveRefill: state.tunables.collectibles.diveRefill,
     terrain: state.arena.terrain,
     nowMs,
     zoom,
@@ -221,7 +224,8 @@ function readFeel(
     bodies: state.players,
     nowMs,
     feel: state.tunables.feel,
-    fullBlastRadius: state.tunables.combat.explosion.radius,
+    // The rocket's blast is the full-size reference for the explosion shake.
+    fullBlastRadius: blastReach(state.tunables, state.tunables.combat.rocket.power),
     reducedMotion,
     shake: renderer.shake,
   });

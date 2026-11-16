@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildTerrainFromLevel,
-  clearCircle,
+  clearCrater,
   getCellInfo,
   groundFrictionBelow,
 } from "@/features/arena/api/arenaApi";
@@ -109,11 +109,13 @@ describe("parseLevelFile — kit files", () => {
     }
   });
 
-  it("should give the default start arena 4 spawns, 5 drops and 5 collectibles when imported", () => {
+  it("should give the default start arena 4 spawns, 5 drops, 5 point orbs and 3 headbutt resets when imported", () => {
     const { level: def } = okLevel(parseLevelFile(BUILT_INS[0]!.text));
     expect(def.spawns).toHaveLength(4);
     expect(def.drops).toHaveLength(5);
-    expect(def.collectibles).toHaveLength(5);
+    const items = def.collectibles.map((point) => point.itemId);
+    expect(items.filter((id) => id === "point-orb")).toHaveLength(5);
+    expect(items.filter((id) => id === "dive-reset")).toHaveLength(3);
   });
 
   it("should import both AUTHORING.md examples without errors", () => {
@@ -376,7 +378,7 @@ describe("material system (acceptance)", () => {
     if (!result.ok) throw new Error(JSON.stringify(result.errors));
     const grid = buildTerrainFromLevel(result.level);
     for (const b of blocks) {
-      const cleared = clearCircle(grid, { x: b.x + 32, y: 432, radius: 20 });
+      const cleared = clearCrater(grid, { x: b.x + 32, y: 432, reach: 20 });
       expect(cleared.removed > 0, `${b.material}/${b.color}`).toBe(BREAKABLE.has(b.material));
       const cx = Math.floor((b.x + 2) / grid.cellSize);
       expect(getCellInfo(grid, cx, 50)).toMatchObject({ materialId: b.material, colorId: b.color });

@@ -85,12 +85,14 @@ export function stepRockets(ctx: CombatContext, dt: number): void {
     steerHoming(ctx, rocket, dt);
     const contact = sweepRocket(ctx, rocket, dt);
     rocket.age += dt;
-    const expired = rocket.age >= flightTunables(ctx.tunables, rocket.kind).maxLifetime;
+    const flight = flightTunables(ctx.tunables, rocket.kind);
+    const expired = rocket.age >= flight.maxLifetime;
     if (contact || expired) {
       explode(ctx, {
         at: contact ?? { x: rocket.x, y: rocket.y },
         ownerSlot: rocket.ownerSlot,
         ownerId: rocket.ownerId,
+        power: flight.power,
       });
     } else {
       flying.push(rocket);

@@ -3,7 +3,7 @@ import { GAME_PALETTE, terrainSwatch } from "@/shared/config/gamePalette";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import type { TerrainGrid } from "@/features/arena/types/arena.types";
-import { takeDirtyChunks } from "@/features/arena/services/terrainGrid";
+import { isBreakableSlot, takeDirtyChunks } from "@/features/arena/services/terrainGrid";
 import { pieceCellSlot } from "@/features/arena/services/terrainRaster";
 import { readTile, tileCellsFor, type TileState } from "@/features/arena/services/terrainTiles";
 import {
@@ -55,7 +55,7 @@ function slabPieces(level: LevelDefinition): { solids: SlabPiece[]; breakables: 
   for (const piece of level.terrain) {
     const slot = pieceCellSlot(piece);
     const slab = { shape: piece.shape, swatch: terrainSwatch(slot.colorId), surface: slot.surface };
-    (slot.destructible ? breakables : solids).push(slab);
+    (isBreakableSlot(slot) ? breakables : solids).push(slab);
   }
   return { solids, breakables };
 }

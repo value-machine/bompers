@@ -76,6 +76,7 @@ Named colours a level puts on any material (`data-color`; catalog kind `color`).
 | Homing missile body / seeker light / trail | `#c9a7ff` / `#e0103f` (blinks 6 Hz) / `#d9c4ff`; fins in the shooter's body colour |
 | Weapon pickup crate | `#fff4e2`; its face shows the weapon's tube silhouette in ink inside a ring in the weapon accent (§ 9) |
 | Point collectible (falls from the roof) | `#ff8fc8` bubblegum star |
+| Headbutt reset (floats on its point) | `#5fe0ff` aqua diamond crystal, ink outline, white gloss facet, ink up-chevron; while gone, an ink ghost outline at 30 % alpha |
 | Timer warning (last 10 s) | `#ff8a1f` |
 | Weapon accents (§ 9) | rocket launcher sky `#8fd6ff`; homing launcher lilac `#b08cff`; planned: flamethrower ember `#ff8a1f` |
 
@@ -87,7 +88,7 @@ Named colours a level puts on any material (`data-color`; catalog kind `color`).
 - **Blob:** a soft egg, not a perfect circle.
   - Body: half-width R and height 1.94 R (the reference size; R = 30 world units in the style mockup). The widest point sits slightly below the middle, so the bottom is a little fuller and flatter than the top. Build it from four cubic curves (top, two sides, bottom), so squash and stretch deform one smooth shape.
   - Feet: two ellipses 0.4 R × 0.25 R, centred 0.45 R left and right of centre. The body overlaps the top half of each foot, so the feet look tucked under. Fill them with the body shade. Helmet: a dome over the top 45 % of the body, 4 units wider than the body, cream with a white gloss stroke and the emblem in the middle. Weapon tube: a silhouette per weapon on the helmet (§ 9), pivoting toward the aim direction; the rocket tube is a rounded rect (0.76 R × 0.47 R) with a cap. Eyes sit under the helmet rim and look toward the aim direction.
-- **Terrain:** every piece, whatever its material, is a big rounded slab (corner radius 14 units) with a lighter lip on top, in its colour swatch. A blast cuts stepped craters out of a breakable slab along the engine's destruction grid.
+- **Terrain:** every piece, whatever its material, is a big rounded slab (corner radius 14 units) with a lighter lip on top, in its colour swatch. A blast cuts stepped craters out of a breakable slab along the engine's destruction grid; a softer material (lower toughness, e.g. cardboard) opens a wider crater from the same blast.
 - **Props and pickups:** chunky and short; nothing thinner than 0.2 R.
 
 ### Material behaviour: the rule (owner, material-system D1)

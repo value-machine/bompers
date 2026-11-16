@@ -10,6 +10,11 @@ import {
   type CrateLayers,
 } from "@/features/collectibles/services/weaponCrateRenderer";
 import type { CollectiblesState } from "@/features/collectibles/types/collectibles.types";
+import {
+  createDiveRefillLayer,
+  syncDiveRefillLayer,
+  type DiveRefillLayer,
+} from "@/features/collectibles/services/diveRefillRenderer";
 
 /**
  * Collectibles layers; the match renderer places them (DESIGN_LANGUAGE § 5): `shadows` (4,
@@ -21,6 +26,8 @@ import type { CollectiblesState } from "@/features/collectibles/types/collectibl
 export interface CollectiblesView extends CrateLayers {
   orbs: Container;
   orbSprites: Map<string, Container>;
+  /** Headbutt resets (layer 5, beside the orbs): `diveRefillRenderer.ts`. */
+  refills: DiveRefillLayer;
 }
 
 const BOB = { amplitude: 3, periodMs: 1200 };
@@ -32,6 +39,7 @@ export function createCollectiblesView(): CollectiblesView {
     crateSprites: new Map(),
     orbs: new Container({ label: "collectibles" }),
     orbSprites: new Map(),
+    refills: createDiveRefillLayer(),
   };
 }
 
@@ -56,6 +64,8 @@ export interface CollectiblesFrame {
   size: number;
   /** Weapon-crate box, world units. */
   crateSize: number;
+  /** Headbutt reset touch box and respawn time (`collectibles.diveRefill` tunables). */
+  diveRefill: { size: number; respawnSeconds: number };
   /** Terrain the crate shadows fall on. */
   terrain: TerrainGrid;
   /** Animation clock, ms. */
@@ -72,6 +82,13 @@ export function syncCollectiblesView(view: CollectiblesView, frame: Collectibles
     size: frame.crateSize,
     outline: width,
     terrain: frame.terrain,
+  });
+  syncDiveRefillLayer(view.refills, {
+    refills: frame.collectibles.diveRefills,
+    size: frame.diveRefill.size,
+    respawnSeconds: frame.diveRefill.respawnSeconds,
+    outline: width,
+    nowMs: frame.nowMs,
   });
   syncDisplayById(view.orbSprites, view.orbs, {
     list: frame.collectibles.orbs,

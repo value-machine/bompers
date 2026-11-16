@@ -5,6 +5,7 @@ import { DESIGN_SCALE } from "@/shared/utils/outlineWidth";
 import type { MaterialSurface } from "@/shared/types/terrainSurface.types";
 import type { TerrainShape } from "@/features/level/api/levelApi";
 import type { TerrainGrid } from "@/features/arena/types/arena.types";
+import { isBreakableSlot } from "@/features/arena/services/terrainGrid";
 
 /**
  * Terrain slab drawing shared by every material (DESIGN_LANGUAGE § 2): one rounded slab with a
@@ -102,7 +103,7 @@ export function drawSlabFill(g: Graphics, pieces: readonly SlabPiece[]): void {
 
 const isBreakableCell = (grid: TerrainGrid, cx: number, cy: number): boolean => {
   const slot = grid.cells[cy * grid.widthCells + cx] ?? 0;
-  return slot !== 0 && grid.slots[slot]?.destructible === true;
+  return slot !== 0 && isBreakableSlot(grid.slots[slot]);
 };
 
 /** Horizontal runs `[from, to)` of breakable cells in one row. */

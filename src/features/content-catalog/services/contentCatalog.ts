@@ -21,8 +21,7 @@ export const CONTENT_CATALOG: ContentCatalog = {
     stone: {
       id: "stone",
       label: "Stone",
-      destructible: false,
-      durability: 0,
+      toughness: null,
       friction: 1,
       bounce: 0,
       surface: "plain",
@@ -33,8 +32,7 @@ export const CONTENT_CATALOG: ContentCatalog = {
     earth: {
       id: "earth",
       label: "Earth",
-      destructible: true,
-      durability: 1,
+      toughness: 1,
       friction: 1,
       bounce: 0,
       surface: "breakable",
@@ -45,8 +43,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
     cardboard: {
       id: "cardboard",
       label: "Cardboard",
-      destructible: true,
-      durability: 1,
+      // Softer than earth: the same blast opens a crater 1 / 0.7 ≈ 1.4× as wide (blast-power D2).
+      toughness: 0.7,
       friction: 1,
       bounce: 0,
       surface: "breakable",
@@ -57,8 +55,7 @@ export const CONTENT_CATALOG: ContentCatalog = {
     ice: {
       id: "ice",
       label: "Ice",
-      destructible: false,
-      durability: 0,
+      toughness: null,
       friction: 0.12,
       bounce: 0,
       surface: "ice",
@@ -108,6 +105,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
     "rocket-launcher": { id: "rocket-launcher", label: "Rocket launcher", use: "drop" },
     "homing-launcher": { id: "homing-launcher", label: "Homing launcher", use: "drop" },
     "point-orb": { id: "point-orb", label: "Point orb", use: "collectible" },
+    // Placed, not dropped: gives a spent dive its charge back mid-flight (headbutt-reset D1).
+    "dive-reset": { id: "dive-reset", label: "Headbutt reset", use: "collectible" },
   },
 };
 

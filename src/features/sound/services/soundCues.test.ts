@@ -23,6 +23,7 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   diveBonkSoundId: "none",
   speed: 0,
   terrainHitSpeed: 0,
+  diveRefillCount: 0,
   ...patch,
 });
 
@@ -179,5 +180,12 @@ describe("readSoundCues — wall bonks and hit intensity", () => {
       )[0]?.gain ?? 0;
     expect(hitAt(SOUND_MIX.hitFullSpeed)).toBe(1);
     expect(hitAt(0)).toBe(JUICE_VOLUME.minGain);
+  });
+});
+
+describe("readSoundCues — headbutt reset", () => {
+  it("should play the pickup sound pitched by the collector when a player takes a headbutt reset", () => {
+    const frame = snapshot({ players: [player(0), player(1, { diveRefillCount: 1 })] });
+    expect(cuesAfter(frame)).toEqual([{ soundId: "pickup", slot: 1, gain: 1 }]);
   });
 });

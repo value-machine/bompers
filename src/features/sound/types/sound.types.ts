@@ -35,6 +35,8 @@ export interface SoundPlayerSnapshot {
   speed: number;
   /** Speed into the terrain this step, fastest axis, units / s (0 when nothing was hit). */
   terrainHitSpeed: number;
+  /** Headbutt resets taken over the match (monotonic). */
+  diveRefillCount: number;
 }
 
 /** The two volume channels: sound effects and music. */

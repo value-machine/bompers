@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { EMPTY_CELL } from "@/features/arena/types/arena.types";
 import {
-  clearCircle,
+  clearCrater,
   createTerrainGrid,
   setCellSlot,
   slotFor,
@@ -13,14 +13,14 @@ function dirtGrid() {
   const dirt = slotFor(grid, {
     materialId: "earth",
     colorId: "clay",
-    destructible: true,
+    toughness: 1,
     friction: 1,
     surface: "breakable",
   });
   const stone = slotFor(grid, {
     materialId: "stone",
     colorId: "plum",
-    destructible: false,
+    toughness: null,
     friction: 1,
     surface: "plain",
   });
@@ -37,7 +37,7 @@ describe("terrainTiles", () => {
     expect(tileCellsFor(28)).toBe(1);
   });
 
-  it("should read a fully filled destructible tile as intact and uncracked at load", () => {
+  it("should read a fully filled breakable tile as intact and uncracked at load", () => {
     const { grid, dirt, initial } = dirtGrid();
     expect(readTile(grid, initial, { tx: 2, ty: 1, k: 2 })).toMatchObject({
       slot: dirt,
@@ -46,14 +46,14 @@ describe("terrainTiles", () => {
     });
   });
 
-  it("should ignore indestructible cells when reading tiles", () => {
+  it("should ignore unbreakable cells when reading tiles", () => {
     const { grid, initial } = dirtGrid();
     expect(readTile(grid, initial, { tx: 1, ty: 2, k: 2 }).slot).toBe(EMPTY_CELL);
   });
 
   it("should crack the tiles next to a blasted cell but not the ones further away", () => {
     const { grid, initial } = dirtGrid();
-    clearCircle(grid, { x: 8, y: 20, radius: 5 });
+    clearCrater(grid, { x: 8, y: 20, reach: 5 });
     const blasted = readTile(grid, initial, { tx: 0, ty: 1, k: 2 });
     expect(blasted).toMatchObject({ intact: false, cracked: true });
     expect(readTile(grid, initial, { tx: 1, ty: 1, k: 2 }).cracked).toBe(true);

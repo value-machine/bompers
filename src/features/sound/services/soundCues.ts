@@ -75,6 +75,8 @@ const PLAYER_RULES: readonly [
   ["tumble-bounce", (p, n) => n.tumbleBounceCount > p.tumbleBounceCount, () => 1],
   ["dive-launch", (p, n) => n.divePhase === "travel" && p.divePhase !== "travel", () => 1],
   ["respawn", (p, n) => n.inPlay && !p.inPlay, () => 1],
+  // A headbutt reset reuses the pickup sound, pitched by the collector (headbutt-reset D5).
+  ["pickup", (p, n) => n.diveRefillCount > p.diveRefillCount, () => 1],
 ];
 
 const bonked = (previous: SoundPlayerSnapshot, now: SoundPlayerSnapshot): boolean =>

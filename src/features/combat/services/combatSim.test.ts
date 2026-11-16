@@ -14,7 +14,7 @@ import {
   fighterFor,
   type CombatContext,
 } from "@/features/combat/services/combatState";
-import { explode } from "@/features/combat/services/explosions";
+import { explode, type Blast } from "@/features/combat/services/explosions";
 import { stepAttacks } from "@/features/combat/services/attacks";
 import { takeWeaponPickups } from "@/features/combat/services/weapons";
 import type { CombatEvent, CombatState } from "@/features/combat/types/combat.types";
@@ -53,6 +53,14 @@ const level: LevelDefinition = {
 const FLOOR_Y = 320;
 const dt = 1 / 120;
 const C = DEFAULT_GAME_TUNABLES.combat;
+const ROCKET_POWER = C.rocket.power;
+/** A rocket-power blast fired by player 0 at `at`. */
+const p0Blast = (at: Blast["at"]): Blast => ({
+  at,
+  ownerSlot: 0,
+  ownerId: "p0",
+  power: ROCKET_POWER,
+});
 const P = DEFAULT_GAME_TUNABLES.player;
 const G = DEFAULT_GAME_TUNABLES.world.gravity;
 
@@ -157,7 +165,7 @@ describe("combat — rockets and explosions", () => {
         { x: 330, y: FLOOR_Y },
       ],
     });
-    explode(world.ctx(), { at: { x: 315, y: FLOOR_Y - 10 }, ownerSlot: 0, ownerId: "p0" });
+    explode(world.ctx(), p0Blast({ x: 315, y: FLOOR_Y - 10 }));
     expect(health(world, 1)).toBe(C.maxHealth - 1);
     expect(health(world, 2)).toBe(C.maxHealth - 1);
     expect(health(world, 0)).toBe(C.maxHealth);
@@ -171,14 +179,14 @@ describe("combat — rockets and explosions", () => {
       ],
     });
     world.players[1]!.facing = -1; // faces left, blast comes from the left → front
-    explode(world.ctx(), { at: { x: 320, y: FLOOR_Y - 14 }, ownerSlot: 0, ownerId: "p0" }); // from the right → back
+    explode(world.ctx(), p0Blast({ x: 320, y: FLOOR_Y - 14 })); // from the right → back
     expect(health(world, 1)).toBe(C.maxHealth - 1);
     expect(eventsOfLive(world.combat, "playerHit")[0]).toMatchObject({ zone: "back", damage: 1 });
   });
 
   it("should never damage the shooter when the shooter stands in their own blast", () => {
     const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
-    explode(world.ctx(), { at: { x: 200, y: FLOOR_Y }, ownerSlot: 0, ownerId: "p0" });
+    explode(world.ctx(), p0Blast({ x: 200, y: FLOOR_Y }));
     expect(health(world, 0)).toBe(C.maxHealth);
     expect(world.players[0]!.vy).toBeLessThan(0);
   });
@@ -203,13 +211,12 @@ describe("combat — rockets and explosions", () => {
       ],
     });
     const blastY = FLOOR_Y - P.height / 2;
-    explode(near.ctx(), { at: { x: 270, y: blastY }, ownerSlot: 0, ownerId: "p0" });
-    explode(far.ctx(), { at: { x: 240, y: blastY }, ownerSlot: 0, ownerId: "p0" });
-    explode(outside.ctx(), {
-      at: { x: 286 - C.explosion.radius - 1, y: blastY },
-      ownerSlot: 0,
-      ownerId: "p0",
-    });
+    explode(near.ctx(), p0Blast({ x: 270, y: blastY }));
+    explode(far.ctx(), p0Blast({ x: 240, y: blastY }));
+    explode(
+      outside.ctx(),
+      p0Blast({ x: 286 - C.blast.reachPerPower * ROCKET_POWER - 1, y: blastY })
+    );
     const nearVx = near.players[1]!.vx;
     const farVx = far.players[1]!.vx;
     expect(nearVx).toBeGreaterThan(0);
@@ -234,7 +241,7 @@ describe("combat — blast hurt reaction", () => {
   it("should send a victim tumbling off the floor when the blast is close", () => {
     const world = twoPlayers();
     const victim = world.players[1]!;
-    explode(world.ctx(), { at: { x: 284, y: blastY + 6 }, ownerSlot: 0, ownerId: "p0" });
+    explode(world.ctx(), p0Blast({ x: 284, y: blastY + 6 }));
     expect(victim.tumbleSeconds).toBeGreaterThan(0);
     world.step([], 240);
     expect(victim.tumbleBounceCount).toBeGreaterThan(0);
@@ -243,14 +250,14 @@ describe("combat — blast hurt reaction", () => {
 
   it("should only push the victim when the blast is at the edge of its range", () => {
     const world = twoPlayers();
-    explode(world.ctx(), { at: { x: 240, y: blastY }, ownerSlot: 0, ownerId: "p0" });
+    explode(world.ctx(), p0Blast({ x: 240, y: blastY }));
     expect(world.players[1]!.vx).toBeGreaterThan(0);
     expect(world.players[1]!.tumbleSeconds).toBe(0);
   });
 
   it("should never send the shooter tumbling when they stand in their own blast", () => {
     const world = twoPlayers();
-    explode(world.ctx(), { at: { x: 100, y: FLOOR_Y }, ownerSlot: 0, ownerId: "p0" });
+    explode(world.ctx(), p0Blast({ x: 100, y: FLOOR_Y }));
     expect(world.players[0]!.vy).toBeLessThan(0);
     expect(world.players[0]!.tumbleSeconds).toBe(0);
   });
@@ -338,10 +345,10 @@ describe("combat — rockets", () => {
     expect(health(world, 1)).toBe(C.maxHealth - 1);
   });
 
-  it("should clear only destructible cells and emit the material's effect and sound when a blast hits mixed terrain", () => {
+  it("should clear only breakable cells and emit the material's effect and sound when a blast hits mixed terrain", () => {
     const world = createWorld({ at: [{ x: 100, y: FLOOR_Y }] });
     const terrain = world.ctx().terrain;
-    explode(world.ctx(), { at: { x: 480, y: 184 }, ownerSlot: 0, ownerId: "p0" });
+    explode(world.ctx(), p0Blast({ x: 480, y: 184 }));
     // Dirt cell at (480, 176) is gone; the stone strip at y 184–192 stays.
     expect(getCellInfo(terrain, 60, 22)).toBeNull();
     expect(getCellInfo(terrain, 60, 23)?.materialId).toBe("stone");
@@ -379,7 +386,7 @@ describe("combat — rockets", () => {
       ],
     });
     world.combat.fighters.get("p1")!.invulnerableUntil = world.time() + 5;
-    explode(world.ctx(), { at: { x: 280, y: FLOOR_Y - 14 }, ownerSlot: 0, ownerId: "p0" });
+    explode(world.ctx(), p0Blast({ x: 280, y: FLOOR_Y - 14 }));
     expect(health(world, 1)).toBe(C.maxHealth);
     expect(world.players[1]!.vx).toBeGreaterThan(0);
   });

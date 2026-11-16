@@ -17,8 +17,7 @@
     {
       "id": "stone",
       "label": "Stone",
-      "destructible": false,
-      "durability": 0,
+      "toughness": null,
       "friction": 1,
       "bounce": 0,
       "surface": "plain",
@@ -29,8 +28,7 @@
     {
       "id": "earth",
       "label": "Earth",
-      "destructible": true,
-      "durability": 1,
+      "toughness": 1,
       "friction": 1,
       "bounce": 0,
       "surface": "breakable",
@@ -41,8 +39,7 @@
     {
       "id": "cardboard",
       "label": "Cardboard",
-      "destructible": true,
-      "durability": 1,
+      "toughness": 0.7,
       "friction": 1,
       "bounce": 0,
       "surface": "breakable",
@@ -53,8 +50,7 @@
     {
       "id": "ice",
       "label": "Ice",
-      "destructible": false,
-      "durability": 0,
+      "toughness": null,
       "friction": 0.12,
       "bounce": 0,
       "surface": "ice",
@@ -212,6 +208,11 @@
     {
       "id": "point-orb",
       "label": "Point orb",
+      "use": "collectible"
+    },
+    {
+      "id": "dive-reset",
+      "label": "Headbutt reset",
       "use": "collectible"
     }
   ]

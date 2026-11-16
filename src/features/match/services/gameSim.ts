@@ -16,6 +16,7 @@ import {
 import {
   createCollectiblesState,
   stepCollectibles,
+  stepDiveRefills,
   stepWeaponCrates,
   type CollectiblesState,
 } from "@/features/collectibles/api/collectiblesApi";
@@ -27,6 +28,8 @@ import {
 } from "@/features/player/api/playerApi";
 import {
   createDiveState,
+  isDiveSpent,
+  refillDive,
   requestDive,
   stepDives,
   type DiveState,
@@ -49,11 +52,13 @@ import {
  *   1. joinSlots       — a connected input slot without a player gets one
  *   2. stepPlayers     — player feature: controller + terrain collision
  *   2b. bodyContacts   — player feature: blob-vs-blob bounce; the contacts feed step 3b
- *   3. stepCombat      — combat feature: rockets, blasts (damage, impulse, clearCircle);
+ *   3. stepCombat      — combat feature: rockets, blasts (damage, impulse, clearCrater);
  *                        unarmed fire goes through its `unarmedAttack` hook to the dive
  *   3a. stepWeaponCrates — collectibles feature: weapon crates drop, fall, land and get taken;
  *                        combat's `takeWeaponPickups` arms the collector
  *   3b. stepDives      — dive feature: the unarmed attack; its hits go through combat's `applyHit`
+ *   4. stepHeadbuttResets — collectibles feature: a player with a spent dive touching a headbutt
+ *                        reset takes it; the dive feature's `refillDive` gives the charge back
  *   4. stepCollectibles — collectibles feature: point orbs fall from the sky; touching one scores
  *   5. stepMatchRules  — out of the kill zone → elimination; scoring; eliminated players wait
  *                        `respawnDelaySeconds`, then respawn at the spawn farthest from opponents
@@ -137,7 +142,7 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
     players: [],
     combat: createCombatState(),
     dive: createDiveState(),
-    collectibles: createCollectiblesState(matchTunables),
+    collectibles: createCollectiblesState(matchTunables, normalized.level.collectibles),
     rules: createMatchRulesState(matchTunables.match.maxPlayers),
     round: {
       phase: "playing",
@@ -196,6 +201,24 @@ function stepCratePickups(state: GameState, dt: number): void {
   takeWeaponPickups({ combat: state.combat, players, tunables, timeSeconds }, pickups);
 }
 
+/**
+ * Step 4 (before the orbs): headbutt resets. Only players in play whose dive charge is spent may
+ * take one (headbutt-reset D2); taking it refills their dive mid-flight.
+ */
+function stepHeadbuttResets(state: GameState, dt: number): void {
+  const spent = playersInPlay(state).filter((player) => isDiveSpent(state.dive, player));
+  const taken = stepDiveRefills({
+    refills: state.collectibles.diveRefills,
+    players: spent,
+    tunables: state.tunables,
+    dt,
+  });
+  for (const { slot } of taken) {
+    const player = spent.find((candidate) => candidate.slot === slot);
+    if (player) refillDive(state.dive, player);
+  }
+}
+
 function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
   const { tunables, timeSeconds } = state;
   const { level, terrain } = state.arena;
@@ -226,6 +249,7 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
     timeSeconds,
     dt,
   });
+  stepHeadbuttResets(state, dt);
   const collected = stepCollectibles({
     collectibles: state.collectibles,
     points: level.collectibles,
