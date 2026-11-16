@@ -20,10 +20,11 @@ interface CatalogEntryBase {
  * the behaviour. Colour is a separate axis (`color` kind); any colour goes on any material.
  */
 export interface MaterialEntry extends CatalogEntryBase {
-  /** Blasts clear its cells. */
-  destructible: boolean;
-  /** Hits to clear one cell (1 = one blast). Used by combat later. */
-  durability: number;
+  /**
+   * How hard it is to blast away (blast-power D1, D2): a blast clears a cell when distance ×
+   * toughness ≤ its crater reach, so 0.5 opens twice the crater of 1. `null` = unbreakable.
+   */
+  toughness: number | null;
   /** 0 = ice … 1 = grippy. Scales the blob's grounded acceleration and braking. */
   friction: number;
   /** 0 = dead stop … 1 = full bounce. */

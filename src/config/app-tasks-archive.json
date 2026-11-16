@@ -263,5 +263,10 @@
     "title": "Uniform material system for level maps",
     "description": "Feedback round 2 § 4.1. Externally generated HTML levels need unambiguous materials. Destructible and indestructible blocks share shape and base structure (the current purple ground) but differ clearly in colour (e.g. cardboard tint for destructible). Add material behaviours such as ice (slippery) and colour variants (ice, earth, cardboard, indestructible). Design question for the lap: decouple physical behaviour from colour (any colour on any behaviour, no LittleBigPlanet-style material explosion) while a player still recognises destructible vs slippery at a glance. No backwards compatibility needed: old levels may break; update the shipped levels, LEVEL_FORMAT.md and the level kit. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
     "status": "done"
+  },
+  {
+    "title": "In-game pause menu",
+    "description": "Feedback round 2 § 2.2. During a match any player can open a pause menu (keyboard and gamepad Start) that fully freezes gameplay. In it: back to main menu, SFX on/off, music on/off, general options. Match settings stay lobby-only. Must open on Escape (owner 2026-11-16) as well as any pad's Start. Gamepad support (#35) and music (#33) are on main. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "status": "done"
   }
 ]

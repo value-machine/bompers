@@ -81,11 +81,11 @@ describe("terrainRaster", () => {
         },
       ])
     );
-    expect(getCellInfo(grid, 0, 0)).toMatchObject({ materialId: "stone", destructible: false });
+    expect(getCellInfo(grid, 0, 0)).toMatchObject({ materialId: "stone", toughness: null });
     expect(getCellInfo(grid, 5, 0)).toMatchObject({
       materialId: "earth",
       colorId: "clay",
-      destructible: true,
+      toughness: 1,
       surface: "breakable",
     });
   });

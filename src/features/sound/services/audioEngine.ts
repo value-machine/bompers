@@ -27,6 +27,8 @@ export interface AudioEngine {
   playCue(cue: SoundCue): void;
   /** Switches the music (null = fade out); asking for the playing track does nothing. */
   playMusic(track: MusicTrackId | null, offsetSeconds?: number): void;
+  /** Holds the music at its position (game paused) or continues it; a new track ends the hold. */
+  setMusicPaused(paused: boolean): void;
   settings(): SoundSettings;
   updateSettings(change: (settings: SoundSettings) => SoundSettings): void;
   /** Called after every settings change; returns the unsubscribe. */
@@ -94,6 +96,7 @@ function silentEngine(host: SoundHost): AudioEngine {
   return {
     playCue: () => undefined,
     playMusic: () => undefined,
+    setMusicPaused: () => undefined,
     settings: store.get,
     updateSettings: store.update,
     subscribe: store.subscribe,
@@ -262,6 +265,7 @@ export function createAudioEngine(host: SoundHost): AudioEngine {
       void load(url).then((buffer) => buffer && startVoice({ context, mixer }, buffer, cue));
     },
     playMusic: music.play,
+    setMusicPaused: music.setPaused,
     settings: store.get,
     updateSettings: store.update,
     subscribe: store.subscribe,

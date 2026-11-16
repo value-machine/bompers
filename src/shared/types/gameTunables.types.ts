@@ -215,6 +215,8 @@ export interface GameTunables {
       maxLifetime: number;
       /** Velocity change on the shooter per shot, opposite the aim, units / s. */
       recoil: number;
+      /** Blast power of its explosion, 0–100 (`combat.blast` turns it into push, reach, crater). */
+      power: number;
     };
     /**
      * Homing launcher (homing-missiles D2): a slower rocket that steers toward the opponent it
@@ -239,14 +241,20 @@ export interface GameTunables {
       fuelSeconds: number;
       /** Half-angle of the forward cone (degrees from the aim) in which it picks its target. */
       lockConeDegrees: number;
+      /** Blast power of its explosion, 0–100. */
+      power: number;
     };
-    explosion: {
-      /** Players within this distance of the blast (nearest body point) are hit and pushed. */
-      radius: number;
-      /** Destructible cells within this radius are cleared. */
-      craterRadius: number;
-      /** Speed added at the blast centre, units / s; falls off linearly to `minFalloff` at the edge. */
-      impulse: number;
+    /**
+     * One blast power P (0–100, each weapon's `power`) drives everything an explosion does, in
+     * straight lines (blast-power D1, D3): players within `reachPerPower · P` of the blast
+     * (nearest body point) get `pushPerPower · P` units / s at the centre, falling off linearly to
+     * `minFalloff` at the edge; breakable terrain clears where distance × the material's
+     * toughness ≤ `craterPerPower · P`.
+     */
+    blast: {
+      pushPerPower: number;
+      reachPerPower: number;
+      craterPerPower: number;
       minFalloff: number;
     };
     /** Weapon pickups dropping from the level's drop points. */
@@ -303,7 +311,7 @@ export interface GameTunables {
       hit: { px: number; seconds: number };
       /** A back hit (the hard one: more damage, starts a tumble) multiplies the hit kick. */
       hardHitScale: number;
-      /** Scaled by blast radius / `combat.explosion.radius` (capped at 1.5). */
+      /** Scaled by blast reach / the rocket's reach (capped at 1.5). */
       explosion: { px: number; seconds: number };
       /** Scaled by bounce speed / `fullSpeed` (capped at 1). */
       tumbleBounce: { px: number; seconds: number; fullSpeed: number };

@@ -15,11 +15,6 @@
     "status": "to-do"
   },
   {
-    "title": "In-game pause menu",
-    "description": "Feedback round 2 § 2.2. During a match any player can open a pause menu (keyboard and gamepad Start) that fully freezes gameplay. In it: back to main menu, SFX on/off, music on/off, general options. Match settings stay lobby-only. Must open on Escape (owner 2026-11-16) as well as any pad's Start. Gamepad support (#35) and music (#33) are on main. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Material collision sounds",
     "description": "Follow-up from the sound lap: give the terrain materials real impact/destroy sounds (the catalog's thud and crumble are still silent) and use the saved dive-impact spares. Same process as the SFX lap: palette in DESIGN_LANGUAGE.md § 8, small test batch with explicit durations, owner picks on an artifact, then wire through the content catalog (pnpm level-kit:sync). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md.  Waits on the uniform material system. Also run the round-2 audio experiment: swap the headbutt-into-wall sound with the jump-landing sound and let the owner judge which fits.",
     "status": "to-do"

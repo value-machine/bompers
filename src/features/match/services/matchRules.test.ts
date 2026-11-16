@@ -194,7 +194,8 @@ describe("outOfBoundsMargin and killZoneOf", () => {
 
   it("should be twice the apex of a jump plus a point-blank blast and its recoil when gravity is the default", () => {
     const { jumpSpeed } = tunables.player;
-    const launch = jumpSpeed + tunables.combat.explosion.impulse + tunables.combat.rocket.recoil;
+    const { rocket, blast } = tunables.combat;
+    const launch = jumpSpeed + rocket.power * blast.pushPerPower + rocket.recoil;
     const apex = (launch * launch) / (2 * tunables.world.gravity);
     expect(outOfBoundsMargin(tunables)).toBeCloseTo(apex * 2);
   });

@@ -1,6 +1,7 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
+import { maxBlastPush } from "@/shared/utils/blastPower";
 import {
   eliminateFighter,
   maxWeaponRecoil,
@@ -101,9 +102,8 @@ export interface StepMatchRulesArgs {
  * flights too. Uses the match's effective gravity (engine × lobby × level).
  */
 export function outOfBoundsMargin(tunables: GameTunables): number {
-  const { combat } = tunables;
   const recoil = maxWeaponRecoil(tunables);
-  const launchSpeed = tunables.player.jumpSpeed + combat.explosion.impulse + recoil;
+  const launchSpeed = tunables.player.jumpSpeed + maxBlastPush(tunables) + recoil;
   return (launchSpeed * launchSpeed) / tunables.world.gravity;
 }
 

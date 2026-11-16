@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildTerrainFromLevel,
-  clearCircle,
+  clearCrater,
   getCellInfo,
   groundFrictionBelow,
 } from "@/features/arena/api/arenaApi";
@@ -376,7 +376,7 @@ describe("material system (acceptance)", () => {
     if (!result.ok) throw new Error(JSON.stringify(result.errors));
     const grid = buildTerrainFromLevel(result.level);
     for (const b of blocks) {
-      const cleared = clearCircle(grid, { x: b.x + 32, y: 432, radius: 20 });
+      const cleared = clearCrater(grid, { x: b.x + 32, y: 432, reach: 20 });
       expect(cleared.removed > 0, `${b.material}/${b.color}`).toBe(BREAKABLE.has(b.material));
       const cx = Math.floor((b.x + 2) / grid.cellSize);
       expect(getCellInfo(grid, cx, 50)).toMatchObject({ materialId: b.material, colorId: b.color });
