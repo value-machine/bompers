@@ -75,9 +75,13 @@ function playerCues(
   now: SoundPlayerSnapshot
 ): SoundCue[] {
   if (!previous) return [];
-  return PLAYER_RULES.filter(([, fired]) => fired(previous, now)).map(([soundId]) =>
+  const cues = PLAYER_RULES.filter(([, fired]) => fired(previous, now)).map(([soundId]) =>
     cue(soundId, now.slot, soundId === "land" ? landingGain(now.lastLandingSpeed) : 1)
   );
+  // Sinking into a crouch is a soft landing thud (no file of its own).
+  if (now.crouchCount > previous.crouchCount)
+    cues.push(cue("land", now.slot, SOUND_MIX.crouchGain));
+  return cues;
 }
 
 function eventCues(events: readonly CombatEvent[], lastSeq: number): SoundCue[] {

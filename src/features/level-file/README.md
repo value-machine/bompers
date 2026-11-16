@@ -33,7 +33,7 @@ Kit sync: `pnpm level-kit:sync` writes the generated files; `pnpm level-kit:chec
 
 ## Decisions
 
-- Built-in levels are real level files in `public/levels/*.html`, fetched at start (game-orchestration D4).
+- Built-in levels are real level files in `public/levels/*.html`, fetched at start (game-orchestration D4). Their drop points (and the kit's example level) list `rocket-launcher homing-launcher`, so crates alternate the two weapons (homing-missiles D4).
 - A rejected import adds nothing; every accepted import (even the same file again) is a new library entry and becomes the lobby's level (level-importer, lobby D1).
 - The built-in list is a TS manifest checked against `public/levels/` by a test, not a JSON file in that folder (lobby D6).
 - Point roles carry no behaviour in the engine yet; `data-behavior` on them is only checked (W4) (level-importer).

@@ -2,11 +2,12 @@ import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import { fighterFor, type CombatContext } from "@/features/combat/services/combatState";
 import { fireRocket } from "@/features/combat/services/rockets";
+import { rocketKindOf, weaponTunables } from "@/features/combat/services/weapons";
 import type { FighterState } from "@/features/combat/types/combat.types";
 
 /**
- * The fire button (GDD § 3), one action per press: armed players shoot a rocket (then a
- * cooldown); unarmed players go to the `unarmedAttack` hook. Without a hook, unarmed fire
+ * The fire button (GDD § 3), one action per press: armed players shoot their weapon's rocket kind
+ * (then that weapon's cooldown); unarmed players go to the `unarmedAttack` hook. Without a hook, unarmed fire
  * does nothing.
  */
 export interface UnarmedFirePress {
@@ -33,10 +34,11 @@ function fire(press: UnarmedFirePress, unarmedAttack: UnarmedAttackHook | undefi
     unarmedAttack?.(press);
     return;
   }
-  fireRocket(ctx, attacker);
+  const { itemId } = fighter.weapon;
+  fireRocket(ctx, attacker, rocketKindOf(itemId));
   fighter.weapon.ammo -= 1;
   if (fighter.weapon.ammo <= 0) fighter.weapon = null;
-  fighter.attackCooldown = ctx.tunables.combat.rocket.fireCooldown;
+  fighter.attackCooldown = weaponTunables(ctx.tunables, itemId).fireCooldown;
 }
 
 export function stepAttacks(

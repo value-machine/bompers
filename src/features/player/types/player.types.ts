@@ -62,6 +62,12 @@ export interface PlayerState {
   tumbleBouncesLeft: number;
   tumbleBounceCount: number;
   lastTumbleBounceSpeed: number;
+  /**
+   * Defensive crouch (grounded + crouch held, not tumbling or ability-steered): the blob stands
+   * still and combat halves the damage it takes. `crouchCount` counts crouch starts (render).
+   */
+  crouching: boolean;
+  crouchCount: number;
   /** Top of the first surface below the feet within shadow range, or null (contact shadow). */
   groundBelowY: number | null;
   /**

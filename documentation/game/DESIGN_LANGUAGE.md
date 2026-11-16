@@ -58,7 +58,8 @@ Rules:
 | Rocket flame | `#ffb21a` |
 | Smoke puffs (trail, landing dust) | `#ffffff`, ink edge at 30–60 % alpha |
 | Hit flash | `#ffffff` |
-| Weapon pickup crate | `#fff4e2` with a `#8fd6ff` ring |
+| Homing missile body / seeker light / trail | `#c9a7ff` / `#e0103f` (blinks 6 Hz) / `#d9c4ff`; fins in the shooter's body colour |
+| Weapon pickup crate | `#fff4e2` with a `#8fd6ff` ring; homing launcher: `#b08cff` ring and twin-pod mark |
 | Point collectible (falls from the roof) | `#ff8fc8` bubblegum star |
 | Timer warning (last 10 s) | `#ff8a1f` |
 
@@ -160,6 +161,7 @@ Squash and stretch keep area roughly constant (`sx × sy` between 0.93 and 1.01,
 | Idle | slow breathing, ±3 % on y | 1.6 s loop |
 
 - Feet lag the body by 2 frames (about 33 ms) and squash flatter than the body.
+- Feet move on their own (tunables `feel.feet`): running, the lifted foot swings forward in an arc and tips its toe up; in the air the feet trail the horizontal speed and droop while rising, flare while falling, with a springy lag; a landing spreads them, a jump pulls them in. While wall-sliding, and a moment after a wall-jump (`wallJumpHoldSeconds`), both feet turn their soles to the wall, the near foot higher.
 - The helmet sits on its own spring (it wobbles after landings and shots).
 - Rocket fire: the body recoils 4 units away from the aim, tube kicks back 3 units.
 - **Hit:** 3 frames (50 ms) of white body fill, silhouette outline unchanged, 3 px screen shake for 80 ms.

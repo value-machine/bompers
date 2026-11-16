@@ -114,3 +114,20 @@ describe("hits — applyHit", () => {
     expect(applyHit(world, dive(1)).landed).toBe(false);
   });
 });
+
+describe("hits — crouch", () => {
+  it("should halve the damage rounded down when the victim crouches", () => {
+    const { world, victim } = createHitWorld();
+    victim.crouching = true;
+    expect(applyHit(world, dive(1))).toMatchObject({ landed: true, damage: 1 });
+    expect(healthOf(world)).toBe(C.maxHealth - 1);
+  });
+
+  it("should deal no damage when a 1-chunk hit meets a crouching victim", () => {
+    const { world, victim } = createHitWorld();
+    victim.crouching = true;
+    expect(applyHit(world, dive(-1))).toMatchObject({ landed: true, damage: 0 });
+    expect(applyHit(world, { ...dive(1), kind: "blast" })).toMatchObject({ damage: 0 });
+    expect(healthOf(world)).toBe(C.maxHealth);
+  });
+});

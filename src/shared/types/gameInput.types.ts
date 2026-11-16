@@ -13,6 +13,11 @@ export interface PlayerInput {
   /** Held state; the sim derives "pressed this step" from its own previous value. */
   jump: boolean;
   fire: boolean;
+  /**
+   * Down on the move control (keyboard down, d-pad down, move stick mostly down). Crouches only
+   * on the ground; in the air down is just aim (`aimY`).
+   */
+  crouch: boolean;
 }
 
 /** Inputs for all player slots, index = slot (0–3). */
