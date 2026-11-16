@@ -119,6 +119,7 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       // level (strongest in the air; ground decel soaks most of it).
       recoil: 200,
       power: 50,
+      craterShape: "round",
     },
     // Dodgeable (homing-missiles D2, D3): 1.4 × run speed and a turn radius of 480 / 2.6 ≈ 185
     // units (≈ 6.6 blob widths), so a late sidestep or jump makes it overshoot; fuel ends loops.
@@ -134,6 +135,7 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       lockConeDegrees: 70,
       // Same blast as the rocket.
       power: 50,
+      craterShape: "round",
     },
     // Chosen so power 50 (the rocket) keeps the pre-power blast: push 1080, reach 64, crater 34 on
     // toughness 1 (blast-power D3, D10). Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units;

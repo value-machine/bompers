@@ -1,0 +1,32 @@
+# level-kit
+
+## Purpose
+
+The material that teaches outside authors and AI agents to write Bompers level files, generated from the game code so it never goes stale: the copyable AI prompt ("Copy AI prompt" in the lobby's "Your level" row) and the generated parts of the public kit under `public/level-kit/v2/`. Reading and importing level files stays in `level-file`; this feature only describes the format to the outside.
+
+## Structure
+
+| Layer      | Path                                   | Purpose                                                                                                                                                                                                                                                                       |
+| ---------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Services   | `services/levelPrompt.ts`              | `buildLevelPrompt(tunables?)`: the level-generation prompt in the owner's 7-section shape (`documentation/game/LEVEL_PROMPT_EXAMPLE.md`). Sections 1–6 come from the format version, catalog, level defaults, spawn minimums, palette and tunables (jump, dive, wall, blast power per weapon, crater per toughness); section 7 is the player's map wish. Embeds a minimal level that imports clean (tested). `LEVEL_KIT_ORIGIN` |
+| Services   | `services/levelKitExport.ts`           | Kit `catalog.json` (colours carry their palette hex for the preview; materials carry `toughness`, `null` = unbreakable, and the ID table states "toughness 0.7" / "unbreakable", blast-power D21), the catalog ID table (between `<!-- level-kit:catalog-ids:… -->` markers in AUTHORING.md and LEVEL_FORMAT.md) and `LEVEL_PROMPT.md` (whole file); `planLevelKitSync(read)` |
+| Hooks      | `hooks/useClipboardCopy.ts`            | Copy text on click with `copied` / `failed` feedback for 2 s (Clipboard API)                                                                                                                                                                                                 |
+| Hooks      | `hooks/useLevelPromptCopy.ts`          | `useClipboardCopy` bound to `buildLevelPrompt`                                                                                                                                                                                                                                |
+| Components | `components/CopyLevelPromptButton.tsx` | "Copy AI prompt" ghost button; label turns to "Prompt copied" / "Copy failed"                                                                                                                                                                                                 |
+| API        | `api/levelKitApi.ts`                   | Public seam                                                                                                                                                                                                                                                                   |
+
+Kit sync: `pnpm level-kit:sync` writes the generated files; `pnpm level-kit:check` (CI `test` job) fails when they differ from the code. Script: `scripts/sync-level-kit.mjs` (loads `levelKitExport.ts` through Vite).
+
+## Dependencies
+
+- `content-catalog` (`exportCatalog`, `CATALOG_DEFAULTS`, `LEVEL_FORMAT_VERSION`) and `level-file` (`MIN_SPAWNS`, `RECOMMENDED_SPAWNS`; `parseLevelFile` in the prompt test) through their `api/` files.
+- `src/shared/config/gameTunables.ts`, `src/shared/config/gamePalette.ts`, `src/shared/utils/blastPower.ts`, kit UI `Button`.
+- Consumed by `lobby` (`CopyLevelPromptButton` in the "Your level" row) and `scripts/sync-level-kit.mjs`.
+
+## Decisions
+
+- The copy button copies the full prompt with every game-dependent number filled in live; the player only writes the map wish at the end. Not a short settings block with a linked spec, not a fill-in form (owner, level-gen-prompt D1).
+- One builder: the app copies `buildLevelPrompt()` directly (no fetch), and the sync writes the same text to `/level-kit/v2/LEVEL_PROMPT.md` (level-gen-prompt D2).
+- Clipboard through the browser API, no package; the text is built on click (level-gen-prompt D3).
+- The prompt names the production kit origin (`LEVEL_KIT_ORIGIN`, level-file-format D14), not `location.origin`, so the generated file is deterministic (level-gen-prompt D5).
+- Split from `level-file` when the prompt pushed its services past the feature budget: describing the format to the outside is its own reason to change (level-gen-prompt D6).

@@ -93,6 +93,7 @@ export function stepRockets(ctx: CombatContext, dt: number): void {
         ownerSlot: rocket.ownerSlot,
         ownerId: rocket.ownerId,
         power: flight.power,
+        craterShape: flight.craterShape,
       });
     } else {
       flying.push(rocket);

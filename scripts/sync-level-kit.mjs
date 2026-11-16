@@ -6,7 +6,7 @@
  *                                             generated tables in AUTHORING.md / LEVEL_FORMAT.md
  *   node scripts/sync-level-kit.mjs --check   exit 1 when any of them differs (CI, pre-commit)
  *
- * What gets generated: src/features/level-file/services/levelKitExport.ts (loaded through Vite
+ * What gets generated: src/features/level-kit/services/levelKitExport.ts (loaded through Vite
  * so the TypeScript and the `@/` alias resolve exactly as in the app).
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const EXPORT_MODULE = "/src/features/level-file/services/levelKitExport.ts";
+const EXPORT_MODULE = "/src/features/level-kit/services/levelKitExport.ts";
 const check = process.argv.includes("--check");
 
 const read = (rel) => {

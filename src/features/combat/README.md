@@ -42,6 +42,7 @@ Seams for later work:
 - Elimination flags the fighter; match step 4 does the respawn (combat D4).
 - Launcher: 6 rockets, no time limit, dropped when empty or on elimination (combat D5).
 - Drops: first after 3 s, then every 7 s while fewer than 2 lie in the arena, round-robin over drop points — the sim has no randomness source (combat D6). The crates themselves live in `collectibles` since the pickups-to-collectibles lap (D1 there).
+- Each weapon names the crater shape its blast cuts (`craterShape`, `src/shared/types/craterShape.types.ts` + its distance rule in `src/shared/utils/craterShape.ts`); rocket and homing are `"round"`. A new shape is a new union member plus its rule (terrain-field D5, owner blast-power D17).
 - One blast power per explosion (0–100, each weapon's `power`; rocket and homing 50) sets everything in straight lines: reach `reachPerPower · P`, centre push `pushPerPower · P` falling off to `minFalloff`, crater reach `craterPerPower · P` ÷ the material's toughness (`combat.blast`; blast-power D1, D3, D10). Power 50 reproduces the pre-power blast (push 1080, reach 64, crater 34). Distance is measured to the nearest point of the body box (combat D8). Replaces combat D7 (separate push / crater radii).
 - The blast hands each pushed player one `{ direction, impulse }` through `reactToHit`; the tumble threshold stays in the reaction, so the planned shared-roll lap swaps the reaction without touching blast code (blast-power D12).
 - Knockback and impulses still apply during spawn protection; only damage is blocked.

@@ -48,7 +48,7 @@ The level root is the **first `<svg>` element with a `data-level-format` attribu
 | `data-author` | no | text | Person or team. |
 | `data-agent` | no | text | The AI agent that wrote it (`claude`, `gemini`, `chatgpt`, …). |
 | `data-description` | no | text | One or two sentences. |
-| `data-cell-size` | no | integer ≥ 1 | World units per terrain cell. Default: catalog `defaults.cellSize` (8). |
+| `data-cell-size` | no | integer ≥ 1 | World units between terrain samples (each sample stores its material and its distance to the nearest terrain edge, so craters and slopes stay curved between samples). Default: catalog `defaults.cellSize` (4). |
 | `data-gravity` | no | number > 0 | Multiplier of the engine's default gravity. Default `1`. |
 | `data-match-duration` | no | integer seconds > 0 | Overrides the match length for this level. Default: the match setting. |
 
@@ -212,6 +212,7 @@ Served from the game's own site under `/level-kit/v2/`:
 | `preview.js` | Legend with counts, metadata, point labels, terrain-grid overlay (toggle), soft validation; reads `catalog.json` next to itself to flag unknown IDs and paint terrain in its `data-color`. No dependencies. |
 | `catalog.json` | Current catalog IDs per kind (colours with their `fill` / `lip` hex) and the defaults. |
 | `AUTHORING.md` | The agent one-pager. |
+| `LEVEL_PROMPT.md` | The copyable AI prompt (the lobby's "Copy AI prompt" copies the same text), generated whole from the format, catalog and game tunables by `pnpm level-kit:sync`. |
 | `example-level.html` | A complete level using relative kit links (works served or opened from the repo). |
 
 Agent-written levels link the kit with absolute URLs on `https://bompers.tom-fab.workers.dev`, the game's production origin. Without network access the links fail silently and the file is still a correct picture.

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Level files in and out of the game: the importer that turns one HTML file with an inline `<svg data-level-format>` (or a bare `.svg` with the same root) into the engine's `LevelDefinition`, the built-in level source, the "Load level" control, and the generated parts of the public level kit. Format spec (SSOT): `documentation/game/LEVEL_FORMAT.md`; agent one-pager: `public/level-kit/v2/AUTHORING.md`.
+Level files in and out of the game: the importer that turns one HTML file with an inline `<svg data-level-format>` (or a bare `.svg` with the same root) into the engine's `LevelDefinition`, the built-in level source and the "Load level" control. The generated public kit and the copyable AI prompt live in `level-kit` (level-gen-prompt D6). Format spec (SSOT): `documentation/game/LEVEL_FORMAT.md`; agent one-pager: `public/level-kit/v2/AUTHORING.md`.
 
 ## Structure
 
@@ -16,14 +16,13 @@ Level files in and out of the game: the importer that turns one HTML file with a
 | Services   | `services/levelFileIssues.ts`       | Issue log (errors, warnings)                                                                                                                                                                                                                                                                                                    |
 | Services   | `services/levelFileMigrations.ts`   | `LEVEL_FILE_MIGRATIONS` (key N = migrate vN → vN+1; empty: format 2 shipped without a v1 step, so v1 files get E2), `migrateLevelRoot`                                                                                                                                                                                          |
 | Services   | `services/levelFileSource.ts`       | `BUILT_IN_LEVEL_FILES` — the built-in manifest (every file in `public/levels/`, picker order, first = the GDD § 4 start map; a drift test checks it), `BUILT_IN_LEVEL_URLS`, `loadLevelFromUrl`                                                                                                                                 |
-| Services   | `services/levelKitExport.ts`        | Kit `catalog.json` (colours carry their palette hex for the preview; materials carry `toughness`, `null` = unbreakable, and the ID table states "toughness 0.7" / "unbreakable", blast-power D21) and the catalog ID table (between `<!-- level-kit:catalog-ids:… -->` markers in AUTHORING.md and LEVEL_FORMAT.md), built from the content catalog + level defaults; `planLevelKitSync(read)`                                                               |
 | Hooks      | `hooks/useLevelLibrary.ts`          | The pickable levels: built-ins (TanStack `useQueries`, one per manifest URL) + every valid import this session (`import:<n>`); `importFile` → new entry id, last `report`                                                                                                                                                       |
 | Components | `components/LevelImportControl.tsx` | "Load level" button (file picker; optional `pickerRef` opens it from code) + the report as an `Alert` (errors, or warnings)                                                                                                                                                                                                     |
 | API        | `api/levelFileApi.ts`               | Public seam                                                                                                                                                                                                                                                                                                                     |
 
 Messages name the element: `terrain "main-core"` (id or `data-label`), else `spawn #2` (ordinal within its role, document order).
 
-Kit sync: `pnpm level-kit:sync` writes the generated files; `pnpm level-kit:check` (CI `test` job, and pre-commit when catalog / level / kit files are staged) fails when they differ from the code. Script: `scripts/sync-level-kit.mjs` (loads `levelKitExport.ts` through Vite).
+`MIN_SPAWNS` (E5) and `RECOMMENDED_SPAWNS` (W6) are exported through the API so the `level-kit` prompt states the same limits. Kit sync (`pnpm level-kit:sync` / `:check`): see `src/features/level-kit/README.md`.
 
 ## Dependencies
 
@@ -36,6 +35,7 @@ Kit sync: `pnpm level-kit:sync` writes the generated files; `pnpm level-kit:chec
 - Built-in levels are real level files in `public/levels/*.html`, fetched at start (game-orchestration D4). Their drop points (and the kit's example level) list `rocket-launcher homing-launcher`, so crates alternate the two weapons (homing-missiles D4). Both also place headbutt resets: collectible points with `data-item="dive-reset"` (start arena 3, floating garden 4; headbutt-reset D1). The importer needs nothing new for them: any `use: collectible` item ID is accepted on the role.
 - A rejected import adds nothing; every accepted import (even the same file again) is a new library entry and becomes the lobby's level (level-importer, lobby D1).
 - The built-in list is a TS manifest checked against `public/levels/` by a test, not a JSON file in that folder (lobby D6).
+- `data-cell-size` is the terrain sample spacing; the shipped levels and the kit example use 4 (terrain-field D1).
 - Point roles carry no behaviour in the engine yet; `data-behavior` on them is only checked (W4) (level-importer).
 - `x`, `y`, `cx`, `cy` default to 0 as in SVG; sizes (`width`, `height`, `r` on terrain, `points`) are required and positive (level-importer).
 - Format 2: one `terrain` role with `data-material` (behaviour) and `data-color` (looks); v1 rejected without migration and the kit moved to `/level-kit/v2/` (owner waived compatibility, material-system D1, D2, D10). Acceptance test: `services/levelFileParser.test.ts` § material system.
