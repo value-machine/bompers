@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 import { clearCrater } from "@/features/arena/services/terrainGrid";
-import { breakableMask, type MaskShapes } from "@/features/arena/services/terrainSurfaces";
+import { terrainContour, type MaskShapes } from "@/features/arena/services/terrainSurfaces";
 
 const level: LevelDefinition = {
   formatVersion: 2,
@@ -36,29 +36,28 @@ const covers = (mask: MaskShapes, x: number, y: number): boolean =>
   mask.rects.some((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) ||
   mask.pieces.some((piece) => inPiece(piece, x, y));
 
-describe("breakableMask", () => {
-  it("should cover the whole authored slab with plain rects when no blast has touched it", () => {
+const W = 3;
+const fill = (grid: ReturnType<typeof buildTerrainFromLevel>): MaskShapes =>
+  terrainContour(grid, { grow: 0, breakableOnly: true });
+const outline = (grid: ReturnType<typeof buildTerrainFromLevel>): MaskShapes =>
+  terrainContour(grid, { grow: W, breakableOnly: false });
+
+describe("terrainContour", () => {
+  it("should trace an untouched slab as itself: fill inside its edge, ink one width outside it", () => {
     const grid = buildTerrainFromLevel(level);
-    const mask = breakableMask(grid, { initial: grid.distance.slice(), grow: 0 });
-    expect(mask.pieces).toEqual([]);
-    // Authored corners (50, 101) and (350, 161) sit off the 4-unit grid: still covered.
-    for (const [x, y] of [
-      [50.2, 101.2],
-      [349.8, 160.8],
-      [200, 130],
-    ] as const) {
-      expect(covers(mask, x, y)).toBe(true);
-    }
+    expect(covers(fill(grid), 200, 101.6)).toBe(true);
+    expect(covers(fill(grid), 200, 100.4)).toBe(false);
+    expect(covers(outline(grid), 200, 101 - W + 0.6)).toBe(true);
+    expect(covers(outline(grid), 200, 101 - W - 0.6)).toBe(false);
+    // Rounded corner (radius ≈ 6.2), like the drawn slab: the very corner point is outside.
+    expect(covers(fill(grid), 50.3, 101.3)).toBe(false);
   });
 
   it("should clip along the curved crater rim to within half a unit when a blast cuts the slab", () => {
     const grid = buildTerrainFromLevel(level);
-    const initial = grid.distance.slice();
     const centre = { x: 200, y: 101 };
     clearCrater(grid, { ...centre, reach: 34, shape: "round" });
-    const mask = breakableMask(grid, { initial, grow: 0 });
-    expect(mask.pieces.length).toBeGreaterThan(0);
-    // Walk rays down into the slab: covered exactly where the point lies outside the rim.
+    const mask = fill(grid);
     for (let deg = 20; deg <= 160; deg += 7) {
       const a = (deg * Math.PI) / 180;
       for (const r of [34 - 0.5, 34 + 0.5]) {
@@ -69,28 +68,34 @@ describe("breakableMask", () => {
     }
   });
 
-  it("should grow the mask by the ink width when asked for the ink mask", () => {
+  it("should outline every rim and both cut faces when overlapping craters split the slab", () => {
     const grid = buildTerrainFromLevel(level);
-    const initial = grid.distance.slice();
-    clearCrater(grid, { x: 200, y: 101, reach: 34, shape: "round" });
-    const ink = breakableMask(grid, { initial, grow: 3 });
-    expect(covers(ink, 200, 101 + 34 - 2)).toBe(true);
-    expect(covers(ink, 200, 101 + 34 - 4)).toBe(false);
-  });
-
-  it("should trace an ink band along every rim but none along untouched edges when the rim ink is asked for", () => {
-    const grid = buildTerrainFromLevel(level);
-    const initial = grid.distance.slice();
-    // Two overlapping craters, the second one cutting the slab through to its bottom.
     clearCrater(grid, { x: 150, y: 101, reach: 34, shape: "round" });
     clearCrater(grid, { x: 180, y: 140, reach: 34, shape: "round" });
-    const rim = breakableMask(grid, { initial, grow: 3, onlyTouched: true });
-    // Ink just inside the hole along the first rim, and on both cut faces of the split slab.
-    expect(covers(rim, 150 + Math.cos(2.4) * 32, 101 + Math.sin(2.4) * 32)).toBe(true);
-    expect(covers(rim, 180 - 32, 140)).toBe(true);
-    expect(covers(rim, 180 + 32, 140)).toBe(true);
-    // Never far into the hole, and nothing along the untouched far end of the slab.
-    expect(covers(rim, 180, 140)).toBe(false);
-    expect(covers(rim, 345, 130)).toBe(false);
+    const ink = outline(grid);
+    expect(covers(ink, 150 + Math.cos(2.4) * 32, 101 + Math.sin(2.4) * 32)).toBe(true);
+    expect(covers(ink, 180 - 32, 140)).toBe(true);
+    expect(covers(ink, 180 + 32, 140)).toBe(true);
+    expect(covers(ink, 180, 140)).toBe(false);
+  });
+
+  it("should leave no ink where a platform used to be when blasts remove it completely", () => {
+    const grid = buildTerrainFromLevel(level);
+    for (let x = 60; x <= 340; x += 40) {
+      clearCrater(grid, { x, y: 131, reach: 60, shape: "round" });
+    }
+    const ink = outline(grid);
+    expect(fill(grid).rects.length + fill(grid).pieces.length).toBe(0);
+    // Along the old top, ends and bottom of the platform: no outline left behind.
+    for (const [x, y] of [
+      [200, 99],
+      [48, 130],
+      [352, 130],
+      [200, 162],
+    ] as const) {
+      expect(covers(ink, x, y), `${x}, ${y}`).toBe(false);
+    }
+    // The stone floor below keeps its outline.
+    expect(covers(ink, 200, 168)).toBe(true);
   });
 });
