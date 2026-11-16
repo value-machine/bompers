@@ -6,7 +6,7 @@ import {
   buildKitCatalog,
   planLevelKitSync,
   replaceGeneratedBlock,
-} from "@/features/level-file/services/levelKitExport";
+} from "@/features/level-kit/services/levelKitExport";
 
 const readRepoFile = (rel: string): string => {
   try {

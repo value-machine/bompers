@@ -26,7 +26,7 @@ Controls: join / confirm Space or F (left keys), Enter or / (right keys), A or S
 ## Dependencies
 
 - `sound` (`useAudioEngine`, `useSoundSettings`, `useMusicTrack`, `withVolumeStep`) through its api; volume effects are applied in `useLobby`.
-- `level-file` (`useLevelLibrary` entries, `LevelImportControl` + picker handle), `level` (types), `match` (`MatchSetup`, `applyLevelSettings`) through their `api/` files.
+- `level-file` (`useLevelLibrary` entries, `LevelImportControl` + picker handle), `level-kit` (`CopyLevelPromptButton`, in the "Your level" row; mouse/touch only, the row's controller action stays "open the file picker"), `level` (types), `match` (`MatchSetup`, `applyLevelSettings`) through their `api/` files.
 - Shared: `gameInputService` (`sampleMenus`), `gameInputMapping` (`INPUT_DEVICES`, `inputSourceKey`), `gameTunables`, `gamePalette`, `playerEmblem`, `useFileDrop`; kit `Button`.
 - Mounted by `src/pages/GamePage.tsx`, which switches between `LobbyScreen` and `match`'s `GameView`.
 

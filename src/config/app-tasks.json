@@ -15,13 +15,8 @@
     "status": "to-do"
   },
   {
-    "title": "Copyable level-generation prompt",
-    "description": "Feedback round 2 § 2.1. Next to the 'Your Level' import, a one-click copy button for a standard system prompt the user pastes into an external AI agent (e.g. Gemini) to generate a valid, playable HTML level in one shot: all required constants, variables, entities and material definitions. Owner example prompt (format v1): documentation/game/LEVEL_PROMPT_EXAMPLE.md — sections 1–6 must be generated from the live format, catalog and tunables (the jumps lap changes gravity and jump numbers), section 7 is the user's map request. Owner note: 'only the variable settings in it' (lap clarifies with the owner). Waits on the uniform material system and the headbutt reset power-up so the prompt describes the final format. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Loose terrain falls",
-    "description": "Owner idea 2026-11-16 (future, not scheduled): terrain cut off from its support by a blast or burnt-out fuel breaks loose and falls. On the distance field: flood-fill the touched region for islands not connected to anchored material or the level edge, lift each island out as a contour polygon into a falling body (simple custom body or a physics library — a new dependency is an owner choice), and stamp it back into the field when it settles; falling chunks can hit players. Precedent: Noita (pixel islands become rigid bodies). Waits on the distance field (a2) and collision on the field (a3). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "description": "Owner idea 2026-11-16 (future, not scheduled): terrain cut off from its support by a blast or burnt-out fuel breaks loose and falls. On the distance field: flood-fill the touched region for islands not connected to anchored material or the level edge, lift each island out as a contour polygon into a falling body (simple custom body or a physics library — a new dependency is an owner choice), and stamp it back into the field when it settles; falling chunks can hit players. Precedent: Noita (pixel islands become rigid bodies). Waits on the distance field (a2) and collision on the field (a3). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. Note from the distance-field lap (#45): only unbreakable samples and the bottom row are anchored, so all-breakable floating platforms have no anchor — this lap needs its own rule for which piece stays put. ",
     "status": "to-do"
   },
   {

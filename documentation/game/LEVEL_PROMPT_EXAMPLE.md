@@ -2,7 +2,9 @@
 
 Reference for the backlog task **Copyable level-generation prompt**. The owner wrote this example (2026-11-16) against level format v1. It shows the shape the in-app copyable prompt should take; its facts are stale where later laps change them (material system → format v2 and materials/colours, slower jumps → gravity and jump metrics, open map edges → bounds no longer lethal on sides/top nearby, headbutt reset power-up → new role). The lap generates sections 1–6 from the live format, catalog and tunables instead of hardcoding numbers, and leaves section 7 (the map request) for the user.
 
-Owner note on the task: "alleen de variabele settings hierin" (only the variable settings in it).
+Owner note on the task: "alleen de variabele settings hierin" (only the variable settings in it). Read as: the full prompt with every game-dependent value filled in live (owner, level-gen-prompt D1).
+
+**Superseded:** the live prompt is built by `src/features/level-kit/services/levelPrompt.ts`, copied by the lobby's "Copy AI prompt" button and generated to [`public/level-kit/v2/LEVEL_PROMPT.md`](../../public/level-kit/v2/LEVEL_PROMPT.md). This file stays as the owner's original for reference only.
 
 ---
 

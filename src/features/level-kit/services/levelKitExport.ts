@@ -5,6 +5,7 @@ import {
   type CatalogEntryByKind,
   type ContentKind,
 } from "@/features/content-catalog/api/contentCatalogApi";
+import { buildLevelPrompt } from "@/features/level-kit/services/levelPrompt";
 import { terrainSwatch, toCssColor } from "@/shared/config/gamePalette";
 
 /**
@@ -107,6 +108,8 @@ export const LEVEL_KIT_FILES: readonly KitFile[] = [
     render: () => `${JSON.stringify(buildKitCatalog(), null, 2)}\n`,
   },
   { path: `${KIT_DIR}/AUTHORING.md`, render: withCatalogTable },
+  // The copyable AI prompt, whole file (level-gen-prompt D2): the app copies the same text.
+  { path: `${KIT_DIR}/LEVEL_PROMPT.md`, render: () => buildLevelPrompt() },
   { path: "documentation/game/LEVEL_FORMAT.md", render: withCatalogTable },
 ];
 

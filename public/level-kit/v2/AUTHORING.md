@@ -1,6 +1,6 @@
 # Write a Bompers level (format v2) — agent guide
 
-You are writing **one HTML file** that holds **one inline `<svg>`**. The SVG is the level. Bompers is a 2D side-view arena brawler for 2–4 squishy blob players who fire rockets, rocket-jump and blow up breakable terrain. Full spec: `documentation/game/LEVEL_FORMAT.md` in the Bompers repo.
+You are writing **one HTML file** that holds **one inline `<svg>`**. The SVG is the level. Bompers is a 2D side-view arena brawler for 2–4 squishy blob players who fire rockets, rocket-jump and blow up breakable terrain. Full spec: `documentation/game/LEVEL_FORMAT.md` in the Bompers repo. Ready-made prompt with every physics number for one-shot level generation: `/level-kit/v2/LEVEL_PROMPT.md`.
 
 ## Rules (all of them)
 

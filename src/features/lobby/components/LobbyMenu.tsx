@@ -8,6 +8,7 @@ import {
   type LevelLibrary,
   type LevelLibraryEntry,
 } from "@/features/level-file/api/levelFileApi";
+import { CopyLevelPromptButton } from "@/features/level-kit/api/levelKitApi";
 import type { Lobby } from "@/features/lobby/hooks/useLobby";
 import type { LobbyAction, LobbyRow } from "@/features/lobby/types/lobby.types";
 
@@ -121,6 +122,7 @@ export const LobbyMenu = ({ lobby, library, pickerRef, onFile, onAction }: Lobby
           pickerRef={pickerRef}
         />
         <span className="text-xs text-muted-foreground">or drop a level file anywhere</span>
+        <CopyLevelPromptButton />
       </Row>
       <Row row="duration" label="Match length" focused={focusedRow === "duration"}>
         <Stepper row="duration" onAction={onAction} value={view.duration} />

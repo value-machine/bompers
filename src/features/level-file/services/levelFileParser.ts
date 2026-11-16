@@ -48,8 +48,10 @@ export type LevelImportResult =
   | { ok: true; level: LevelDefinition; warnings: LevelIssue[] }
   | { ok: false; errors: LevelIssue[]; warnings: LevelIssue[] };
 
-const MIN_SPAWNS = 2;
-const RECOMMENDED_SPAWNS = 4;
+/** Fewer valid spawns than this rejects the file (E5). */
+export const MIN_SPAWNS = 2;
+/** Fewer than this warns (W6): 4-player rounds would share spawns. */
+export const RECOMMENDED_SPAWNS = 4;
 
 const ofRole = <R extends RoleElement["role"]>(items: readonly RoleElement[], ...roles: R[]) =>
   items.filter((item): item is RoleElement & { role: R } => roles.includes(item.role as R));
