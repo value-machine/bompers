@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   FINAL_MUSIC_SECONDS,
@@ -31,6 +33,13 @@ describe("musicBank", () => {
     expect(MUSIC_TRACKS.final.loop).toBe(false);
     for (const track of Object.values(MUSIC_TRACKS)) {
       expect(track.url.startsWith(MUSIC_BASE_URL)).toBe(true);
+    }
+  });
+
+  it("should point at files that exist in public/audio/music when listing tracks", () => {
+    for (const track of Object.values(MUSIC_TRACKS)) {
+      const file = resolve(process.cwd(), "public", track.url.slice(1));
+      expect(existsSync(file), track.url).toBe(true);
     }
   });
 });
