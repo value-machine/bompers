@@ -25,7 +25,9 @@ New game elements keep arriving, and each lap picks its own shake, flash, squash
 | `src/shared/config` | `DEFAULT_GAME_TUNABLES.feel` holds literal shake / flash / hit-stop values | `gameJuice.ts` beside it; `feel` references tiers | new file + ride |
 | `documentation/game` | DESIGN_LANGUAGE § 6 motion, § 8 audio | `GAME_JUICE.md` subcategory doc | new |
 | `.agents/skills`, router catalog | no juice guidance | `spec-apply-game-juice` | new (protected) |
-| `.claude/rules`, `AGENTS.md` | no game rule | `game-juice.md` path-scoped | new (protected) |
+| `.claude/rules`, `AGENTS.md`, `DOC_RULES_INDEX.md` | no game rule | `game-juice.md` path-scoped + catalog / index rows | new (protected) |
+| `loop-plan`, `loop-check` skills | no juice call | one Calls entry each (validator: spec skill needs ≥ 2 loop callers) | ride (protected, consent D6) |
+| `ARCHITECTURE.md` | `shared/config` table | one `gameJuice.ts` row | ride |
 
 Overrun rule (skill-loop D51): a diff that touches a feature area **not** in this table stops the lap.
 

@@ -23,6 +23,7 @@ Decisions: [`DOC_DECISION_LOG.md`](../../../../documentation/DOC_DECISION_LOG.md
 | `spec-simplify-flow` | built | `challenge`, `standards-align` |
 | `spec-optimize-performance` | built | `optimize2`, `react-perf-vite` |
 | `spec-check-layer` | built | `layer-consistency-check` |
+| `spec-apply-game-juice` | built | — (new, game-juice-system) |
 | `meta-write-skill` | built | `create-skill` |
 | `meta-audit-harness` | built | `align-harness`, `tighten-harness` |
 | `meta-intake-harness` | built | `update-harness` |
