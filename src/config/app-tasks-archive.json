@@ -208,5 +208,10 @@
     "title": "Game feel: hit flash, screen shake, helmet wobble",
     "description": "Render-only feedback the visual pass left out: hit flash on the victim's fill (back hits stronger), capped decaying screen shake (explosions, hard dive hits, tumble bounces), helmet spring wobble, render-only hit-stop; feel tunables; prefers-reduced-motion respected. No sim change. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "done"
+  },
+  {
+    "title": "Feet animation: rotation, dynamics and wall-facing feet",
+    "description": "Feedback round 2 § 2.5 and § 3. The feet only move straight up and down; they lost the rotation, dynamics and feel of the pre-restyle version. Bring back rotation and dynamic motion (earlier ideas like taller sprites or changed collision are dropped). While wall-sliding and wall-jumping, the feet turn to face the wall surface. Render-only. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "status": "done"
   }
 ]
