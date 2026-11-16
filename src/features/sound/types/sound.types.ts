@@ -31,6 +31,10 @@ export interface SoundPlayerSnapshot {
   diveBonked: boolean;
   /** Catalog sound of the material a head-on bonk hit (`"none"` when unknown or not bonked). */
   diveBonkSoundId: string;
+  /** Body speed this frame, units / s (a hit victim's knockback: the hit's intensity). */
+  speed: number;
+  /** Speed into the terrain this step, fastest axis, units / s (0 when nothing was hit). */
+  terrainHitSpeed: number;
 }
 
 /** The two volume channels: sound effects and music. */

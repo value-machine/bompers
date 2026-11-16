@@ -86,3 +86,16 @@ export function isJuiceSquash(pose: { sx: number; sy: number }): boolean {
   const axisOk = (scale: number): boolean => scale >= minScale && scale <= maxScale;
   return area >= minArea && area <= maxArea && axisOk(pose.sx) && axisOk(pose.sy);
 }
+
+/**
+ * Effect volume scales with intensity (owner, 2026-11-16): a cue that has an impact speed plays at
+ * `minGain` for a gentle touch, rising linearly to full gain at the moment's full speed. Each
+ * moment owns its full speed (the sound bank's `SOUND_MIX.landingFullSpeed` / `hitFullSpeed`).
+ */
+export const JUICE_VOLUME = { minGain: 0.35 } as const;
+
+/** Effect gain for an impact `speed` against the moment's `fullSpeed` (units / s). */
+export function intensityGain(speed: number, fullSpeed: number): number {
+  const t = Math.min(1, Math.max(0, speed / fullSpeed));
+  return JUICE_VOLUME.minGain + (1 - JUICE_VOLUME.minGain) * t;
+}

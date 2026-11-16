@@ -60,7 +60,7 @@ Sound identity, the four sound families, the prompt template, post-processing an
 
 - Pick its **family** (body, impacts, weapon, round & UI) and build the prompt from that family's words and materials; target length from the family row.
 - Pitch it by the player it belongs to (`PLAYER_PITCH_SEMITONES`): actions by the actor, hits and eliminations by the victim; world and round sounds are unpitched.
-- Loudness: −16 LUFS files; per-cue gain only to scale with impact (landings: `SOUND_MIX.minLandingGain` → 1 by fall speed). A `heavy` moment's sound ducks the music.
+- Loudness: −16 LUFS files; per-cue gain only to scale with intensity (`intensityGain` in `gameJuice.ts`: `JUICE_VOLUME.minGain` → 1 at the moment's full speed; landings by fall speed up to `SOUND_MIX.landingFullSpeed`, hits and wall bonks by impact speed up to `SOUND_MIX.hitFullSpeed`). A `heavy` moment's sound ducks the music.
 - Register the sound ID in the content catalog and the sound bank (the sound bank test checks it), and cue it from sim events in `soundCues.ts` — never from render code.
 
 ## 6. Moment ledger
@@ -76,12 +76,12 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Pickup collected | light | `pickup` | — | — | — | — | — | — |
 | Respawn | light | `respawn` | — | — | — | — | blink 8 Hz + ring | — |
 | Dive launch | light | `dive-launch` | dive pose | — | — | — | — | — |
-| Front hit taken | medium | `hit` / `dive-impact` | — | 0.75 | 3 px | — | impact pop (not on dive hits) | kick |
+| Front hit taken | medium | `hit` / `dive-impact` (gain by knockback) | — | 0.75 | 3 px | — | impact pop (not on dive hits) | kick |
 | Tumble bounce | medium | `tumble-bounce` | squash wide (by speed) | — | 3 px (by speed) | — | — | kick |
-| Dive wall bonk | medium | `dive-impact` | — | — | — | — | — | — |
-| Back hit taken | heavy | `hit` / `dive-impact` | — | 1.0 | 6 px | 50 ms | impact pop (not on dive hits) | kick |
+| Dive wall bonk | medium | `land` + the wall's material sound (gain by speed into the wall) | bonk squash (dive pose) | — | — | — | — | — |
+| Back hit taken | heavy | `hit` / `dive-impact` (gain by knockback) | — | 1.0 | 6 px | 50 ms | impact pop (not on dive hits) | kick |
 | Explosion | heavy | `explosion` (ducks music) | — | — | 6 px (by radius) | — | star burst | — |
-| Terrain destroyed | light | material's sound | — | — | — | — | debris | — |
+| Terrain destroyed | light | material's sound (`thud` / `crumble` / `thwap` / `clink`) | — | — | — | — | debris | — |
 | Elimination | heavy | `elimination` | — | — | — | — | **gap:** droplets + confetti (DESIGN_LANGUAGE § 6) not built yet | — |
 | Health chunk lost (HUD) | — | — | pip pop | — | — | — | — | — |
 | Round start / end | — | `round-start` / `round-end` | — | — | — | — | banner | — |

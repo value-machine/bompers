@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { CombatEvent } from "@/features/combat/api/combatApi";
-import { readSoundCues, type SoundSnapshot } from "@/features/sound/services/soundCues";
+import { JUICE_VOLUME } from "@/shared/config/gameJuice";
+import {
+  readSoundCues,
+  WALL_BONK_SOUND,
+  type SoundSnapshot,
+} from "@/features/sound/services/soundCues";
 import type { SoundPlayerSnapshot } from "@/features/sound/types/sound.types";
 import { SOUND_MIX } from "@/features/sound/services/soundBank";
 
@@ -16,6 +21,8 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   divePhase: "idle",
   diveBonked: false,
   diveBonkSoundId: "none",
+  speed: 0,
+  terrainHitSpeed: 0,
   ...patch,
 });
 
@@ -71,28 +78,6 @@ describe("readSoundCues", () => {
     expect(cues).toEqual([{ soundId: "dive-launch", slot: 0, gain: 1 }]);
   });
 
-  it("should cue a dive impact when a dive ends in a terrain bonk", () => {
-    const first = snapshot({ players: [player(0, { divePhase: "travel" }), player(1)] });
-    const next = snapshot({
-      players: [player(0, { divePhase: "recovery", diveBonked: true }), player(1)],
-    });
-    expect(idsOf(cuesAfter(next, first))).toEqual(["dive-impact"]);
-  });
-
-  it("should layer the wall's material sound over the bonk when a dive bonks into terrain", () => {
-    const first = snapshot({ players: [player(2, { divePhase: "travel" }), player(1)] });
-    const next = snapshot({
-      players: [
-        player(2, { divePhase: "recovery", diveBonked: true, diveBonkSoundId: "thud" }),
-        player(1),
-      ],
-    });
-    expect(cuesAfter(next, first)).toEqual([
-      { soundId: "dive-impact", slot: 2, gain: 1 },
-      { soundId: "thud", slot: null, gain: 1 },
-    ]);
-  });
-
   it("should cue a respawn when a player comes back into play", () => {
     const first = snapshot({ players: [player(0, { inPlay: false }), player(1)] });
     expect(idsOf(cuesAfter(snapshot(), first))).toEqual(["respawn"]);
@@ -145,5 +130,54 @@ describe("readSoundCues — crouch", () => {
     const frame = snapshot({ players: [player(0, { crouchCount: 1 }), player(1)] });
     const { cues } = readSoundCues(cursor, frame);
     expect(cues).toEqual([{ soundId: "land", slot: 0, gain: SOUND_MIX.crouchGain }]);
+  });
+});
+
+describe("readSoundCues — wall bonks and hit intensity", () => {
+  it("should cue the landing splut when a dive ends in a terrain bonk", () => {
+    const first = snapshot({ players: [player(0, { divePhase: "travel" }), player(1)] });
+    const next = snapshot({
+      players: [player(0, { divePhase: "recovery", diveBonked: true }), player(1)],
+    });
+    expect(idsOf(cuesAfter(next, first))).toEqual([WALL_BONK_SOUND]);
+    expect(WALL_BONK_SOUND).toBe("land");
+  });
+
+  it("should layer the wall's material sound over the bonk at the bonk's intensity when a dive bonks into terrain", () => {
+    const first = snapshot({ players: [player(2, { divePhase: "travel" }), player(1)] });
+    const bonk = (terrainHitSpeed: number) =>
+      cuesAfter(
+        snapshot({
+          players: [
+            player(2, {
+              divePhase: "recovery",
+              diveBonked: true,
+              diveBonkSoundId: "thud",
+              terrainHitSpeed,
+            }),
+            player(1),
+          ],
+        }),
+        first
+      );
+    expect(bonk(SOUND_MIX.hitFullSpeed)).toEqual([
+      { soundId: "land", slot: 2, gain: 1 },
+      { soundId: "thud", slot: null, gain: 1 },
+    ]);
+    const soft = bonk(SOUND_MIX.hitFullSpeed / 4);
+    expect(soft[0]?.gain).toBeLessThan(1);
+    expect(soft[1]?.gain).toBe(soft[0]?.gain);
+  });
+
+  it("should scale a hit's gain with the victim's knockback speed when a player is hit", () => {
+    const hitAt = (speed: number) =>
+      cuesAfter(
+        snapshot({
+          players: [player(0, { speed }), player(1)],
+          events: [event({ type: "playerHit", victimSlot: 0, byPlayerSlot: 1, source: "rocket" })],
+        })
+      )[0]?.gain ?? 0;
+    expect(hitAt(SOUND_MIX.hitFullSpeed)).toBe(1);
+    expect(hitAt(0)).toBe(JUICE_VOLUME.minGain);
   });
 });

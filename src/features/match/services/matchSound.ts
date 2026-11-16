@@ -70,6 +70,8 @@ export function soundSnapshotOf(state: GameState): SoundSnapshot {
         diveBonkSoundId: dive?.bonked
           ? bonkedMaterialSound(state.arena.terrain, player, { x: dive.dirX, y: dive.dirY })
           : "none",
+        speed: Math.hypot(player.vx, player.vy),
+        terrainHitSpeed: Math.max(player.terrainHitSpeedX, player.terrainHitSpeedY),
       };
     }),
     events: state.combat.events,
