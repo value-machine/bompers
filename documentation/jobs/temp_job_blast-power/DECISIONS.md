@@ -23,6 +23,11 @@ Owner picks come from the fire-design ideation page (version 3, https://claude.a
 | D12 | Seam for the shared-roll lap | closed | A blast resolves to one `{ direction, impulse }` per pushed player and calls `reactToHit` as today; the tumble threshold stays in the reaction | loop-refine | clear-winner — the roll lap swaps the reaction without touching blast code |
 | D13 | Consumers of removed constants | closed | Explosion event `radius` = this blast's reach; feel shake scale and out-of-bounds margin derive from the rocket's power | loop-refine | clear-winner — identical values at P 50 |
 
+| D14 | Terrain look | closed | Smooth outline over the existing cell grid: per-corner distance values traced as a contour (marching squares), so craters and edges read as one sheet; per-cell materials, toughness and fire stay | owner (via orchestrator) | Supersedes the owner's earlier vector-terrain pick (C). Rejected: 2-unit pixel grid; vector polygons. Built in its own lap after this one (D16); comparison page https://claude.ai/artifact/293sCRDGDCbdjrghGBNzZE |
+| D15 | Collision vs smooth outline | closed | Collision follows the smooth outline (blobs stand and roll on the drawn line), not the cell staircase | owner (via orchestrator) | Needed for the queued Shared roll lap (rolling down slopes) |
+| D16 | Lap placement of the smooth outline | closed | Own laps after this one: "Smooth terrain outline + crater shapes" (render + crater field), then "Collision on the smooth outline"; both before Shared roll | loop-refine | clear-winner — keeps each lap ≤ M; this lap writes the crater test as a distance rule (`shapeDistance × toughness ≤ craterPerPower × power`) so the outline lap reuses it |
+| D17 | Crater shape per weapon | closed | The crater test takes a shape (distance rule) per weapon; the rocket stays round; the shape slot ships with the outline lap | owner (via orchestrator) "custom crater shapes per weapon" | This lap: round only, function signature ready |
+
 ## Open
 
 | id | topic | status | options briefly | blocked phase |
@@ -33,3 +38,4 @@ Owner picks come from the fire-design ideation page (version 3, https://claude.a
 - 2026-11-16 — D1, D2, D4–D8 closed via owner "all recommended" (relayed by orchestrator)
 - 2026-11-16 — D3 closed, derived from the owner's "all recommended" (orchestrator)
 - 2026-11-16 — D9–D13 closed via loop-refine (clear-winner)
+- 2026-11-16 — D14, D15, D17 closed via owner (relayed by orchestrator; D14 supersedes the vector pick); D16 via loop-refine (clear-winner)
