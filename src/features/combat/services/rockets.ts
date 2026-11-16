@@ -8,7 +8,8 @@ import type { RocketState } from "@/features/combat/types/combat.types";
 
 /**
  * Rockets: leave the helmet along the unit aim, fly straight, and explode on the first contact
- * with terrain, another player or the level bounds. Motion is swept in sub-steps of at most
+ * with terrain, another player or the edge of `ctx.bounds` (the match's kill zone, far outside
+ * the level bounds except at the bottom). Motion is swept in sub-steps of at most
  * half a terrain cell, so no speed tunnels through a one-cell wall or a player.
  */
 export function fireRocket(ctx: CombatContext, shooter: PlayerState): void {
