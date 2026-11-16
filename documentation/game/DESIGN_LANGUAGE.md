@@ -166,7 +166,8 @@ Squash and stretch keep area roughly constant (`sx × sy` between 0.94 and 1.0).
 - **Explosion:** pops in at full size on frame 1 (no fade-in), shrinks and clears in 250 ms; 6 px screen shake for 120 ms. Debris: 5–8 cell-coloured squares with the cell grid-line colour as a thin edge, spinning outward.
 - **Elimination:** blob pops into 6 droplets of its body colour plus a small confetti burst, 300 ms.
 - **Respawn protection:** body alpha blinks between 100 % and 45 % at 8 Hz, inside a dashed ink ring (radius 1.5 R); the blob is fully playable meanwhile (GDD § 6).
-- Reduced motion (OS setting): drop screen shake and idle breathing; keep squash (it carries gameplay information).
+- Reduced motion (OS setting): drop screen shake and idle breathing; keep squash (it carries gameplay information). Built: no shake and a half-strength hit flash; idle breathing still plays.
+- Game feel as built (tunables `feel`): back hits flash full white (front 75 %) and shake twice as hard, then hold the world view for 50 ms (hit-stop, render only); tumble bounces shake by bounce speed; live shakes add as a root of squares, capped at 12 px.
 
 ---
 
