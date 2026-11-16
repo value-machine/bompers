@@ -60,9 +60,12 @@ export function helmetPath(g: Graphics, m: BlobMetrics): Graphics {
     .closePath();
 }
 
-/** One foot (0.4 R × 0.25 R), centred 6 units above its ground point. */
+/** Height of a foot's centre above its ground point, mockup units (the foot turns around it). */
+export const FOOT_CENTRE_UNITS = 6;
+
+/** One foot (0.4 R × 0.25 R), centred `FOOT_CENTRE_UNITS` above its ground point. */
 export const footPath = (g: Graphics, m: BlobMetrics): Graphics =>
-  g.ellipse(0, -6 * m.u, 12 * m.u, 7.5 * m.u);
+  g.ellipse(0, -FOOT_CENTRE_UNITS * m.u, 12 * m.u, 7.5 * m.u);
 
 /** Rocket tube (26 × 14) with its cap (8 × 16), along +x from the pivot. */
 export const tubePath = (g: Graphics, u: number): Graphics =>

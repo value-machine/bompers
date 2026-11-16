@@ -305,6 +305,37 @@ export interface GameTunables {
       hitTilt: number;
       hitDrop: number;
     };
+    /**
+     * Foot motion (DESIGN_LANGUAGE § 6): run-cycle swing and toe tilt, air tilt from velocity,
+     * landing / jump splay on a damped spring, and feet turned to the wall while wall-sliding.
+     * Lengths in body radii R, angles in radians.
+     */
+    feet: {
+      /** Spring stiffness (1/s²) and damping (1/s) for the tilt lag and the splay. */
+      stiffness: number;
+      damping: number;
+      /** Run cycle: distance per step (R), lift and forward swing of the stepping foot (R), toe tilt. */
+      stride: number;
+      stepLift: number;
+      stepSwing: number;
+      stepTilt: number;
+      /** Ground speed (units / s) at which the run cycle reaches full size. */
+      fullStepSpeed: number;
+      /** Air tilt at `airTiltSpeed` (units / s): feet trail the horizontal speed and droop / flare with vy. */
+      airTilt: number;
+      airTiltSpeed: number;
+      /** Splay velocity kicks (rad / s): landings spread the feet, jumps pull them in. Cap in radians. */
+      landKick: number;
+      jumpKick: number;
+      maxSplay: number;
+      /** Wall pose: feet centre out from the body centre (R), heights of the low and high foot (R). */
+      wallX: number;
+      wallLow: number;
+      wallHigh: number;
+      /** Seconds to turn to / from the wall, and to keep facing it after a wall-jump. */
+      wallBlendSeconds: number;
+      wallJumpHoldSeconds: number;
+    };
     /** Render-only freeze after a hard hit (the sim keeps running); 0 turns it off. */
     hitStop: { seconds: number };
   };
