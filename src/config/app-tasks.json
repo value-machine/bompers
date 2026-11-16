@@ -30,8 +30,8 @@
     "status": "to-do"
   },
   {
-    "title": "Fire: spreading fire, flamethrower and burn reaction",
-    "description": "Owner request 2026-11-16. Design with the owner first: ideate options and show examples (artifact) before picking a direction, then build in laps. (1) Fire that spreads depending on material type (e.g. cardboard burns and spreads, stone does not, ice melts?) — builds on the uniform material system. (2) A flamethrower weapon. (3) A hit reaction when a blob touches fire. Build waits on the uniform material system. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md once #34 lands. ",
+    "title": "Material responses: blast power and spreading fire",
+    "description": "Owner direction 2026-11-16 (supersedes the earlier fire-only scope): one shared model where a source only says WHERE and HOW STRONG, and the material decides the result. (1) Blasts: a rocket picks only its explosion point and power (no fixed crater radius); each material's toughness decides the cutout. (2) Fire: a fire source at a point; fire spreads per tick outward in a circle from the origin, and each material decides whether and how it burns — so part of a block can burn while the rest does not (the terrain cell grid makes that per-cell, not a split entity). (3) A flamethrower weapon. (4) A hit reaction when a blob touches fire. Design with the owner, with examples, before building. Laps: blast-by-power refactor first, then fire + burn reaction, then flamethrower. Build waits on the uniform material system (#36). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
   },
   {
