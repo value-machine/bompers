@@ -1,4 +1,4 @@
-import type { Circle, Rect } from "@/shared/types/gameGeometry.types";
+import type { Rect } from "@/shared/types/gameGeometry.types";
 import {
   EMPTY_CELL,
   type TerrainCellSlot,
@@ -21,10 +21,14 @@ export interface TerrainGridSize {
 const EMPTY_SLOT: TerrainCellSlot = {
   materialId: "",
   colorId: "",
-  destructible: false,
+  toughness: null,
   friction: 1,
   surface: "plain",
 };
+
+/** True for a slot a blast can clear (it has a toughness); false for empty or unbreakable. */
+export const isBreakableSlot = (info: TerrainCellSlot | null | undefined): boolean =>
+  info !== null && info !== undefined && info.toughness !== null;
 
 export function createTerrainGrid(size: TerrainGridSize): TerrainGrid {
   const chunkCells = size.chunkCells ?? DEFAULT_CHUNK_CELLS;
@@ -150,27 +154,44 @@ function tallyLook(bySlot: Map<number, ClearedLook>, slot: number, info: Terrain
   bySlot.set(slot, look);
 }
 
+/** Where a blast cuts terrain: its centre and its crater reach at toughness 1 (world units). */
+export interface Crater {
+  x: number;
+  y: number;
+  reach: number;
+}
+
+/** How far a crater can cut in this grid: its reach in the softest breakable material. */
+function craterSpan(grid: TerrainGrid, reach: number): number {
+  const softest = Math.min(
+    ...grid.slots.map((slot) => slot.toughness ?? Infinity).filter((t) => t > 0)
+  );
+  return Number.isFinite(softest) ? reach / softest : 0;
+}
+
 /**
- * Blasts a circle out of the terrain: destructible cells whose centre lies inside become empty;
- * other cells stay. Returns what was removed, per material + colour.
+ * Blasts a crater out of the terrain (blast-power D1): a breakable cell clears when the distance
+ * from the crater centre to the cell centre × the cell's toughness ≤ `reach`, so softer materials
+ * open wider; unbreakable cells stay. Written as a distance rule per sample so the distance-field
+ * lap can reuse it with other crater shapes. Returns what was removed, per material + colour.
  */
-export function clearCircle(grid: TerrainGrid, circle: Circle): ClearedCells {
+export function clearCrater(grid: TerrainGrid, crater: Crater): ClearedCells {
+  const span = craterSpan(grid, crater.reach);
   const range = cellRangeOf(grid, {
-    x: circle.x - circle.radius,
-    y: circle.y - circle.radius,
-    w: circle.radius * 2,
-    h: circle.radius * 2,
+    x: crater.x - span,
+    y: crater.y - span,
+    w: span * 2,
+    h: span * 2,
   });
-  const radiusSq = circle.radius * circle.radius;
   const bySlot = new Map<number, ClearedLook>();
   for (let cy = range.minY; cy <= range.maxY; cy += 1) {
     for (let cx = range.minX; cx <= range.maxX; cx += 1) {
       const slot = getCellSlot(grid, cx, cy);
       const info = grid.slots[slot];
-      if (slot === EMPTY_CELL || info?.destructible !== true) continue;
-      const dx = (cx + 0.5) * grid.cellSize - circle.x;
-      const dy = (cy + 0.5) * grid.cellSize - circle.y;
-      if (dx * dx + dy * dy > radiusSq) continue;
+      if (slot === EMPTY_CELL || !info || info.toughness === null) continue;
+      const dx = (cx + 0.5) * grid.cellSize - crater.x;
+      const dy = (cy + 0.5) * grid.cellSize - crater.y;
+      if (Math.hypot(dx, dy) * info.toughness > crater.reach) continue;
       setCellSlot(grid, { cx, cy, slot: EMPTY_CELL });
       tallyLook(bySlot, slot, info);
     }

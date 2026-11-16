@@ -35,8 +35,8 @@ Link the preview kit in `<head>` (works offline without it):
 | Kind | ID | Label | Notes |
 |---|---|---|---|
 | material | `stone` | Stone | unbreakable, looks: smooth slab, effect `none`, sound `thud`, default for terrain |
-| material | `earth` | Earth | breakable, looks: seam grid, effect `dust-burst`, sound `crumble` |
-| material | `cardboard` | Cardboard | breakable, looks: seam grid, effect `dust-burst`, sound `crumble` |
+| material | `earth` | Earth | toughness 1, looks: seam grid, effect `dust-burst`, sound `crumble` |
+| material | `cardboard` | Cardboard | toughness 0.7, looks: seam grid, effect `dust-burst`, sound `crumble` |
 | material | `ice` | Ice | unbreakable, slippery, looks: gloss streaks + white rim, effect `none`, sound `thud` |
 | color | `plum` | Plum | default for stone |
 | color | `slate` | Slate |  |

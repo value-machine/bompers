@@ -19,6 +19,7 @@ export {
 export { musicTrackFor, FINAL_MUSIC_SECONDS } from "@/features/sound/services/musicBank";
 export {
   VOLUME_STEPS,
+  isChannelEnabled,
   withChannelEnabled,
   withVolumeStep,
 } from "@/features/sound/services/soundSettings";

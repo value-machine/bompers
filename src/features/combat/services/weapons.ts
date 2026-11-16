@@ -15,6 +15,8 @@ export interface ProjectileWeaponTunables {
   fireCooldown: number;
   recoil: number;
   maxLifetime: number;
+  /** Blast power of the explosion it fires (blast-power D1). */
+  power: number;
 }
 
 const KIND_OF: Readonly<Record<WeaponItemId, RocketKind>> = {

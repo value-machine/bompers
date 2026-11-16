@@ -4,7 +4,7 @@ import { waitForGameFont } from "@/shared/utils/gameFont";
 import { advanceFixedStep, createFixedStepClock } from "@/shared/services/gameLoop";
 import { createGameInputReader } from "@/shared/services/gameInputService";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
-import type { MenuInput, PlayerInputs, SlotSources } from "@/shared/types/gameInput.types";
+import type { PlayerInputs, SlotSources } from "@/shared/types/gameInput.types";
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import { createGameState, stepGame, type GameState } from "@/features/match/services/gameSim";
 import {
@@ -15,6 +15,7 @@ import {
 import { isPastRestartLock, isRestartPress } from "@/features/match/services/matchRules";
 import { useAudioEngine, type AudioEngine } from "@/features/sound/api/soundApi";
 import { createMatchSound } from "@/features/match/services/matchSound";
+import { createPausableInput, type PauseLink } from "@/features/pause/api/pauseApi";
 
 // Pixi nulls these on destroy although the types say they are always set.
 const isAppAlive = (app: Application): boolean =>
@@ -48,10 +49,6 @@ const warnAboutLevel = ({ levelWarnings }: GameState): void => {
   if (levelWarnings.length > 0) console.warn("Level warnings:", levelWarnings);
 };
 
-/** True when any device newly pressed back this frame. */
-const backPressed = (menus: readonly MenuInput[], previous: readonly MenuInput[]): boolean =>
-  menus.some((menu, index) => menu.back && previous[index]?.back !== true);
-
 /** How long a session waits for Fredoka before it starts with the fallback face (visual-pass D5). */
 const FONT_WAIT_MS = 1500;
 
@@ -60,9 +57,10 @@ interface SessionDeps {
   app: Application;
   engine: AudioEngine;
   exitRef: { current: () => void };
+  pause: PauseLink;
 }
 
-function startSession({ app, engine, exitRef }: SessionDeps, setup: MatchSetup): () => void {
+function startSession({ app, engine, exitRef, pause }: SessionDeps, setup: MatchSetup): () => void {
   const { level, tunables, inputSources } = setup;
   const stepSeconds = 1 / tunables.sim.stepHz;
   const sound = createMatchSound(engine);
@@ -75,15 +73,12 @@ function startSession({ app, engine, exitRef }: SessionDeps, setup: MatchSetup):
   };
   let round = startRound();
   const input = createGameInputReader(window, inputSources);
+  const sampleFrame = createPausableInput(input, { pause, sources: inputSources });
   let clock = createFixedStepClock();
   let previousInputs: PlayerInputs = [];
-  let previousMenus: MenuInput[] = input.sampleMenus();
 
   /** True when this frame's back press (round over, past the lock) left for the lobby. */
-  const exitIfPressed = (): boolean => {
-    const menus = input.sampleMenus();
-    const pressed = backPressed(menus, previousMenus);
-    previousMenus = menus;
+  const exitIfPressed = (pressed: boolean): boolean => {
     if (!pressed || !isPastRestartLock(roundLockOf(round.state))) return false;
     exitRef.current();
     return true;
@@ -104,13 +99,18 @@ function startSession({ app, engine, exitRef }: SessionDeps, setup: MatchSetup):
 
   const onFrame = (ticker: Ticker): void => {
     const frameSeconds = ticker.deltaMS / 1000;
+    const frame = sampleFrame();
+    // Paused: no steps, no round timer, no cues; the last frame stays on screen.
+    if (!frame) return;
+    // Out of a pause: no catch-up burst for the time the menu was open.
+    if (frame.resumed) clock = createFixedStepClock();
     const advance = advanceFixedStep(clock, frameSeconds, {
       stepSeconds,
       maxSteps: tunables.sim.maxStepsPerFrame,
     });
     clock = advance.clock;
-    if (exitIfPressed()) return;
-    const inputs = input.sample();
+    if (exitIfPressed(frame.back)) return;
+    const { inputs } = frame;
     const restarted = restartIfPressed(inputs);
     previousInputs = inputs;
     if (restarted) return;
@@ -135,13 +135,14 @@ function startSession({ app, engine, exitRef }: SessionDeps, setup: MatchSetup):
  * Runs matches of `setup` on a ready Pixi app (nothing until it is ready; a new setup object
  * restarts the match): input → fixed steps of `stepGame` → render, once per Pixi ticker
  * frame. After a round ends (past the restart lock), a jump press starts a fresh round on the
- * same level and settings, and a back press calls `onExitToLobby`. Everything is created in
- * the effect and torn down in its cleanup, so a StrictMode remount starts a clean session.
+ * same level and settings, and a back press calls `onExitToLobby`. While `pause` is open the
+ * match holds (see `createPausableInput`). Everything is created in the effect and torn down in
+ * its cleanup, so a StrictMode remount starts a clean session.
  */
 export function useGameSession(
   app: Application | null,
   setup: MatchSetup,
-  onExitToLobby: () => void
+  { onExitToLobby, pause }: { onExitToLobby: () => void; pause: PauseLink }
 ): void {
   const exitRef = useRef(onExitToLobby);
   exitRef.current = onExitToLobby;
@@ -153,11 +154,12 @@ export function useGameSession(
     let stop: (() => void) | null = null;
     // Pixi Text rasterises with the face available at creation: wait for Fredoka first.
     void waitForGameFont(FONT_WAIT_MS).then(() => {
-      if (!cancelled && isAppAlive(app)) stop = startSession({ app, engine, exitRef }, setup);
+      if (!cancelled && isAppAlive(app))
+        stop = startSession({ app, engine, exitRef, pause }, setup);
     });
     return () => {
       cancelled = true;
       stop?.();
     };
-  }, [app, engine, setup]);
+  }, [app, engine, setup, pause]);
 }
