@@ -15,6 +15,11 @@
     "status": "to-do"
   },
   {
+    "title": "Elimination: ragdoll and fall apart",
+    "description": "Owner request 2026-11-16: when a blob is lethally hit it ragdolls, or falls apart into pieces that ragdoll; the pieces then blink until they disappear, and the player respawns. Design first: an artifact with live examples of the options before the owner picks. Fills the game-juice gap 'elimination has sound but no visual'. Relates to the Shared roll lap (ragdoll/tumble state) and the loose-parts idea (falling bodies). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md. ",
+    "status": "to-do"
+  },
+  {
     "title": "Loose terrain falls",
     "description": "Owner idea 2026-11-16 (future, not scheduled): terrain cut off from its support by a blast or burnt-out fuel breaks loose and falls. On the distance field: flood-fill the touched region for islands not connected to anchored material or the level edge, lift each island out as a contour polygon into a falling body (simple custom body or a physics library — a new dependency is an owner choice), and stamp it back into the field when it settles; falling chunks can hit players. Precedent: Noita (pixel islands become rigid bodies). Waits on the distance field (a2) and collision on the field (a3). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. Note from the distance-field lap (#45): only unbreakable samples and the bottom row are anchored, so all-breakable floating platforms have no anchor — this lap needs its own rule for which piece stays put. ",
     "status": "to-do"
