@@ -34,7 +34,7 @@ export interface StepWeaponCratesArgs {
   /** Players who can take a crate (in play and not eliminated). */
   players: readonly PlayerState[];
   terrain: TerrainGrid;
-  /** The level's in-bounds area: a crate below it or beside it vanishes. */
+  /** The in-bounds area (the match passes its kill zone): a crate below it or beside it vanishes. */
   bounds: Rect;
   tunables: GameTunables;
   dt: number;

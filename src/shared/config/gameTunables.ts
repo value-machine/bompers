@@ -13,7 +13,9 @@ export type { GameTunables };
  */
 export const DEFAULT_GAME_TUNABLES: GameTunables = {
   sim: { stepHz: 120, maxStepsPerFrame: 8 },
-  world: { gravity: 2200, maxFallSpeed: 1400 },
+  // Slower tempo, same heights (jumps-and-recoil D1): every gravity-coupled vertical speed below is
+  // the 2200-gravity value × √(1400 / 2200) ≈ 0.8, so apexes stay and air time grows ~25 %.
+  world: { gravity: 1400, maxFallSpeed: 1120 },
   match: {
     durationSeconds: 180,
     maxPlayers: 4,
@@ -39,14 +41,14 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     turnAccel: 5200,
     airAccel: 1700,
     airDecel: 700,
-    // Apex at gravity 2200: 1050² / 4400 ≈ 250 units — clears a 160-unit plateau with room.
-    jumpSpeed: 1050,
+    // Apex at gravity 1400: 840² / 2800 ≈ 250 units — clears a 160-unit plateau with room, in 0.6 s.
+    jumpSpeed: 840,
     jumpCutMultiplier: 0.45,
     coyoteTime: 0.1,
     jumpBufferTime: 0.12,
     wallSlideSpeed: 220,
     wallJumpSpeedX: 420,
-    wallJumpSpeedY: 900,
+    wallJumpSpeedY: 720,
     wallJumpControlLock: 0.16,
     squash: {
       land: { sx: 1.25, sy: 0.75, seconds: 0.18 },
@@ -88,8 +90,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     bonkMinAlignment: 0.8,
     bonkRebound: 0.25,
     strikeImpulse: 160,
-    strikeLift: 320,
-    attackerPop: 720,
+    strikeLift: 256,
+    attackerPop: 576,
     staggerSeconds: 0.3,
     staggerSteerScale: 0.15,
   },
@@ -107,9 +109,13 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       fireCooldown: 0.4,
       muzzleOffset: 6,
       maxLifetime: 4,
+      // A kick opposite the aim on every shot: a hop when firing down, a push back when firing
+      // level (strongest in the air; ground decel soaks most of it).
+      recoil: 200,
     },
-    // Rocket jump from standing: ≈ 1350² / 4400 ≈ 410 units, well above a full jump (≈ 250).
-    explosion: { radius: 64, craterRadius: 34, impulse: 1350, minFalloff: 0.35 },
+    // Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units; with the recoil (1080 + 200) ≈ 585,
+    // well above a full jump (≈ 250).
+    explosion: { radius: 64, craterRadius: 34, impulse: 1080, minFalloff: 0.35 },
     drops: { firstDelaySeconds: 3, intervalSeconds: 7, maxActive: 2, size: 22 },
   },
   camera: {
