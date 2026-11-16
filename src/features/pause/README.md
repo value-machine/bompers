@@ -24,7 +24,7 @@ The in-match pause menu (FEEDBACK_ROUND_2 § 2.2): any player in the match press
 ## Decisions
 
 - D1 Any player in the match drives the open menu with one shared cursor (like the lobby); any player's pause press, back, or Resume closes it. Devices not in the match are ignored.
-- D2 Paused = no sim steps, no round timer, no sound cues, no rematch / lobby checks; the fixed-step clock restarts on resume (no catch-up burst). Music keeps playing; the menu has its own music switch.
+- D2 Paused = no sim steps, no round timer, no sound cues, no rematch / lobby checks; the fixed-step clock restarts on resume (no catch-up burst). The music pauses with the game and continues from the same spot on resume, so the final-30 s piece still lands on 0:00 (owner, 2026-11-16; supersedes "music keeps playing"). `usePauseMenu` calls the engine's `setMusicPaused(open)`; leaving for the lobby switches tracks, which ends the hold.
 - D3 Main menu = the lobby with players, level and settings kept (same as the round-end back press).
 - D4 "General options" = the Music and Sounds volumes, the player preferences the lobby also shows; nothing else until a real option exists.
 - D5 Pause opens on the round-result screen too (one rule everywhere); the restart lock waits while paused.

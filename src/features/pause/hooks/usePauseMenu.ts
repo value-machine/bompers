@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   isChannelEnabled,
   useAudioEngine,
@@ -64,6 +64,10 @@ export function usePauseMenu(onMainMenu: () => void): PauseMenuControl {
     },
     [engine]
   );
+
+  // The music pauses with the game and continues in sync (pause D2): leaving for the lobby
+  // switches tracks, which ends the hold, so unmount needs no cleanup.
+  useEffect(() => engine.setMusicPaused(menu.open), [engine, menu.open]);
 
   const link = useMemo<PauseLink>(
     () => ({
