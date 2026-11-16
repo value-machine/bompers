@@ -282,7 +282,7 @@ The owner picked this system on 2026-11-16 (lap weapon-visuals, direction A of t
 | Weapon | Tube silhouette | Accent | Projectile |
 |---|---|---|---|
 | Rocket launcher | capped tube (§ 2) | sky `#8fd6ff` | cream body, ink nose, fins in the shooter colour (§ 1) |
-| Homing launcher | twin pod (a short mount and two stacked pods) | lilac `#b08cff` | lilac hull, cherry seeker light blinking 6 Hz, lilac trail, shooter-colour fins (§ 1; owner's final pick on the flight look pending) |
+| Homing launcher | twin pod (a short mount and two stacked pods) | lilac `#b08cff` | lilac hull, cherry seeker light blinking 6 Hz, lilac trail, shooter-colour fins (§ 1; owner passed this look with #39) |
 | Flamethrower (planned) | flared nozzle with a pilot flame | ember `#ff8a1f` | short stream of ember and yellow puffs |
 
 Rules:
