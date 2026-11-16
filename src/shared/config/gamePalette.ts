@@ -4,6 +4,13 @@
  * there first. The one place game colors live; do not inline colors elsewhere.
  * Player arrays are indexed by slot (0–3).
  */
+import type { WeaponTubeShape } from "@/shared/utils/weaponTube";
+
+export interface WeaponLook {
+  accent: number;
+  tube: WeaponTubeShape;
+}
+
 interface MaterialLook {
   fill: number;
   /** Top lip (stone) or alternate cell (destructible). */
@@ -32,7 +39,16 @@ export const GAME_PALETTE = {
   explosion: { outer: 0xff8a1f, mid: 0xffe14d, core: 0xffffff },
   rocket: { body: 0xfff4e2, nose: 0x2b1d3a, flame: 0xffb21a, tubeCap: 0xd9c7ae },
   pickupCrate: 0xfff4e2,
-  pickupRing: 0x8fd6ff,
+  /**
+   * Per-weapon look, keyed by the held weapon's item id (DESIGN_LANGUAGE § Weapon identity):
+   * accent for the crate ring, HUD ammo pills and muzzle light; tube silhouette on helmet and crate.
+   * Accents never reuse a player body colour.
+   */
+  weaponLooks: {
+    "rocket-launcher": { accent: 0x8fd6ff, tube: "capped" },
+  } as Readonly<Record<string, WeaponLook>>,
+  /** Look for an item id with no entry. */
+  fallbackWeaponLook: { accent: 0x8fd6ff, tube: "capped" } as WeaponLook,
   /** Lost health chunk (DESIGN_LANGUAGE § 7). */
   healthLost: 0xe9dfd0,
   /** Point orb: bubblegum star (DESIGN_LANGUAGE § 1 Effects). */
@@ -65,6 +81,13 @@ export const GAME_PALETTE = {
   /** Look for a lookToken with no entry (should not happen after normalisation). */
   fallbackLook: { fill: 0x5a3f7a, accent: 0x7d5fa6 } as MaterialLook,
 } as const;
+
+/** The look of a weapon item; own keys only, so prototype names fall back. */
+export function weaponLook(itemId: string): WeaponLook {
+  return Object.prototype.hasOwnProperty.call(GAME_PALETTE.weaponLooks, itemId)
+    ? (GAME_PALETTE.weaponLooks[itemId] ?? GAME_PALETTE.fallbackWeaponLook)
+    : GAME_PALETTE.fallbackWeaponLook;
+}
 
 /** A palette colour as CSS, for DOM next to the canvas (hints, lobby blobs). */
 export const toCssColor = (color: number): string => `#${color.toString(16).padStart(6, "0")}`;

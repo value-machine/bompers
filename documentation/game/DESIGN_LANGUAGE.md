@@ -58,9 +58,10 @@ Rules:
 | Rocket flame | `#ffb21a` |
 | Smoke puffs (trail, landing dust) | `#ffffff`, ink edge at 30–60 % alpha |
 | Hit flash | `#ffffff` |
-| Weapon pickup crate | `#fff4e2` with a `#8fd6ff` ring |
+| Weapon pickup crate | `#fff4e2`; its face shows the weapon's tube silhouette in ink inside a ring in the weapon accent (§ 9) |
 | Point collectible (falls from the roof) | `#ff8fc8` bubblegum star |
 | Timer warning (last 10 s) | `#ff8a1f` |
+| Weapon accents (§ 9) | rocket sky `#8fd6ff`; planned: homing lilac `#b58cff`, flamethrower ember `#ff8a1f` |
 
 ---
 
@@ -69,7 +70,7 @@ Rules:
 - Everything is built from circles, ellipses and rounded rectangles. The only sharp shape is the explosion star.
 - **Blob:** a soft egg, not a perfect circle.
   - Body: half-width R and height 1.94 R (the reference size; R = 30 world units in the style mockup). The widest point sits slightly below the middle, so the bottom is a little fuller and flatter than the top. Build it from four cubic curves (top, two sides, bottom), so squash and stretch deform one smooth shape.
-  - Feet: two ellipses 0.4 R × 0.25 R, centred 0.45 R left and right of centre. The body overlaps the top half of each foot, so the feet look tucked under. Fill them with the body shade. Helmet: a dome over the top 45 % of the body, 4 units wider than the body, cream with a white gloss stroke and the emblem in the middle. Rocket tube: a rounded rect (0.76 R × 0.47 R) on the helmet, pivoting toward the aim direction. Eyes sit under the helmet rim and look toward the aim direction.
+  - Feet: two ellipses 0.4 R × 0.25 R, centred 0.45 R left and right of centre. The body overlaps the top half of each foot, so the feet look tucked under. Fill them with the body shade. Helmet: a dome over the top 45 % of the body, 4 units wider than the body, cream with a white gloss stroke and the emblem in the middle. Weapon tube: a silhouette per weapon on the helmet (§ 9), pivoting toward the aim direction; the rocket tube is a rounded rect (0.76 R × 0.47 R) with a cap. Eyes sit under the helmet rim and look toward the aim direction.
 - **Terrain:** solid pieces are big rounded slabs (corner radius 14 units) with a lighter lip on top. Destructible pieces are square cells on the engine's destruction grid (28 units in the mockup) with 6-unit corners.
 - **Props and pickups:** chunky and short; nothing thinner than 0.2 R.
 
@@ -176,7 +177,7 @@ Squash and stretch keep area roughly constant (`sx × sy` between 0.94 and 1.0).
 - **Typeface:** Fredoka (OFL), weights 400–700, used for menus, HUD and in-game text.
 - **Loading:** one Google Fonts link in `index.html` (`family=Fredoka:wght@400..700&display=swap`), the way the app already loads fonts. Pixi `Text` uses the browser's fonts, so the game waits for `document.fonts.load("700 20px Fredoka")` before creating text objects, or the first labels render in the fallback face. Self-hosting would need a font package (a new dependency); not worth it until offline play matters.
 - **Layout (at 1280 × 720, scale with the viewport):** four player cards across the top, two at each side; timer centred between them.
-- **Player card:** 228 × 70, white `#fffaf0` fill, one 3 px ink outline around the card (same silhouette idea as the characters), 18 px corners, tilted ±1.5° (alternating). Inside: a 50 × 50 chip in the player colour with the emblem in ink; `P1`…`P4` label (Fredoka 700, 20 px); four health chunks (22 × 20 pills, 7 px corners, no outline); score (Fredoka 700, 30 px) with a small `PTS` caption (600, 11 px, letter-spacing 0.12 em, `#8a7a99`).
+- **Player card:** 228 × 86, white `#fffaf0` fill, one 3 px ink outline around the card (same silhouette idea as the characters), 18 px corners, tilted ±1.5° (alternating). Inside: a 50 × 50 chip in the player colour with the emblem in ink; `P1`…`P4` label (Fredoka 700, 20 px); four health chunks (22 × 20 pills, 7 px corners, no outline); under them, while armed, the ammo row: one 10 px high pill per shot (5 px corners, 3 px gaps) across the health-row width, filled in the weapon accent, spent ones pale `#e9dfd0`, hidden when unarmed; score (Fredoka 700, 30 px) with a small `PTS` caption (600, 11 px, letter-spacing 0.12 em, `#8a7a99`).
 - **Health chunks:** full = player colour; lost = pale `#e9dfd0`. A chunk that is lost pops out (scale 1.3 → 0, 150 ms) before the empty pill shows.
 - **Timer:** 140 × 70 ink `#2b1d3a` card, lemon `#ffd43b` numerals (Fredoka 700, 42 px). Last 10 seconds: numerals turn `#ff8a1f` and pulse once per second.
 - **Menus and app chrome** use the theme tokens below, so buttons, cards and dialogs match the HUD.
@@ -241,6 +242,33 @@ Every SFX prompt is built from one template: **material + action + palette words
 **Post-processing** for every file: trim leading and trailing silence, cut to the target length with a short fade-out, loudness-normalise to −16 LUFS, mono, short mp3.
 
 **Chosen takes** (owner, 2026-11-14; files in `public/audio/sfx/`, wiring in `src/features/sound/`): jump, tumble bounce, rocket fire and respawn from the first batch (one take each); explosion 3 takes and pickup 2 takes from the first batch; hit from the test batch; round start, all 4 test takes; land, dive launch, dive impact and elimination from round two; round end, all 6 round-two takes, one picked at random each time. Spares kept for later: dive impact × 4 (future material-specific collisions), elimination × 2.
+
+---
+
+## 9. Weapon identity
+
+The owner picked this system on 2026-11-16 (lap weapon-visuals, direction A of three; the mockup page is not part of the repo). Each question a player asks from the couch has one signal, and it looks the same on the blob, the crate and the HUD.
+
+| Question | Signal | Where |
+|---|---|---|
+| Which one is me? | Body colour + helmet emblem (§ 1), unchanged | Blob, HUD chip |
+| Which team? (team modes only) | Helmet shell: light cream vs dark plum. Light against dark survives every colour-blind view and uses no player hue. Built when a team mode exists. | Helmet, HUD card tab |
+| Which weapon? | **Tube silhouette** on the helmet, one per weapon (part of the ink outline, so it reads at couch zoom) + the weapon **accent** | Helmet tube, crate face, HUD ammo pills |
+| What's in the crate? | The same tube silhouette in ink inside a ring in the weapon accent | Crate |
+| Shots left? | HUD ammo row in the accent (§ 7). No empty-weapon look: the tube disappears at 0 ammo | HUD |
+| Ready to fire? | An accent light on the muzzle cap fades out while a shot recharges and is full when ready | Helmet tube |
+
+| Weapon | Tube silhouette | Accent | Projectile |
+|---|---|---|---|
+| Rocket launcher | capped tube (§ 2) | sky `#8fd6ff` | cream body, ink nose, fins in the shooter colour (§ 1) |
+| Homing missiles (planned) | twin pod | lilac `#b58cff` | proposed: lilac hull + red blinking seeker light, shooter-colour fins (open, decided in the homing lap) |
+| Flamethrower (planned) | flared nozzle with a pilot flame | ember `#ff8a1f` | short stream of ember and yellow puffs |
+
+Rules:
+
+- Weapon accents never reuse a player body colour (§ 1 player hues are reserved). The tube shape is the first cue, so an accent close to a player hue (ember vs tomato) stays readable.
+- A new weapon adds a tube shape (`src/shared/utils/weaponTube.ts`) and one `weaponLooks` entry (`gamePalette.ts`). The crate, tube and ammo row follow from those two.
+- The helmet emblem always stays the player's; weapons never replace it.
 
 ---
 
