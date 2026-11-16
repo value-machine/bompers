@@ -208,5 +208,10 @@
     "title": "Game feel: hit flash, screen shake, helmet wobble",
     "description": "Render-only feedback the visual pass left out: hit flash on the victim's fill (back hits stronger), capped decaying screen shake (explosions, hard dive hits, tumble bounces), helmet spring wobble, render-only hit-stop; feel tunables; prefers-reduced-motion respected. No sim change. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "done"
+  },
+  {
+    "title": "Game juice design system",
+    "description": "Feedback round 2 § 4.2. New game elements keep arriving; define one consistent set of constants and guidelines for sounds, squash-and-stretch and visual feedback (extend DESIGN_LANGUAGE.md and the feel tunables; an agent skill or several, the lap decides) so every new element gets the same style and feel. Skill or rule files need the owner's yes. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "status": "done"
   }
 ]

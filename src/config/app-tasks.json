@@ -30,11 +30,6 @@
     "status": "to-do"
   },
   {
-    "title": "Game juice design system",
-    "description": "Feedback round 2 § 4.2. New game elements keep arriving; define one consistent set of constants and guidelines for sounds, squash-and-stretch and visual feedback (extend DESIGN_LANGUAGE.md and the feel tunables; an agent skill or several, the lap decides) so every new element gets the same style and feel. Skill or rule files need the owner's yes. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "In-game pause menu",
     "description": "Feedback round 2 § 2.2. During a match any player can open a pause menu (keyboard and gamepad Start) that fully freezes gameplay. In it: back to main menu, SFX on/off, music on/off, general options. Match settings stay lobby-only. Waits on gamepad support (Start button) and music (music toggle). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
     "status": "to-do"
