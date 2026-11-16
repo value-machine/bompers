@@ -93,6 +93,9 @@ const PAD_BUTTON = {
 /** A stick must pass this far to count as a menu direction (firmer than the play deadzone). */
 const MENU_STICK_THRESHOLD = 0.5;
 
+/** The move stick crouches when it points this far down and more down than sideways. */
+export const CROUCH_STICK_THRESHOLD = 0.5;
+
 export const EMPTY_PLAYER_INPUT: PlayerInput = {
   connected: false,
   moveX: 0,
@@ -100,6 +103,7 @@ export const EMPTY_PLAYER_INPUT: PlayerInput = {
   aimY: 0,
   jump: false,
   fire: false,
+  crouch: false,
 };
 
 const anyHeld = (held: ReadonlySet<string>, codes: readonly string[]): boolean =>
@@ -115,7 +119,8 @@ export function mapKeyboardInput(
 ): PlayerInput {
   const layout = KEYBOARD_LAYOUTS[layoutId];
   const moveX = axisFrom(anyHeld(held, layout.left), anyHeld(held, layout.right));
-  const aimY = axisFrom(anyHeld(held, layout.up), anyHeld(held, layout.down));
+  const down = anyHeld(held, layout.down);
+  const aimY = axisFrom(anyHeld(held, layout.up), down);
   return {
     connected: true,
     moveX,
@@ -123,6 +128,7 @@ export function mapKeyboardInput(
     aimY,
     jump: anyHeld(held, layout.jump),
     fire: anyHeld(held, layout.fire),
+    crouch: down,
   };
 }
 
@@ -151,8 +157,13 @@ export function mapGamepadInput(pad: GamepadSnapshot | null): PlayerInput {
     aimY: usesAimStick ? aim.y : move.y,
     jump: pressed(pad, PAD_BUTTON.a),
     fire: fireButtons.some((button) => pressed(pad, button)),
+    crouch: pressed(pad, PAD_BUTTON.dpadDown) || stickCrouches(move),
   };
 }
+
+/** Raw move stick (deadzone applied) points mostly down. */
+const stickCrouches = (move: { x: number; y: number }): boolean =>
+  move.y >= CROUCH_STICK_THRESHOLD && move.y > Math.abs(move.x);
 
 export interface RawInputState {
   heldKeys: ReadonlySet<string>;

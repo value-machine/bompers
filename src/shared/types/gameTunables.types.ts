@@ -77,6 +77,22 @@ export interface GameTunables {
     wallJumpSpeedY: number;
     /** Seconds after a wall-jump in which input steering is reduced (stops instant re-cling). */
     wallJumpControlLock: number;
+    /**
+     * Defensive crouch (grounded + crouch held): the blob stands still. Render-only numbers:
+     * body scale (anchored at the feet point) and the seconds to sink in / stand up. The feet
+     * keep their normal pose (owner, crouch D6).
+     */
+    crouch: {
+      bodySx: number;
+      bodySy: number;
+      easeSeconds: number;
+      /**
+       * Face while crouched, in mockup units (u = r / 30): the helmet sinks this far and the eyes
+       * rise this far, drawn under the dome so the rim covers about half of each eye.
+       */
+      helmetDrop: number;
+      eyeLift: number;
+    };
     /** Render-only squash and stretch (sx, sy pairs; seconds). */
     squash: {
       land: { sx: number; sy: number; seconds: number };
@@ -182,6 +198,8 @@ export interface GameTunables {
       contact: { front: number; back: number };
       blast: { front: number; back: number };
     };
+    /** Damage multiplier while the victim crouches, rounded down (0.5: 2 → 1, 1 → 0). */
+    crouchDamageScale: number;
     rocket: {
       /** Flight speed, units / s (straight line, no gravity). */
       speed: number;

@@ -1,27 +1,7 @@
 [
   {
-    "title": "Gamepad support and verification",
-    "description": "The owner has only verified keyboard play. Make up to 4 gamepads work end to end: join, move, aim (stick), jump, fire/dive, hot-plug and disconnect, sensible deadzones; then the owner verifies with real controllers. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
-    "title": "Uniform material system for level maps",
-    "description": "Feedback round 2 § 4.1. Externally generated HTML levels need unambiguous materials. Destructible and indestructible blocks share shape and base structure (the current purple ground) but differ clearly in colour (e.g. cardboard tint for destructible). Add material behaviours such as ice (slippery) and colour variants (ice, earth, cardboard, indestructible). Design question for the lap: decouple physical behaviour from colour (any colour on any behaviour, no LittleBigPlanet-style material explosion) while a player still recognises destructible vs slippery at a glance. No backwards compatibility needed: old levels may break; update the shipped levels, LEVEL_FORMAT.md and the level kit. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
-    "status": "to-do"
-  },
-  {
-    "title": "Game juice design system",
-    "description": "Feedback round 2 § 4.2. New game elements keep arriving; define one consistent set of constants and guidelines for sounds, squash-and-stretch and visual feedback (extend DESIGN_LANGUAGE.md and the feel tunables; an agent skill or several, the lap decides) so every new element gets the same style and feel. Skill or rule files need the owner's yes. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
-    "status": "to-do"
-  },
-  {
-    "title": "Finer headbutt directions (16 ways)",
-    "description": "Owner request 2026-11-16: the headbutt/dive can only aim in 45° steps (diveSim AIM_STEP = π/4, 8 ways); halve it to 22.5° (16 ways). Keyboard aim is 8-way from the keys, so the lap checks how keyboard players reach the in-between angles and asks the owner if a new control scheme is needed. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Material responses: blast power and spreading fire",
-    "description": "Owner direction 2026-11-16 (supersedes the earlier fire-only scope): one shared model where a source only says WHERE and HOW STRONG, and the material decides the result. (1) Blasts: a rocket picks only its explosion point and power (no fixed crater radius); each material's toughness decides the cutout. Blast power also drives the push on players (owner 2026-11-16): one scalable blast power from 0 (barely moves a player) through a small shove to sending them flying, so each weapon is tuned by its blast power alone. (2) Fire: a fire source at a point; fire spreads per tick outward in a circle from the origin, and each material decides whether and how it burns — so part of a block can burn while the rest does not (the terrain cell grid makes that per-cell, not a split entity). (3) A flamethrower weapon. (4) A hit reaction when a blob touches fire. Design with the owner, with examples, before building. Laps: blast-by-power refactor first, then fire + burn reaction, then flamethrower. Build waits on the uniform material system (#36). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "description": "Owner direction 2026-11-16 (supersedes the earlier fire-only scope): one shared model where a source only says WHERE and HOW STRONG, and the material decides the result. (1) Blasts: a rocket picks only its explosion point and power (no fixed crater radius); each material's toughness decides the cutout. Blast power also drives the push on players (owner 2026-11-16): one scalable blast power from 0 (barely moves a player) through a small shove to sending them flying, so each weapon is tuned by its blast power alone. (2) Fire: a fire source at a point; fire spreads per tick outward in a circle from the origin, and each material decides whether and how it burns — so part of a block can burn while the rest does not (the terrain cell grid makes that per-cell, not a split entity). (3) A flamethrower weapon. (4) A hit reaction when a blob touches fire. Design with the owner, with examples, before building. Laps: blast-by-power refactor first, then fire + burn reaction, then flamethrower. Build waits on the uniform material system (#36). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. Owner 2026-11-16: the material system (#36) is fine but its destructibility must match this paradigm — the breakable flag becomes toughness (stone/ice unbreakable), shared by level format, kit, catalog and the generation prompt. ",
     "status": "to-do"
   },
   {
@@ -36,12 +16,7 @@
   },
   {
     "title": "In-game pause menu",
-    "description": "Feedback round 2 § 2.2. During a match any player can open a pause menu (keyboard and gamepad Start) that fully freezes gameplay. In it: back to main menu, SFX on/off, music on/off, general options. Match settings stay lobby-only. Waits on gamepad support (Start button) and music (music toggle). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
-    "status": "to-do"
-  },
-  {
-    "title": "Crouch: defensive stance",
-    "description": "Feedback round 2 § 2.4. Holding down puts the blob in a fixed crouch: it cannot walk, sinks to the ground, feet nearly invisible. All incoming damage is halved; attacks or hazards that normally deal 1 damage deal 0. Waits on slower jumps and the feet animation lap (same player code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "description": "Feedback round 2 § 2.2. During a match any player can open a pause menu (keyboard and gamepad Start) that fully freezes gameplay. In it: back to main menu, SFX on/off, music on/off, general options. Match settings stay lobby-only. Must open on Escape (owner 2026-11-16) as well as any pad's Start. Gamepad support (#35) and music (#33) are on main. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
     "status": "to-do"
   },
   {
@@ -62,6 +37,11 @@
   {
     "title": "Loose terrain falls",
     "description": "Owner idea 2026-11-16 (future, not scheduled): terrain cut off from its support by a blast or burnt-out fuel breaks loose and falls. On the distance field: flood-fill the touched region for islands not connected to anchored material or the level edge, lift each island out as a contour polygon into a falling body (simple custom body or a physics library — a new dependency is an owner choice), and stamp it back into the field when it settles; falling chunks can hit players. Precedent: Noita (pixel islands become rigid bodies). Waits on the distance field (a2) and collision on the field (a3). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "to-do"
+  },
+  {
+    "title": "Weapon visuals: embellish",
+    "description": "Owner 2026-11-16 signed off the weapon and crate visual system (#38) as a work in progress: 'we will embellish further later on'. Polish pass on crates, helmet tubes, muzzle lights and HUD ammo once the owner names what to improve. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
   },
   {

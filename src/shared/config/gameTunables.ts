@@ -49,6 +49,9 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     wallJumpSpeedX: 420,
     wallJumpSpeedY: 720,
     wallJumpControlLock: 0.16,
+    // Defensive crouch (feedback round 2 § 2.4): sink fast, stand up a touch slower.
+    // Helmet down 4 u and eyes up 2 u: the rim lands on about the middle of the eyes (crouch D7).
+    crouch: { bodySx: 1.18, bodySy: 0.68, easeSeconds: 0.07, helmetDrop: 4, eyeLift: 2 },
     squash: {
       land: { sx: 1.25, sy: 0.75, seconds: 0.18 },
       landFullImpact: 1100,
@@ -100,6 +103,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     eventRetentionSeconds: 1,
     // Body hits from behind hurt more; explosions stay exactly 1 chunk from any side (GDD § 3).
     hitDamage: { contact: { front: 1, back: 2 }, blast: { front: 1, back: 1 } },
+    // Crouching halves damage, rounded down: 2 → 1, 1 → 0 (feedback round 2 § 2.4, crouch D1).
+    crouchDamageScale: 0.5,
     // 6 rockets, no time limit: the count stays legible without a HUD timer (combat D5).
     rocket: {
       speed: 950,
