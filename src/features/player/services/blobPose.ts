@@ -101,13 +101,11 @@ export function stepCrouchBlend(
       : Math.max(target, anim.crouchBlend - step);
 }
 
-/** Crouch pose factors at the anim's blend: body (sx, sy) and feet scale; all 1 when standing. */
+/** Crouch pose factors at the anim's blend: body (sx, sy); 1 when standing. The feet stay as they are. */
 function crouchScale(anim: BlobAnim, crouch: CrouchTunables | undefined) {
   const k = crouch ? smoothstep(anim.crouchBlend) : 0;
   const lerp = (to: number): number => 1 + (to - 1) * k;
-  return crouch
-    ? { sx: lerp(crouch.bodySx), sy: lerp(crouch.bodySy), feet: lerp(crouch.feetScale) }
-    : { sx: 1, sy: 1, feet: 1 };
+  return crouch ? { sx: lerp(crouch.bodySx), sy: lerp(crouch.bodySy) } : { sx: 1, sy: 1 };
 }
 
 /** Back-out ease 0 → 1 with a small overshoot past 1. */
@@ -190,7 +188,7 @@ export function blobShadow(player: PlayerState): BlobShadow | null {
 
 /**
  * The pose to draw this frame. Call `noteBlobEvents` (and `stepCrouchBlend` when `crouch` is
- * given) first. The crouch sinks the body and shrinks the feet to almost nothing.
+ * given) first. The crouch sinks the body (head included); the feet keep their pose.
  */
 export function blobPose(
   anim: BlobAnim,
@@ -204,8 +202,8 @@ export function blobPose(
   return {
     bodySx: (body.sx / stretch) * crouched.sx,
     bodySy: body.sy * stretch * crouched.sy,
-    feetSx: (1 + (feet.sx - 1) * FEET_SQUASH_GAIN) * crouched.feet,
-    feetSy: Math.max(0.3, 1 + (feet.sy - 1) * FEET_SQUASH_GAIN) * crouched.feet,
+    feetSx: 1 + (feet.sx - 1) * FEET_SQUASH_GAIN,
+    feetSy: Math.max(0.3, 1 + (feet.sy - 1) * FEET_SQUASH_GAIN),
     shadow: blobShadow(player),
   };
 }

@@ -79,13 +79,12 @@ export interface GameTunables {
     wallJumpControlLock: number;
     /**
      * Defensive crouch (grounded + crouch held): the blob stands still. Render-only numbers:
-     * body scale (anchored at the feet point), feet scale (near 0 = hidden) and the seconds to
-     * sink in / stand up.
+     * body scale (anchored at the feet point) and the seconds to sink in / stand up. The feet
+     * keep their normal pose (owner, crouch D6).
      */
     crouch: {
       bodySx: number;
       bodySy: number;
-      feetScale: number;
       easeSeconds: number;
     };
     /** Render-only squash and stretch (sx, sy pairs; seconds). */

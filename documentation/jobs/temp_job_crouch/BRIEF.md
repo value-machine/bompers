@@ -8,7 +8,7 @@ Holding down does nothing on the ground. The owner wants a defensive crouch: hol
 
 ## Success check
 
-- Grounded + down held: the blob stops (no walking), sinks (body squashed toward the ground) and the feet nearly vanish; release → it stands back up.
+- Grounded + down held: the blob stops (no walking), sinks (body and head squashed toward the ground) while the feet stay as they are (owner, D6); release → it stands back up.
 - While crouching every hit's damage is `floor(damage × 0.5)`: contact back 2 → 1, contact front 1 → 0, blast 1 → 0.
 - Aim, fire, jump and the dive work as before (down + fire on the ground still aims down).
 

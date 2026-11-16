@@ -50,7 +50,7 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     wallJumpSpeedY: 720,
     wallJumpControlLock: 0.16,
     // Defensive crouch (feedback round 2 § 2.4): sink fast, stand up a touch slower.
-    crouch: { bodySx: 1.18, bodySy: 0.68, feetScale: 0.12, easeSeconds: 0.07 },
+    crouch: { bodySx: 1.18, bodySy: 0.68, easeSeconds: 0.07 },
     squash: {
       land: { sx: 1.25, sy: 0.75, seconds: 0.18 },
       landFullImpact: 1100,
