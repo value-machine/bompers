@@ -263,5 +263,10 @@
     "title": "Uniform material system for level maps",
     "description": "Feedback round 2 § 4.1. Externally generated HTML levels need unambiguous materials. Destructible and indestructible blocks share shape and base structure (the current purple ground) but differ clearly in colour (e.g. cardboard tint for destructible). Add material behaviours such as ice (slippery) and colour variants (ice, earth, cardboard, indestructible). Design question for the lap: decouple physical behaviour from colour (any colour on any behaviour, no LittleBigPlanet-style material explosion) while a player still recognises destructible vs slippery at a glance. No backwards compatibility needed: old levels may break; update the shipped levels, LEVEL_FORMAT.md and the level kit. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
     "status": "done"
+  },
+  {
+    "title": "Material collision sounds",
+    "description": "Follow-up from the sound lap: give the terrain materials real impact/destroy sounds (the catalog's thud and crumble are still silent) and use the saved dive-impact spares. Same process as the SFX lap: palette in DESIGN_LANGUAGE.md § 8, small test batch with explicit durations, owner picks on an artifact, then wire through the content catalog (pnpm level-kit:sync). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md.  Waits on the uniform material system. Also run the round-2 audio experiment: swap the headbutt-into-wall sound with the jump-landing sound and let the owner judge which fits.",
+    "status": "done"
   }
 ]
