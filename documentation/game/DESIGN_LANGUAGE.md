@@ -58,7 +58,8 @@ Rules:
 | Rocket flame | `#ffb21a` |
 | Smoke puffs (trail, landing dust) | `#ffffff`, ink edge at 30–60 % alpha |
 | Hit flash | `#ffffff` |
-| Weapon pickup crate | `#fff4e2` with a `#8fd6ff` ring |
+| Homing missile body / seeker light / trail | `#c9a7ff` / `#e0103f` (blinks 6 Hz) / `#d9c4ff`; fins in the shooter's body colour |
+| Weapon pickup crate | `#fff4e2` with a `#8fd6ff` ring; homing launcher: `#b08cff` ring and twin-pod mark |
 | Point collectible (falls from the roof) | `#ff8fc8` bubblegum star |
 | Timer warning (last 10 s) | `#ff8a1f` |
 

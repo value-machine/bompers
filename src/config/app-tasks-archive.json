@@ -228,5 +228,10 @@
     "title": "Feet animation: rotation, dynamics and wall-facing feet",
     "description": "Feedback round 2 § 2.5 and § 3. The feet only move straight up and down; they lost the rotation, dynamics and feel of the pre-restyle version. Bring back rotation and dynamic motion (earlier ideas like taller sprites or changed collision are dropped). While wall-sliding and wall-jumping, the feet turn to face the wall surface. Render-only. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
     "status": "done"
+  },
+  {
+    "title": "Homing missiles (dodgeable)",
+    "description": "Owner request 2026-11-16. A homing-missile weapon: missiles track a target but are dodgeable, never a guaranteed hit (limited turn rate, lock delay, fuel/lifetime or similar — the lap proposes the dodge rule). Picked up from crates like the rocket launcher. A separate weapon from the normal rocket launcher (owner 2026-11-16): the missile itself looks different — another colour or a red blinking part — and its crate looks different too. Uses the weapon visual system once defined (placeholder until then). Waits on slower jumps and rocket recoil (#31, same rocket code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md once #34 lands. ",
+    "status": "done"
   }
 ]
