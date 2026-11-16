@@ -111,7 +111,7 @@ Never draw gloss on a non-slippery piece, even for decoration. A new behaviour t
   - Then draw the coloured parts on top with no stroke.
   - Only the outer half of the ink stroke stays visible, which is the silhouette line. That is two passes of the same shapes and no filters.
   - Cache the shape geometry per pose if needed.
-- **Width in world units (visible part):** characters 3.5, terrain slab 3.5 (every material), rockets and pickups 2, effect stars 3. A breakable slab keeps its outer line next to standing terrain; crater edges are curves with no ink line.
+- **Width in world units (visible part):** characters 3.5, terrain slab 3.5 (every material), rockets and pickups 2, effect stars 3. The outline traces the real shape everywhere: crater rims and every face a blast exposes (also where a crater cuts a piece in two) get the same ink line as authored edges, one continuous outline around what is left (owner, terrain-curves D7).
 - **Zoom rule:** the on-screen line is `clamp(worldWidth × zoom, minPx, maxPx)`. Convert back to world width per frame (`screenWidth / zoom`) when drawing. When the camera zooms far out, the line stays readable instead of shrinking to a hairline; zoomed in, it doesn't turn into a thick border.
 
   | Line | world width | minPx | maxPx |

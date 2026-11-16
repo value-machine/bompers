@@ -18,7 +18,9 @@ import {
  * unbreakable terrain, only its colour differs (owner, terrain-curves D5). Back to front:
  * - **Ink:** style E silhouette — every slab stroked at twice the outline width, fills on top, so
  *   one outer line shows. Breakable slabs' ink is clipped by the standing-terrain mask grown by the
- *   outline width. Redrawn when the zoom-clamped width changes step.
+ *   outline width; every edge a blast made (crater rims, cut faces) gets the same width of ink from
+ *   the changed shape grown by the width, so the outline traces the real shape (owner,
+ *   terrain-curves D7). Redrawn when the zoom-clamped width changes step.
  * - **Fills:** unbreakable slabs (with ice gloss) drawn once; breakable slabs clipped by a mask of
  *   the breakable terrain still standing (rebuilt when the sim marks chunks dirty): plain rects
  *   where no blast has been, so authored corners stay sharp, and the distance field's contour
@@ -29,6 +31,8 @@ export interface TerrainView {
   solidInk: Graphics;
   solidFill: Graphics;
   breakableInk: Graphics;
+  /** Ink along every edge a blast made (crater rims, cut faces), under the fills. */
+  rimInk: Graphics;
   breakableFill: Graphics;
   masks: { cells: Graphics; ink: Graphics };
   solids: readonly SlabPiece[];
@@ -58,6 +62,7 @@ function createLayers() {
   const solidInk = new Graphics({ label: "solid-ink" });
   const solidFill = new Graphics({ label: "solid-fill" });
   const breakableInk = new Graphics({ label: "breakable-ink" });
+  const rimInk = new Graphics({ label: "breakable-rim-ink" });
   const breakableFill = new Graphics({ label: "breakable-fill" });
   const masks = {
     cells: new Graphics({ label: "breakable-cell-mask" }),
@@ -65,9 +70,9 @@ function createLayers() {
   };
   breakableFill.mask = masks.cells;
   breakableInk.mask = masks.ink;
-  container.addChild(solidInk, breakableInk, solidFill, breakableFill);
+  container.addChild(solidInk, breakableInk, rimInk, solidFill, breakableFill);
   container.addChild(masks.cells, masks.ink);
-  return { container, solidInk, solidFill, breakableInk, breakableFill, masks };
+  return { container, solidInk, solidFill, breakableInk, rimInk, breakableFill, masks };
 }
 
 export function createTerrainView(arena: {
@@ -101,10 +106,14 @@ export function syncTerrainView(view: TerrainView, grid: TerrainGrid, zoom: numb
   }
   const terrainChanged = takeDirtyChunks(grid).length > 0;
   if (stepChanged || terrainChanged) {
-    const any = drawBreakableMasks(grid, view.masks, {
-      initial: view.initialDistance,
-      grow: view.inkWidth,
-    });
+    const any = drawBreakableMasks(
+      grid,
+      { ...view.masks, rimInk: view.rimInk },
+      {
+        initial: view.initialDistance,
+        grow: view.inkWidth,
+      }
+    );
     view.breakableFill.visible = any;
     view.breakableInk.visible = any;
   }

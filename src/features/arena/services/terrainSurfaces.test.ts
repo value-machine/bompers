@@ -39,7 +39,7 @@ const covers = (mask: MaskShapes, x: number, y: number): boolean =>
 describe("breakableMask", () => {
   it("should cover the whole authored slab with plain rects when no blast has touched it", () => {
     const grid = buildTerrainFromLevel(level);
-    const mask = breakableMask(grid, grid.distance.slice(), 0);
+    const mask = breakableMask(grid, { initial: grid.distance.slice(), grow: 0 });
     expect(mask.pieces).toEqual([]);
     // Authored corners (50, 101) and (350, 161) sit off the 4-unit grid: still covered.
     for (const [x, y] of [
@@ -56,7 +56,7 @@ describe("breakableMask", () => {
     const initial = grid.distance.slice();
     const centre = { x: 200, y: 101 };
     clearCrater(grid, { ...centre, reach: 34, shape: "round" });
-    const mask = breakableMask(grid, initial, 0);
+    const mask = breakableMask(grid, { initial, grow: 0 });
     expect(mask.pieces.length).toBeGreaterThan(0);
     // Walk rays down into the slab: covered exactly where the point lies outside the rim.
     for (let deg = 20; deg <= 160; deg += 7) {
@@ -73,8 +73,24 @@ describe("breakableMask", () => {
     const grid = buildTerrainFromLevel(level);
     const initial = grid.distance.slice();
     clearCrater(grid, { x: 200, y: 101, reach: 34, shape: "round" });
-    const ink = breakableMask(grid, initial, 3);
+    const ink = breakableMask(grid, { initial, grow: 3 });
     expect(covers(ink, 200, 101 + 34 - 2)).toBe(true);
     expect(covers(ink, 200, 101 + 34 - 4)).toBe(false);
+  });
+
+  it("should trace an ink band along every rim but none along untouched edges when the rim ink is asked for", () => {
+    const grid = buildTerrainFromLevel(level);
+    const initial = grid.distance.slice();
+    // Two overlapping craters, the second one cutting the slab through to its bottom.
+    clearCrater(grid, { x: 150, y: 101, reach: 34, shape: "round" });
+    clearCrater(grid, { x: 180, y: 140, reach: 34, shape: "round" });
+    const rim = breakableMask(grid, { initial, grow: 3, onlyTouched: true });
+    // Ink just inside the hole along the first rim, and on both cut faces of the split slab.
+    expect(covers(rim, 150 + Math.cos(2.4) * 32, 101 + Math.sin(2.4) * 32)).toBe(true);
+    expect(covers(rim, 180 - 32, 140)).toBe(true);
+    expect(covers(rim, 180 + 32, 140)).toBe(true);
+    // Never far into the hole, and nothing along the untouched far end of the slab.
+    expect(covers(rim, 180, 140)).toBe(false);
+    expect(covers(rim, 345, 130)).toBe(false);
   });
 });

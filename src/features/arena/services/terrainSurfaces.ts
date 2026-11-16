@@ -113,6 +113,8 @@ interface MaskPass {
   grid: TerrainGrid;
   initial: Float32Array;
   grow: number;
+  /** Skip untouched cells: only the shape a blast changed (the rim ink, terrain-curves D7). */
+  onlyTouched: boolean;
 }
 
 const sampleIndex = (grid: TerrainGrid, cx: number, cy: number): number =>
@@ -156,7 +158,8 @@ function classifyCell(pass: MaskPass, cx: number, cy: number): CellCover {
     return index >= 0 && grid.distance[index] !== initial[index];
   });
   if (!touched) {
-    return corners.some(({ x, y }) => isBreakableSample(grid, x, y)) ? "fixed" : "none";
+    const breakable = corners.some(({ x, y }) => isBreakableSample(grid, x, y));
+    return breakable && !pass.onlyTouched ? "fixed" : "none";
   }
   const values = corners.map(({ x, y }) => maskValue(pass, x, y));
   if (values.every((v) => v > 0)) return "field";
@@ -230,8 +233,12 @@ function maskRow(shapes: MaskShapes, pass: MaskPass, cy: number): void {
  * own path draws the corner) and contour pieces along every crater rim. `grow` widens it by that
  * many units (the ink mask: field + width, so the outer line survives next to standing terrain).
  */
-export function breakableMask(grid: TerrainGrid, initial: Float32Array, grow: number): MaskShapes {
-  const pass: MaskPass = { grid, initial, grow };
+export function breakableMask(
+  grid: TerrainGrid,
+  options: { initial: Float32Array; grow: number; onlyTouched?: boolean }
+): MaskShapes {
+  const { initial, grow } = options;
+  const pass: MaskPass = { grid, initial, grow, onlyTouched: options.onlyTouched === true };
   const shapes: MaskShapes = { rects: [], pieces: [] };
   for (let cy = -1; cy < grid.heightCells; cy += 1) maskRow(shapes, pass, cy);
   return shapes;
@@ -244,19 +251,22 @@ export function breakableMask(grid: TerrainGrid, initial: Float32Array, grow: nu
  */
 export function drawBreakableMasks(
   grid: TerrainGrid,
-  masks: { cells: Graphics; ink: Graphics },
+  layers: { cells: Graphics; ink: Graphics; rimInk: Graphics },
   options: { initial: Float32Array; grow: number }
 ): boolean {
-  masks.cells.clear();
-  masks.ink.clear();
-  const draw = (g: Graphics, shapes: MaskShapes): boolean => {
+  const draw = (g: Graphics, shapes: MaskShapes, color: number): boolean => {
+    g.clear();
     for (const r of shapes.rects) g.rect(r.x, r.y, r.w, r.h);
     for (const piece of shapes.pieces) g.poly(piece);
     const any = shapes.rects.length > 0 || shapes.pieces.length > 0;
-    if (any) g.fill(0xffffff);
+    if (any) g.fill(color);
     return any;
   };
-  const any = draw(masks.cells, breakableMask(grid, options.initial, 0));
-  draw(masks.ink, breakableMask(grid, options.initial, options.grow));
+  const { initial, grow } = options;
+  const any = draw(layers.cells, breakableMask(grid, { initial, grow: 0 }), 0xffffff);
+  draw(layers.ink, breakableMask(grid, { initial, grow }), 0xffffff);
+  // Rim ink: the changed shape grown by the outline width, in ink, under the fills, so every edge
+  // a blast made gets the same outline as an authored edge (owner, terrain-curves D7).
+  draw(layers.rimInk, breakableMask(grid, { initial, grow, onlyTouched: true }), GAME_PALETTE.ink);
   return any;
 }
