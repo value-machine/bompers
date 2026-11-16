@@ -7,7 +7,6 @@ export type {
   LevelSettings,
   NormalizedLevel,
   TerrainPiece,
-  TerrainRole,
   TerrainShape,
 } from "@/features/level/types/levelDefinition.types";
 export {

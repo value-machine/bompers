@@ -3,20 +3,20 @@
   <head>
     <meta charset="utf-8" />
     <title>Start Arena — Bompers level</title>
-    <link rel="stylesheet" href="https://bompers.tom-fab.workers.dev/level-kit/v1/preview.css" />
-    <script src="https://bompers.tom-fab.workers.dev/level-kit/v1/preview.js" defer></script>
+    <link rel="stylesheet" href="https://bompers.tom-fab.workers.dev/level-kit/v2/preview.css" />
+    <script src="https://bompers.tom-fab.workers.dev/level-kit/v2/preview.js" defer></script>
   </head>
   <body>
     <svg
       id="level"
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 1920 1440"
-      data-level-format="1"
+      data-level-format="2"
       data-level-id="start-arena"
       data-title="Start Arena"
       data-author="Bompers team"
       data-agent="claude"
-      data-description="The start map: one floating main platform with two thin plateaus and a top perch above it, open side edges, no hazards. Dirt crusts, edges and plateaus blast away; a stone core always stays."
+      data-description="The start map: one floating main platform with two thin plateaus and a top perch above it, open side edges, no hazards. Earth crusts and edges and cardboard plateaus blast away; a stone core always stays and the top perch has an ice heart."
       data-cell-size="8"
       data-gravity="1"
       style="display: block; width: 100%; height: auto; background: #cfeaf7"
@@ -46,12 +46,12 @@
         stroke-dasharray="16 8"
       />
 
-      <!-- Terrain. Cell 8; plum = stone (indestructible), honey = dirt (destructible). Platform wins where shapes overlap. -->
+      <!-- Terrain. Cell 8. data-material sets behaviour (stone solid, earth/cardboard breakable, ice slippery); data-color only looks. Unbreakable wins where shapes overlap. -->
       <g id="terrain" stroke="#2b1d3a" stroke-width="5" stroke-linejoin="round">
-        <!-- Main platform: stone core under every spawn, dirt everywhere a blast should bite. The dirt edges have a 128-unit vertical outer face: the wall-jump spot for recovering from a fall. -->
+        <!-- Main platform: stone core under every spawn, earth everywhere a blast should bite. The earth edges have a 128-unit vertical outer face: the wall-jump spot for recovering from a fall. -->
         <rect
           id="main-core"
-          data-role="platform"
+          data-role="terrain"
           data-material="stone"
           data-label="Main core"
           x="576"
@@ -62,96 +62,99 @@
         />
         <polygon
           id="main-underside"
-          data-role="platform"
+          data-role="terrain"
           data-material="stone"
           points="576,1088 1344,1088 1216,1152 704,1152"
           fill="#5a3f7a"
         />
         <rect
           id="main-crust"
-          data-role="destructible"
-          data-material="dirt"
+          data-role="terrain"
+          data-material="earth"
           data-label="Main crust"
           x="480"
           y="960"
           width="960"
           height="32"
-          fill="#f4ad55"
+          fill="#c4673f"
         />
         <polygon
           id="main-edge-left"
-          data-role="destructible"
-          data-material="dirt"
+          data-role="terrain"
+          data-material="earth"
           data-label="Left edge"
           points="480,992 576,992 576,1136 480,1088"
-          fill="#f4ad55"
+          fill="#c4673f"
         />
         <polygon
           id="main-edge-right"
-          data-role="destructible"
-          data-material="dirt"
+          data-role="terrain"
+          data-material="earth"
           data-label="Right edge"
           points="1344,992 1440,992 1440,1088 1344,1136"
-          fill="#f4ad55"
+          fill="#c4673f"
         />
         <polygon
           id="main-keel"
-          data-role="destructible"
-          data-material="dirt"
+          data-role="terrain"
+          data-material="earth"
           data-label="Keel"
           points="704,1152 1216,1152 1056,1216 864,1216"
-          fill="#f4ad55"
+          fill="#c4673f"
         />
 
-        <!-- Tier 1: two thin dirt plateaus, 144 above the main surface (one jump; apex ≈ 250). -->
+        <!-- Tier 1: two thin cardboard plateaus, 144 above the main surface (one jump; apex ≈ 250). -->
         <rect
           id="plateau-left"
-          data-role="destructible"
-          data-material="dirt"
+          data-role="terrain"
+          data-material="cardboard"
+          data-color="cardboard"
           data-label="Left plateau"
           x="640"
           y="816"
           width="192"
           height="16"
-          fill="#f4ad55"
+          fill="#c99a62"
         />
         <rect
           id="plateau-right"
-          data-role="destructible"
-          data-material="dirt"
+          data-role="terrain"
+          data-material="cardboard"
+          data-color="rose"
           data-label="Right plateau"
           x="1088"
           y="816"
           width="192"
           height="16"
-          fill="#f4ad55"
+          fill="#c95a86"
         />
 
-        <!-- Tier 2: the top perch, 144 above tier 1 (288 above the main surface: climb a plateau, wall-jump or rocket-jump): dirt wings around a stone heart. -->
+        <!-- Tier 2: the top perch, 144 above tier 1 (288 above the main surface: climb a plateau, wall-jump or rocket-jump): earth wings around an ice heart (slippery, unbreakable). -->
         <rect
           id="perch-wings"
-          data-role="destructible"
-          data-material="dirt"
+          data-role="terrain"
+          data-material="earth"
           data-label="Top perch"
           x="864"
           y="672"
           width="192"
           height="16"
-          fill="#f4ad55"
+          fill="#c4673f"
         />
         <rect
           id="perch-heart"
-          data-role="platform"
-          data-material="stone"
+          data-role="terrain"
+          data-material="ice"
+          data-color="frost"
           x="912"
           y="672"
           width="96"
           height="16"
-          fill="#5a3f7a"
+          fill="#a8cfe6"
         />
       </g>
 
-      <!-- Spawns: centre 24 above the surface, each above the stone core (never over a void, even when the dirt is gone). -->
+      <!-- Spawns: centre 24 above the surface, each above the stone core (never over a void, even when the earth is gone). -->
       <g id="spawns" stroke="#2b1d3a" stroke-width="3">
         <circle
           id="spawn-main-left"

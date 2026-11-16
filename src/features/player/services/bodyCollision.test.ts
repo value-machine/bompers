@@ -13,8 +13,8 @@ const level: LevelDefinition = {
   settings: { cellSize: 8, gravity: 1 },
   worldSize: { w: 800, h: 400 },
   terrain: [
-    { shape: { type: "rect", x: 0, y: 320, w: 800, h: 32 }, role: "platform", materialId: "stone" },
-    { shape: { type: "rect", x: 400, y: 0, w: 16, h: 320 }, role: "platform", materialId: "stone" },
+    { shape: { type: "rect", x: 0, y: 320, w: 800, h: 32 }, materialId: "stone" },
+    { shape: { type: "rect", x: 400, y: 0, w: 16, h: 320 }, materialId: "stone" },
   ],
   spawns: [],
   drops: [],

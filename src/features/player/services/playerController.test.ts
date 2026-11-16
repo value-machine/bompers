@@ -12,7 +12,7 @@ import type { PlayerState } from "@/features/player/types/player.types";
 // (y 0–320). Ledge platform x 80–240, top y = 160.
 const stone = (rect: Rect) => ({
   shape: { type: "rect" as const, ...rect },
-  role: "platform" as const,
+
   materialId: "stone",
 });
 
@@ -45,9 +45,10 @@ interface Sim {
 
 const createSim = (
   start: { x: number; y: number },
-  tunables: GameTunables = DEFAULT_GAME_TUNABLES
+  tunables: GameTunables = DEFAULT_GAME_TUNABLES,
+  world: LevelDefinition = level
 ): Sim => {
-  const terrain = buildTerrainFromLevel(level);
+  const terrain = buildTerrainFromLevel(world);
   const player = createPlayer(0, start, tunables);
   const step = (patch: Partial<PlayerInput> = {}, steps = 1): void => {
     for (let i = 0; i < steps; i += 1) {
@@ -128,6 +129,26 @@ describe("playerController — horizontal feel", () => {
     expect(sim.player.vx).toBeGreaterThan(0);
     sim.step({}, 2);
     expect(sim.player.vx).toBe(0);
+  });
+
+  it("should keep sliding after run is released when standing on ice", () => {
+    // Ice overlays the floor at x 0–400 (later unbreakable piece wins); the blob starts at x 300.
+    const icy = {
+      ...level,
+      terrain: [...level.terrain, { ...stone({ x: 0, y: 320, w: 400, h: 32 }), materialId: "ice" }],
+    };
+    const onIce = createSim({ x: 300, y: FLOOR_Y - 40 }, DEFAULT_GAME_TUNABLES, icy);
+    onIce.step({}, 120);
+    const onStone = grounded(300);
+    const released = [onIce, onStone].map((sim) => {
+      sim.step({ moveX: -1 }, 40);
+      const before = sim.player.vx;
+      sim.step({}, Math.ceil(P.runSpeed / P.groundDecel / dt) + 1);
+      return { before, after: sim.player.vx };
+    });
+    expect(released[1]!.after).toBe(0);
+    expect(released[0]!.before).toBeLessThan(0);
+    expect(released[0]!.after).toBeLessThan(released[0]!.before * 0.5);
   });
 
   it("should reverse with the stronger turn accel when the direction flips", () => {

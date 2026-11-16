@@ -5,6 +5,7 @@ import {
   type CatalogEntryByKind,
   type ContentKind,
 } from "@/features/content-catalog/api/contentCatalogApi";
+import { terrainSwatch, toCssColor } from "@/shared/config/gamePalette";
 
 /**
  * The public level kit's generated parts, built from the content catalog and level defaults in
@@ -12,31 +13,51 @@ import {
  * and fails CI when the files lag behind (`pnpm level-kit:check`). Pure: no file access here.
  */
 const KIT_DIR = `public/level-kit/v${LEVEL_FORMAT_VERSION}`;
-const KINDS: readonly ContentKind[] = ["material", "effect", "sound", "behavior", "item"];
+const KINDS: readonly ContentKind[] = ["material", "color", "effect", "sound", "behavior", "item"];
 const CATALOG_IDS_BLOCK = "catalog-ids";
 
-/** The kit's catalog.json: `exportCatalog()` (format version, defaults, IDs per kind) as is. */
+/**
+ * The kit's catalog.json: `exportCatalog()` (format version, defaults, IDs per kind), with each
+ * colour's RGB from the game palette so the preview paints terrain the way the game does.
+ */
 export function buildKitCatalog(): Record<string, unknown> {
+  const catalog = exportCatalog();
   return {
     $comment:
       "GENERATED from the content catalog in the game code by `pnpm level-kit:sync`. Do not edit. Spec: documentation/game/LEVEL_FORMAT.md.",
-    ...exportCatalog(),
+    ...catalog,
+    color: catalog.color.map((entry) => {
+      const swatch = terrainSwatch(entry.id);
+      return { ...entry, fill: toCssColor(swatch.fill), lip: toCssColor(swatch.lip) };
+    }),
   };
 }
 
 const roleDefaults = (kind: ContentKind, id: string): string[] => {
-  const roles =
-    kind === "material"
-      ? Object.entries(CATALOG_DEFAULTS.material).filter(([, m]) => m === id)
-      : kind === "item"
-        ? Object.entries(CATALOG_DEFAULTS.items).filter(([, v]) => [v].flat().includes(id))
-        : [];
-  return roles.map(([role]) => `default for ${role}`);
+  if (kind === "material") return CATALOG_DEFAULTS.material === id ? ["default for terrain"] : [];
+  if (kind === "color") {
+    const materials = exportCatalog().material.filter((m) => m.defaultColor === id);
+    return materials.map((m) => `default for ${m.id}`);
+  }
+  if (kind !== "item") return [];
+  return Object.entries(CATALOG_DEFAULTS.items)
+    .filter(([, v]) => [v].flat().includes(id))
+    .map(([role]) => `default for ${role}`);
 };
+
+const SURFACE_NOTES = {
+  plain: "smooth slab",
+  breakable: "seam grid",
+  ice: "gloss streaks + white rim",
+} as const;
 
 function entryNotes<K extends ContentKind>(kind: K, entry: CatalogEntryByKind[K]): string {
   const facts: string[] = [];
-  if ("destructible" in entry) facts.push(entry.destructible ? "destructible" : "indestructible");
+  if ("destructible" in entry) {
+    facts.push(entry.destructible ? "breakable" : "unbreakable");
+    if (entry.friction < 1) facts.push("slippery");
+    facts.push(`looks: ${SURFACE_NOTES[entry.surface]}`);
+  }
   if ("effect" in entry) facts.push(`effect \`${entry.effect}\`, sound \`${entry.sound}\``);
   if ("use" in entry) facts.push(`use: ${entry.use}`);
   return [...facts, ...roleDefaults(kind, entry.id)].join(", ");

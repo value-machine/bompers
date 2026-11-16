@@ -7,13 +7,15 @@ import type { Rect, Shape2D, Vec2 } from "@/shared/types/gameGeometry.types";
  */
 export type TerrainShape = Shape2D;
 
-/** platform = indestructible terrain; destructible = blasts clear it. */
-export type TerrainRole = "platform" | "destructible";
-
+/**
+ * One terrain shape. The material sets behaviour (breakable, friction, sound, surface pattern);
+ * the colour is looks only, independent of the material (LEVEL_FORMAT § 6).
+ */
 export interface TerrainPiece {
   shape: TerrainShape;
-  role: TerrainRole;
   materialId: string;
+  /** Catalog colour ID; the normaliser fills the material's default when absent. */
+  colorId?: string;
   /** Effect when cells of this piece are destroyed (default: the material's). */
   effectId?: string;
   /** Sound on destroy / impact (default: the material's). */

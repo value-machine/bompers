@@ -32,7 +32,7 @@ describe("terrainRaster", () => {
       levelWith([
         {
           shape: { type: "rect", x: 10, y: 20, w: 30, h: 10 },
-          role: "platform",
+
           materialId: "stone",
         },
       ])
@@ -43,9 +43,7 @@ describe("terrainRaster", () => {
 
   it("should fill a circle by cell centres", () => {
     const rows = filled(
-      levelWith([
-        { shape: { type: "circle", cx: 50, cy: 50, r: 10 }, role: "platform", materialId: "stone" },
-      ])
+      levelWith([{ shape: { type: "circle", cx: 50, cy: 50, r: 10 }, materialId: "stone" }])
     );
     expect(rows[4]).toBe("....##....");
     expect(rows[5]).toBe("....##....");
@@ -61,52 +59,50 @@ describe("terrainRaster", () => {
         { x: 0, y: 0 },
       ],
     };
-    const rows = filled(levelWith([{ shape: triangle, role: "platform", materialId: "stone" }]));
+    const rows = filled(levelWith([{ shape: triangle, materialId: "stone" }]));
     expect(rows[0]).toBe("..........");
     // Cell 9 sits exactly on the hypotenuse (centre 95,95): on the edge is not inside.
     expect(rows[9]).toBe("#########.");
     expect(rows[5]).toBe("#####.....");
   });
 
-  it("should keep platform cells when a later destructible piece overlaps them", () => {
+  it("should keep unbreakable cells when a later breakable piece overlaps them", () => {
     const grid = buildTerrainFromLevel(
       levelWith([
         {
           shape: { type: "rect", x: 0, y: 0, w: 20, h: 10 },
-          role: "platform",
+
           materialId: "stone",
         },
         {
           shape: { type: "rect", x: 0, y: 0, w: 100, h: 10 },
-          role: "destructible",
-          materialId: "dirt",
+
+          materialId: "earth",
         },
       ])
     );
     expect(getCellInfo(grid, 0, 0)).toMatchObject({ materialId: "stone", destructible: false });
     expect(getCellInfo(grid, 5, 0)).toMatchObject({
-      materialId: "dirt",
+      materialId: "earth",
+      colorId: "clay",
       destructible: true,
-      lookToken: "dirt",
+      surface: "breakable",
     });
   });
 
-  it("should let the later piece set the material when two pieces share a role", () => {
+  it("should let the later piece set material and colour when both are unbreakable", () => {
     const grid = buildTerrainFromLevel(
       levelWith([
         {
           shape: { type: "rect", x: 0, y: 0, w: 100, h: 10 },
-          role: "destructible",
-          materialId: "dirt",
-        },
-        {
-          shape: { type: "rect", x: 0, y: 0, w: 20, h: 10 },
-          role: "destructible",
           materialId: "stone",
+          colorId: "rose",
         },
+        { shape: { type: "rect", x: 0, y: 0, w: 20, h: 10 }, materialId: "ice", colorId: "moss" },
       ])
     );
-    expect(getCellInfo(grid, 0, 0)).toMatchObject({ materialId: "stone", destructible: false });
+    expect(getCellInfo(grid, 0, 0)).toMatchObject({ materialId: "ice", colorId: "moss" });
+    expect(getCellInfo(grid, 5, 0)).toMatchObject({ materialId: "stone", colorId: "rose" });
   });
 
   it("should fill a self-overlapping polygon's overlap by the non-zero rule", () => {
@@ -123,9 +119,7 @@ describe("terrainRaster", () => {
       { x: 40, y: 60 },
       { x: 40, y: 40 },
     ];
-    const rows = filled(
-      levelWith([{ shape: { type: "polygon", points }, role: "platform", materialId: "stone" }])
-    );
+    const rows = filled(levelWith([{ shape: { type: "polygon", points }, materialId: "stone" }]));
     expect(rows[4]).toBe("##########");
   });
 });

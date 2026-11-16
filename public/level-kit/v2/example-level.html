@@ -13,7 +13,7 @@
       id="level"
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 1600 1000"
-      data-level-format="1"
+      data-level-format="2"
       data-level-id="floating-garden"
       data-title="Floating Garden"
       data-author="Bompers team"
@@ -31,16 +31,16 @@
 
       <g id="terrain">
         <!-- Main floating platform: indestructible core, destructible lips -->
-        <rect id="main-core" data-role="platform" data-material="stone" data-label="Main platform" x="400" y="640" width="800" height="64" fill="#7d7a85" />
-        <polygon id="main-underside" data-role="platform" data-material="stone" points="480,704 1120,704 1040,800 560,800" fill="#7d7a85" />
-        <rect id="main-lip-left" data-role="destructible" data-material="dirt" x="320" y="640" width="80" height="48" fill="#c08a5b" />
-        <rect id="main-lip-right" data-role="destructible" data-material="dirt" x="1200" y="640" width="80" height="48" fill="#c08a5b" />
+        <rect id="main-core" data-role="terrain" data-material="stone" data-label="Main platform" x="400" y="640" width="800" height="64" fill="#5a3f7a" />
+        <polygon id="main-underside" data-role="terrain" data-material="stone" points="480,704 1120,704 1040,800 560,800" fill="#5a3f7a" />
+        <rect id="main-lip-left" data-role="terrain" data-material="earth" x="320" y="640" width="80" height="48" fill="#c4673f" />
+        <rect id="main-lip-right" data-role="terrain" data-material="earth" x="1200" y="640" width="80" height="48" fill="#c4673f" />
 
         <!-- Raised plateaus -->
-        <rect id="plateau-left" data-role="destructible" data-material="dirt" data-label="Left plateau" x="440" y="460" width="240" height="32" fill="#c08a5b" />
-        <rect id="plateau-right" data-role="destructible" data-material="dirt" data-label="Right plateau" x="920" y="460" width="240" height="32" fill="#c08a5b" />
-        <rect id="plateau-top" data-role="platform" data-material="stone" x="700" y="300" width="200" height="32" fill="#7d7a85" />
-        <circle id="top-knob" data-role="destructible" data-material="dirt" data-effect="dust-burst" data-sound="crumble" cx="800" cy="300" r="28" fill="#c08a5b" />
+        <rect id="plateau-left" data-role="terrain" data-material="cardboard" data-label="Left plateau" x="440" y="460" width="240" height="32" fill="#c99a62" />
+        <rect id="plateau-right" data-role="terrain" data-material="cardboard" data-color="mint" data-label="Right plateau" x="920" y="460" width="240" height="32" fill="#3aa889" />
+        <rect id="plateau-top" data-role="terrain" data-material="ice" x="700" y="300" width="200" height="32" fill="#a8cfe6" />
+        <circle id="top-knob" data-role="terrain" data-material="earth" data-color="rose" data-effect="dust-burst" data-sound="crumble" cx="800" cy="300" r="28" fill="#c95a86" />
       </g>
 
       <g id="spawns">

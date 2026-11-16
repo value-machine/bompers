@@ -7,7 +7,7 @@ import {
 
 describe("contentCatalog", () => {
   it("should resolve a known material when the ID exists", () => {
-    const resolved = resolveCatalogEntry("material", "dirt");
+    const resolved = resolveCatalogEntry("material", "earth");
     expect(resolved.isFallback).toBe(false);
     expect(resolved.entry?.destructible).toBe(true);
   });
@@ -28,13 +28,14 @@ describe("contentCatalog", () => {
   it("should export plain JSON in the kit catalog shape with every starter ID", () => {
     const exported = exportCatalog();
     expect(JSON.parse(JSON.stringify(exported))).toEqual(exported);
-    expect(exported.formatVersion).toBe(1);
-    expect(exported.defaults.material).toEqual({ platform: "stone", destructible: "dirt" });
+    expect(exported.formatVersion).toBe(2);
+    expect(exported.defaults.material).toBe("stone");
     expect(exported.defaults.items).toEqual({
       drop: ["rocket-launcher"],
       collectible: "point-orb",
     });
-    expect(exported.material.map((m) => m.id)).toEqual(["stone", "dirt"]);
+    expect(exported.material.map((m) => m.id)).toEqual(["stone", "earth", "cardboard", "ice"]);
+    expect(exported.color.map((c) => c.id)).toContain("plum");
     expect(exported.item.map((i) => i.id)).toEqual([
       "rocket-launcher",
       "homing-launcher",
@@ -54,8 +55,9 @@ describe("contentCatalog", () => {
     }
   });
 
-  it("should only reference effect and sound IDs that exist when a material names defaults", () => {
+  it("should only reference effect, sound and colour IDs that exist when a material names defaults", () => {
     for (const material of Object.values(CONTENT_CATALOG.material)) {
+      expect(resolveCatalogEntry("color", material.defaultColor).isFallback).toBe(false);
       expect(resolveCatalogEntry("effect", material.effect).isFallback).toBe(false);
       expect(resolveCatalogEntry("sound", material.sound).isFallback).toBe(false);
     }
