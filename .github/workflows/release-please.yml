@@ -12,6 +12,9 @@
 #   trigger workflows, but a GITHUB_TOKEN workflow_dispatch does, so the required `test`
 #   check reports on the release PR without a PAT (D21). ci.yml runs only the version check
 #   there. Fallback if that ever fails: a GitHub App token (see temp_job_git-workflow-model-c D21).
+#   It reads the action's `prs` output (JSON array) with jq in the shell, never fromJSON in an
+#   expression: the runner evaluates a step's `env:` even when its `if:` skips it, so
+#   fromJSON('') on a run without a release PR failed the whole job. No release PR → log and exit 0.
 name: Release Please
 
 on:
@@ -30,7 +33,7 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -57,7 +60,7 @@ jobs:
           gh release create "v$version" --target "$sha" --title "v$version" \
             --notes "Baseline release for release-please (created by the Model C bootstrap job)."
 
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@v5
         id: release
         if: steps.mode.outputs.mode == 'model-c'
         with:
@@ -66,9 +69,19 @@ jobs:
           manifest-file: .release-please-manifest.json
 
       - name: Run CI on the release branch
-        if: steps.release.outputs.prs_created == 'true'
+        if: steps.mode.outputs.mode == 'model-c'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
-        run: gh workflow run ci.yml --ref "$RELEASE_BRANCH"
+          # JSON array of release PRs; empty when release-please opened or updated none.
+          RELEASE_PRS: ${{ steps.release.outputs.prs }}
+        run: |
+          branches="$(printf '%s' "${RELEASE_PRS:-[]}" | jq -r '.[].headBranchName // empty')"
+          if [ -z "$branches" ]; then
+            echo "No release PR opened or updated; nothing to dispatch."
+            exit 0
+          fi
+          while IFS= read -r branch; do
+            echo "Dispatching ci.yml on $branch"
+            gh workflow run ci.yml --ref "$branch"
+          done <<< "$branches"
