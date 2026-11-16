@@ -40,7 +40,7 @@ Interpretations of open points in the GDD, made against the GDD itself. Change a
 | Destructible arena sections | Arena geometry is split into destructible chunks that rocket explosions remove; indestructible base parts keep the map playable. |
 | Rocket jump without self-damage | Explosion impulse applies to the shooter; damage never does. |
 | Health | 4 chunks per player; a rocket hit removes exactly 1; the unarmed bash also removes 1 and knocks back. |
-| Falling off the map | Falling below the bottom of the out-of-bounds zone eliminates the player (counts as a kill for the last player who hit them within a short window). The sides and the top are open space: no elimination there; past the sides there is no ground, so a player must steer back or fall (open-map-edges D1, owner feedback round 2). |
+| Falling off the map | Leaving the out-of-bounds zone eliminates the player (counts as a kill for the last player who hit them within a short window). Its bottom is lethal right at the level bounds; its sides and top lie so far out, derived from how far a player can fly, that nobody notices them, even with chained jumps (open-map-edges D1, owner feedback round 2). |
 | Configurable settings | Match duration and gravity first; all tunables live in one settings/config module so later options plug in. |
 
 ---

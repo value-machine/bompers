@@ -12,7 +12,7 @@ The level model the engine runs on: `LevelDefinition` (geometry, spawns, drops, 
 | Services | `services/levelDefinition.ts`    | `LEVEL_FORMAT_VERSION`, `DEFAULT_LEVEL_SETTINGS` (from the catalog defaults), `normalizeLevelDefinition(level)` → `{ level, warnings }`                                                                                                                                                                                                                    |
 | API      | `api/levelApi.ts`                | Public seam                                                                                                                                                                                                                                                                                                                                                |
 
-Units: 1 world unit = 1 SVG unit, origin top-left, y down. Spawn points are feet points (bottom-centre of a player). `bounds` is the in-bounds area; falling below its bottom edge eliminates (sides and top are open, `shared/utils/outOfBounds`). `settings.gravity` multiplies the engine default.
+Units: 1 world unit = 1 SVG unit, origin top-left, y down. Spawn points are feet points (bottom-centre of a player). `bounds` is the in-bounds area; falling below its bottom edge eliminates; the side and top kill lines lie far beyond it (match `killZoneOf`). `settings.gravity` multiplies the engine default.
 
 Normalisation applies the format's warnings that make sense on a parsed level and never throws. Each correction adds a warning naming its path (`terrain[3]: unknown material "lava", using "stone"`):
 

@@ -392,16 +392,6 @@ describe("combat — unarmed fire", () => {
   });
 });
 
-describe("combat — rockets at the arena edges", () => {
-  it("should fly on past the top edge of the bounds when the rocket meets nothing", () => {
-    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
-    arm(world, 0);
-    shoot(world, { aimY: -1, aimX: 0 }, 120);
-    expect(eventsOf(world, "explosion")).toEqual([]);
-    expect(world.combat.rockets[0]!.y).toBeLessThan(level.bounds.y);
-  });
-});
-
 describe("combat — out of bounds", () => {
   it("should credit the last hitter when a player falls out soon after being hit", () => {
     const world = createWorld({

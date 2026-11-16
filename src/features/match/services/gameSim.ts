@@ -1,6 +1,6 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
-import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
 import { createArenaState, type ArenaState } from "@/features/arena/api/arenaApi";
 import {
   normalizeLevelDefinition,
@@ -35,6 +35,7 @@ import {
   awardOrbs,
   createMatchRulesState,
   isInPlay,
+  killZoneOf,
   roundWinners,
   stepMatchRules,
   type MatchRulesState,
@@ -54,7 +55,7 @@ import {
  *                        combat's `takeWeaponPickups` arms the collector
  *   3b. stepDives      — dive feature: the unarmed attack; its hits go through combat's `applyHit`
  *   4. stepCollectibles — collectibles feature: point orbs fall from the sky; touching one scores
- *   5. stepMatchRules  — out of bounds → elimination; scoring; eliminated players wait
+ *   5. stepMatchRules  — out of the kill zone → elimination; scoring; eliminated players wait
  *                        `respawnDelaySeconds`, then respawn at the spawn farthest from opponents
  *                        with spawn protection and a fresh dive
  *   6. roundTimer      — counts down; at 0 the round ends (winners fixed) and systems 1–5 stop
@@ -85,6 +86,11 @@ export interface GameState {
   /** Settings for this match (a copy of the defaults, possibly overridden). */
   tunables: GameTunables;
   arena: ArenaState;
+  /**
+   * Leaving it eliminates; rockets and crates vanish outside it (`killZoneOf`: the level bounds,
+   * grown far past the sides and top from this match's tunables).
+   */
+  killZone: Rect;
   /** What normalising the level corrected (unknown IDs etc.); empty for a clean level. */
   levelWarnings: string[];
   players: PlayerState[];
@@ -126,6 +132,7 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
     timeSeconds: 0,
     tunables: matchTunables,
     arena: createArenaState(normalized.level),
+    killZone: killZoneOf(normalized.level.bounds, matchTunables),
     levelWarnings: normalized.warnings,
     players: [],
     combat: createCombatState(),
@@ -182,7 +189,7 @@ function stepCratePickups(state: GameState, dt: number): void {
     drops: level.drops,
     players,
     terrain,
-    bounds: level.bounds,
+    bounds: state.killZone,
     tunables,
     dt,
   });
@@ -201,7 +208,7 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
     players,
     inputs,
     terrain,
-    bounds: level.bounds,
+    bounds: state.killZone,
     tunables,
     timeSeconds,
     dt,
@@ -235,6 +242,7 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
     players: state.players,
     spawns: level.spawns,
     bounds: level.bounds,
+    killZone: state.killZone,
     tunables,
     timeSeconds,
   });

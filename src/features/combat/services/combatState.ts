@@ -22,7 +22,7 @@ export interface CombatContext {
   combat: CombatState;
   players: PlayerState[];
   terrain: TerrainGrid;
-  /** The level's in-bounds area: rockets explode below it (`isOutOfBounds`). */
+  /** The in-bounds area (the match passes its kill zone): rockets explode outside it. */
   bounds: Rect;
   tunables: GameTunables;
   timeSeconds: number;
