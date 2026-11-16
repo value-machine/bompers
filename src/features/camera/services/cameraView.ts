@@ -33,12 +33,20 @@ export function computeCameraView(args: CameraFrameArgs): CameraView {
   return containTargets(eased, { targets, viewport, margin: settings.edgeMargin });
 }
 
-/** Applies a view to the world container (everything under it is in world units). */
-export function applyCameraView(world: Container, view: CameraView, viewport: Viewport): void {
+/**
+ * Applies a view to the world container (everything under it is in world units). `offset` is a
+ * render-only screen-px nudge on top (the camera shake); it never changes the view itself.
+ */
+export function applyCameraView(
+  world: Container,
+  view: CameraView,
+  frame: { viewport: Viewport; offset?: Vec2 }
+): void {
+  const { viewport, offset } = frame;
   world.scale.set(view.zoom);
   world.position.set(
-    viewport.width / 2 - view.centerX * view.zoom,
-    viewport.height / 2 - view.centerY * view.zoom
+    viewport.width / 2 - view.centerX * view.zoom + (offset?.x ?? 0),
+    viewport.height / 2 - view.centerY * view.zoom + (offset?.y ?? 0)
   );
 }
 

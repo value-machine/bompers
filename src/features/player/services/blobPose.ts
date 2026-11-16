@@ -1,5 +1,10 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import { contactShadow } from "@/shared/utils/contactShadow";
+import {
+  createDampedSpring,
+  stepDampedSpring,
+  type DampedSpring,
+} from "@/shared/utils/dampedSpring";
 import type { PlayerState } from "@/features/player/types/player.types";
 
 /**
@@ -8,6 +13,7 @@ import type { PlayerState } from "@/features/player/types/player.types";
  * curves are unit-tested; the renderer only applies the numbers. Never feeds back into the sim.
  */
 export type SquashTunables = GameTunables["player"]["squash"];
+export type HelmetTunables = GameTunables["feel"]["helmet"];
 
 type SquashKind = "land" | "jump" | "wallJump";
 
@@ -78,11 +84,15 @@ const easeOutBack = (t: number): number => {
 
 const easeOutQuad = (t: number): number => 1 - (1 - t) * (1 - t);
 
-/** Starts a squash for the newest sim event since the last frame (the latest one wins). */
+/**
+ * Starts a squash for the newest sim event since the last frame (the latest one wins). Returns
+ * the squash it started, or null, so the helmet spring can react to the same moment.
+ */
 export function noteBlobEvents(
   anim: BlobAnim,
   frame: { player: PlayerState; squash: SquashTunables; nowMs: number }
-): void {
+): BlobAnim["active"] {
+  const before = anim.active;
   const { player, squash, nowMs } = frame;
   if (player.landCount !== anim.seenLandings && player.lastLandingSpeed >= MIN_LANDING_SPEED) {
     const impact = Math.min(1, player.lastLandingSpeed / squash.landFullImpact);
@@ -99,6 +109,11 @@ export function noteBlobEvents(
   if (player.wallJumpCount !== anim.seenWallJumps) {
     anim.active = { kind: "wallJump", startMs: nowMs, amount: 1 };
   }
+  markEventsSeen(anim, player);
+  return anim.active === before ? null : anim.active;
+}
+
+function markEventsSeen(anim: BlobAnim, player: PlayerState): void {
   anim.seenLandings = player.landCount;
   anim.seenTumbleBounces = player.tumbleBounceCount;
   anim.seenJumps = player.jumpCount;
@@ -154,4 +169,70 @@ export function blobPose(
     feetSy: Math.max(0.3, 1 + (feet.sy - 1) * FEET_SQUASH_GAIN),
     shadow: blobShadow(player),
   };
+}
+
+/**
+ * The helmet (with its emblem) rides a damped spring that lags behind the body (DESIGN_LANGUAGE
+ * § 6): `drop` sinks it toward the body (mockup units), `tilt` rocks it (radians, clockwise).
+ */
+export interface HelmetWobble {
+  tilt: DampedSpring;
+  drop: DampedSpring;
+  /** Render clock of the last step (null before the first). */
+  lastMs: number | null;
+  /** `startMs` of the newest hit already kicked. */
+  seenHitMs: number;
+  /** The drawn offset after the last step, capped: tilt (radians), drop (mockup units). */
+  pose: { tilt: number; drop: number };
+}
+
+export const createHelmetWobble = (): HelmetWobble => ({
+  tilt: createDampedSpring(),
+  drop: createDampedSpring(),
+  lastMs: null,
+  seenHitMs: -1,
+  pose: { tilt: 0, drop: 0 },
+});
+
+/** Velocity kick for a squash moment: landings and tumble bounces sink it, jumps leave it behind. */
+export function kickHelmetForSquash(
+  wobble: HelmetWobble,
+  moment: { kind: SquashKind; amount: number; vx: number; tumbling: boolean },
+  helmet: HelmetTunables
+): void {
+  const side = Math.sign(moment.vx);
+  if (moment.kind === "land") {
+    wobble.drop.velocity += helmet.landDrop * moment.amount;
+    // A tumble bounce also rocks it, against the roll.
+    if (moment.tumbling) wobble.tilt.velocity -= side * helmet.hitTilt * 0.5 * moment.amount;
+  }
+  if (moment.kind === "jump") wobble.drop.velocity += helmet.jumpDrop;
+  if (moment.kind === "wallJump") wobble.tilt.velocity += side * helmet.wallJumpTilt;
+}
+
+/** Velocity kick for a hit pushing toward `dirX`: the helmet rocks that way and sinks a little. */
+export function kickHelmetForHit(
+  wobble: HelmetWobble,
+  hit: { dirX: number; hard: boolean },
+  helmet: HelmetTunables
+): void {
+  const scale = hit.hard ? 1.5 : 1;
+  wobble.tilt.velocity += hit.dirX * helmet.hitTilt * scale;
+  wobble.drop.velocity += helmet.hitDrop * scale;
+}
+
+const clampAbs = (value: number, max: number): number => Math.max(-max, Math.min(max, value));
+
+/** Steps both springs to `nowMs` and writes the capped offset into `wobble.pose`. */
+export function stepHelmetWobble(
+  wobble: HelmetWobble,
+  frame: { nowMs: number; helmet: HelmetTunables }
+): void {
+  const { nowMs, helmet } = frame;
+  const dt = wobble.lastMs === null ? 0 : (nowMs - wobble.lastMs) / 1000;
+  wobble.lastMs = nowMs;
+  stepDampedSpring(wobble.tilt, helmet, dt);
+  stepDampedSpring(wobble.drop, helmet, dt);
+  wobble.pose.tilt = clampAbs(wobble.tilt.value, helmet.maxTilt);
+  wobble.pose.drop = clampAbs(wobble.drop.value, helmet.maxDrop);
 }

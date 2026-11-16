@@ -119,9 +119,12 @@ const inkStroke = (width: number) => ({
   join: "round" as const,
 });
 
-/** Ink pass of the torso (body + helmet). */
-export const drawTorsoInk = (g: Graphics, m: BlobMetrics, width: number): Graphics =>
-  helmetPath(eggPath(g.clear(), m.r).stroke(inkStroke(width)), m).stroke(inkStroke(width));
+/** Ink pass of the body (the helmet has its own, so it can wobble on its spring). */
+export const drawBodyInk = (g: Graphics, m: BlobMetrics, width: number): Graphics =>
+  eggPath(g.clear(), m.r).stroke(inkStroke(width));
+
+export const drawHelmetInk = (g: Graphics, m: BlobMetrics, width: number): Graphics =>
+  helmetPath(g.clear(), m).stroke(inkStroke(width));
 
 export const drawFootInk = (g: Graphics, m: BlobMetrics, width: number): Graphics =>
   footPath(g.clear(), m).stroke(inkStroke(width));
@@ -129,11 +132,17 @@ export const drawFootInk = (g: Graphics, m: BlobMetrics, width: number): Graphic
 export const drawTubeInk = (g: Graphics, u: number, width: number): Graphics =>
   tubePath(g.clear(), u).stroke(inkStroke(width));
 
-/** Fill pass of the torso: gradient body, white gloss oval, gradient helmet. */
-export function drawTorsoFill(slot: number, m: BlobMetrics): Graphics {
-  const { r } = m;
-  return helmetPath(eggPath(new Graphics(), r).fill(bodyGradient(slot)), m).fill(helmetFill());
-}
+/** Fill pass of the body: the gradient egg. */
+export const drawBodyFill = (slot: number, m: BlobMetrics): Graphics =>
+  eggPath(new Graphics(), m.r).fill(bodyGradient(slot));
+
+/** Hit flash: the egg in flat white, drawn over the body fill; its alpha is set per frame. */
+export const drawBodyFlash = (m: BlobMetrics): Graphics =>
+  eggPath(new Graphics(), m.r).fill(GAME_PALETTE.hitFlash);
+
+/** Fill pass of the helmet dome: the vertical gradient. */
+export const drawHelmetFill = (m: BlobMetrics): Graphics =>
+  helmetPath(new Graphics(), m).fill(helmetFill());
 
 /** Gloss oval on the body (0.13 R × 0.22 R, tilted 18°), as its own shape so it can rotate. */
 export function drawBodyGloss(m: BlobMetrics): Graphics {

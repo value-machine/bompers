@@ -4,8 +4,12 @@ import {
   blobPose,
   blobShadow,
   createBlobAnim,
+  createHelmetWobble,
   eventSquash,
+  kickHelmetForHit,
+  kickHelmetForSquash,
   noteBlobEvents,
+  stepHelmetWobble,
 } from "@/features/player/services/blobPose";
 import { createPlayer } from "@/features/player/services/playerController";
 import type { PlayerState } from "@/features/player/types/player.types";
@@ -103,5 +107,57 @@ describe("blobPose", () => {
     expect(half?.width).toBeCloseTo(1.05 * player.width * 0.75, 6);
     player.groundBelowY = null;
     expect(blobShadow(player)).toBeNull();
+  });
+});
+
+describe("helmet wobble", () => {
+  const helmet = DEFAULT_GAME_TUNABLES.feel.helmet;
+
+  const settle = (wobble: ReturnType<typeof createHelmetWobble>, ms: number) => {
+    const drops: number[] = [];
+    const tilts: number[] = [];
+    for (let t = 0; t <= ms; t += 16) {
+      stepHelmetWobble(wobble, { nowMs: t, helmet });
+      drops.push(wobble.pose.drop);
+      tilts.push(wobble.pose.tilt);
+    }
+    return { drops, tilts };
+  };
+
+  it("should report which squash started when an event is counted", () => {
+    const player = standing();
+    const anim = createBlobAnim(player);
+    expect(noteBlobEvents(anim, { player, squash, nowMs: 0 })).toBeNull();
+    player.jumpCount += 1;
+    expect(noteBlobEvents(anim, { player, squash, nowMs: 0 })?.kind).toBe("jump");
+  });
+
+  it("should sink, bounce back past rest and settle when a landing kicks it", () => {
+    const wobble = createHelmetWobble();
+    kickHelmetForSquash(wobble, { kind: "land", amount: 1, vx: 0, tumbling: false }, helmet);
+    const { drops, tilts } = settle(wobble, 1200);
+    expect(Math.max(...drops)).toBeGreaterThan(0);
+    expect(Math.min(...drops)).toBeLessThan(0);
+    expect(Math.abs(drops[drops.length - 1]!)).toBeLessThan(0.05);
+    expect(tilts.every((t) => t === 0)).toBe(true);
+  });
+
+  it("should tilt toward the push when a hit kicks it, harder for a back hit", () => {
+    const front = createHelmetWobble();
+    const back = createHelmetWobble();
+    kickHelmetForHit(front, { dirX: 1, hard: false }, helmet);
+    kickHelmetForHit(back, { dirX: 1, hard: true }, helmet);
+    const peakFront = Math.max(...settle(front, 200).tilts);
+    const peakBack = Math.max(...settle(back, 200).tilts);
+    expect(peakFront).toBeGreaterThan(0);
+    expect(peakBack).toBeGreaterThan(peakFront);
+  });
+
+  it("should never draw past the caps when kicks pile up", () => {
+    const wobble = createHelmetWobble();
+    for (let i = 0; i < 10; i += 1) kickHelmetForHit(wobble, { dirX: -1, hard: true }, helmet);
+    const { drops, tilts } = settle(wobble, 500);
+    expect(Math.max(...drops.map(Math.abs))).toBeLessThanOrEqual(helmet.maxDrop);
+    expect(Math.max(...tilts.map(Math.abs))).toBeLessThanOrEqual(helmet.maxTilt);
   });
 });

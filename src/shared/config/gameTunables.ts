@@ -121,4 +121,35 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     zoomOutRate: 8,
     edgeMargin: 24,
   },
+  // DESIGN_LANGUAGE § 6: hit = 3 frames of white + 3 px shake for 80 ms; explosion = 6 px for 120 ms.
+  feel: {
+    hitFlash: {
+      holdSeconds: 0.05,
+      fadeSeconds: 0.08,
+      front: 0.75,
+      back: 1,
+      reducedMotionScale: 0.5,
+    },
+    shake: {
+      maxPx: 12,
+      frequencyHz: 30,
+      hit: { px: 3, seconds: 0.08 },
+      hardHitScale: 2,
+      explosion: { px: 6, seconds: 0.12 },
+      tumbleBounce: { px: 3, seconds: 0.1, fullSpeed: 900 },
+    },
+    helmet: {
+      stiffness: 420,
+      damping: 11,
+      maxTilt: 0.35,
+      maxDrop: 5,
+      landDrop: 70,
+      jumpDrop: 45,
+      wallJumpTilt: 5,
+      hitTilt: 7,
+      hitDrop: 40,
+    },
+    // About 3 frames at 60 fps.
+    hitStop: { seconds: 0.05 },
+  },
 };

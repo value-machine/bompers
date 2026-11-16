@@ -14,15 +14,24 @@ import {
 } from "@/features/player/api/playerApi";
 import {
   applyCameraView,
+  cameraShakeOffset,
   computeCameraView,
+  createCameraShake,
+  type CameraShake,
   type CameraView,
+  type Viewport,
 } from "@/features/camera/api/cameraApi";
 import { createCombatView, syncCombatView, type CombatView } from "@/features/combat/api/combatApi";
 import {
   createEffectsView,
+  createFeelState,
+  readFeelCues,
   syncEffectsView,
   type EffectsView,
+  type FeelState,
 } from "@/features/effects/api/effectsApi";
+import { prefersReducedMotion } from "@/shared/utils/reducedMotion";
+import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import {
   createCollectiblesView,
   syncCollectiblesView,
@@ -55,6 +64,11 @@ import { createHudView, syncHudView, type HudView } from "@/features/match/servi
  * Order follows DESIGN_LANGUAGE.md § 5. Each feature owns its layer's create/sync pair; this
  * file only orders and drives them. The camera is computed first, so every layer gets this
  * frame's zoom for its outline width clamp (DESIGN_LANGUAGE § 3).
+ *
+ * Game feel (DESIGN_LANGUAGE § 6), all render-only: `feel` turns new combat events and tumble
+ * bounces into hit flashes, helmet kicks and `shake` kicks; the shake offset is added when the
+ * camera is applied (none under the OS reduced-motion setting); after a hard hit the world view
+ * holds still for `feel.hitStop` (the sim keeps running, the HUD keeps drawing).
  */
 export interface GameRenderer {
   backdrop: BackdropView;
@@ -67,6 +81,8 @@ export interface GameRenderer {
   dive: DiveView;
   hud: HudView;
   camera: CameraView | null;
+  feel: FeelState;
+  shake: CameraShake;
 }
 
 export function createGameRenderer(app: Application, state: GameState): GameRenderer {
@@ -105,6 +121,8 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     dive,
     hud,
     camera: null,
+    feel: createFeelState(),
+    shake: createCameraShake(),
   };
 }
 
@@ -129,6 +147,7 @@ interface LayerFrame {
   nowMs: number;
   /** Camera zoom this frame (outline width clamp). */
   zoom: number;
+  hits: FeelState["hits"];
 }
 
 /** Syncs every world-space layer to the state. */
@@ -141,6 +160,8 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     overlays: diveBlobPoses(state.dive, state.tunables),
     armedIds: armedIds(state),
     zoom,
+    hits: frame.hits,
+    helmet: state.tunables.feel.helmet,
   });
   syncDiveView(renderer.dive, state.dive);
   syncCollectiblesView(renderer.collectibles, {
@@ -166,6 +187,33 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
   });
 }
 
+/**
+ * Reads this frame's game-feel cues. `frozen`: a hit-stop holds the world view; `offset`: the
+ * screen shake (none under the OS reduced-motion setting).
+ */
+function readFeel(
+  renderer: GameRenderer,
+  frame: { state: GameState; nowMs: number }
+): { frozen: boolean; offset: Vec2 | undefined } {
+  const { state, nowMs } = frame;
+  // Decided before reading: the hit's own frame still draws (with its flash), then it holds.
+  const frozen = renderer.camera !== null && nowMs < renderer.feel.hitStopUntilMs;
+  const reducedMotion = prefersReducedMotion();
+  readFeelCues(renderer.feel, {
+    events: state.combat.events,
+    bodies: state.players,
+    nowMs,
+    feel: state.tunables.feel,
+    fullBlastRadius: state.tunables.combat.explosion.radius,
+    reducedMotion,
+    shake: renderer.shake,
+  });
+  const offset = reducedMotion
+    ? undefined
+    : cameraShakeOffset(renderer.shake, { nowMs, settings: state.tunables.feel.shake });
+  return { frozen, offset };
+}
+
 /** Draws the latest state (no interpolation, lap D6). Call once per rendered frame. */
 export function renderGame(
   renderer: GameRenderer,
@@ -173,11 +221,32 @@ export function renderGame(
 ): void {
   const { state, app, dt } = frame;
   const viewport = { width: app.screen.width, height: app.screen.height };
-  const { level } = state.arena;
-  const inPlay = playersInPlay(state);
   const nowMs = performance.now();
+  const { frozen, offset } = readFeel(renderer, { state, nowMs });
 
-  const camera = computeCameraView({
+  if (frozen && renderer.camera) {
+    applyCameraView(renderer.world, renderer.camera, { viewport, offset });
+    syncHudView(renderer.hud, { state, viewport });
+    return;
+  }
+
+  const inPlay = playersInPlay(state);
+  const camera = frameCamera(renderer, { state, inPlay, viewport, dt });
+  const worldHeight = state.arena.level.worldSize.h;
+  syncBackdropView(renderer.backdrop, { viewport, camera, worldHeight, nowMs });
+  syncWorldLayers(renderer, state, { inPlay, nowMs, zoom: camera.zoom, hits: renderer.feel.hits });
+  applyCameraView(renderer.world, camera, { viewport, offset });
+  syncHudView(renderer.hud, { state, viewport });
+}
+
+/** Frames the players in play and remembers the view for the next frame. */
+function frameCamera(
+  renderer: GameRenderer,
+  frame: { state: GameState; inPlay: LayerFrame["inPlay"]; viewport: Viewport; dt: number }
+): CameraView {
+  const { state, inPlay, viewport, dt } = frame;
+  const { level } = state.arena;
+  renderer.camera = computeCameraView({
     targets: inPlay.map((player) => ({ x: player.x, y: player.y })),
     bounds: { x: 0, y: 0, w: level.worldSize.w, h: level.worldSize.h },
     viewport,
@@ -186,11 +255,5 @@ export function renderGame(
     dt,
     settings: state.tunables.camera,
   });
-  renderer.camera = camera;
-  const { zoom } = camera;
-
-  syncBackdropView(renderer.backdrop, { viewport, camera, worldHeight: level.worldSize.h, nowMs });
-  syncWorldLayers(renderer, state, { inPlay, nowMs, zoom });
-  applyCameraView(renderer.world, camera, viewport);
-  syncHudView(renderer.hud, { state, viewport });
+  return renderer.camera;
 }
