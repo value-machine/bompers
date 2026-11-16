@@ -20,3 +20,4 @@ Updated: 2026-11-16
 ## Log
 
 - 2026-11-16 — D2–D4 closed via loop-refine (clear-winner)
+- 2026-11-16 — Coordination note (orchestrator, open-map-edges thread): LEVEL_FORMAT bounds row will say only the bottom edge eliminates; sides and top are open. Keep that meaning if the bounds section is rewritten; rebase onto main before ship.
