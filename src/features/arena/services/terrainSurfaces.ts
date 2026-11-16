@@ -4,8 +4,8 @@ import { shapeContains } from "@/shared/utils/shapeGeometry";
 import { DESIGN_SCALE } from "@/shared/utils/outlineWidth";
 import type { MaterialSurface } from "@/shared/types/terrainSurface.types";
 import type { TerrainShape } from "@/features/level/api/levelApi";
-import type { TerrainGrid } from "@/features/arena/types/arena.types";
-import { isBreakableSlot } from "@/features/arena/services/terrainGrid";
+import { EMPTY_CELL, type TerrainGrid } from "@/features/arena/types/arena.types";
+import { fieldBand, isBreakableSlot } from "@/features/arena/services/terrainGrid";
 
 /**
  * Terrain slab drawing shared by every material (DESIGN_LANGUAGE § 2): one rounded slab with a
@@ -101,53 +101,163 @@ export function drawSlabFill(g: Graphics, pieces: readonly SlabPiece[]): void {
   for (const { shape, surface } of pieces) if (surface === "ice") drawIceGloss(g, shape);
 }
 
-const isBreakableCell = (grid: TerrainGrid, cx: number, cy: number): boolean => {
-  const slot = grid.cells[cy * grid.widthCells + cx] ?? 0;
-  return slot !== 0 && isBreakableSlot(grid.slots[slot]);
+/** World-space mask geometry: plain rects plus contour pieces (flat [x, y, …] polygons). */
+export interface MaskShapes {
+  rects: { x: number; y: number; w: number; h: number }[];
+  pieces: number[][];
+}
+
+/** What one mask cell (between four sample centres) contributes. */
+type CellCover = "none" | "fixed" | "field" | "piece";
+
+interface MaskPass {
+  grid: TerrainGrid;
+  initial: Float32Array;
+  grow: number;
+}
+
+const sampleIndex = (grid: TerrainGrid, cx: number, cy: number): number =>
+  cx >= 0 && cy >= 0 && cx < grid.widthCells && cy < grid.heightCells
+    ? cy * grid.widthCells + cx
+    : -1;
+
+/** Breakable-only field (+ grow): breakable or empty samples keep their distance, others are out. */
+function maskValue(pass: MaskPass, cx: number, cy: number): number {
+  const { grid, grow } = pass;
+  const index = sampleIndex(grid, cx, cy);
+  if (index < 0) return -fieldBand(grid);
+  const slot = grid.cells[index] ?? EMPTY_CELL;
+  if (slot !== EMPTY_CELL && !isBreakableSlot(grid.slots[slot])) return -fieldBand(grid);
+  return (grid.distance[index] ?? -fieldBand(grid)) + grow;
+}
+
+const isBreakableSample = (grid: TerrainGrid, cx: number, cy: number): boolean => {
+  const index = sampleIndex(grid, cx, cy);
+  const slot = index < 0 ? EMPTY_CELL : (grid.cells[index] ?? EMPTY_CELL);
+  return slot !== EMPTY_CELL && isBreakableSlot(grid.slots[slot]);
 };
 
-/** Horizontal runs `[from, to)` of breakable cells in one row. */
-function breakableRuns(grid: TerrainGrid, cy: number): { from: number; to: number }[] {
-  const runs: { from: number; to: number }[] = [];
-  let from = -1;
-  for (let cx = 0; cx < grid.widthCells; cx += 1) {
-    const on = isBreakableCell(grid, cx, cy);
-    if (on && from < 0) from = cx;
-    if (!on && from >= 0) {
-      runs.push({ from, to: cx });
-      from = -1;
-    }
+const CORNERS = [
+  [0, 0],
+  [1, 0],
+  [1, 1],
+  [0, 1],
+] as const;
+
+/**
+ * Untouched mask cells (all four samples still at their load-time distance) are full squares,
+ * so authored shapes keep their own sharp path (terrain-curves D2); touched cells follow the
+ * field: full when all four values are positive, a contour piece when some are.
+ */
+function classifyCell(pass: MaskPass, cx: number, cy: number): CellCover {
+  const { grid, initial } = pass;
+  const corners = CORNERS.map(([dx, dy]) => ({ x: cx + dx, y: cy + dy }));
+  const touched = corners.some(({ x, y }) => {
+    const index = sampleIndex(grid, x, y);
+    return index >= 0 && grid.distance[index] !== initial[index];
+  });
+  if (!touched) {
+    return corners.some(({ x, y }) => isBreakableSample(grid, x, y)) ? "fixed" : "none";
   }
-  if (from >= 0) runs.push({ from, to: grid.widthCells });
-  return runs;
+  const values = corners.map(({ x, y }) => maskValue(pass, x, y));
+  if (values.every((v) => v > 0)) return "field";
+  return values.some((v) => v > 0) ? "piece" : "none";
 }
 
 /**
- * Masks of the breakable cells still standing: `cells` exactly (clips fills), `ink` grown by
- * `grow` world units (clips the ink pass so the outer line survives next to standing cells).
- * One rect per horizontal run of breakable cells. Empty when none are left.
+ * The part of one mask cell where the field is positive: walk its corners clockwise, keep the
+ * positive ones and add the linear zero crossing on every edge whose sign flips (marching
+ * squares; exact distances make the crossings lie on the true rim, terrain-curves D1).
+ */
+function cellPiece(pass: MaskPass, cx: number, cy: number): number[] {
+  const size = pass.grid.cellSize;
+  const points = CORNERS.map(([dx, dy]) => ({
+    x: (cx + dx + 0.5) * size,
+    y: (cy + dy + 0.5) * size,
+    v: maskValue(pass, cx + dx, cy + dy),
+  }));
+  const path: number[] = [];
+  points.forEach((a, i) => {
+    const b = points[(i + 1) % points.length]!;
+    if (a.v > 0) path.push(a.x, a.y);
+    if (a.v > 0 !== b.v > 0) {
+      const t = a.v / (a.v - b.v);
+      path.push(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t);
+    }
+  });
+  return path;
+}
+
+interface CellRun {
+  cy: number;
+  from: number;
+  to: number;
+  cover: CellCover;
+}
+
+/**
+ * Appends a run of full cells in one row as one rect. Untouched ("fixed") runs are grown by the
+ * ink width when asked; field runs already include it in their values.
+ */
+function pushRun(shapes: MaskShapes, pass: MaskPass, run: CellRun): void {
+  const { cellSize: size } = pass.grid;
+  const g = run.cover === "fixed" ? pass.grow : 0;
+  shapes.rects.push({
+    x: (run.from + 0.5) * size - g,
+    y: (run.cy + 0.5) * size - g,
+    w: (run.to - run.from) * size + g * 2,
+    h: size + g * 2,
+  });
+}
+
+/** One row of mask cells: runs of full cells as rects, partial cells as contour pieces. */
+function maskRow(shapes: MaskShapes, pass: MaskPass, cy: number): void {
+  const { widthCells } = pass.grid;
+  let run: CellRun | null = null;
+  for (let cx = -1; cx <= widthCells; cx += 1) {
+    const cover = cx < widthCells ? classifyCell(pass, cx, cy) : "none";
+    if (run && run.cover !== cover) {
+      pushRun(shapes, pass, { ...run, to: cx });
+      run = null;
+    }
+    if (!run && (cover === "fixed" || cover === "field")) run = { cy, from: cx, to: cx, cover };
+    if (cover === "piece") shapes.pieces.push(cellPiece(pass, cx, cy));
+  }
+}
+
+/**
+ * Mask of the breakable terrain still standing, in world units: plain rects where no blast has
+ * been (each cell spans four sample centres, so it reaches past an authored edge and the slab's
+ * own path draws the corner) and contour pieces along every crater rim. `grow` widens it by that
+ * many units (the ink mask: field + width, so the outer line survives next to standing terrain).
+ */
+export function breakableMask(grid: TerrainGrid, initial: Float32Array, grow: number): MaskShapes {
+  const pass: MaskPass = { grid, initial, grow };
+  const shapes: MaskShapes = { rects: [], pieces: [] };
+  for (let cy = -1; cy < grid.heightCells; cy += 1) maskRow(shapes, pass, cy);
+  return shapes;
+}
+
+/**
+ * Draws the breakable masks: `cells` exactly (clips fills along crater rims), `ink` grown by the
+ * ink width (clips the ink pass so the outer line survives next to standing terrain). Returns
+ * false when no breakable terrain is left.
  */
 export function drawBreakableMasks(
   grid: TerrainGrid,
   masks: { cells: Graphics; ink: Graphics },
-  grow: number
+  options: { initial: Float32Array; grow: number }
 ): boolean {
   masks.cells.clear();
   masks.ink.clear();
-  const size = grid.cellSize;
-  let any = false;
-  for (let cy = 0; cy < grid.heightCells; cy += 1) {
-    for (const run of breakableRuns(grid, cy)) {
-      const x = run.from * size;
-      const w = (run.to - run.from) * size;
-      masks.cells.rect(x, cy * size, w, size);
-      masks.ink.rect(x - grow, cy * size - grow, w + grow * 2, size + grow * 2);
-      any = true;
-    }
-  }
-  if (any) {
-    masks.cells.fill(0xffffff);
-    masks.ink.fill(0xffffff);
-  }
+  const draw = (g: Graphics, shapes: MaskShapes): boolean => {
+    for (const r of shapes.rects) g.rect(r.x, r.y, r.w, r.h);
+    for (const piece of shapes.pieces) g.poly(piece);
+    const any = shapes.rects.length > 0 || shapes.pieces.length > 0;
+    if (any) g.fill(0xffffff);
+    return any;
+  };
+  const any = draw(masks.cells, breakableMask(grid, options.initial, 0));
+  draw(masks.ink, breakableMask(grid, options.initial, options.grow));
   return any;
 }

@@ -22,7 +22,9 @@ import {
  *   by a mask of their standing cells grown by the outline width. Redrawn when the zoom-clamped
  *   width changes step.
  * - **Fills:** unbreakable slabs (with ice gloss) drawn once; breakable slabs clipped by a mask of
- *   their standing cells (rebuilt when the sim marks chunks dirty), so a crater cuts the slab.
+ *   the breakable terrain still standing (rebuilt when the sim marks chunks dirty): plain rects
+ *   where no blast has been, so authored corners stay sharp, and the distance field's contour
+ *   along every crater rim, so a crater cuts a true curve (terrain-curves D1, D2).
  * - **Seams:** one `Graphics` per grid chunk over breakable cells: seam lines between intact tiles,
  *   a centre pip per intact tile, cracks next to a crater. Redrawn only when dirty (plus
  *   neighbours) and cached as a texture.
@@ -39,6 +41,8 @@ export interface TerrainView {
   breakables: readonly SlabPiece[];
   /** Cells at level load: a cell that was filled and is empty now is a crater (cracks). */
   initial: Uint8Array;
+  /** Distances at level load: cells whose samples still hold them draw the authored slab as is. */
+  initialDistance: Float32Array;
   tileCells: number;
   /** Outline step the ink pass was drawn at (null before the first draw). */
   inkStep: number | null;
@@ -95,6 +99,7 @@ export function createTerrainView(arena: {
     solids,
     breakables,
     initial: grid.cells.slice(),
+    initialDistance: grid.distance.slice(),
     tileCells: tileCellsFor(grid.cellSize),
     inkStep: null,
     inkWidth: 0,
@@ -139,7 +144,7 @@ function drawTile(g: Graphics, tile: TileState, at: TileDraw): void {
   if (at.below) g.moveTo(x, y + size).lineTo(x + size, y + size);
   if (at.right || at.below) g.stroke({ width: TILE.line, color: seam });
   g.circle(x + size / 2, y + size / 2, size * TILE.pip).fill({ color: seam, alpha: TILE.pipAlpha });
-  // Cracks mark the intact tiles around a crater; the crater edge itself shows stepped cells.
+  // Cracks mark the intact tiles around a crater; the crater edge itself is the mask's curve.
   if (tile.cracked) drawCrack(g, at);
 }
 
@@ -239,7 +244,10 @@ export function syncTerrainView(view: TerrainView, grid: TerrainGrid, zoom: numb
   }
   const redraw = chunksToRedraw(grid);
   if (stepChanged || redraw.size > 0) {
-    const any = drawBreakableMasks(grid, view.masks, view.inkWidth);
+    const any = drawBreakableMasks(grid, view.masks, {
+      initial: view.initialDistance,
+      grow: view.inkWidth,
+    });
     view.breakableFill.visible = any;
     view.breakableInk.visible = any;
   }

@@ -88,7 +88,7 @@ Named colours a level puts on any material (`data-color`; catalog kind `color`).
 - **Blob:** a soft egg, not a perfect circle.
   - Body: half-width R and height 1.94 R (the reference size; R = 30 world units in the style mockup). The widest point sits slightly below the middle, so the bottom is a little fuller and flatter than the top. Build it from four cubic curves (top, two sides, bottom), so squash and stretch deform one smooth shape.
   - Feet: two ellipses 0.4 R × 0.25 R, centred 0.45 R left and right of centre. The body overlaps the top half of each foot, so the feet look tucked under. Fill them with the body shade. Helmet: a dome over the top 45 % of the body, 4 units wider than the body, cream with a white gloss stroke and the emblem in the middle. Weapon tube: a silhouette per weapon on the helmet (§ 9), pivoting toward the aim direction; the rocket tube is a rounded rect (0.76 R × 0.47 R) with a cap. Eyes sit under the helmet rim and look toward the aim direction.
-- **Terrain:** every piece, whatever its material, is a big rounded slab (corner radius 14 units) with a lighter lip on top, in its colour swatch. A blast cuts stepped craters out of a breakable slab along the engine's destruction grid; a softer material (lower toughness, e.g. cardboard) opens a wider crater from the same blast.
+- **Terrain:** every piece, whatever its material, is a big rounded slab (corner radius 14 units) with a lighter lip on top, in its colour swatch. A blast cuts a smoothly curved crater out of a breakable slab (the terrain distance field's contour, terrain-curves D1); a slab no blast has touched keeps its authored sharp corners. A softer material (lower toughness, e.g. cardboard) opens a wider crater from the same blast.
 - **Props and pickups:** chunky and short; nothing thinner than 0.2 R.
 
 ### Material behaviour: the rule (owner, material-system D1)
@@ -98,7 +98,7 @@ Colour is free: any swatch on any material. Players read behaviour at a glance f
 | | Solid (`stone`) | Breakable (`earth`, `cardboard`) | Slippery (`ice`) |
 |---|---|---|---|
 | Surface | smooth, one lip highlight | seam grid between 16-unit tiles, one pip per tile | two white gloss streaks and a white inner rim |
-| Silhouette | one continuous rounded slab | the same slab; craters cut stepped edges | the same slab |
+| Silhouette | one continuous rounded slab | the same slab; craters cut curved edges | the same slab |
 | When hit | nothing changes | cells disappear, neighbours crack, swatch-coloured debris flies | nothing changes |
 
 Never draw seams on an unbreakable piece or gloss on a non-slippery one, even for decoration. A new behaviour gets its own pattern before it ships.
@@ -113,7 +113,7 @@ Never draw seams on an unbreakable piece or gloss on a non-slippery one, even fo
   - Then draw the coloured parts on top with no stroke.
   - Only the outer half of the ink stroke stays visible, which is the silhouette line. That is two passes of the same shapes and no filters.
   - Cache the shape geometry per pose if needed.
-- **Width in world units (visible part):** characters 3.5, terrain slab 3.5 (every material), rockets and pickups 2, effect stars 3. A breakable slab keeps its outer line next to standing cells; crater edges are stepped cells with no ink line.
+- **Width in world units (visible part):** characters 3.5, terrain slab 3.5 (every material), rockets and pickups 2, effect stars 3. A breakable slab keeps its outer line next to standing terrain; crater edges are curves with no ink line.
 - **Zoom rule:** the on-screen line is `clamp(worldWidth × zoom, minPx, maxPx)`. Convert back to world width per frame (`screenWidth / zoom`) when drawing. When the camera zooms far out, the line stays readable instead of shrinking to a hairline; zoomed in, it doesn't turn into a thick border.
 
   | Line | world width | minPx | maxPx |
