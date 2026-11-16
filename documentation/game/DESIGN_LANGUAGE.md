@@ -45,7 +45,7 @@ Rules:
 | Destructible cell | `#f4ad55`, every third cell `#f7bd6c` | Honey wafer. |
 | Destructible grid line / pip | `#b9722a` | 2-unit lines between cells, one centre pip per cell (50 % alpha). |
 | Crack (cells next to a crater) | `#2b1d3a` | 2-unit zig-zag. |
-| Helmet shell | `#fff4e2`, rocket tube cap `#d9c7ae` | Same for every player. |
+| Helmet shell | `#fff4e2`; weapon tubes are the same cream, with an accent muzzle light (§ 9) | Same for every player. |
 | Eye white / pupil | `#ffffff` / `#2b1d3a` | |
 | Contact shadow | `#2b1d3a` at 28 % alpha max | See § 4. |
 
@@ -165,6 +165,7 @@ Squash and stretch keep area roughly constant (`sx × sy` between 0.94 and 1.0).
 - Feet move on their own (tunables `feel.feet`): running, the lifted foot swings forward in an arc and tips its toe up; in the air the feet trail the horizontal speed and droop while rising, flare while falling, with a springy lag; a landing spreads them, a jump pulls them in. While wall-sliding, and a moment after a wall-jump (`wallJumpHoldSeconds`), both feet turn their soles to the wall, the near foot higher.
 - The helmet sits on its own spring (it wobbles after landings and shots).
 - Rocket fire: the body recoils 4 units away from the aim, tube kicks back 3 units.
+- Muzzle ready light (§ 9): after a shot the accent dot on each muzzle drops to 15 % alpha and climbs back to full as the fire cooldown runs out; full = ready to fire.
 - **Hit:** 3 frames (50 ms) of white body fill, silhouette outline unchanged, 3 px screen shake for 80 ms.
 - **Explosion:** pops in at full size on frame 1 (no fade-in), shrinks and clears in 250 ms; 6 px screen shake for 120 ms. Debris: 5–8 cell-coloured squares with the cell grid-line colour as a thin edge, spinning outward.
 - **Elimination:** blob pops into 6 droplets of its body colour plus a small confetti burst, 300 ms.

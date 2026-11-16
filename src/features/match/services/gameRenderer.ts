@@ -10,6 +10,7 @@ import {
 import {
   createPlayersView,
   syncPlayersView,
+  type BlobWeapon,
   type PlayersView,
 } from "@/features/player/api/playerApi";
 import {
@@ -21,7 +22,12 @@ import {
   type CameraView,
   type Viewport,
 } from "@/features/camera/api/cameraApi";
-import { createCombatView, syncCombatView, type CombatView } from "@/features/combat/api/combatApi";
+import {
+  createCombatView,
+  syncCombatView,
+  weaponTunables,
+  type CombatView,
+} from "@/features/combat/api/combatApi";
 import {
   createEffectsView,
   createFeelState,
@@ -126,11 +132,20 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   };
 }
 
-/** Ids of players holding a weapon (they wear the rocket tube). */
-const armedIds = (state: GameState): Set<string> => {
-  const ids = new Set<string>();
-  for (const [id, fighter] of state.combat.fighters) if (fighter.weapon) ids.add(id);
-  return ids;
+/**
+ * Held weapons by player id, as the blobs show them: the weapon's tube, and how ready the next
+ * shot is (1 − cooldown / fire cooldown) for the muzzle light (weapon-visuals D3).
+ */
+const blobWeapons = (state: GameState): Map<string, BlobWeapon> => {
+  const weapons = new Map<string, BlobWeapon>();
+  for (const [id, fighter] of state.combat.fighters) {
+    if (!fighter.weapon) continue;
+    const { itemId } = fighter.weapon;
+    const { fireCooldown } = weaponTunables(state.tunables, itemId);
+    const ready = fireCooldown > 0 ? 1 - fighter.attackCooldown / fireCooldown : 1;
+    weapons.set(id, { itemId, ready });
+  }
+  return weapons;
 };
 
 /** Ids of players whose spawn protection is still running. */
@@ -158,7 +173,7 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     nowMs,
     protectedIds: protectedIds(state),
     overlays: diveBlobPoses(state.dive, state.tunables),
-    armedIds: armedIds(state),
+    weapons: blobWeapons(state),
     zoom,
     hits: frame.hits,
     helmet: state.tunables.feel.helmet,

@@ -4,9 +4,6 @@
  * Plain round rects along +x from the pivot, scaled by `u = r / 30`; the Pixi tracer is
  * `shared/services/weaponTubeRenderer.ts`. A new weapon adds its shape id and parts here and its
  * look (accent, shape id) in `gamePalette.weaponLooks`.
- *
- * Second copy (code-style § Naming F2): `features/player/services/blobShapes.ts` `tubePath` still
- * holds the capped tube until weapon-visuals phase 2 switches it to these parts.
  */
 export type WeaponTubeShape = "capped" | "twin-pod";
 
@@ -20,29 +17,24 @@ export interface TubePart {
 
 export interface WeaponTubeParts {
   parts: readonly TubePart[];
-  /** Centre of the muzzle, where the ready light sits. */
-  muzzle: { x: number; y: number };
+  /** Centre of each muzzle, where the ready light sits. */
+  muzzles: readonly { x: number; y: number }[];
 }
 
-const part = (u: number, [x, y, width, height, radius]: readonly number[]): TubePart => ({
-  x: (x ?? 0) * u,
-  y: (y ?? 0) * u,
-  width: (width ?? 0) * u,
-  height: (height ?? 0) * u,
-  radius: (radius ?? 0) * u,
-});
+interface ShapeSpec {
+  /** [x, y, width, height, radius] per part at u = 1. */
+  parts: readonly (readonly [number, number, number, number, number])[];
+  muzzles: readonly (readonly [number, number])[];
+}
 
-/** Shapes at u = 1: [x, y, width, height, radius] per part, and the muzzle point. */
-const SHAPES: Readonly<
-  Record<WeaponTubeShape, { parts: readonly (readonly number[])[]; muzzle: [number, number] }>
-> = {
+const SHAPES: Readonly<Record<WeaponTubeShape, ShapeSpec>> = {
   // Rocket launcher: tube 26 × 14 with its cap 8 × 16 (DESIGN_LANGUAGE § 2).
   capped: {
     parts: [
       [-3, -7, 26, 14, 6],
       [17, -8, 8, 16, 3.5],
     ],
-    muzzle: [21, 0],
+    muzzles: [[21, 0]],
   },
   // Homing launcher: a short mount and two stacked pods (weapon-visuals mockup, direction A).
   "twin-pod": {
@@ -51,16 +43,25 @@ const SHAPES: Readonly<
       [-1, -11, 24, 10, 5],
       [-1, 1, 24, 10, 5],
     ],
-    muzzle: [19, 0],
+    muzzles: [
+      [18, -6],
+      [18, 6],
+    ],
   },
 };
 
 /** The tube of `shape` at scale `u`. */
 export function weaponTubeParts(shape: WeaponTubeShape, u: number): WeaponTubeParts {
-  const { parts, muzzle } = SHAPES[shape];
+  const { parts, muzzles } = SHAPES[shape];
   return {
-    parts: parts.map((numbers) => part(u, numbers)),
-    muzzle: { x: muzzle[0] * u, y: muzzle[1] * u },
+    parts: parts.map(([x, y, width, height, radius]) => ({
+      x: x * u,
+      y: y * u,
+      width: width * u,
+      height: height * u,
+      radius: radius * u,
+    })),
+    muzzles: muzzles.map(([x, y]) => ({ x: x * u, y: y * u })),
   };
 }
 

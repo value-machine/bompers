@@ -57,6 +57,8 @@ Plan review 2026-11-16, merged lenses (naming + code-style, rebel + precedent, s
 
 | A5 | loop-build | Merged main after homing-missiles (#39): its `drawCrate` homing branch, `pickupRing` / `pickupRingHoming` folded into `weaponLooks["homing-launcher"] = { accent 0xb08cff, tube "twin-pod" }`; table typed `Record<WeaponItemId, WeaponLook>` (no fallback: a new weapon id fails to compile until it has a look); crate mark fitted by the tube's span; HUD max ammo from combat's `weaponTunables` (exported through `combatApi`), replacing the rocket-only accessor. |
 
+| A6 | loop-build | Phase 2 built after #32: `blobShapes.tubePath` removed (F2 copy resolved); `drawTubeInk`/`drawTubeFill`/`drawMuzzleLight` take shared `WeaponTubeParts`; `muzzle` became `muzzles[]` so the twin pod lights both pods; tubes are all cream (the old `#d9c7ae` cap tint gave way to the accent light); `syncPlayersView` takes `weapons: Map<id, { itemId, ready }>` instead of `armedIds`, built in `gameRenderer.blobWeapons` from `attackCooldown / weaponTunables(...).fireCooldown`; light alpha 0.15 → 1. Renderer change kept to the helmet tube (crouch lap runs in parallel). |
+
 ### Notes during development
 
 - Advisory: `gamePalette` imports the `WeaponTubeShape` type from `shared/utils/weaponTube` (type-only; no runtime cycle). Kept.
