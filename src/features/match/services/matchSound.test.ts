@@ -4,7 +4,7 @@ import { mapPlayerInputs } from "@/shared/utils/gameInputMapping";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { readSoundCues } from "@/features/sound/api/soundApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
-import { soundSnapshotOf } from "@/features/match/services/matchSound";
+import { bonkedMaterialSound, soundSnapshotOf } from "@/features/match/services/matchSound";
 
 const level: LevelDefinition = {
   formatVersion: 1,
@@ -45,5 +45,36 @@ describe("matchSound", () => {
       heard.push(...cues.map((cue) => `${cue.soundId}:${cue.slot}`));
     }
     expect(heard).toContain("jump:0");
+  });
+});
+
+describe("bonkedMaterialSound", () => {
+  const walled: LevelDefinition = {
+    ...level,
+    terrain: [
+      ...level.terrain,
+      { shape: { type: "rect", x: 200, y: 200, w: 32, h: 120 }, materialId: "earth" },
+    ],
+  };
+
+  it("should return the wall material's sound when the blob is pressed against it in the dive direction", () => {
+    const state = createGameState({ level: walled, tunables: DEFAULT_GAME_TUNABLES });
+    stepGame(state, keys(), dt);
+    const [player] = state.players;
+    if (!player) throw new Error("no player");
+    player.x = 200 - player.width / 2;
+    player.y = 320;
+    expect(bonkedMaterialSound(state.arena.terrain, player, { x: 1, y: 0.2 })).toBe("crumble");
+    expect(bonkedMaterialSound(state.arena.terrain, player, { x: 0.1, y: 1 })).toBe("thud");
+  });
+
+  it("should return none when no terrain is next to the blob in the dive direction", () => {
+    const state = createGameState({ level: walled, tunables: DEFAULT_GAME_TUNABLES });
+    stepGame(state, keys(), dt);
+    const [player] = state.players;
+    if (!player) throw new Error("no player");
+    player.x = 100;
+    player.y = 200;
+    expect(bonkedMaterialSound(state.arena.terrain, player, { x: -1, y: -0.2 })).toBe("none");
   });
 });

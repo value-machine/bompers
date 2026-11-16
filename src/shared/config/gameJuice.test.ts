@@ -3,6 +3,8 @@ import {
   JUICE_SHAKE_CAP_PX,
   JUICE_TIERS,
   isInJuiceWindow,
+  JUICE_VOLUME,
+  intensityGain,
   isJuiceSquash,
 } from "@/shared/config/gameJuice";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
@@ -51,5 +53,14 @@ describe("feel tunables conform to the juice scale", () => {
       expect(isJuiceSquash(preset)).toBe(true);
       expect(isInJuiceWindow("squash", preset.seconds)).toBe(true);
     }
+  });
+});
+
+describe("intensityGain", () => {
+  it("should rise from the volume floor to full gain when impact speed grows to the full speed", () => {
+    expect(intensityGain(0, 900)).toBe(JUICE_VOLUME.minGain);
+    expect(intensityGain(450, 900)).toBeCloseTo((JUICE_VOLUME.minGain + 1) / 2);
+    expect(intensityGain(900, 900)).toBe(1);
+    expect(intensityGain(5000, 900)).toBe(1);
   });
 });
