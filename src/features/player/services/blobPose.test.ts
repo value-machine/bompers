@@ -5,6 +5,7 @@ import {
   blobShadow,
   createBlobAnim,
   createHelmetWobble,
+  crouchFace,
   eventSquash,
   kickHelmetForHit,
   kickHelmetForSquash,
@@ -295,5 +296,29 @@ describe("crouch pose", () => {
     stepCrouchBlend(anim, { player, crouch, nowMs: 1000 });
     expect(anim.crouchBlend).toBe(0);
     expect(blobPose(anim, { player, squash, nowMs: 0, crouch }).bodySy).toBe(1);
+  });
+});
+
+describe("crouch face", () => {
+  const crouch = DEFAULT_GAME_TUNABLES.player.crouch;
+
+  it("should lower the helmet, lift the eyes and tuck them under the dome when crouched", () => {
+    const player = standing();
+    player.crouching = true;
+    const anim = createBlobAnim(player);
+    expect(crouchFace(anim, crouch)).toEqual({
+      helmetDrop: crouch.helmetDrop,
+      eyeLift: crouch.eyeLift,
+      eyesUnderHelmet: true,
+    });
+  });
+
+  it("should keep the standing face when not crouching", () => {
+    const anim = createBlobAnim(standing());
+    expect(crouchFace(anim, crouch)).toEqual({
+      helmetDrop: 0,
+      eyeLift: 0,
+      eyesUnderHelmet: false,
+    });
   });
 });

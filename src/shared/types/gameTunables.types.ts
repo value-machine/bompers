@@ -86,6 +86,12 @@ export interface GameTunables {
       bodySx: number;
       bodySy: number;
       easeSeconds: number;
+      /**
+       * Face while crouched, in mockup units (u = r / 30): the helmet sinks this far and the eyes
+       * rise this far, drawn under the dome so the rim covers about half of each eye.
+       */
+      helmetDrop: number;
+      eyeLift: number;
     };
     /** Render-only squash and stretch (sx, sy pairs; seconds). */
     squash: {

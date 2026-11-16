@@ -45,6 +45,8 @@ export interface BlobPose {
   feetSx: number;
   feetSy: number;
   shadow: BlobShadow | null;
+  /** Helmet / eye offsets of the crouch (all zero when standing). */
+  face: CrouchFace;
 }
 
 /**
@@ -106,6 +108,24 @@ function crouchScale(anim: BlobAnim, crouch: CrouchTunables | undefined) {
   const k = crouch ? smoothstep(anim.crouchBlend) : 0;
   const lerp = (to: number): number => 1 + (to - 1) * k;
   return crouch ? { sx: lerp(crouch.bodySx), sy: lerp(crouch.bodySy) } : { sx: 1, sy: 1 };
+}
+
+/** The face while crouching: how far the helmet sinks and the eyes rise (mockup units). */
+export interface CrouchFace {
+  helmetDrop: number;
+  eyeLift: number;
+  /** Eyes drawn under the helmet dome, so its rim covers them (only while crouching). */
+  eyesUnderHelmet: boolean;
+}
+
+/** Crouch face at the anim's blend; zero offsets and eyes over the dome when standing. */
+export function crouchFace(anim: BlobAnim, crouch: CrouchTunables | undefined): CrouchFace {
+  const k = crouch ? smoothstep(anim.crouchBlend) : 0;
+  return {
+    helmetDrop: (crouch?.helmetDrop ?? 0) * k,
+    eyeLift: (crouch?.eyeLift ?? 0) * k,
+    eyesUnderHelmet: k > 0,
+  };
 }
 
 /** Back-out ease 0 → 1 with a small overshoot past 1. */
@@ -205,6 +225,7 @@ export function blobPose(
     feetSx: 1 + (feet.sx - 1) * FEET_SQUASH_GAIN,
     feetSy: Math.max(0.3, 1 + (feet.sy - 1) * FEET_SQUASH_GAIN),
     shadow: blobShadow(player),
+    face: crouchFace(anim, frame.crouch),
   };
 }
 
