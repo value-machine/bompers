@@ -210,6 +210,7 @@ Served from the game's own site under `/level-kit/v2/`:
 | `preview.js` | Legend with counts, metadata, point labels, terrain-grid overlay (toggle), soft validation; reads `catalog.json` next to itself to flag unknown IDs and paint terrain in its `data-color`. No dependencies. |
 | `catalog.json` | Current catalog IDs per kind (colours with their `fill` / `lip` hex) and the defaults. |
 | `AUTHORING.md` | The agent one-pager. |
+| `LEVEL_PROMPT.md` | The copyable AI prompt (the lobby's "Copy AI prompt" copies the same text), generated whole from the format, catalog and game tunables by `pnpm level-kit:sync`. |
 | `example-level.html` | A complete level using relative kit links (works served or opened from the repo). |
 
 Agent-written levels link the kit with absolute URLs on `https://bompers.tom-fab.workers.dev`, the game's production origin. Without network access the links fail silently and the file is still a correct picture.

@@ -9,6 +9,8 @@ export type {
   LevelWarningCode,
 } from "@/features/level-file/types/levelFile.types";
 export {
+  MIN_SPAWNS,
+  RECOMMENDED_SPAWNS,
   parseLevelFile,
   type LevelImportResult,
 } from "@/features/level-file/services/levelFileParser";
