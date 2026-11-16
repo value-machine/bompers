@@ -1,10 +1,5 @@
 [
   {
-    "title": "Gamepad support and verification",
-    "description": "The owner has only verified keyboard play. Make up to 4 gamepads work end to end: join, move, aim (stick), jump, fire/dive, hot-plug and disconnect, sensible deadzones; then the owner verifies with real controllers. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Uniform material system for level maps",
     "description": "Feedback round 2 § 4.1. Externally generated HTML levels need unambiguous materials. Destructible and indestructible blocks share shape and base structure (the current purple ground) but differ clearly in colour (e.g. cardboard tint for destructible). Add material behaviours such as ice (slippery) and colour variants (ice, earth, cardboard, indestructible). Design question for the lap: decouple physical behaviour from colour (any colour on any behaviour, no LittleBigPlanet-style material explosion) while a player still recognises destructible vs slippery at a glance. No backwards compatibility needed: old levels may break; update the shipped levels, LEVEL_FORMAT.md and the level kit. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
     "status": "to-do"
