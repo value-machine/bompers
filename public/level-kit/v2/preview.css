@@ -27,6 +27,7 @@
   --lk-spawn: #2ed0a0;
   --lk-drop: #ff8a1f;
   --lk-collectible: #ff8fc8;
+  --lk-dive-reset: #5fe0ff;
   --lk-bounds: #ff4f3a;
   --lk-warn: #a8580a;
   --lk-font: system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -105,6 +106,9 @@ svg[data-level-format] [data-role='collectible'] {
   fill: var(--lk-collectible);
   stroke: var(--lk-outline);
   stroke-width: 2;
+}
+svg[data-level-format] [data-role='collectible'][data-item='dive-reset'] {
+  fill: var(--lk-dive-reset);
 }
 svg[data-level-format] [data-role='bounds'] {
   fill: none;

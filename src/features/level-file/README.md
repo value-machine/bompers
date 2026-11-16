@@ -33,7 +33,7 @@ Kit sync: `pnpm level-kit:sync` writes the generated files; `pnpm level-kit:chec
 
 ## Decisions
 
-- Built-in levels are real level files in `public/levels/*.html`, fetched at start (game-orchestration D4). Their drop points (and the kit's example level) list `rocket-launcher homing-launcher`, so crates alternate the two weapons (homing-missiles D4).
+- Built-in levels are real level files in `public/levels/*.html`, fetched at start (game-orchestration D4). Their drop points (and the kit's example level) list `rocket-launcher homing-launcher`, so crates alternate the two weapons (homing-missiles D4). Both also place headbutt resets: collectible points with `data-item="dive-reset"` (start arena 3, floating garden 4; headbutt-reset D1). The importer needs nothing new for them: any `use: collectible` item ID is accepted on the role.
 - A rejected import adds nothing; every accepted import (even the same file again) is a new library entry and becomes the lobby's level (level-importer, lobby D1).
 - The built-in list is a TS manifest checked against `public/levels/` by a test, not a JSON file in that folder (lobby D6).
 - `data-cell-size` is the terrain sample spacing; the shipped levels and the kit example use 4 (terrain-field D1).

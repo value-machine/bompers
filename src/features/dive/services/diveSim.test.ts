@@ -12,7 +12,14 @@ import {
   type PlayerState,
 } from "@/features/player/api/playerApi";
 import { createCombatState, stepCombat } from "@/features/combat/api/combatApi";
-import { createDiveState, requestDive, stepDives } from "@/features/dive/services/diveSim";
+import {
+  createDiveState,
+  isDiveSpent,
+  refillDive,
+  requestDive,
+  resetDive,
+  stepDives,
+} from "@/features/dive/services/diveSim";
 import type { DiveHit, DivePhase } from "@/features/dive/types/dive.types";
 
 // Cell size 8. Floor top y = 320. Thin wall (one cell) x 600–608, y 0–320. Open sky elsewhere.
@@ -449,5 +456,55 @@ describe("stepDives hurt reaction", () => {
     const sim = createSim([520]);
     sim.step([RIGHT], 200);
     expect(sim.players[0]!.tumbleBounceCount).toBe(0);
+  });
+});
+
+describe("refillDive (headbutt reset)", () => {
+  /** Dives right from high in the air, then runs until the dive is back to idle. */
+  const diveInAir = (refillMidDive: boolean) => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    liftTo(player, 40);
+    sim.step([RIGHT]);
+    stepsUntilPhaseChange(sim); // wind-up → travel
+    if (refillMidDive) refillDive(sim.dive, player);
+    stepsUntilPhaseChange(sim); // travel → recovery
+    stepsUntilPhaseChange(sim); // recovery → idle
+    sim.step([RIGHT]);
+    return { sim, player };
+  };
+
+  it("should count the dive as spent when the player is airborne after a dive", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    expect(isDiveSpent(sim.dive, player)).toBe(false);
+    liftTo(player, 40);
+    sim.step([RIGHT]);
+    expect(isDiveSpent(sim.dive, player)).toBe(true);
+  });
+
+  it("should not count a wind-up on the ground as spent when the player is standing", () => {
+    const sim = createSim([100]);
+    sim.step([RIGHT]);
+    expect(isDiveSpent(sim.dive, sim.players[0]!)).toBe(false);
+  });
+
+  it("should let the next dive start right after the recovery when the charge was refilled mid-dive", () => {
+    const { sim, player } = diveInAir(true);
+    expect(sim.phaseOf(player)).toBe("windup");
+    expect(sim.dive.refillCounts[player.id]).toBe(1);
+  });
+
+  it("should refuse a second dive in the same airtime when no refill was taken", () => {
+    const { sim, player } = diveInAir(false);
+    expect(sim.phaseOf(player)).toBe("idle");
+  });
+
+  it("should keep the refill count when the player respawns", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    refillDive(sim.dive, player);
+    resetDive(sim.dive, player);
+    expect(sim.dive.refillCounts[player.id]).toBe(1);
   });
 });

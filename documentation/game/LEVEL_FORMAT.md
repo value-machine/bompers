@@ -92,7 +92,7 @@ Every game-relevant shape carries `data-role`. Elements without it are decoratio
 | `terrain` | rect, polygon, circle | ≥ 1 | Solid ground. Its material decides whether explosions clear its cells and how it plays (e.g. ice is slippery). | `data-material` (default `defaults.material`), `data-color` (default: the material's `defaultColor`), `data-effect`, `data-sound`, `data-behavior` |
 | `spawn` | circle | ≥ 2 (≥ 4 recommended) | Player spawn point. The game picks the one farthest from active opponents (GDD § 6). | `data-behavior` |
 | `drop` | circle | ≥ 1 | Where weapons and power-ups fall from (GDD § 3–4). | `data-items` (space-separated item IDs; default `defaults.items.drop`), `data-behavior` |
-| `collectible` | circle | ≥ 0 | Where collectibles (points) appear (GDD § 5). | `data-item` (one item ID; default `defaults.items.collectible`), `data-behavior` |
+| `collectible` | circle | ≥ 0 | A pickup point. `point-orb` (default): point orbs fall from the sky onto it (GDD § 5). `dive-reset`: a headbutt reset floats there from the start; a player whose dive is spent in the air takes it and gets the dive back, then it is gone 2.5 s (FEEDBACK_ROUND_2 § 2.3). Only items with `use: collectible`. | `data-item` (one item ID; default `defaults.items.collectible`), `data-behavior` |
 | `bounds` | rect | exactly 1 | The in-bounds area. A player whose centre falls below its bottom edge is out of bounds (eliminated; vision § How the GDD is read); the engine sets the side and top kill lines far beyond it. Must lie within the viewBox. | — |
 
 At least one `terrain` shape is required.
@@ -121,8 +121,8 @@ At least one `terrain` shape is required.
 |---|---|---|---|
 | material | `stone` | Stone | unbreakable, looks: smooth slab, effect `none`, sound `thud`, default for terrain |
 | material | `earth` | Earth | toughness 1, looks: seam grid, effect `dust-burst`, sound `crumble` |
-| material | `cardboard` | Cardboard | toughness 0.7, looks: seam grid, effect `dust-burst`, sound `crumble` |
-| material | `ice` | Ice | unbreakable, slippery, looks: gloss streaks + white rim, effect `none`, sound `thud` |
+| material | `cardboard` | Cardboard | toughness 0.7, looks: seam grid, effect `dust-burst`, sound `thwap` |
+| material | `ice` | Ice | unbreakable, slippery, looks: gloss streaks + white rim, effect `none`, sound `clink` |
 | color | `plum` | Plum | default for stone |
 | color | `slate` | Slate |  |
 | color | `cardboard` | Cardboard | default for cardboard |
@@ -136,6 +136,8 @@ At least one `terrain` shape is required.
 | sound | `none` | Silent |  |
 | sound | `thud` | Thud |  |
 | sound | `crumble` | Crumble |  |
+| sound | `thwap` | Thwap |  |
+| sound | `clink` | Clink |  |
 | sound | `jump` | Jump |  |
 | sound | `land` | Land |  |
 | sound | `tumble-bounce` | Tumble bounce |  |
@@ -153,6 +155,7 @@ At least one `terrain` shape is required.
 | item | `rocket-launcher` | Rocket launcher | use: drop, default for drop |
 | item | `homing-launcher` | Homing launcher | use: drop |
 | item | `point-orb` | Point orb | use: collectible, default for collectible |
+| item | `dive-reset` | Headbutt reset | use: collectible |
 <!-- level-kit:catalog-ids:end -->
 
 ## 7. Validation

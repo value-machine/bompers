@@ -2,6 +2,8 @@
 export type {
   CollectiblesState,
   CrateStepResult,
+  DiveRefillCollected,
+  DiveRefillPickup,
   OrbCollected,
   PointOrb,
   WeaponCrate,
@@ -13,6 +15,11 @@ export {
   stepCollectibles,
   type StepCollectiblesArgs,
 } from "@/features/collectibles/services/collectiblesSim";
+export {
+  DIVE_REFILL_ITEM,
+  stepDiveRefills,
+  type StepDiveRefillsArgs,
+} from "@/features/collectibles/services/diveRefills";
 export {
   stepWeaponCrates,
   type StepWeaponCratesArgs,

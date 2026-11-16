@@ -36,7 +36,8 @@ The unarmed attack (GDD § 3 "Ongewapende aanval", the "bomp"): fire makes a blo
 - The dive steers the controller through three generic modifiers on `PlayerState`; the player feature knows nothing about dives (dive-headbutt D2).
 - Owner's pick after the three-option prototype (dive-headbutt D8): Cannonball's launch, Pogo's ricochet off other blobs, no bounce off terrain.
 - A head-on clash has no special rule: both reflect equally, both ricochet and both take the front-zone damage (dive-headbutt D6). Ricochets are applied before pushes so the result does not depend on player order.
-- One dive per airtime; the charge returns on ground contact or on a hit (dive-headbutt D7).
+- One dive per airtime; the charge returns on ground contact or on a hit (dive-headbutt D7), or from a headbutt reset pickup: `refillDive` (match calls it; `isDiveSpent` = airborne and uncharged).
+- A refill also waives the between-dives cooldown: the next dive is ready once the current recovery ends, so chains through several resets work. Without it a link cost 0.7 s of free fall (headbutt-reset D4). The refill count lives in `DiveState.refillCounts` (not the motion) so respawns never make it go back; sound cues `pickup` on its rise.
 - A wall bonk stuns for 30 frames (250 ms), down from the prototype's 54, to stay fair (dive-headbutt D9).
 - Test levels list terrain as `{ shape, materialId }` only: terrain has no role since level format 2 (material-system D5).
 - The dive aim snaps to 16 directions (22.5°), up from 8, for finer headbutt aim. Keyboard aim (four direction keys) still only reaches the 8 main ones; sticks reach all 16. The owner accepted that keyboard players don't get the in-between angles (dive-16-ways D1, 2026-11-16).

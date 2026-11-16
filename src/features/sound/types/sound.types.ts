@@ -29,6 +29,14 @@ export interface SoundPlayerSnapshot {
   /** Dive phase, and whether the current recovery is a head-on terrain bonk. */
   divePhase: "idle" | "windup" | "travel" | "recovery";
   diveBonked: boolean;
+  /** Catalog sound of the material a head-on bonk hit (`"none"` when unknown or not bonked). */
+  diveBonkSoundId: string;
+  /** Body speed this frame, units / s (a hit victim's knockback: the hit's intensity). */
+  speed: number;
+  /** Speed into the terrain this step, fastest axis, units / s (0 when nothing was hit). */
+  terrainHitSpeed: number;
+  /** Headbutt resets taken over the match (monotonic). */
+  diveRefillCount: number;
 }
 
 /** The two volume channels: sound effects and music. */

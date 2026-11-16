@@ -34,7 +34,10 @@ export interface DiveMotion {
   /** Unit dive direction, locked at the press (the aim snapped to 8 ways). */
   dirX: number;
   dirY: number;
-  /** One dive per airtime: spent at the press, back on ground contact or on a hit. */
+  /**
+   * One dive per airtime: spent at the press, back on ground contact, on a hit or from a
+   * headbutt reset pickup (`refillDive`).
+   */
   charged: boolean;
   /** Seconds until the next dive may start. */
   cooldown: number;
@@ -58,6 +61,11 @@ export interface RecentHit {
 export interface DiveState {
   /** By player id. */
   motions: Record<string, DiveMotion>;
+  /**
+   * Headbutt resets taken per player id over the match (the sound cue counts it). Kept outside
+   * `motions` so a respawn (`resetDive`) never makes the count go back.
+   */
+  refillCounts: Record<string, number>;
   /** Hits made on the last step (also emitted by combat as `playerHit` events). */
   hits: DiveHit[];
   recentHits: RecentHit[];
