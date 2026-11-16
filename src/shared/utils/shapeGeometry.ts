@@ -30,6 +30,43 @@ export function shapeContains(shape: Shape2D, p: Vec2): boolean {
   return polygonWinding(shape.points, p) !== 0;
 }
 
+/** Distance from `p` to the segment a–b. */
+function segmentDistance(a: Vec2, b: Vec2, p: Vec2): number {
+  const abx = b.x - a.x;
+  const aby = b.y - a.y;
+  const lengthSq = abx * abx + aby * aby;
+  const t =
+    lengthSq === 0
+      ? 0
+      : Math.max(0, Math.min(1, ((p.x - a.x) * abx + (p.y - a.y) * aby) / lengthSq));
+  return Math.hypot(p.x - (a.x + abx * t), p.y - (a.y + aby * t));
+}
+
+function rectSignedDistance(rect: Extract<Shape2D, { type: "rect" }>, p: Vec2): number {
+  const hx = rect.w / 2;
+  const hy = rect.h / 2;
+  const dx = Math.abs(p.x - (rect.x + hx)) - hx;
+  const dy = Math.abs(p.y - (rect.y + hy)) - hy;
+  const outside = Math.hypot(Math.max(dx, 0), Math.max(dy, 0));
+  return -(outside + Math.min(Math.max(dx, dy), 0));
+}
+
+/**
+ * Signed distance from `p` to the edge of `shape`, world units: positive inside, negative
+ * outside, 0 on the edge (the terrain distance field, terrain-field D3). Polygons take the sign
+ * from the non-zero rule, like `shapeContains`.
+ */
+export function shapeSignedDistance(shape: Shape2D, p: Vec2): number {
+  if (shape.type === "rect") return rectSignedDistance(shape, p);
+  if (shape.type === "circle") return shape.r - Math.hypot(p.x - shape.cx, p.y - shape.cy);
+  const { points } = shape;
+  let nearest = Infinity;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
+    nearest = Math.min(nearest, segmentDistance(points[j]!, points[i]!, p));
+  }
+  return polygonWinding(points, p) !== 0 ? nearest : -nearest;
+}
+
 /** Flat [x, y, …] path of a star centred on 0,0 with its first point straight up. */
 export function starPoints(points: number, outer: number, inner: number): number[] {
   const path: number[] = [];

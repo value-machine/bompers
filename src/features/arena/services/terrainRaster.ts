@@ -1,14 +1,22 @@
-import { shapeContains } from "@/shared/utils/shapeGeometry";
+import { shapeContains, shapeSignedDistance } from "@/shared/utils/shapeGeometry";
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import type { LevelDefinition, TerrainPiece, TerrainShape } from "@/features/level/api/levelApi";
-import type { TerrainCellSlot, TerrainGrid } from "@/features/arena/types/arena.types";
 import {
+  EMPTY_CELL,
+  type TerrainCellSlot,
+  type TerrainGrid,
+} from "@/features/arena/types/arena.types";
+import {
+  EDGE_EPSILON,
+  HALF_DIAGONAL,
   cellRangeOf,
   createTerrainGrid,
+  fieldBand,
   getCellInfo,
   isBreakableSlot,
-  setCellSlot,
+  nearestEmptyDistance,
   slotFor,
+  writeSample,
 } from "@/features/arena/services/terrainGrid";
 
 /**
@@ -53,23 +61,70 @@ export function pieceCellSlot(piece: TerrainPiece): TerrainCellSlot {
 const slotOfPiece = (grid: TerrainGrid, piece: TerrainPiece): number =>
   slotFor(grid, pieceCellSlot(piece));
 
-function rasterizePiece(grid: TerrainGrid, piece: TerrainPiece): void {
+/**
+ * Fills the samples whose centre lies in the piece (material by the overlap rule) and raises the
+ * seed distance of every sample within the band to the piece's signed distance (union = max,
+ * terrain-field D3).
+ */
+function rasterizePiece(grid: TerrainGrid, piece: TerrainPiece, seed: Float32Array): void {
   const slot = slotOfPiece(grid, piece);
   const breakable = isBreakableSlot(grid.slots[slot]);
   const size = grid.cellSize;
-  const range = cellRangeOf(grid, shapeBounds(piece.shape));
-  for (let cy = range.minY; cy <= range.maxY; cy += 1) {
-    for (let cx = range.minX; cx <= range.maxX; cx += 1) {
-      if (!shapeContains(piece.shape, { x: (cx + 0.5) * size, y: (cy + 0.5) * size })) continue;
+  const band = fieldBand(grid);
+  const bounds = shapeBounds(piece.shape);
+  const range = cellRangeOf(grid, {
+    x: bounds.x - band,
+    y: bounds.y - band,
+    w: bounds.w + band * 2,
+    h: bounds.h + band * 2,
+  });
+  for (
+    let cy = Math.max(0, range.minY);
+    cy <= Math.min(grid.heightCells - 1, range.maxY);
+    cy += 1
+  ) {
+    for (
+      let cx = Math.max(0, range.minX);
+      cx <= Math.min(grid.widthCells - 1, range.maxX);
+      cx += 1
+    ) {
+      const centre = { x: (cx + 0.5) * size, y: (cy + 0.5) * size };
+      const index = cy * grid.widthCells + cx;
+      seed[index] = Math.max(seed[index] ?? -band, shapeSignedDistance(piece.shape, centre));
+      if (!shapeContains(piece.shape, centre)) continue;
       // An unbreakable cell is never overwritten by a breakable piece (LEVEL_FORMAT § 4).
       const below = getCellInfo(grid, cx, cy);
       if (breakable && below !== null && !isBreakableSlot(below)) continue;
-      setCellSlot(grid, { cx, cy, slot });
+      writeSample(grid, { cx, cy, slot });
     }
   }
 }
 
-/** Builds the grid a (normalised) level describes. */
+/**
+ * Final distance of one sample: outside, the shapes' union distance; inside, at least the bound
+ * from the nearest empty sample, so a seam between two touching shapes is not read as an edge.
+ * Clamped to the band, with the sign the slot says (solid ⇔ distance > 0). Also sets anchored.
+ */
+function finishSample(grid: TerrainGrid, seed: Float32Array, at: { cx: number; cy: number }): void {
+  const { cx, cy } = at;
+  const index = cy * grid.widthCells + cx;
+  const band = fieldBand(grid);
+  const slot = grid.cells[index] ?? EMPTY_CELL;
+  const shaped = seed[index] ?? -band;
+  if (slot === EMPTY_CELL) {
+    writeSample(grid, { cx, cy, slot, distance: Math.max(-band, Math.min(shaped, -EDGE_EPSILON)) });
+    return;
+  }
+  const inner =
+    shaped >= band
+      ? band
+      : Math.max(shaped, nearestEmptyDistance(grid, cx, cy) - HALF_DIAGONAL * grid.cellSize);
+  writeSample(grid, { cx, cy, slot, distance: Math.min(band, Math.max(EDGE_EPSILON, inner)) });
+  const unbreakable = !isBreakableSlot(grid.slots[slot]);
+  if (unbreakable || cy === grid.heightCells - 1) grid.anchored[index] = 1;
+}
+
+/** Builds the grid a (normalised) level describes: material slots plus the distance field. */
 export function buildTerrainFromLevel(level: LevelDefinition): TerrainGrid {
   const { cellSize } = level.settings;
   const grid = createTerrainGrid({
@@ -77,6 +132,10 @@ export function buildTerrainFromLevel(level: LevelDefinition): TerrainGrid {
     widthCells: Math.ceil(level.worldSize.w / cellSize),
     heightCells: Math.ceil(level.worldSize.h / cellSize),
   });
-  for (const piece of level.terrain) rasterizePiece(grid, piece);
+  const seed = new Float32Array(grid.cells.length).fill(-fieldBand(grid));
+  for (const piece of level.terrain) rasterizePiece(grid, piece, seed);
+  for (let cy = 0; cy < grid.heightCells; cy += 1) {
+    for (let cx = 0; cx < grid.widthCells; cx += 1) finishSample(grid, seed, { cx, cy });
+  }
   return grid;
 }

@@ -60,6 +60,7 @@ const p0Blast = (at: Blast["at"]): Blast => ({
   ownerSlot: 0,
   ownerId: "p0",
   power: ROCKET_POWER,
+  craterShape: C.rocket.craterShape,
 });
 const P = DEFAULT_GAME_TUNABLES.player;
 const G = DEFAULT_GAME_TUNABLES.world.gravity;

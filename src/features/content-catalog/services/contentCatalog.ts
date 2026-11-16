@@ -111,7 +111,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
 };
 
 export const CATALOG_DEFAULTS: CatalogDefaults = {
-  cellSize: 8,
+  // Terrain sample spacing (terrain-field D1): fine enough for curved craters and slopes.
+  cellSize: 4,
   gravity: 1,
   matchDuration: DEFAULT_GAME_TUNABLES.match.durationSeconds,
   material: "stone",

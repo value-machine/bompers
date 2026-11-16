@@ -1,3 +1,5 @@
+import type { CraterShape } from "@/shared/types/craterShape.types";
+
 /** Shape of the game tunables; values and docs: `src/shared/config/gameTunables.ts`. */
 export interface GameTunables {
   /** Simulation clock. */
@@ -227,6 +229,8 @@ export interface GameTunables {
       recoil: number;
       /** Blast power of its explosion, 0–100 (`combat.blast` turns it into push, reach, crater). */
       power: number;
+      /** Shape its blast cuts out of terrain (`src/shared/types/craterShape.types.ts`). */
+      craterShape: CraterShape;
     };
     /**
      * Homing launcher (homing-missiles D2): a slower rocket that steers toward the opponent it
@@ -253,6 +257,7 @@ export interface GameTunables {
       lockConeDegrees: number;
       /** Blast power of its explosion, 0–100. */
       power: number;
+      craterShape: CraterShape;
     };
     /**
      * One blast power P (0–100, each weapon's `power`) drives everything an explosion does, in

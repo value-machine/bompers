@@ -3,7 +3,7 @@ import { EMPTY_CELL } from "@/features/arena/types/arena.types";
 import {
   clearCrater,
   createTerrainGrid,
-  setCellSlot,
+  writeSample,
   slotFor,
 } from "@/features/arena/services/terrainGrid";
 import { readTile, tileCellsFor } from "@/features/arena/services/terrainTiles";
@@ -25,9 +25,9 @@ function dirtGrid() {
     surface: "plain",
   });
   for (let cy = 2; cy < 4; cy += 1) {
-    for (let cx = 0; cx < 12; cx += 1) setCellSlot(grid, { cx, cy, slot: dirt });
+    for (let cx = 0; cx < 12; cx += 1) writeSample(grid, { cx, cy, slot: dirt });
   }
-  for (let cx = 0; cx < 12; cx += 1) setCellSlot(grid, { cx, cy: 4, slot: stone });
+  for (let cx = 0; cx < 12; cx += 1) writeSample(grid, { cx, cy: 4, slot: stone });
   return { grid, dirt, initial: grid.cells.slice() };
 }
 
@@ -53,7 +53,7 @@ describe("terrainTiles", () => {
 
   it("should crack the tiles next to a blasted cell but not the ones further away", () => {
     const { grid, initial } = dirtGrid();
-    clearCrater(grid, { x: 8, y: 20, reach: 5 });
+    clearCrater(grid, { x: 8, y: 20, reach: 5, shape: "round" });
     const blasted = readTile(grid, initial, { tx: 0, ty: 1, k: 2 });
     expect(blasted).toMatchObject({ intact: false, cracked: true });
     expect(readTile(grid, initial, { tx: 1, ty: 1, k: 2 }).cracked).toBe(true);

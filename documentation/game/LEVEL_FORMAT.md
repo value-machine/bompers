@@ -48,7 +48,7 @@ The level root is the **first `<svg>` element with a `data-level-format` attribu
 | `data-author` | no | text | Person or team. |
 | `data-agent` | no | text | The AI agent that wrote it (`claude`, `gemini`, `chatgpt`, …). |
 | `data-description` | no | text | One or two sentences. |
-| `data-cell-size` | no | integer ≥ 1 | World units per terrain cell. Default: catalog `defaults.cellSize` (8). |
+| `data-cell-size` | no | integer ≥ 1 | World units between terrain samples (each sample stores its material and its distance to the nearest terrain edge, so craters and slopes stay curved between samples). Default: catalog `defaults.cellSize` (4). |
 | `data-gravity` | no | number > 0 | Multiplier of the engine's default gravity. Default `1`. |
 | `data-match-duration` | no | integer seconds > 0 | Overrides the match length for this level. Default: the match setting. |
 

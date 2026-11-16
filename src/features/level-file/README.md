@@ -35,6 +35,7 @@ Messages name the element: `terrain "main-core"` (id or `data-label`), else `spa
 - Built-in levels are real level files in `public/levels/*.html`, fetched at start (game-orchestration D4). Their drop points (and the kit's example level) list `rocket-launcher homing-launcher`, so crates alternate the two weapons (homing-missiles D4). Both also place headbutt resets: collectible points with `data-item="dive-reset"` (start arena 3, floating garden 4; headbutt-reset D1). The importer needs nothing new for them: any `use: collectible` item ID is accepted on the role.
 - A rejected import adds nothing; every accepted import (even the same file again) is a new library entry and becomes the lobby's level (level-importer, lobby D1).
 - The built-in list is a TS manifest checked against `public/levels/` by a test, not a JSON file in that folder (lobby D6).
+- `data-cell-size` is the terrain sample spacing; the shipped levels and the kit example use 4 (terrain-field D1).
 - Point roles carry no behaviour in the engine yet; `data-behavior` on them is only checked (W4) (level-importer).
 - `x`, `y`, `cx`, `cy` default to 0 as in SVG; sizes (`width`, `height`, `r` on terrain, `points`) are required and positive (level-importer).
 - Format 2: one `terrain` role with `data-material` (behaviour) and `data-color` (looks); v1 rejected without migration and the kit moved to `/level-kit/v2/` (owner waived compatibility, material-system D1, D2, D10). Acceptance test: `services/levelFileParser.test.ts` § material system.

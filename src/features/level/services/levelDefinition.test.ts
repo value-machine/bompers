@@ -92,7 +92,7 @@ describe("levelDefinition", () => {
       ...base,
       settings: { cellSize: 0, gravity: -1, matchDurationS: 2.5 },
     });
-    expect(level.settings).toEqual({ cellSize: 8, gravity: 1 });
+    expect(level.settings).toEqual({ cellSize: 4, gravity: 1 });
     expect(warnings).toHaveLength(3);
   });
 
