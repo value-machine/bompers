@@ -1,15 +1,17 @@
 import { Container, Graphics, Text } from "pixi.js";
-import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import { GAME_PALETTE, weaponLook } from "@/shared/config/gamePalette";
 import { traceEmblem } from "@/shared/services/emblemRenderer";
 import { GAME_FONT_FAMILY } from "@/shared/utils/gameFont";
 import { playerEmblemShape } from "@/shared/utils/playerEmblem";
+import { pillRow } from "@/shared/utils/pillRow";
+import { weaponTunables, type HeldWeapon } from "@/features/combat/api/combatApi";
 import type { GameState } from "@/features/match/services/gameSim";
 import { roundResultLabel } from "@/features/match/services/matchRules";
 
 /**
  * Screen-space HUD (DESIGN_LANGUAGE § 7): a timer card centred at the top, one player card per
- * joined slot (P1–P2 left, P3–P4 right) with emblem chip, health chunks (a lost chunk pops out)
- * and score, and the round-result banner. All colours are fixed canvas colours from the palette,
+ * joined slot (P1–P2 left, P3–P4 right) with emblem chip, health chunks (a lost chunk pops out),
+ * the held weapon's ammo pills in its accent colour, and score, and the round-result banner. All colours are fixed canvas colours from the palette,
  * never UI theme tokens: the canvas looks the same in light and dark mode (match-rules D7).
  * Text is Fredoka; the session waits for the font before creating this view (visual-pass D5).
  */
@@ -28,12 +30,20 @@ interface PlayerCard {
   poppedAt: number;
   score: Text;
   shown: { health: number; max: number };
+  /** Ammo pills of the held weapon; hidden when unarmed. */
+  ammo: Graphics;
+  /** `itemId:ammo:max` last drawn, so pills redraw only on change. */
+  ammoShown: string;
 }
 
 const DESIGN_WIDTH = 1280;
-const CARD = { w: 228, h: 70, radius: 18, gap: 12, margin: 16, top: 12, tilt: 0.026 };
+const CARD = { w: 228, h: 86, radius: 18, gap: 12, margin: 16, top: 12, tilt: 0.026 };
 const TIMER = { w: 140, h: 70, radius: 18, warnSeconds: 10 };
 const PIP = { w: 22, h: 20, radius: 7, gap: 4, x: 70, y: 40, popSeconds: 0.15 };
+/** Ammo row under the health chunks (weapon-visuals D3): same pills, weapon accent, health-row width. */
+const AMMO = { y: 66, h: 10, radius: 5, gap: 3 };
+/** Health row width: `max` chunks of `PIP.w`; the ammo row spans the same width. */
+const healthRowWidth = (max: number): number => max * (PIP.w + PIP.gap) - PIP.gap;
 const BANNER = { w: 560, h: 160, radius: 24 };
 const OUTLINE = 3;
 
@@ -88,10 +98,44 @@ function createPlayerCard(slot: number): PlayerCard {
     .roundRect(0, 0, CARD.w, CARD.h, CARD.radius)
     .fill(GAME_PALETTE.hud.card)
     .stroke(ink(OUTLINE));
-  root.addChild(card, drawChip(slot), label, pips, pop, score, caption);
+  const ammo = new Graphics();
+  root.addChild(card, drawChip(slot), label, pips, pop, ammo, score, caption);
   root.pivot.set(CARD.w / 2, CARD.h / 2);
   root.rotation = slot % 2 === 0 ? -CARD.tilt : CARD.tilt;
-  return { root, pips, pop, poppedAt: -Infinity, score, shown: { health: -1, max: -1 } };
+  return {
+    root,
+    pips,
+    pop,
+    poppedAt: -Infinity,
+    score,
+    shown: { health: -1, max: -1 },
+    ammo,
+    ammoShown: "",
+  };
+}
+
+interface AmmoLook {
+  weapon: HeldWeapon | null;
+  max: number;
+  /** Health row width, so both rows line up. */
+  rowWidth: number;
+}
+
+/** Redraws the ammo pills only when the weapon, its ammo or capacity changed (weapon-visuals D3). */
+function drawAmmo(card: PlayerCard, { weapon, max, rowWidth }: AmmoLook): void {
+  const key = weapon ? `${weapon.itemId}:${weapon.ammo}:${max}` : "";
+  if (card.ammoShown === key) return;
+  card.ammoShown = key;
+  card.ammo.clear();
+  card.ammo.visible = weapon !== null;
+  if (!weapon) return;
+  const { accent } = weaponLook(weapon.itemId);
+  const pills = pillRow({ count: max, filled: weapon.ammo, width: rowWidth, gap: AMMO.gap });
+  for (const pill of pills) {
+    card.ammo
+      .roundRect(PIP.x + pill.x, AMMO.y, pill.w, AMMO.h, AMMO.radius)
+      .fill(pill.filled ? accent : GAME_PALETTE.healthLost);
+  }
 }
 
 interface PipsLook {
@@ -111,11 +155,15 @@ function drawPips(card: PlayerCard, { slot, health, max, timeSeconds }: PipsLook
   }
   card.shown = { health, max };
   card.pips.clear();
-  for (let i = 0; i < max; i += 1) {
-    const x = PIP.x + i * (PIP.w + PIP.gap);
+  for (const pill of pillRow({
+    count: max,
+    filled: health,
+    width: healthRowWidth(max),
+    gap: PIP.gap,
+  })) {
     card.pips
-      .roundRect(x, PIP.y, PIP.w, PIP.h, PIP.radius)
-      .fill(i < health ? slotColor(slot) : GAME_PALETTE.healthLost);
+      .roundRect(PIP.x + pill.x, PIP.y, pill.w, PIP.h, PIP.radius)
+      .fill(pill.filled ? slotColor(slot) : GAME_PALETTE.healthLost);
   }
 }
 
@@ -217,6 +265,12 @@ function syncCards(view: HudView, frame: HudFrame, scale: number): void {
     const health = fighter?.health ?? max;
     drawPips(card, { slot: player.slot, health, max, timeSeconds: state.timeSeconds });
     syncPop(card, state.timeSeconds);
+    const weapon = fighter?.weapon ?? null;
+    drawAmmo(card, {
+      weapon,
+      max: weapon ? weaponTunables(state.tunables, weapon.itemId).ammo : 0,
+      rowWidth: healthRowWidth(max),
+    });
     card.score.text = String(state.rules.scores[player.slot] ?? 0);
     const centre = cardCentre(player.slot, frame, scale);
     card.root.position.set(centre.x, centre.y);
