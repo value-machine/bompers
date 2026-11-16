@@ -1,14 +1,11 @@
 {
   "$comment": "GENERATED from the content catalog in the game code by `pnpm level-kit:sync`. Do not edit. Spec: documentation/game/LEVEL_FORMAT.md.",
-  "formatVersion": 1,
+  "formatVersion": 2,
   "defaults": {
     "cellSize": 8,
     "gravity": 1,
     "matchDuration": 180,
-    "material": {
-      "platform": "stone",
-      "destructible": "dirt"
-    },
+    "material": "stone",
     "items": {
       "drop": [
         "rocket-launcher"
@@ -24,20 +21,96 @@
       "durability": 0,
       "friction": 1,
       "bounce": 0,
-      "lookToken": "stone",
+      "surface": "plain",
+      "defaultColor": "plum",
       "effect": "none",
       "sound": "thud"
     },
     {
-      "id": "dirt",
-      "label": "Dirt",
+      "id": "earth",
+      "label": "Earth",
       "destructible": true,
       "durability": 1,
       "friction": 1,
       "bounce": 0,
-      "lookToken": "dirt",
+      "surface": "breakable",
+      "defaultColor": "clay",
       "effect": "dust-burst",
       "sound": "crumble"
+    },
+    {
+      "id": "cardboard",
+      "label": "Cardboard",
+      "destructible": true,
+      "durability": 1,
+      "friction": 1,
+      "bounce": 0,
+      "surface": "breakable",
+      "defaultColor": "cardboard",
+      "effect": "dust-burst",
+      "sound": "crumble"
+    },
+    {
+      "id": "ice",
+      "label": "Ice",
+      "destructible": false,
+      "durability": 0,
+      "friction": 0.12,
+      "bounce": 0,
+      "surface": "ice",
+      "defaultColor": "frost",
+      "effect": "none",
+      "sound": "thud"
+    }
+  ],
+  "color": [
+    {
+      "id": "plum",
+      "label": "Plum",
+      "fill": "#5a3f7a",
+      "lip": "#7d5fa6"
+    },
+    {
+      "id": "slate",
+      "label": "Slate",
+      "fill": "#4f6178",
+      "lip": "#71849c"
+    },
+    {
+      "id": "cardboard",
+      "label": "Cardboard",
+      "fill": "#c99a62",
+      "lip": "#ddb682"
+    },
+    {
+      "id": "clay",
+      "label": "Clay",
+      "fill": "#c4673f",
+      "lip": "#dc8a62"
+    },
+    {
+      "id": "moss",
+      "label": "Moss",
+      "fill": "#5f8f3e",
+      "lip": "#82b05c"
+    },
+    {
+      "id": "mint",
+      "label": "Mint",
+      "fill": "#3aa889",
+      "lip": "#67c7aa"
+    },
+    {
+      "id": "frost",
+      "label": "Frost",
+      "fill": "#a8cfe6",
+      "lip": "#dff1fa"
+    },
+    {
+      "id": "rose",
+      "label": "Rose",
+      "fill": "#c95a86",
+      "lip": "#e384a8"
     }
   ],
   "effect": [

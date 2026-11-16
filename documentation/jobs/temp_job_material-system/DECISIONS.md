@@ -22,7 +22,7 @@ Updated: 2026-11-16
 | D7 | Where colours live | closed | Catalog kind `color` (IDs + labels, default per material); RGB in `gamePalette.terrainSwatches`; kit catalog.json carries the hex for the preview | loop-plan | Palette stays the one home of game colours |
 | D8 | Breakable rendering | closed | Breakable pieces draw the same slab (ink, fill, lip, seams) clipped by a cell mask; ink clipped by a mask grown by the outline width; cracks stay per chunk | loop-plan | Alternatives: per-cell rounded tiles (loses slab silhouette), polygon cut-outs (heavy geometry) |
 | D9 | Overlaps | closed | An unbreakable material wins over a breakable one; between equals the later piece sets material and colour | loop-plan | Same meaning as v1's platform-wins rule |
-| D10 | Kit path | closed | Kit moves to `/level-kit/v2/`; v1 folder removed | loop-plan | Follows the version (LEVEL_FORMAT § 8), compat waived |
+| D10 | Kit path | closed | Kit moves to `/level-kit/v2/`; v1 folder removed; `projectStructure.config.cjs` whitelist entry renamed v1 → v2 (owner consent for the protected file, relayed by the orchestrator) | loop-plan + owner | Follows the version (LEVEL_FORMAT § 8), compat waived |
 
 ## Log
 
