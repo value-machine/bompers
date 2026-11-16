@@ -151,6 +151,28 @@ describe("playerController — jumping", () => {
     expect(Math.abs(rise - (P.jumpSpeed * P.jumpSpeed) / (2 * G))).toBeLessThan(P.jumpSpeed * dt);
   });
 
+  // Owner feedback round 2 § 3: the previously shipped pair (gravity 2200, jumpSpeed 1050) reached
+  // its apex too fast to coordinate trick jumps. The jump must hang at least 20 % longer and reach
+  // about the same height.
+  it("should hang 20 % longer at the old apex height when jump is held at default tunables", () => {
+    const old = { gravity: 2200, jumpSpeed: 1050 };
+    const oldApexSeconds = old.jumpSpeed / old.gravity;
+    const oldApex = (old.jumpSpeed * old.jumpSpeed) / (2 * old.gravity);
+    const sim = grounded();
+    const startY = sim.player.y;
+    let minY = startY;
+    let apexStep = 0;
+    for (let i = 0; i < 240; i += 1) {
+      sim.step({ jump: true });
+      if (sim.player.y < minY) {
+        minY = sim.player.y;
+        apexStep = i;
+      }
+    }
+    expect(apexStep * dt).toBeGreaterThanOrEqual(oldApexSeconds * 1.2);
+    expect(Math.abs(startY - minY - oldApex) / oldApex).toBeLessThan(0.05);
+  });
+
   it("should jump twice as high when gravity is halved", () => {
     const low: GameTunables = {
       ...DEFAULT_GAME_TUNABLES,

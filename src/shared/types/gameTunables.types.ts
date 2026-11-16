@@ -195,6 +195,8 @@ export interface GameTunables {
       muzzleOffset: number;
       /** Seconds before a rocket that hit nothing explodes in the air. */
       maxLifetime: number;
+      /** Velocity change on the shooter per shot, opposite the aim, units / s. */
+      recoil: number;
     };
     explosion: {
       /** Players within this distance of the blast (nearest body point) are hit and pushed. */
