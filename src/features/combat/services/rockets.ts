@@ -27,6 +27,7 @@ export function fireRocket(ctx: CombatContext, shooter: PlayerState): void {
   };
   ctx.combat.nextEntityId += 1;
   ctx.combat.rockets.push(rocket);
+  kickShooter(shooter, ctx.tunables.combat.rocket.recoil);
   emitCombatEvent(
     ctx.combat,
     {
@@ -88,4 +89,11 @@ export function stepRockets(ctx: CombatContext, dt: number): void {
     }
   }
   ctx.combat.rockets = flying;
+}
+
+/** Recoil: pushes the shooter opposite the aim; an upward kick leaves the ground. */
+function kickShooter(shooter: PlayerState, recoil: number): void {
+  shooter.vx -= shooter.aimX * recoil;
+  shooter.vy -= shooter.aimY * recoil;
+  if (shooter.aimY > 0) shooter.grounded = false;
 }

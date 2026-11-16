@@ -43,7 +43,7 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 - Render the latest sim state without interpolation; revisit if motion stutters (game-engine-foundation D6).
 - Fixed step 120 Hz, max 8 steps per frame; the backlog after a stall is dropped (`gameTunables.sim`).
 - Scoring: kill +2, point orb +1, an elimination nobody gets credit for −1; no clamp, all in `match.scoring` (match-rules D1).
-- Kill zone: falling below the level bounds eliminates at once; the side and top kill lines lie `outOfBoundsMargin` = (jumpSpeed + explosion.impulse)² / gravity beyond the bounds (twice the apex of a jump plus a point-blank blast, with the match's effective gravity), so nobody notices them, even with chained jumps. Combat (rockets) and collectibles (crates) get the same zone as their `bounds` (open-map-edges D1–D3).
+- Kill zone: falling below the level bounds eliminates at once; the side and top kill lines lie `outOfBoundsMargin` = (jumpSpeed + explosion.impulse + rocket.recoil)² / gravity beyond the bounds (twice the apex of a jump plus a point-blank blast and its recoil, jumps-and-recoil D2; with the match's effective gravity), so nobody notices them, even with chained jumps. Combat (rockets) and collectibles (crates) get the same zone as their `bounds` (open-map-edges D1–D3).
 - Eliminated players are out of play for the respawn delay: not stepped, hit, drawn or framed (match-rules D3).
 - Respawn at the spawn maximising the distance to the nearest opponent in play; ties → lowest index; level spawns are the author's safe points (match-rules D4).
 - Spawn protection only blocks damage (combat), the player moves and fires freely; blink + dashed ring per DESIGN_LANGUAGE § 6 (match-rules D5).
