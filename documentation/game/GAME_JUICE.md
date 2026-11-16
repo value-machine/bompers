@@ -71,7 +71,8 @@ Every built game moment with its tier and channels. Add a row for each new momen
 |--------|------|-------|--------|-------|-------|----------|--------|--------|
 | Jump / wall-jump | light | `jump` | stretch tall | — | — | — | — | kick |
 | Land | light | `land` (gain by speed) | squash wide (by speed) | — | — | — | — | kick |
-| Rocket fire | light | `rocket-fire` | — | — | — | — | — | — |
+| Rocket fire | light | `rocket-fire` | — | — | — | — | — (visual: the recoil row) | — |
+| Rocket recoil | light | `rocket-fire` (the fire cue) | — | — | — | — | body kick opposite the aim (sim impulse `combat.rocket.recoil`) | — |
 | Pickup collected | light | `pickup` | — | — | — | — | — | — |
 | Respawn | light | `respawn` | — | — | — | — | blink 8 Hz + ring | — |
 | Dive launch | light | `dive-launch` | dive pose | — | — | — | — | — |
@@ -84,6 +85,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Elimination | heavy | `elimination` | — | — | — | — | **gap:** droplets + confetti (DESIGN_LANGUAGE § 6) not built yet | — |
 | Health chunk lost (HUD) | — | — | pip pop | — | — | — | — | — |
 | Round start / end | — | `round-start` / `round-end` | — | — | — | — | banner | — |
+| Final 30 s build-up (lands with #33) | — | music build-up for the last 30 s | — | — | — | — | timer turns orange and pulses in the last 10 s (HUD) | — |
 
 Rows marked **gap** break § 1 today; the lap that builds the missing channel fills the row.
 
