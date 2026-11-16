@@ -13,6 +13,11 @@ export interface PlayerInput {
   /** Held state; the sim derives "pressed this step" from its own previous value. */
   jump: boolean;
   fire: boolean;
+  /**
+   * Pause / Start (pad Start, keyboard Escape). Not used by the sim; a pause menu reads the
+   * press edge per slot like `jump`.
+   */
+  pause: boolean;
 }
 
 /** Inputs for all player slots, index = slot (0–3). */
@@ -47,6 +52,7 @@ export type KeyboardLayoutId = "left" | "right";
 
 /** A plain snapshot of one gamepad (the subset of the Gamepad API the mapping needs). */
 export interface GamepadSnapshot {
+  /** Left stick x, y then right stick x, y (standard mapping), each -1 … 1. */
   axes: readonly number[];
   /** Pressed state per standard-mapping button index. */
   buttons: readonly boolean[];

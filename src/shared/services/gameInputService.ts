@@ -25,8 +25,9 @@ export interface GameInputReader {
   dispose: () => void;
 }
 
+// Some browsers keep an unplugged pad in the list with `connected: false` instead of null.
 const toSnapshot = (pad: Gamepad | null): GamepadSnapshot | null =>
-  pad ? { axes: pad.axes, buttons: pad.buttons.map((button) => button.pressed) } : null;
+  pad?.connected ? { axes: pad.axes, buttons: pad.buttons.map((button) => button.pressed) } : null;
 
 const readGamepads = (): (GamepadSnapshot | null)[] => {
   if (typeof navigator === "undefined" || typeof navigator.getGamepads !== "function") return [];

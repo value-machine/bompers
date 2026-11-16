@@ -21,7 +21,7 @@ The join screen before a round (GDD § 1, § 7): 1–4 players claim a slot from
 | Components | `components/BlobBadge.tsx`       | SVG blob of a slot (colour, shade feet, helmet emblem from `shared/utils/playerEmblem`)                                                                    |
 | API        | `api/lobbyApi.ts`                | `useLobby`, `LobbyScreen` (mounted by `pages/GamePage.tsx`)                                                                                                |
 
-Controls: join / confirm Space or F (left keys), Enter or / (right keys), A or Start (pad); back Q, Backspace, B; directions W A S D, arrows, d-pad or left stick.
+Controls: join / confirm Space or F (left keys), Enter or / (right keys), A or Start (pad); back Q, Backspace, B; directions W A S D, arrows, d-pad or left stick. A pad shows up after its first button press (browser rule); "Pad N" is the browser's gamepad index, so a replugged pad may come back as another number. In-match pad controls: `ARCHITECTURE.md` input row.
 
 ## Dependencies
 
