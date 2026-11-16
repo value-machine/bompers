@@ -5,21 +5,38 @@ import {
   pickTakeIndex,
   playbackRateFor,
 } from "@/features/sound/services/soundBank";
-import type { SoundCue } from "@/features/sound/types/sound.types";
+import { MUSIC_TRACKS } from "@/features/sound/services/musicBank";
+import { createMusicPlayer, type MusicPlayer } from "@/features/sound/services/musicPlayer";
+import {
+  busGains,
+  readSoundSettings,
+  writeSoundSettings,
+} from "@/features/sound/services/soundSettings";
+import type { MusicTrackId, SoundCue, SoundSettings } from "@/features/sound/types/sound.types";
 
 /** Key that toggles mute in game (not used by any keyboard layout). */
 export const MUTE_KEY_CODE = "KeyM";
 const MUTE_STORAGE_KEY = "bompers.sound.muted";
 
-/** The game's sound output: plays cues, toggles mute (M), and is disposed with the session. */
-export interface SoundPlayer {
-  play(cue: SoundCue): void;
+/**
+ * The game's audio output for the whole app lifetime: SFX cues, music, the player's sound
+ * settings (volumes, on/off per channel) and the M mute. One per page; never per match, so
+ * music carries from lobby to match and explosions duck it.
+ */
+export interface AudioEngine {
+  playCue(cue: SoundCue): void;
+  /** Switches the music (null = fade out); asking for the playing track does nothing. */
+  playMusic(track: MusicTrackId | null, offsetSeconds?: number): void;
+  settings(): SoundSettings;
+  updateSettings(change: (settings: SoundSettings) => SoundSettings): void;
+  /** Called after every settings change; returns the unsubscribe. */
+  subscribe(listener: () => void): () => void;
   toggleMute(): void;
   isMuted(): boolean;
   dispose(): void;
 }
 
-/** What the player needs from the browser (a real `window`, or a stub in tests). */
+/** What the engine needs from the browser (a real `window`, or a stub in tests). */
 export interface SoundHost {
   addEventListener: Window["addEventListener"];
   removeEventListener: Window["removeEventListener"];
@@ -46,34 +63,80 @@ const writeMuted = (host: SoundHost, muted: boolean): void => {
 
 const decibelsToGain = (db: number): number => 10 ** (db / 20);
 
-/** A player that does nothing (no Web Audio in this browser or test). */
-const silentPlayer = (): SoundPlayer => {
+interface SettingsStore {
+  get(): SoundSettings;
+  update(change: (settings: SoundSettings) => SoundSettings): void;
+  subscribe(listener: () => void): () => void;
+}
+
+/** The settings, remembered by the browser, with change listeners. */
+function createSettingsStore(host: SoundHost): SettingsStore {
+  let settings = readSoundSettings(host.localStorage);
+  const listeners = new Set<() => void>();
+  return {
+    get: () => settings,
+    update: (change) => {
+      settings = change(settings);
+      writeSoundSettings(host.localStorage, settings);
+      listeners.forEach((listener) => listener());
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+}
+
+/** An engine that plays nothing (no Web Audio in this browser or test); settings still work. */
+function silentEngine(host: SoundHost): AudioEngine {
+  const store = createSettingsStore(host);
   let muted = false;
   return {
-    play: () => undefined,
+    playCue: () => undefined,
+    playMusic: () => undefined,
+    settings: store.get,
+    updateSettings: store.update,
+    subscribe: store.subscribe,
     toggleMute: () => {
       muted = !muted;
     },
     isMuted: () => muted,
     dispose: () => undefined,
   };
-};
+}
 
 interface Mixer {
   master: GainNode;
   sfxBus: GainNode;
+  /** Music volume. */
   musicBus: GainNode;
+  /** In front of the music bus: explosions duck this one, so ducking never fights the volume. */
+  musicDuck: GainNode;
 }
 
-/** master → destination, with an SFX bus and a music bus (the bus explosions duck). */
+/** master → destination; SFX bus and music bus (← duck) into the master. */
 function createMixer(context: AudioContext): Mixer {
   const master = context.createGain();
   const sfxBus = context.createGain();
   const musicBus = context.createGain();
+  const musicDuck = context.createGain();
   sfxBus.connect(master);
+  musicDuck.connect(musicBus);
   musicBus.connect(master);
   master.connect(context.destination);
-  return { master, sfxBus, musicBus };
+  return { master, sfxBus, musicBus, musicDuck };
+}
+
+function applyGains(
+  context: AudioContext,
+  mixer: Mixer,
+  { settings, muted }: { settings: SoundSettings; muted: boolean }
+): void {
+  const now = context.currentTime;
+  const gains = busGains(settings);
+  mixer.master.gain.setValueAtTime(muted ? 0 : SOUND_MIX.masterGain, now);
+  mixer.sfxBus.gain.setValueAtTime(gains.sfx, now);
+  mixer.musicBus.gain.setValueAtTime(gains.music, now);
 }
 
 /** Fetches and decodes each URL once; a failed file warns and plays nothing. */
@@ -87,7 +150,10 @@ function createBufferLoader(
     if (cached) return cached;
     const pending = host
       .fetch(url)
-      .then((response) => response.arrayBuffer())
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.arrayBuffer();
+      })
       .then((data) => context.decodeAudioData(data))
       .catch((error: unknown) => {
         console.warn(`Sound file failed to load: ${url}`, error);
@@ -98,11 +164,11 @@ function createBufferLoader(
   };
 }
 
-function duckMusic(context: AudioContext, musicBus: GainNode): void {
+function duckMusic(context: AudioContext, musicDuck: GainNode): void {
   const now = context.currentTime;
-  musicBus.gain.cancelScheduledValues(now);
-  musicBus.gain.setValueAtTime(decibelsToGain(-SOUND_MIX.duckDecibels), now);
-  musicBus.gain.linearRampToValueAtTime(1, now + SOUND_MIX.duckSeconds);
+  musicDuck.gain.cancelScheduledValues(now);
+  musicDuck.gain.setValueAtTime(decibelsToGain(-SOUND_MIX.duckDecibels), now);
+  musicDuck.gain.linearRampToValueAtTime(1, now + SOUND_MIX.duckSeconds);
 }
 
 /** One voice: the buffer at the cue's pitch and gain, into the SFX bus. */
@@ -156,38 +222,53 @@ function bindKeys(host: SoundHost, context: AudioContext, toggleMute: () => void
   };
 }
 
+/** Fetches every SFX take and music track once, so the first play is not late. */
+function warm(load: (url: string) => Promise<AudioBuffer | null>): void {
+  Object.values(SOUND_FILES).forEach((urls) => urls.forEach((url) => void load(url)));
+  Object.values(MUSIC_TRACKS).forEach((track) => void load(track.url));
+}
+
 /**
- * Creates the Web Audio sound player (DESIGN_LANGUAGE § 8): per-player pitch, random take
- * rotation, explosion ducking of the music bus, master volume and an M mute toggle that the
- * browser remembers. Takes are fetched and decoded once, warmed at creation.
+ * Creates the Web Audio engine (DESIGN_LANGUAGE § 8): per-player pitch, random take rotation,
+ * music with crossfades, explosion ducking of the music, SFX and music volumes with on/off
+ * switches, and an M mute; settings and mute are remembered by the browser.
  */
-export function createSoundPlayer(host: SoundHost): SoundPlayer {
-  if (!host.AudioContext) return silentPlayer();
+export function createAudioEngine(host: SoundHost): AudioEngine {
+  if (!host.AudioContext) return silentEngine(host);
   const context = new host.AudioContext();
   const mixer = createMixer(context);
   const load = createBufferLoader(host, context);
   const pickTake = createTakePicker(context);
+  const music: MusicPlayer = createMusicPlayer({ context, output: mixer.musicDuck, load });
+  const store = createSettingsStore(host);
   let muted = readMuted(host);
-  mixer.master.gain.value = muted ? 0 : SOUND_MIX.masterGain;
-  Object.values(SOUND_FILES).forEach((urls) => urls.forEach((url) => void load(url)));
+  const apply = (): void => applyGains(context, mixer, { settings: store.get(), muted });
+  apply();
+  const unsubscribeGains = store.subscribe(apply);
+  warm(load);
 
   const toggleMute = (): void => {
     muted = !muted;
     writeMuted(host, muted);
-    mixer.master.gain.setValueAtTime(muted ? 0 : SOUND_MIX.masterGain, context.currentTime);
+    apply();
   };
   const unbindKeys = bindKeys(host, context, toggleMute);
 
   return {
-    play: (cue) => {
+    playCue: (cue) => {
       const url = pickTake(cue);
       if (url === null) return;
-      if (DUCKING_SOUNDS.has(cue.soundId)) duckMusic(context, mixer.musicBus);
+      if (DUCKING_SOUNDS.has(cue.soundId)) duckMusic(context, mixer.musicDuck);
       void load(url).then((buffer) => buffer && startVoice({ context, mixer }, buffer, cue));
     },
+    playMusic: music.play,
+    settings: store.get,
+    updateSettings: store.update,
+    subscribe: store.subscribe,
     toggleMute,
     isMuted: () => muted,
     dispose: () => {
+      unsubscribeGains();
       unbindKeys();
       void context.close();
     },

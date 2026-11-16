@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import type { InputSource } from "@/shared/types/gameInput.types";
-import type { LobbyAction, LobbyButton, LobbyState } from "@/features/lobby/types/lobby.types";
+import type {
+  LobbyAction,
+  LobbyButton,
+  LobbyEffect,
+  LobbyState,
+} from "@/features/lobby/types/lobby.types";
 import {
   canStart,
   createLobbyState,
@@ -25,7 +30,7 @@ const run = (actions: LobbyAction[], start = createLobbyState(DEFAULT_GAME_TUNAB
   actions.reduce((result, action) => reduceLobby(result.state, action, CONTEXT), {
     state: start,
     effect: null,
-  } as { state: LobbyState; effect: string | null });
+  } as { state: LobbyState; effect: LobbyEffect });
 
 describe("lobbyMenu", () => {
   it("should join a device with confirm and start the match with its next confirm", () => {
@@ -71,5 +76,30 @@ describe("lobbyMenu", () => {
 
   it("should ask the screen to open the file picker when the load-file row is activated", () => {
     expect(run([{ type: "activate", row: "loadFile" }]).effect).toBe("pickFile");
+  });
+
+  it("should step the music volume without wrapping when a joined player presses left or right on it", () => {
+    const { effect, state } = run([
+      press(LEFT, "confirm"),
+      press(LEFT, "down"),
+      press(LEFT, "left"),
+    ]);
+    expect(LOBBY_ROWS[state.cursor]).toBe("musicVolume");
+    expect(effect).toEqual({ type: "volume", row: "musicVolume", step: -1, wrap: false });
+  });
+
+  it("should step the sound volume up with wrap when its row is activated", () => {
+    expect(run([{ type: "activate", row: "sfxVolume" }]).effect).toEqual({
+      type: "volume",
+      row: "sfxVolume",
+      step: 1,
+      wrap: true,
+    });
+    expect(run([{ type: "cycle", row: "sfxVolume", step: 1 }]).effect).toEqual({
+      type: "volume",
+      row: "sfxVolume",
+      step: 1,
+      wrap: false,
+    });
   });
 });
