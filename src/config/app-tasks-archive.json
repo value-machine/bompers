@@ -208,5 +208,10 @@
     "title": "Game feel: hit flash, screen shake, helmet wobble",
     "description": "Render-only feedback the visual pass left out: hit flash on the victim's fill (back hits stronger), capped decaying screen shake (explosions, hard dive hits, tumble bounces), helmet spring wobble, render-only hit-stop; feel tunables; prefers-reduced-motion respected. No sim change. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "done"
+  },
+  {
+    "title": "Slower jumps and rocket recoil",
+    "description": "Feedback round 2 § 3. Jumps are too fast to coordinate trick jumps: lower gravity for more air control, balanced with a lower jump impulse so max height stays sensible. Firing a rocket gives no recoil today: add a physical kick on the shooter (impact and tactical movement, e.g. small rocket-assisted moves). Tunables in gameTunables. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "status": "done"
   }
 ]
