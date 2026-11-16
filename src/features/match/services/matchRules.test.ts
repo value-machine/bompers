@@ -194,10 +194,20 @@ describe("outOfBoundsMargin and killZoneOf", () => {
     world: { ...tunables.world, gravity: tunables.world.gravity * scale },
   });
 
-  it("should be twice the apex of a jump plus a point-blank blast when gravity is the default", () => {
-    const launch = tunables.player.jumpSpeed + tunables.combat.explosion.impulse;
+  it("should be twice the apex of a jump plus a point-blank blast and its recoil when gravity is the default", () => {
+    const { jumpSpeed } = tunables.player;
+    const launch = jumpSpeed + tunables.combat.explosion.impulse + tunables.combat.rocket.recoil;
     const apex = (launch * launch) / (2 * tunables.world.gravity);
     expect(outOfBoundsMargin(tunables)).toBeCloseTo(apex * 2);
+  });
+
+  it("should widen the margin when the rocket recoil is stronger", () => {
+    const { combat } = tunables;
+    const stronger = {
+      ...tunables,
+      combat: { ...combat, rocket: { ...combat.rocket, recoil: combat.rocket.recoil + 300 } },
+    };
+    expect(outOfBoundsMargin(stronger)).toBeGreaterThan(outOfBoundsMargin(tunables));
   });
 
   it("should widen the margin when the match gravity is lower", () => {

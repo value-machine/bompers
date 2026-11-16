@@ -37,6 +37,7 @@ Seams for later work:
 ## Decisions
 
 - Fixed take-off speed: apex scales with gravity, so low-gravity maps jump higher (player-movement D1).
+- Tempo is set by gravity, height by speed² / gravity: default gravity is 1400 (was 2200) for more hang time, and every gravity-coupled vertical speed (jump, wall-jump Y, max fall, blast impulse, dive lift / pop) was scaled by √(1400 / 2200) so heights stayed. Retune those together (jumps-and-recoil D1).
 - Variable jump = one cut of the rise on release (player-movement D2); linear accel toward the input speed with a turn boost (D3).
 - Sim → render events are monotonic counters on `PlayerState`, never per-step flags, because a frame may run several sim steps (player-movement D4). Squash never feeds back into the sim.
 - The animation clock is a `syncPlayersView` option defaulting to `performance.now()` (D5); the sim scans `groundBelowY` for the contact shadow (D6).
