@@ -4,6 +4,8 @@
  * `public/audio/sfx/` (post-processed: trimmed, faded, −16 LUFS, mono mp3). A sound with
  * several takes plays a random one, never the same take twice in a row.
  * Spare takes kept for later (`dive-impact-spare-*`, `elimination-spare-*`) are not listed.
+ * Material sounds (`thud`, `crumble`, `thwap`, `clink`) play when terrain is blasted and, layered,
+ * when a dive bonks into it (material-sounds D1, D2).
  */
 export const SFX_BASE_URL = "/audio/sfx/";
 
@@ -25,6 +27,11 @@ export const SOUND_FILES: Readonly<Record<string, readonly string[]>> = {
   respawn: takes("respawn", 1),
   "round-start": takes("round-start", 4),
   "round-end": takes("round-end", 6),
+  // Material sounds (owner picks, material-sounds lap).
+  thud: takes("thud", 1),
+  crumble: takes("crumble", 2),
+  thwap: takes("thwap", 1),
+  clink: takes("clink", 2),
 };
 
 /** Semitone offset per player slot (P1 0, P2 +2, P3 −2, P4 +4), so four blobs never sound alike. */
@@ -46,9 +53,14 @@ export const SOUND_MIX = {
   duckSeconds: 0.3,
   /** The same sound retriggering faster than this is dropped (a pile-up of landings). */
   minRetriggerSeconds: 0.04,
-  /** Landing speed (units / s) that plays the land sound at full gain; slower is quieter. */
-  fullLandingSpeed: 900,
-  minLandingGain: 0.35,
+  /**
+   * The two intensity knobs (owner, 2026-11-16): the impact speed (units / s) that plays at full
+   * volume; slower is quieter, down to `JUICE_VOLUME.minGain` (`intensityGain`, gameJuice.ts).
+   * Landing: fall speed at touchdown. Hit: a wall bonk's speed into the wall, or a hit victim's
+   * knockback speed (a full dive hit or blast is about 1000).
+   */
+  landingFullSpeed: 900,
+  hitFullSpeed: 1000,
   /** Sinking into a crouch replays the land sound this soft. */
   crouchGain: 0.3,
 } as const;

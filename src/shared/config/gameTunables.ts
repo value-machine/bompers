@@ -31,6 +31,7 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     maxActive: 2,
     dropHeight: 600,
     size: 22,
+    diveRefill: { respawnSeconds: 2.5, size: 30 },
   },
   player: {
     width: 28,

@@ -1,3 +1,4 @@
+import { intensityGain } from "@/shared/config/gameJuice";
 import type { CombatEvent } from "@/features/combat/api/combatApi";
 import { SOUND_MIX } from "@/features/sound/services/soundBank";
 import type { SoundCue, SoundPlayerSnapshot } from "@/features/sound/types/sound.types";
@@ -31,7 +32,7 @@ export function readSoundCues(
   const cues = [
     ...roundCues(cursor, frame),
     ...frame.players.flatMap((player) => playerCues(cursor?.players.get(player.slot), player)),
-    ...eventCues(frame.events, lastSeq),
+    ...eventCues(frame, lastSeq),
   ];
   return {
     cues,
@@ -51,51 +52,83 @@ function roundCues(cursor: SoundCursor | null, frame: SoundSnapshot): SoundCue[]
   return ended ? [cue("round-end", null)] : [];
 }
 
-/** Landing gain grows with fall speed, from `minLandingGain` up to 1. */
-const landingGain = (speed: number): number => {
-  const { fullLandingSpeed, minLandingGain } = SOUND_MIX;
-  const t = Math.min(1, Math.max(0, speed / fullLandingSpeed));
-  return minLandingGain + (1 - minLandingGain) * t;
-};
+/**
+ * The blob part of a head-on wall bonk: the landing splut (owner's swap, material-sounds D5).
+ * Dive hits on another player keep `dive-impact`.
+ */
+export const WALL_BONK_SOUND = "land";
 
 type PlayerRule = (previous: SoundPlayerSnapshot, now: SoundPlayerSnapshot) => boolean;
 
-/** Player-state changes that cue a sound, in play order. Land gain is set separately. */
-const PLAYER_RULES: readonly [soundId: string, fired: PlayerRule][] = [
-  ["jump", (p, n) => n.jumpCount > p.jumpCount || n.wallJumpCount > p.wallJumpCount],
-  ["land", (p, n) => n.landCount > p.landCount],
-  ["tumble-bounce", (p, n) => n.tumbleBounceCount > p.tumbleBounceCount],
-  ["dive-launch", (p, n) => n.divePhase === "travel" && p.divePhase !== "travel"],
-  ["dive-impact", (p, n) => n.divePhase === "recovery" && n.diveBonked && p.divePhase === "travel"],
-  ["respawn", (p, n) => n.inPlay && !p.inPlay],
+/** Player-state changes that cue a sound, in play order, with each one's gain. */
+const PLAYER_RULES: readonly [
+  soundId: string,
+  fired: PlayerRule,
+  gain: (now: SoundPlayerSnapshot) => number,
+][] = [
+  ["jump", (p, n) => n.jumpCount > p.jumpCount || n.wallJumpCount > p.wallJumpCount, () => 1],
+  [
+    "land",
+    (p, n) => n.landCount > p.landCount,
+    (n) => intensityGain(n.lastLandingSpeed, SOUND_MIX.landingFullSpeed),
+  ],
+  ["tumble-bounce", (p, n) => n.tumbleBounceCount > p.tumbleBounceCount, () => 1],
+  ["dive-launch", (p, n) => n.divePhase === "travel" && p.divePhase !== "travel", () => 1],
+  ["respawn", (p, n) => n.inPlay && !p.inPlay, () => 1],
+  // A headbutt reset reuses the pickup sound, pitched by the collector (headbutt-reset D5).
+  ["pickup", (p, n) => n.diveRefillCount > p.diveRefillCount, () => 1],
 ];
+
+const bonked = (previous: SoundPlayerSnapshot, now: SoundPlayerSnapshot): boolean =>
+  now.divePhase === "recovery" && now.diveBonked && previous.divePhase === "travel";
+
+/**
+ * A head-on wall bonk: the blob's splut (pitched) plus the wall's material sound (unpitched),
+ * both as loud as the bonk was hard.
+ */
+function bonkCues(now: SoundPlayerSnapshot): SoundCue[] {
+  const gain = intensityGain(now.terrainHitSpeed, SOUND_MIX.hitFullSpeed);
+  const cues = [cue(WALL_BONK_SOUND, now.slot, gain)];
+  if (now.diveBonkSoundId !== "none") cues.push(cue(now.diveBonkSoundId, null, gain));
+  return cues;
+}
 
 function playerCues(
   previous: SoundPlayerSnapshot | undefined,
   now: SoundPlayerSnapshot
 ): SoundCue[] {
   if (!previous) return [];
-  const cues = PLAYER_RULES.filter(([, fired]) => fired(previous, now)).map(([soundId]) =>
-    cue(soundId, now.slot, soundId === "land" ? landingGain(now.lastLandingSpeed) : 1)
+  const cues = PLAYER_RULES.filter(([, fired]) => fired(previous, now)).map(([soundId, , gain]) =>
+    cue(soundId, now.slot, gain(now))
   );
+  if (bonked(previous, now)) cues.push(...bonkCues(now));
   // Sinking into a crouch is a soft landing thud (no file of its own).
   if (now.crouchCount > previous.crouchCount)
     cues.push(cue("land", now.slot, SOUND_MIX.crouchGain));
   return cues;
 }
 
-function eventCues(events: readonly CombatEvent[], lastSeq: number): SoundCue[] {
-  return events
+function eventCues(frame: SoundSnapshot, lastSeq: number): SoundCue[] {
+  const speedOf = (slot: number): number =>
+    frame.players.find((player) => player.slot === slot)?.speed ?? 0;
+  return frame.events
     .filter((event) => event.seq > lastSeq)
-    .map(combatEventCue)
+    .map((event) => combatEventCue(event, speedOf))
     .filter((eventCue): eventCue is SoundCue => eventCue !== null);
 }
 
-/** Combat event → cue. Hits and eliminations take the victim's pitch, actions the actor's. */
-function combatEventCue(event: CombatEvent): SoundCue | null {
+/**
+ * Combat event → cue. Hits and eliminations take the victim's pitch, actions the actor's. A hit is
+ * as loud as the victim's knockback speed this frame (`hitFullSpeed`).
+ */
+function combatEventCue(event: CombatEvent, speedOf: (slot: number) => number): SoundCue | null {
   switch (event.type) {
     case "playerHit":
-      return cue(event.source === "dive" ? "dive-impact" : "hit", event.victimSlot);
+      return cue(
+        event.source === "dive" ? "dive-impact" : "hit",
+        event.victimSlot,
+        intensityGain(speedOf(event.victimSlot), SOUND_MIX.hitFullSpeed)
+      );
     case "playerEliminated":
       return cue("elimination", event.victimSlot);
     case "rocketFired":

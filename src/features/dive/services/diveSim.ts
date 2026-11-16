@@ -50,7 +50,12 @@ const BONK_SLIDE_KEEP = 0.3;
  */
 const AIM_STEP = Math.PI / 8;
 
-export const createDiveState = (): DiveState => ({ motions: {}, hits: [], recentHits: [] });
+export const createDiveState = (): DiveState => ({
+  motions: {},
+  refillCounts: {},
+  hits: [],
+  recentHits: [],
+});
 
 const createDiveMotion = (): DiveMotion => ({
   phase: "idle",
@@ -78,6 +83,27 @@ export function requestDive(dive: DiveState, player: PlayerState, tunables: Game
   motionOf(dive, player).fireBuffer = tunables.dive.fireBufferSeconds;
 }
 
+/**
+ * True when an airborne player has used this airtime's dive and not got it back yet. A wind-up
+ * on the ground does not count: the charge returns on landing anyway.
+ */
+export const isDiveSpent = (dive: DiveState, player: PlayerState): boolean =>
+  !player.grounded && dive.motions[player.id]?.charged === false;
+
+/**
+ * A headbutt reset pickup: the charge is back at once, even mid-flight, and the between-dives
+ * cooldown is waived, so the next dive is ready as soon as the current one has recovered
+ * (headbutt-reset D4). A dive still travelling keeps going; its recovery still plays.
+ */
+export function refillDive(dive: DiveState, player: PlayerState): void {
+  const motion = motionOf(dive, player);
+  motion.charged = true;
+  const recoveryLeft =
+    motion.phase === "recovery" ? Math.max(0, motion.phaseDuration - motion.phaseSeconds) : 0;
+  motion.cooldown = Math.min(motion.cooldown, recoveryLeft);
+  dive.refillCounts[player.id] = (dive.refillCounts[player.id] ?? 0) + 1;
+}
+
 /** Forgets a player's dive (respawn): idle, charged, no cooldown. */
 export function resetDive(dive: DiveState, player: PlayerState): void {
   dive.motions[player.id] = createDiveMotion();
@@ -102,7 +128,8 @@ function endDive(motion: DiveMotion, d: DiveTunables, stunSeconds = 0): void {
   motion.bonked = stunSeconds > 0;
   const duration = stunSeconds > 0 ? stunSeconds : d.recoverySeconds;
   enterPhase(motion, "recovery", duration);
-  motion.cooldown = duration + d.cooldownSeconds;
+  // Refilled mid-dive by a headbutt reset: no extra cooldown after the recovery (headbutt-reset D4).
+  motion.cooldown = motion.charged ? duration : duration + d.cooldownSeconds;
 }
 
 function startWindup(motion: DiveMotion, player: PlayerState, d: DiveTunables): void {

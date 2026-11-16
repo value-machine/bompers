@@ -254,3 +254,34 @@ describe("gameSim — dive headbutt", () => {
     expect(state.players[0]!.x).toBeGreaterThan(360);
   });
 });
+
+describe("gameSim — headbutt reset", () => {
+  /** One player standing at x 100; a headbutt reset hangs in the air at (100, 120). */
+  const gameWithRefill = () => {
+    const state = createGameState({
+      level: { ...level, collectibles: [{ at: { x: 100, y: 120 }, itemId: "dive-reset" }] },
+      tunables: DEFAULT_GAME_TUNABLES,
+    });
+    stepFor(state, 1);
+    return { state, player: state.players[0]!, refill: state.collectibles.diveRefills[0]! };
+  };
+
+  it("should leave the pickup in place when a player who still holds the charge flies through it", () => {
+    const { state, player, refill } = gameWithRefill();
+    player.y = 130;
+    player.grounded = false;
+    stepGame(state, keys(), dt);
+    expect(refill.respawnTimer).toBe(0);
+  });
+
+  it("should refill the dive mid-air when a player with a spent charge touches it", () => {
+    const { state, player, refill } = gameWithRefill();
+    player.y = 130;
+    player.grounded = false;
+    state.dive.motions[player.id]!.charged = false;
+    stepGame(state, keys(), dt);
+    expect(refill.respawnTimer).toBeGreaterThan(0);
+    expect(state.dive.motions[player.id]!.charged).toBe(true);
+    expect(state.dive.refillCounts[player.id]).toBe(1);
+  });
+});

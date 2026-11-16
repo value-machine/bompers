@@ -76,6 +76,7 @@ Named colours a level puts on any material (`data-color`; catalog kind `color`).
 | Homing missile body / seeker light / trail | `#c9a7ff` / `#e0103f` (blinks 6 Hz) / `#d9c4ff`; fins in the shooter's body colour |
 | Weapon pickup crate | `#fff4e2`; its face shows the weapon's tube silhouette in ink inside a ring in the weapon accent (§ 9) |
 | Point collectible (falls from the roof) | `#ff8fc8` bubblegum star |
+| Headbutt reset (floats on its point) | `#5fe0ff` aqua diamond crystal, ink outline, white gloss facet, ink up-chevron; while gone, an ink ghost outline at 30 % alpha |
 | Timer warning (last 10 s) | `#ff8a1f` |
 | Weapon accents (§ 9) | rocket launcher sky `#8fd6ff`; homing launcher lilac `#b08cff`; planned: flamethrower ember `#ff8a1f` |
 
@@ -255,6 +256,7 @@ Every SFX prompt is built from one template: **material + action + palette words
 | Impacts | dive launch, dive impact, hit, elimination | bonky, squishy | rubber mallet, felt | dry (20/100) · mid | launch 0.3 s, impact 0.4 s, hit 0.35 s, elimination 0.55 s |
 | Weapon | rocket fire, explosion | poppy, fizzy, crackly, soft-edged | cork, paper bag, soda fizz | dry (20/100) · mid | rocket fire 0.4 s, explosion 0.85 s |
 | Round & UI | pickup, respawn, round start, round end | bright, magical, plinky, bubble, spray | marimba, bubble | dry (10/100) · mid | pickup 0.4 s, respawn 0.6 s, round start 2 s, round end 2 s |
+| Terrain | stone, earth, cardboard, ice (impact and destroy) | solid, bonky, crumbly, papery, plinky, cool | stone slab, dry earth, cardboard box, ice block | dry · mid | stone 0.40 s, earth 0.60 s, cardboard 0.40 s, ice 0.45 s |
 
 **Anchors** (kept takes from the first batch, "more like this"): jump take 3, tumble-bounce take 3, explosion takes 2 and 3, respawn take 2. Kept but not steering: rocket-fire take 3, explosion take 4, pickup takes 1 and 2.
 
@@ -262,7 +264,9 @@ Every SFX prompt is built from one template: **material + action + palette words
 
 **Post-processing** for every file: trim leading and trailing silence, cut to the target length with a short fade-out, loudness-normalise to −16 LUFS, mono, short mp3.
 
-**Chosen takes** (owner, 2026-11-14; files in `public/audio/sfx/`, wiring in `src/features/sound/`): jump, tumble bounce, rocket fire and respawn from the first batch (one take each); explosion 3 takes and pickup 2 takes from the first batch; hit from the test batch; round start, all 4 test takes; land, dive launch, dive impact and elimination from round two; round end, all 6 round-two takes, one picked at random each time. Spares kept for later: dive impact × 4 (future material-specific collisions), elimination × 2.
+**Chosen takes** (owner, 2026-11-14; files in `public/audio/sfx/`, wiring in `src/features/sound/`): jump, tumble bounce, rocket fire and respawn from the first batch (one take each); explosion 3 takes and pickup 2 takes from the first batch; hit from the test batch; round start, all 4 test takes; land, dive launch, dive impact and elimination from round two; round end, all 6 round-two takes, one picked at random each time. Spares kept for later: dive impact × 2, elimination × 2.
+
+**Material sounds** (owner, 2026-11-16, material-sounds lap): stone `thud` take 4; earth `crumble` take 3 + dive-impact spare 1; cardboard `thwap` take 4; ice `clink` take 2 + dive-impact spare 4. One sound per material, played when it is blasted and, layered over the blob's splut, when a dive bonks into it. The owner's A/B: a wall bonk's blob part is the landing splut; landings keep it. Volume follows intensity: landings by fall speed, hits and bonks by impact speed (GAME_JUICE § 5).
 
 ### Music (the music lap, 2026-11-16)
 
