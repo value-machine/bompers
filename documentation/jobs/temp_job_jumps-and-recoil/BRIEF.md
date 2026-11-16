@@ -29,6 +29,7 @@ At default tunables a full jump reaches the same apex (~250 units) but takes at 
 | shared/config + shared/types (tunables) | `DEFAULT_GAME_TUNABLES` → every sim system             | `world`, `player`, `combat`, `dive` values; `combat.rocket.recoil` type | ride — values + one field                        |
 | combat                                  | fire press → `attacks.ts` → `fireRocket` spawns rocket | `fireRocket` writes shooter `vx`/`vy`                                   | ride — combat already writes velocity for blasts |
 | player (tests only)                     | `stepPlayers` jump → gravity                           | test of hang time                                                       | ride                                             |
+| match (added after open-map-edges #30 merged, orchestrator ask) | `killZoneOf` → `outOfBoundsMargin` from jump + blast | `outOfBoundsMargin` launch speed adds `combat.rocket.recoil` | ride — recoil stacks with a rocket jump, so the margin must include it |
 
 Overrun rule (skill-loop D51): a diff that touches a feature area **not** in this table stops the lap.
 

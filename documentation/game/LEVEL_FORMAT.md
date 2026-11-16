@@ -93,7 +93,7 @@ Every game-relevant shape carries `data-role`. Elements without it are decoratio
 | `spawn` | circle | ≥ 2 (≥ 4 recommended) | Player spawn point. The game picks the one farthest from active opponents (GDD § 6). | `data-behavior` |
 | `drop` | circle | ≥ 1 | Where weapons and power-ups fall from (GDD § 3–4). | `data-items` (space-separated item IDs; default `defaults.items.drop`), `data-behavior` |
 | `collectible` | circle | ≥ 0 | Where collectibles (points) appear (GDD § 5). | `data-item` (one item ID; default `defaults.items.collectible`), `data-behavior` |
-| `bounds` | rect | exactly 1 | The in-bounds area. A player whose centre leaves it is out of bounds (eliminated; vision § How the GDD is read). Must lie within the viewBox. | — |
+| `bounds` | rect | exactly 1 | The in-bounds area. A player whose centre falls below its bottom edge is out of bounds (eliminated; vision § How the GDD is read); the engine sets the side and top kill lines far beyond it. Must lie within the viewBox. | — |
 
 At least one `platform` or `destructible` shape is required.
 

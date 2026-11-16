@@ -77,6 +77,23 @@ describe("gameSim", () => {
     });
   });
 
+  it("should let a rocket fly on past the bounds top when it is still inside the kill zone", () => {
+    const state = stepGame(newGame(), keys(), dt);
+    const start = { x: 300, y: level.bounds.y + 50 };
+    state.combat.rockets.push({
+      id: 99,
+      ownerSlot: 0,
+      ownerId: "p0",
+      ...start,
+      dirX: 0,
+      dirY: -1,
+      age: 0,
+    });
+    stepFor(state, 0.5);
+    expect(state.combat.events.filter((e) => e.type === "explosion")).toEqual([]);
+    expect(state.combat.rockets[0]?.y).toBeLessThan(level.bounds.y - 300);
+  });
+
   it("should respawn a player whose last health chunk was lost to a hit", () => {
     const state = stepGame(newGame(), keys(), dt);
     const victim = state.players[1]!;
