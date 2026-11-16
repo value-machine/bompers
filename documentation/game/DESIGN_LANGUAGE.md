@@ -207,6 +207,8 @@ Light mode is the daytime arena; dark mode is the same world at dusk (plum night
 
 **Toy-box pop.** Everything sounds like a squishy, rubbery toy: short, bright, a little silly, never harsh. Explosions are big cartoon "BOOMF"s with a confetti-crackle tail, not realistic bass rumble. Music is upbeat ukulele and marimba with slap bass and hand claps, around 128 BPM, major key, built from short loops plus stingers. Each player's sounds are pitched slightly differently (P1 0, P2 +2, P3 −2, P4 +4 semitones) so four blobs never sound identical. Mix: player actions above music; explosions duck the music by about 4 dB for 300 ms.
 
+**Owner listens first (owner, 2026-11-16).** Every generated audio file (SFX, music loop, stinger, re-take) goes on an artifact page where the owner can play it, as processed for the game (cut, faded, levelled; loops with a loop toggle to hear the seam). It is wired into the game only after the owner approves it there. Links into the generator's own app don't count. If artifacts can't serve the audio from the cloud session, say so and agree another listening path with the owner before wiring.
+
 ### SFX set (for the sound task)
 
 | Sound | Character |
