@@ -29,6 +29,8 @@ export interface SoundPlayerSnapshot {
   /** Dive phase, and whether the current recovery is a head-on terrain bonk. */
   divePhase: "idle" | "windup" | "travel" | "recovery";
   diveBonked: boolean;
+  /** Catalog sound of the material a head-on bonk hit (`"none"` when unknown or not bonked). */
+  diveBonkSoundId: string;
 }
 
 /** The two volume channels: sound effects and music. */

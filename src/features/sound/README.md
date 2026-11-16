@@ -30,7 +30,7 @@ What each cue comes from:
 | `hit`                                | `playerHit` (rocket)                                                 |
 | `elimination`                        | `playerEliminated`                                                   |
 | `rocket-fire`, `explosion`, `pickup` | `rocketFired`, `explosion`, `pickupCollected`                        |
-| material sound                       | `terrainDestroyed.soundId` (silent until the bank has a file for it) |
+| material sound                       | `terrainDestroyed.soundId`, and a dive bonk layers the bonked wall's material sound (`diveBonkSoundId`, unpitched) over `dive-impact`; silent until the bank has a file for it |
 | `respawn`                            | a player comes back into play                                        |
 | `round-start`, `round-end`           | a fresh round's first frame; round phase turns `ended`               |
 

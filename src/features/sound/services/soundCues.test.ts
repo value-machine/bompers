@@ -15,6 +15,7 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   inPlay: true,
   divePhase: "idle",
   diveBonked: false,
+  diveBonkSoundId: "none",
   ...patch,
 });
 
@@ -76,6 +77,20 @@ describe("readSoundCues", () => {
       players: [player(0, { divePhase: "recovery", diveBonked: true }), player(1)],
     });
     expect(idsOf(cuesAfter(next, first))).toEqual(["dive-impact"]);
+  });
+
+  it("should layer the wall's material sound over the bonk when a dive bonks into terrain", () => {
+    const first = snapshot({ players: [player(2, { divePhase: "travel" }), player(1)] });
+    const next = snapshot({
+      players: [
+        player(2, { divePhase: "recovery", diveBonked: true, diveBonkSoundId: "thud" }),
+        player(1),
+      ],
+    });
+    expect(cuesAfter(next, first)).toEqual([
+      { soundId: "dive-impact", slot: 2, gain: 1 },
+      { soundId: "thud", slot: null, gain: 1 },
+    ]);
   });
 
   it("should cue a respawn when a player comes back into play", () => {

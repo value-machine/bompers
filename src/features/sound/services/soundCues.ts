@@ -78,6 +78,9 @@ function playerCues(
   const cues = PLAYER_RULES.filter(([, fired]) => fired(previous, now)).map(([soundId]) =>
     cue(soundId, now.slot, soundId === "land" ? landingGain(now.lastLandingSpeed) : 1)
   );
+  // A wall bonk also sounds like the wall: its material's sound, unpitched (terrain is not a player).
+  if (cues.some((bonk) => bonk.soundId === "dive-impact") && now.diveBonkSoundId !== "none")
+    cues.push(cue(now.diveBonkSoundId, null));
   // Sinking into a crouch is a soft landing thud (no file of its own).
   if (now.crouchCount > previous.crouchCount)
     cues.push(cue("land", now.slot, SOUND_MIX.crouchGain));
