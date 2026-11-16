@@ -213,5 +213,15 @@
     "title": "Side and top map edges stop killing players",
     "description": "Feedback round 2 § 3. Players die unexpectedly at the sides and top of the map ('killed by the air'). Only the bottom (falling to your death) should feel lethal; sides and top must feel like open space. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
     "status": "done"
+  },
+  {
+    "title": "Slower jumps and rocket recoil",
+    "description": "Feedback round 2 § 3. Jumps are too fast to coordinate trick jumps: lower gravity for more air control, balanced with a lower jump impulse so max height stays sensible. Firing a rocket gives no recoil today: add a physical kick on the shooter (impact and tactical movement, e.g. small rocket-assisted moves). Tunables in gameTunables. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Finer headbutt directions (16 ways)",
+    "description": "Owner request 2026-11-16: the headbutt/dive can only aim in 45° steps (diveSim AIM_STEP = π/4, 8 ways); halve it to 22.5° (16 ways). Keyboard aim is 8-way from the keys, so the lap checks how keyboard players reach the in-between angles and asks the owner if a new control scheme is needed. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "done"
   }
 ]

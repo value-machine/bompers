@@ -10,13 +10,13 @@
     "status": "to-do"
   },
   {
-    "title": "Slower jumps and rocket recoil",
-    "description": "Feedback round 2 § 3. Jumps are too fast to coordinate trick jumps: lower gravity for more air control, balanced with a lower jump impulse so max height stays sensible. Firing a rocket gives no recoil today: add a physical kick on the shooter (impact and tactical movement, e.g. small rocket-assisted moves). Tunables in gameTunables. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "title": "Feet animation: rotation, dynamics and wall-facing feet",
+    "description": "Feedback round 2 § 2.5 and § 3. The feet only move straight up and down; they lost the rotation, dynamics and feel of the pre-restyle version. Bring back rotation and dynamic motion (earlier ideas like taller sprites or changed collision are dropped). While wall-sliding and wall-jumping, the feet turn to face the wall surface. Render-only. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
     "status": "to-do"
   },
   {
-    "title": "Feet animation: rotation, dynamics and wall-facing feet",
-    "description": "Feedback round 2 § 2.5 and § 3. The feet only move straight up and down; they lost the rotation, dynamics and feel of the pre-restyle version. Bring back rotation and dynamic motion (earlier ideas like taller sprites or changed collision are dropped). While wall-sliding and wall-jumping, the feet turn to face the wall surface. Render-only. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "title": "Game juice design system",
+    "description": "Feedback round 2 § 4.2. New game elements keep arriving; define one consistent set of constants and guidelines for sounds, squash-and-stretch and visual feedback (extend DESIGN_LANGUAGE.md and the feel tunables; an agent skill or several, the lap decides) so every new element gets the same style and feel. Skill or rule files need the owner's yes. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
     "status": "to-do"
   },
   {
@@ -25,8 +25,18 @@
     "status": "to-do"
   },
   {
-    "title": "Game juice design system",
-    "description": "Feedback round 2 § 4.2. New game elements keep arriving; define one consistent set of constants and guidelines for sounds, squash-and-stretch and visual feedback (extend DESIGN_LANGUAGE.md and the feel tunables; an agent skill or several, the lap decides) so every new element gets the same style and feel. Skill or rule files need the owner's yes. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "title": "Material responses: blast power and spreading fire",
+    "description": "Owner direction 2026-11-16 (supersedes the earlier fire-only scope): one shared model where a source only says WHERE and HOW STRONG, and the material decides the result. (1) Blasts: a rocket picks only its explosion point and power (no fixed crater radius); each material's toughness decides the cutout. (2) Fire: a fire source at a point; fire spreads per tick outward in a circle from the origin, and each material decides whether and how it burns — so part of a block can burn while the rest does not (the terrain cell grid makes that per-cell, not a split entity). (3) A flamethrower weapon. (4) A hit reaction when a blob touches fire. Design with the owner, with examples, before building. Laps: blast-by-power refactor first, then fire + burn reaction, then flamethrower. Build waits on the uniform material system (#36). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "to-do"
+  },
+  {
+    "title": "Weapon and crate visual design system",
+    "description": "Owner request 2026-11-16. Design with the owner first, with examples, before building. (1) Crates show what's inside. (2) A visual system for weapons: today every weapon is a tube on the blob's head. Owner idea: replace the figure on the head with the weapon's icon instead of the team; but in team games blob colour identifies the player and the helmet might identify the team — so what identifies the weapon? Define the logic: player = blob colour, team = ?, weapon = ?, consistent across crate, HUD and blob. Build waits on the feet animation lap (same player renderer). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md once #34 lands. ",
+    "status": "to-do"
+  },
+  {
+    "title": "Homing missiles (dodgeable)",
+    "description": "Owner request 2026-11-16. A homing-missile weapon: missiles track a target but are dodgeable, never a guaranteed hit (limited turn rate, lock delay, fuel/lifetime or similar — the lap proposes the dodge rule). Picked up from crates like the rocket launcher. A separate weapon from the normal rocket launcher (owner 2026-11-16): the missile itself looks different — another colour or a red blinking part — and its crate looks different too. Uses the weapon visual system once defined (placeholder until then). Waits on slower jumps and rocket recoil (#31, same rocket code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md once #34 lands. ",
     "status": "to-do"
   },
   {
