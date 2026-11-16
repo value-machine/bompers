@@ -28,6 +28,9 @@ Owner picks come from the fire-design ideation page (version 3, https://claude.a
 | D16 | Lap placement of the smooth outline | closed | Own laps after this one: "Smooth terrain outline + crater shapes" (render + crater field), then "Collision on the smooth outline"; both before Shared roll | loop-refine | clear-winner — keeps each lap ≤ M; this lap writes the crater test as a distance rule (`shapeDistance × toughness ≤ craterPerPower × power`) so the outline lap reuses it |
 | D17 | Crater shape per weapon | closed | The crater test takes a shape (distance rule) per weapon; the rocket stays round; the shape slot ships with the outline lap | owner (via orchestrator) "custom crater shapes per weapon" | This lap: round only, function signature ready |
 
+| D18 | Terrain representation (final) | closed | "Field with real curves": a fine true-distance field (~4 units) over the terrain; edges drawn truly curved (spline-smoothed contour or a shader edge, PixiJS spike first); untouched authored shapes may draw from their level vectors so corners stay sharp until damaged; collision samples the same field (distance + surface direction); crater = shape distance × toughness per sample, crater shapes per weapon; fire = arrival time on the same field (no second representation) | owner (via orchestrator, after the A-vs-vector deep dive in session_01S5apqczKJ9URdGSktgADZt) | Supersedes D14 (8-unit contour) and refines D15/D16. D1–D8 hold; "per cell" in D1/D5 now reads "per field sample". Sharp points under a sample round off once damaged |
+| D19 | Lap order under D18 | closed | a (this lap, blast power on today's grid; the per-cell test is the per-sample test at another resolution) → a2 field storage + crater on field → a2r curved edge renderer → a3 collision on the field → Shared roll; fire (b) after a2r; torch (c) after b | loop-refine | clear-winner — supersedes D16; each lap ≤ M |
+
 ## Open
 
 | id | topic | status | options briefly | blocked phase |
@@ -39,3 +42,4 @@ Owner picks come from the fire-design ideation page (version 3, https://claude.a
 - 2026-11-16 — D3 closed, derived from the owner's "all recommended" (orchestrator)
 - 2026-11-16 — D9–D13 closed via loop-refine (clear-winner)
 - 2026-11-16 — D14, D15, D17 closed via owner (relayed by orchestrator; D14 supersedes the vector pick); D16 via loop-refine (clear-winner)
+- 2026-11-16 — D18 closed via owner (final terrain pick, supersedes D14); D19 via loop-refine (clear-winner, supersedes D16)
