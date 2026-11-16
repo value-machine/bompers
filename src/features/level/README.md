@@ -37,3 +37,4 @@ Seams for later work:
 - Levels hold geometry and gameplay data only; looks, sounds and behaviours are string IDs resolved through the content catalog (owner requirement, via orchestrator).
 - Unknown IDs resolve to a safe default plus a warning, never a crash (orchestrator).
 - Terrain has no role: the material alone decides breakability, the colour is looks only (material-system D1, D5).
+- `settings.cellSize` defaults to the catalog's 4: the arena turns it into the spacing of its distance-field samples (terrain-field D1).

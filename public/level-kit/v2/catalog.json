@@ -2,7 +2,7 @@
   "$comment": "GENERATED from the content catalog in the game code by `pnpm level-kit:sync`. Do not edit. Spec: documentation/game/LEVEL_FORMAT.md.",
   "formatVersion": 2,
   "defaults": {
-    "cellSize": 8,
+    "cellSize": 4,
     "gravity": 1,
     "matchDuration": 180,
     "material": "stone",

@@ -1,4 +1,6 @@
 import type { Rect } from "@/shared/types/gameGeometry.types";
+import type { CraterShape } from "@/shared/types/craterShape.types";
+import { craterShapeDistance } from "@/shared/utils/craterShape";
 import {
   EMPTY_CELL,
   type TerrainCellSlot,
@@ -30,17 +32,36 @@ const EMPTY_SLOT: TerrainCellSlot = {
 export const isBreakableSlot = (info: TerrainCellSlot | null | undefined): boolean =>
   info !== null && info !== undefined && info.toughness !== null;
 
+/** Distances are clamped to this many samples either side of an edge (terrain-field D2). */
+export const FIELD_BAND_SAMPLES = 4;
+
+/**
+ * Half a sample's diagonal, in samples: an edge between a solid and an empty sample centre lies
+ * at least this much less far than the empty centre (the bound used where no shape gives the
+ * exact distance).
+ */
+export const HALF_DIAGONAL = Math.SQRT1_2;
+
+/** Smallest positive distance a solid sample keeps, world units. */
+export const EDGE_EPSILON = 0.01;
+
+/** The distance clamp of a grid, world units. */
+export const fieldBand = (grid: TerrainGrid): number => FIELD_BAND_SAMPLES * grid.cellSize;
+
 export function createTerrainGrid(size: TerrainGridSize): TerrainGrid {
   const chunkCells = size.chunkCells ?? DEFAULT_CHUNK_CELLS;
   const chunksX = Math.ceil(size.widthCells / chunkCells);
   const chunksY = Math.ceil(size.heightCells / chunkCells);
   const dirtyChunks = new Set<number>();
   for (let i = 0; i < chunksX * chunksY; i += 1) dirtyChunks.add(i);
+  const count = size.widthCells * size.heightCells;
   return {
     cellSize: size.cellSize,
     widthCells: size.widthCells,
     heightCells: size.heightCells,
-    cells: new Uint8Array(size.widthCells * size.heightCells),
+    cells: new Uint8Array(count),
+    distance: new Float32Array(count).fill(-FIELD_BAND_SAMPLES * size.cellSize),
+    anchored: new Uint8Array(count),
     slots: [EMPTY_SLOT],
     chunkCells,
     chunksX,
@@ -77,17 +98,49 @@ export function getCellInfo(grid: TerrainGrid, cx: number, cy: number): TerrainC
   return slot === EMPTY_CELL ? null : (grid.slots[slot] ?? null);
 }
 
-/** Writes one cell and marks its chunk dirty when the value changes. */
-export function setCellSlot(
-  grid: TerrainGrid,
-  cell: { cx: number; cy: number; slot: number }
-): void {
-  const { cx, cy, slot } = cell;
-  if (!inGrid(grid, cx, cy)) return;
+/** Signed distance at a sample centre (outside the grid: the band's negative edge, i.e. air). */
+export function sampleDistance(grid: TerrainGrid, cx: number, cy: number): number {
+  if (!inGrid(grid, cx, cy)) return -fieldBand(grid);
+  return grid.distance[cy * grid.widthCells + cx] ?? -fieldBand(grid);
+}
+
+/** One sample write: its slot and, optionally, its distance (default: the band, by the slot). */
+export interface SampleWrite {
+  cx: number;
+  cy: number;
+  slot: number;
+  distance?: number;
+}
+
+/**
+ * The one write path for terrain samples (terrain-field D6, blast-power D20): sets the slot and
+ * the signed distance together, so "solid ⇔ distance > 0" always holds, and marks the chunk
+ * dirty when either changes. Returns whether anything changed.
+ */
+export function writeSample(grid: TerrainGrid, write: SampleWrite): boolean {
+  const { cx, cy, slot } = write;
+  if (!inGrid(grid, cx, cy)) return false;
+  const band = fieldBand(grid);
   const index = cy * grid.widthCells + cx;
-  if (grid.cells[index] === slot) return;
+  const distance = write.distance ?? (slot === EMPTY_CELL ? -band : band);
+  if (grid.cells[index] === slot && grid.distance[index] === distance) return false;
   grid.cells[index] = slot;
+  grid.distance[index] = distance;
   grid.dirtyChunks.add(chunkIndexOfCell(grid, cx, cy));
+  return true;
+}
+
+/** Distance from a sample centre to the nearest empty sample centre within the band (else beyond). */
+export function nearestEmptyDistance(grid: TerrainGrid, cx: number, cy: number): number {
+  const reach = FIELD_BAND_SAMPLES;
+  let best = Infinity;
+  for (let dy = -reach; dy <= reach; dy += 1) {
+    for (let dx = -reach; dx <= reach; dx += 1) {
+      if (getCellSlot(grid, cx + dx, cy + dy) !== EMPTY_CELL) continue;
+      best = Math.min(best, Math.hypot(dx, dy));
+    }
+  }
+  return Number.isFinite(best) ? best * grid.cellSize : (reach + 1) * grid.cellSize;
 }
 
 /** True when the world point lies in a non-empty cell. */
@@ -142,10 +195,32 @@ export interface ClearedLook {
   cells: number;
 }
 
-/** What a blast removed: total cells and the count per material + colour (destroy effects / sounds). */
+/** Inclusive sample range a write touched (empty when `minX > maxX`). */
+export interface SampleBox {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+/**
+ * What a blast removed: total samples, the count per material + colour (destroy effects /
+ * sounds), and the box of samples it wrote (the region a later loose-parts check floods, D20).
+ */
 export interface ClearedCells {
   removed: number;
   byLook: ClearedLook[];
+  box: SampleBox;
+}
+
+const emptyBox = (): SampleBox => ({ minX: 1, minY: 1, maxX: 0, maxY: 0 });
+
+function growBox(box: SampleBox, cx: number, cy: number): void {
+  if (box.minX > box.maxX) Object.assign(box, { minX: cx, minY: cy, maxX: cx, maxY: cy });
+  box.minX = Math.min(box.minX, cx);
+  box.minY = Math.min(box.minY, cy);
+  box.maxX = Math.max(box.maxX, cx);
+  box.maxY = Math.max(box.maxY, cy);
 }
 
 function tallyLook(bySlot: Map<number, ClearedLook>, slot: number, info: TerrainCellSlot): void {
@@ -154,26 +229,74 @@ function tallyLook(bySlot: Map<number, ClearedLook>, slot: number, info: Terrain
   bySlot.set(slot, look);
 }
 
-/** Where a blast cuts terrain: its centre and its crater reach at toughness 1 (world units). */
+/**
+ * Where a blast cuts terrain: its centre, its crater reach at toughness 1 (world units) and the
+ * weapon's crater shape.
+ */
 export interface Crater {
   x: number;
   y: number;
   reach: number;
+  shape: CraterShape;
 }
 
-/** How far a crater can cut in this grid: its reach in the softest breakable material. */
+/** How far a crater can change distances: its reach in the softest breakable material + the band. */
 function craterSpan(grid: TerrainGrid, reach: number): number {
   const softest = Math.min(
     ...grid.slots.map((slot) => slot.toughness ?? Infinity).filter((t) => t > 0)
   );
-  return Number.isFinite(softest) ? reach / softest : 0;
+  return Number.isFinite(softest) ? reach / softest + fieldBand(grid) : 0;
+}
+
+interface CraterPass {
+  grid: TerrainGrid;
+  crater: Crater;
+  bySlot: Map<number, ClearedLook>;
+  box: SampleBox;
+}
+
+/** Lowers one breakable sample's distance to the crater rim's; clears it once that reaches 0. */
+function carveSample(pass: CraterPass, cx: number, cy: number): void {
+  const { grid, crater } = pass;
+  const slot = getCellSlot(grid, cx, cy);
+  const info = grid.slots[slot];
+  if (slot === EMPTY_CELL || !info || info.toughness === null || info.toughness <= 0) return;
+  const dx = (cx + 0.5) * grid.cellSize - crater.x;
+  const dy = (cy + 0.5) * grid.cellSize - crater.y;
+  const rim = craterShapeDistance(crater.shape, dx, dy) - crater.reach / info.toughness;
+  if (rim >= sampleDistance(grid, cx, cy)) return;
+  const cleared = rim <= 0;
+  writeSample(grid, { cx, cy, slot: cleared ? EMPTY_CELL : slot, distance: rim });
+  growBox(pass.box, cx, cy);
+  if (cleared) tallyLook(pass.bySlot, slot, info);
 }
 
 /**
- * Blasts a crater out of the terrain (blast-power D1): a breakable cell clears when the distance
- * from the crater centre to the cell centre × the cell's toughness ≤ `reach`, so softer materials
- * open wider; unbreakable cells stay. Written as a distance rule per sample so the distance-field
- * lap can reuse it with other crater shapes. Returns what was removed, per material + colour.
+ * Unbreakable samples next to a fresh crater keep their old (seam) distance; bound it by the
+ * nearest now-empty sample so their edge reads as an edge (terrain-field D4).
+ */
+function exposeUnbreakable(grid: TerrainGrid, box: SampleBox): void {
+  const pad = FIELD_BAND_SAMPLES;
+  for (let cy = box.minY - pad; cy <= box.maxY + pad; cy += 1) {
+    for (let cx = box.minX - pad; cx <= box.maxX + pad; cx += 1) {
+      const slot = getCellSlot(grid, cx, cy);
+      if (slot === EMPTY_CELL || isBreakableSlot(grid.slots[slot])) continue;
+      const bound = Math.max(
+        EDGE_EPSILON,
+        nearestEmptyDistance(grid, cx, cy) - HALF_DIAGONAL * grid.cellSize
+      );
+      if (bound < sampleDistance(grid, cx, cy))
+        writeSample(grid, { cx, cy, slot, distance: bound });
+    }
+  }
+}
+
+/**
+ * Blasts a crater out of the terrain (blast-power D1, terrain-field D4): each breakable sample's
+ * distance is lowered to its distance from the crater rim, where the rim lies at
+ * `shape distance = reach ÷ toughness`, so softer materials open wider and the rim is a true
+ * curve between samples. A sample clears when its distance reaches 0; unbreakable samples stay.
+ * Returns what was removed, per material + colour, and the box of samples it wrote.
  */
 export function clearCrater(grid: TerrainGrid, crater: Crater): ClearedCells {
   const span = craterSpan(grid, crater.reach);
@@ -183,21 +306,14 @@ export function clearCrater(grid: TerrainGrid, crater: Crater): ClearedCells {
     w: span * 2,
     h: span * 2,
   });
-  const bySlot = new Map<number, ClearedLook>();
+  const pass: CraterPass = { grid, crater, bySlot: new Map(), box: emptyBox() };
   for (let cy = range.minY; cy <= range.maxY; cy += 1) {
-    for (let cx = range.minX; cx <= range.maxX; cx += 1) {
-      const slot = getCellSlot(grid, cx, cy);
-      const info = grid.slots[slot];
-      if (slot === EMPTY_CELL || !info || info.toughness === null) continue;
-      const dx = (cx + 0.5) * grid.cellSize - crater.x;
-      const dy = (cy + 0.5) * grid.cellSize - crater.y;
-      if (Math.hypot(dx, dy) * info.toughness > crater.reach) continue;
-      setCellSlot(grid, { cx, cy, slot: EMPTY_CELL });
-      tallyLook(bySlot, slot, info);
-    }
+    for (let cx = range.minX; cx <= range.maxX; cx += 1) carveSample(pass, cx, cy);
   }
-  const byLook = [...bySlot.values()];
-  return { removed: byLook.reduce((sum, look) => sum + look.cells, 0), byLook };
+  const byLook = [...pass.bySlot.values()];
+  const removed = byLook.reduce((sum, look) => sum + look.cells, 0);
+  if (removed > 0) exposeUnbreakable(grid, pass.box);
+  return { removed, byLook, box: pass.box };
 }
 
 /**

@@ -1,4 +1,5 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
+import type { CraterShape } from "@/shared/types/craterShape.types";
 import type { WeaponItemId } from "@/shared/types/weaponItems.types";
 import { emitCombatEvent, fighterFor, type HitWorld } from "@/features/combat/services/combatState";
 import type { RocketKind } from "@/features/combat/types/combat.types";
@@ -17,6 +18,8 @@ export interface ProjectileWeaponTunables {
   maxLifetime: number;
   /** Blast power of the explosion it fires (blast-power D1). */
   power: number;
+  /** Shape its blast cuts out of terrain (terrain-field D5). */
+  craterShape: CraterShape;
 }
 
 const KIND_OF: Readonly<Record<WeaponItemId, RocketKind>> = {

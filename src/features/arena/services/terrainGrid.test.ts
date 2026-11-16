@@ -8,6 +8,7 @@ import {
   groundFrictionBelow,
   isSolidAt,
   rectHitsSolid,
+  sampleDistance,
   surfaceBelow,
   takeDirtyChunks,
 } from "@/features/arena/services/terrainGrid";
@@ -46,7 +47,7 @@ describe("terrainGrid", () => {
 
   it("should remove breakable cells but keep unbreakable cells when a circle is blasted", () => {
     const grid = buildTerrainFromLevel(level);
-    const cleared = clearCrater(grid, { x: 200, y: 115, reach: 25 });
+    const cleared = clearCrater(grid, { x: 200, y: 115, shape: "round", reach: 25 });
     expect(cleared.removed).toBeGreaterThan(0);
     expect(cleared.byLook).toEqual([
       { materialId: "earth", colorId: "clay", cells: cleared.removed },
@@ -62,7 +63,7 @@ describe("terrainGrid", () => {
         { shape: { type: "rect", x: 0, y: 100, w: 40, h: 10 }, materialId: "ice", colorId: "clay" },
       ],
     });
-    expect(clearCrater(grid, { x: 20, y: 105, reach: 30 }).removed).toBe(0);
+    expect(clearCrater(grid, { x: 20, y: 105, shape: "round", reach: 30 }).removed).toBe(0);
   });
 
   it("should report each colour of a material separately when a blast clears both", () => {
@@ -81,7 +82,7 @@ describe("terrainGrid", () => {
         },
       ],
     });
-    const cleared = clearCrater(grid, { x: 20, y: 105, reach: 30 });
+    const cleared = clearCrater(grid, { x: 20, y: 105, shape: "round", reach: 30 });
     expect(cleared.byLook).toEqual([
       { materialId: "earth", colorId: "rose", cells: 2 },
       { materialId: "earth", colorId: "mint", cells: 2 },
@@ -104,7 +105,7 @@ describe("terrainGrid", () => {
   it("should mark only the touched chunks dirty when a circle is blasted", () => {
     const grid = buildTerrainFromLevel(level);
     takeDirtyChunks(grid);
-    clearCrater(grid, { x: 15, y: 105, reach: 6 });
+    clearCrater(grid, { x: 15, y: 105, shape: "round", reach: 6 });
     expect(takeDirtyChunks(grid)).toEqual([0]);
     expect(grid.dirtyChunks.size).toBe(0);
   });
@@ -136,7 +137,7 @@ describe("clearCrater toughness", () => {
     });
     // Rocket at power 50: crater reach 34 at toughness 1; cardboard (0.7) opens to 34 / 0.7 ≈ 48.6.
     const widthAt = (x: number): number => {
-      clearCrater(grid, { x, y: 100, reach: 34 });
+      clearCrater(grid, { x, y: 100, shape: "round", reach: 34 });
       let cleared = 0;
       for (let cx = Math.floor((x - 60) / 2); cx <= Math.floor((x + 60) / 2); cx += 1) {
         if (getCellInfo(grid, cx, 50) === null) cleared += 1;
@@ -150,5 +151,80 @@ describe("clearCrater toughness", () => {
     expect(earth).toBeGreaterThanOrEqual(66);
     expect(earth).toBeLessThanOrEqual(70);
     expect(widthAt(1000)).toBe(0);
+  });
+});
+
+const S = 4;
+const fieldLevel: LevelDefinition = {
+  ...level,
+  settings: { cellSize: S, gravity: 1 },
+  worldSize: { w: 600, h: 200 },
+  terrain: [
+    { shape: { type: "rect", x: 0, y: 100, w: 200, h: 100 }, materialId: "cardboard" },
+    { shape: { type: "rect", x: 200, y: 100, w: 200, h: 100 }, materialId: "earth" },
+    { shape: { type: "rect", x: 400, y: 100, w: 200, h: 60 }, materialId: "stone" },
+  ],
+};
+
+/** Distance at the centre of the sample under world point (x, y). */
+const at = (grid: ReturnType<typeof buildTerrainFromLevel>, x: number, y: number): number =>
+  sampleDistance(grid, Math.floor(x / S), Math.floor(y / S));
+
+describe("terrain distance field", () => {
+  it("should seed each sample with its distance to the nearest terrain edge when a level loads", () => {
+    const grid = buildTerrainFromLevel(fieldLevel);
+    // Sample centre (102, 106): 6 below the top edge.
+    expect(at(grid, 102, 106)).toBeCloseTo(6);
+    // Sample centre (102, 94): 6 above the top edge, outside.
+    expect(at(grid, 102, 94)).toBeCloseTo(-6);
+    // Deep inside: clamped to the band, still positive.
+    expect(at(grid, 102, 150)).toBeGreaterThan(8);
+  });
+
+  it("should not read a seam between two touching shapes as a surface when the inside is solid both ways", () => {
+    const grid = buildTerrainFromLevel(fieldLevel);
+    // Sample centre (198, 150): 2 from the cardboard / earth seam, 50 from any real edge.
+    expect(at(grid, 198, 150)).toBeGreaterThan(8);
+  });
+
+  it("should mark unbreakable samples and the bottom row anchored but not floating breakable ones", () => {
+    const grid = buildTerrainFromLevel(fieldLevel);
+    const anchored = (x: number, y: number): number =>
+      grid.anchored[Math.floor(y / S) * grid.widthCells + Math.floor(x / S)] ?? 0;
+    expect(anchored(450, 120)).toBe(1);
+    expect(anchored(100, 198)).toBe(1);
+    expect(anchored(100, 120)).toBe(0);
+  });
+
+  it("should put the crater rim on the curve reach ÷ toughness and keep a sample solid only while its distance is positive", () => {
+    const grid = buildTerrainFromLevel(fieldLevel);
+    const earth = clearCrater(grid, { x: 300, y: 100, reach: 34, shape: "round" });
+    const card = clearCrater(grid, { x: 100, y: 100, reach: 34, shape: "round" });
+    // Earth (toughness 1): rim at 34 from the centre; cardboard (0.7): at 34 / 0.7 ≈ 48.6.
+    expect(at(grid, 302, 130)).toBeCloseTo(Math.hypot(0, 30) - 34, 0);
+    expect(at(grid, 302, 142)).toBeCloseTo(Math.hypot(0, 42) - 34, 0);
+    expect(at(grid, 102, 142)).toBeCloseTo(42 - 34 / 0.7, 0);
+    for (const [x, y] of [
+      [302, 130],
+      [302, 142],
+      [102, 142],
+      [102, 154],
+    ] as const) {
+      const solid = getCellInfo(grid, Math.floor(x / S), Math.floor(y / S)) !== null;
+      expect(solid).toBe(at(grid, x, y) > 0);
+    }
+    // The touched box covers every cleared earth sample (x 266–334, y 100–134).
+    expect(earth.box.minX).toBeLessThanOrEqual(66);
+    expect(earth.box.maxX).toBeGreaterThanOrEqual(83);
+    expect(earth.box.minY).toBeLessThanOrEqual(25);
+    expect(earth.box.maxY).toBeGreaterThanOrEqual(33);
+    expect(card.removed).toBeGreaterThan(earth.removed);
+  });
+
+  it("should leave unbreakable samples and their distance untouched when a blast hits them", () => {
+    const grid = buildTerrainFromLevel(fieldLevel);
+    const before = at(grid, 502, 106);
+    expect(clearCrater(grid, { x: 500, y: 100, reach: 34, shape: "round" }).removed).toBe(0);
+    expect(at(grid, 502, 106)).toBe(before);
   });
 });

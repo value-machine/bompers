@@ -1,4 +1,5 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import type { CraterShape } from "@/shared/types/craterShape.types";
 import { clearCrater } from "@/features/arena/api/arenaApi";
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import { playerBody, reactToHit, type PlayerState } from "@/features/player/api/playerApi";
@@ -25,6 +26,8 @@ export interface Blast {
   ownerId: string;
   /** Blast power, 0–100 (the weapon's `power`; the rocket is 50). */
   power: number;
+  /** The weapon's crater shape (terrain-field D5). */
+  craterShape: CraterShape;
 }
 
 const UP: Vec2 = { x: 0, y: -1 };
@@ -74,7 +77,7 @@ function hitPlayers(ctx: CombatContext, blast: Blast): void {
 function blastTerrain(ctx: CombatContext, blast: Blast): void {
   const { at } = blast;
   const reach = craterReach(ctx.tunables, blast.power);
-  const cleared = clearCrater(ctx.terrain, { x: at.x, y: at.y, reach });
+  const cleared = clearCrater(ctx.terrain, { x: at.x, y: at.y, reach, shape: blast.craterShape });
   for (const { materialId, colorId, cells } of cleared.byLook) {
     const material = resolveCatalogEntry("material", materialId).entry;
     emitCombatEvent(

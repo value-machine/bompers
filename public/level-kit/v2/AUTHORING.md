@@ -18,7 +18,7 @@ You are writing **one HTML file** that holds **one inline `<svg>`**. The SVG is 
    Players read the behaviour from the surface pattern the game draws, not from the colour: breakable terrain shows a seam grid, ice shows gloss streaks and a white rim.
 5. Reference other content **by ID only**, never describe it: `data-items` (space-separated) on `drop`, `data-item` on `collectible`. Optional on terrain: `data-effect`, `data-sound`, `data-behavior`. IDs are lowercase-kebab. Every current ID is in § Catalog IDs below (also `/level-kit/v2/catalog.json`).
    Unknown IDs don't break the level; they fall back to the default with a warning.
-6. Optional level settings on the root: `data-gravity` (multiplier, `1` = normal, `0.6` = floaty), `data-match-duration` (seconds), `data-cell-size` (terrain cell size, default `8`). Metadata: `data-author`, `data-agent` (your name, e.g. `claude`, `gemini`, `chatgpt`), `data-level-id`, `data-description`.
+6. Optional level settings on the root: `data-gravity` (multiplier, `1` = normal, `0.6` = floaty), `data-match-duration` (seconds), `data-cell-size` (terrain sample spacing, default `4`). Metadata: `data-author`, `data-agent` (your name, e.g. `claude`, `gemini`, `chatgpt`), `data-level-id`, `data-description`.
 7. Give every shape a `fill` so the file looks right with no network. The game ignores `fill`: it paints terrain with `data-color` (the hex per colour is in `catalog.json`).
 8. Design sense: spawns sit just above ground (centre ~24 units above the surface), not inside terrain and not over a pit. Leave the side edges open so players can fall off. Keep `bounds` a bit larger than the terrain so players fly before they die. Snap terrain to multiples of 8.
 
@@ -112,7 +112,7 @@ Link the preview kit in `<head>` (works offline without it):
          data-level-format="2" data-level-id="floating-garden" data-title="Floating Garden"
          data-author="Bompers team" data-agent="claude"
          data-description="One floating main platform, three raised plateaus, open side edges."
-         data-cell-size="8" data-gravity="1" data-match-duration="180"
+         data-cell-size="4" data-gravity="1" data-match-duration="180"
          style="display:block;width:100%;height:auto;background:#dfe9f2">
       <title>Floating Garden</title>
       <rect data-role="bounds" x="40" y="20" width="1520" height="960" fill="none" stroke="#d24b3a" stroke-width="3" stroke-dasharray="14 8" />

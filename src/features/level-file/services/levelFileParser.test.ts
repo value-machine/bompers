@@ -60,7 +60,7 @@ describe("parseLevelFile — kit files", () => {
       agent: "claude",
       description: expect.stringContaining("floating main platform") as string,
     });
-    expect(def.settings).toEqual({ cellSize: 8, gravity: 1, matchDurationS: 180 });
+    expect(def.settings).toEqual({ cellSize: 4, gravity: 1, matchDurationS: 180 });
     expect(def.worldSize).toEqual({ w: 1600, h: 1000 });
     expect(def.bounds).toEqual({ x: 40, y: 20, w: 1520, h: 960 });
     expect(def.terrain).toHaveLength(8);
@@ -276,7 +276,7 @@ describe("parseLevelFile — placement, ids and settings warnings", () => {
       'data-level-format="2" data-title="T" data-cell-size="0" data-gravity="-1" data-match-duration="2.5"'
     );
     expect(codes(result.warnings)).toEqual(["W8", "W8", "W8"]);
-    expect(result.level.settings).toEqual({ cellSize: 8, gravity: 1 });
+    expect(result.level.settings).toEqual({ cellSize: 4, gravity: 1 });
   });
 
   it("should title the level Untitled with W9 when data-title is missing", () => {
@@ -376,10 +376,14 @@ describe("material system (acceptance)", () => {
     if (!result.ok) throw new Error(JSON.stringify(result.errors));
     const grid = buildTerrainFromLevel(result.level);
     for (const b of blocks) {
-      const cleared = clearCrater(grid, { x: b.x + 32, y: 432, reach: 20 });
+      const cleared = clearCrater(grid, { x: b.x + 32, y: 432, reach: 20, shape: "round" });
       expect(cleared.removed > 0, `${b.material}/${b.color}`).toBe(BREAKABLE.has(b.material));
       const cx = Math.floor((b.x + 2) / grid.cellSize);
-      expect(getCellInfo(grid, cx, 50)).toMatchObject({ materialId: b.material, colorId: b.color });
+      const top = Math.floor(402 / grid.cellSize);
+      expect(getCellInfo(grid, cx, top)).toMatchObject({
+        materialId: b.material,
+        colorId: b.color,
+      });
     }
   });
 
