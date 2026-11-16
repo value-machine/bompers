@@ -213,5 +213,15 @@
     "title": "Side and top map edges stop killing players",
     "description": "Feedback round 2 § 3. Players die unexpectedly at the sides and top of the map ('killed by the air'). Only the bottom (falling to your death) should feel lethal; sides and top must feel like open space. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
     "status": "done"
+  },
+  {
+    "title": "Slower jumps and rocket recoil",
+    "description": "Feedback round 2 § 3. Jumps are too fast to coordinate trick jumps: lower gravity for more air control, balanced with a lower jump impulse so max height stays sensible. Firing a rocket gives no recoil today: add a physical kick on the shooter (impact and tactical movement, e.g. small rocket-assisted moves). Tunables in gameTunables. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Music",
+    "description": "Upbeat ukulele/marimba loops around 128 BPM per DESIGN_LANGUAGE.md § 8 (lobby loop + match loop + short stingers). The audio duck bus is already wired (explosions duck music). Same owner-guided process as the SFX lap; confirm credit cost with the orchestrator before generating long tracks. Add a music volume next to the SFX volume. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md.  Also covers the missing end-phase audio (feedback round 2 § 3): a tension loop or stinger for the last 30 seconds of a match.",
+    "status": "done"
   }
 ]
