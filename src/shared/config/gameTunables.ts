@@ -1,3 +1,4 @@
+import { JUICE_SHAKE_CAP_PX, JUICE_TIERS } from "@/shared/config/gameJuice";
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 
 export type { GameTunables };
@@ -122,21 +123,23 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     edgeMargin: 24,
   },
   // DESIGN_LANGUAGE § 6: hit = 3 frames of white + 3 px shake for 80 ms; explosion = 6 px for 120 ms.
+  // Strengths come from the juice tiers (GAME_JUICE.md); durations stay inside its windows (tested).
   feel: {
     hitFlash: {
       holdSeconds: 0.05,
       fadeSeconds: 0.08,
-      front: 0.75,
-      back: 1,
+      front: JUICE_TIERS.medium.flash,
+      back: JUICE_TIERS.heavy.flash,
       reducedMotionScale: 0.5,
     },
     shake: {
-      maxPx: 12,
+      maxPx: JUICE_SHAKE_CAP_PX,
       frequencyHz: 30,
-      hit: { px: 3, seconds: 0.08 },
-      hardHitScale: 2,
-      explosion: { px: 6, seconds: 0.12 },
-      tumbleBounce: { px: 3, seconds: 0.1, fullSpeed: 900 },
+      hit: { px: JUICE_TIERS.medium.shakePx, seconds: 0.08 },
+      // medium → heavy: a back hit shakes at the heavy tier.
+      hardHitScale: JUICE_TIERS.heavy.shakePx / JUICE_TIERS.medium.shakePx,
+      explosion: { px: JUICE_TIERS.heavy.shakePx, seconds: 0.12 },
+      tumbleBounce: { px: JUICE_TIERS.medium.shakePx, seconds: 0.1, fullSpeed: 900 },
     },
     helmet: {
       stiffness: 420,
@@ -150,6 +153,6 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       hitDrop: 40,
     },
     // About 3 frames at 60 fps.
-    hitStop: { seconds: 0.05 },
+    hitStop: { seconds: JUICE_TIERS.heavy.hitStopSeconds },
   },
 };

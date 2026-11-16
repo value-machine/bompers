@@ -149,7 +149,7 @@ Back to front:
 
 ## 6. Motion and squash
 
-Squash and stretch keep area roughly constant (`sx × sy` between 0.94 and 1.0). Numbers are starting values; the movement task tunes them in its config module.
+Squash and stretch keep area roughly constant (`sx × sy` between 0.93 and 1.01, each axis 0.75–1.25). Numbers are starting values; the movement task tunes them in its config module. Tiers, timing windows and the per-moment channel ledger for all feedback: [`GAME_JUICE.md`](GAME_JUICE.md).
 
 | Moment | Shape | Timing |
 |--------|-------|--------|
@@ -204,6 +204,8 @@ Light mode is the daytime arena; dark mode is the same world at dusk (plum night
 ---
 
 ## 8. Audio identity
+
+Which moments get a sound, how loud and when it ducks the music: [`GAME_JUICE.md`](GAME_JUICE.md) § 2, § 5.
 
 **Toy-box pop.** Everything sounds like a squishy, rubbery toy: short, bright, a little silly, never harsh. Explosions are big cartoon "BOOMF"s with a confetti-crackle tail, not realistic bass rumble. Music is upbeat ukulele and marimba with slap bass and hand claps, around 128 BPM, major key, built from short loops plus stingers. Each player's sounds are pitched slightly differently (P1 0, P2 +2, P3 −2, P4 +4 semitones) so four blobs never sound identical. Mix: player actions above music; explosions duck the music by about 4 dB for 300 ms.
 
