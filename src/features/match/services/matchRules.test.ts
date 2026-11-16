@@ -125,6 +125,24 @@ describe("match rules in the sim", () => {
     expect(state.rules.scores.slice(0, 2)).toEqual([0, -scoring.fallPenalty]);
   });
 
+  it("should keep a player in play when they are far beyond the side or top edge of the bounds", () => {
+    const state = newGame();
+    const [left, right] = state.players;
+    left!.x = -5000;
+    right!.y = -5000;
+    stepFor(state, 0.05);
+    expect(playersInPlay(state).map((p) => p.slot)).toEqual([0, 1]);
+    expect(state.combat.events.filter((e) => e.type === "playerEliminated")).toEqual([]);
+  });
+
+  it("should eliminate a player who falls below the bounds bottom beside the arena", () => {
+    const state = newGame();
+    state.players[0]!.x = -5000;
+    state.players[0]!.y = 2000;
+    stepFor(state, 0.05);
+    expect(playersInPlay(state).map((p) => p.slot)).toEqual([1]);
+  });
+
   it("should keep a player out of play when the respawn delay has not passed", () => {
     const state = newGame();
     const victim = state.players[1]!;

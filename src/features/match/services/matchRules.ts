@@ -1,6 +1,7 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
+import { isOutOfBounds } from "@/shared/utils/outOfBounds";
 import {
   eliminateFighter,
   respawnFighter,
@@ -82,22 +83,16 @@ export interface StepMatchRulesArgs {
   dive: DiveState;
   players: PlayerState[];
   spawns: readonly Vec2[];
-  /** Leaving this area eliminates a player. */
+  /** Falling below this area eliminates a player; its sides and top are open (`isOutOfBounds`). */
   bounds: Rect;
   tunables: GameTunables;
   timeSeconds: number;
 }
 
-const isOutside = (player: PlayerState, zone: Rect): boolean =>
-  player.x < zone.x ||
-  player.x > zone.x + zone.w ||
-  player.y < zone.y ||
-  player.y > zone.y + zone.h;
-
 function eliminateOutOfBounds(args: StepMatchRulesArgs): void {
   const { combat, tunables, timeSeconds } = args;
   for (const player of args.players) {
-    if (!isInPlay(args.rules, player) || !isOutside(player, args.bounds)) continue;
+    if (!isInPlay(args.rules, player) || !isOutOfBounds(args.bounds, player)) continue;
     eliminateFighter({ combat, player, cause: "out-of-bounds", tunables, timeSeconds });
   }
 }
@@ -130,7 +125,7 @@ function respawn(args: StepMatchRulesArgs, player: PlayerState): void {
 }
 
 /**
- * Step 5: out of bounds → elimination (combat credits the last hitter within
+ * Step 5: below the bounds → elimination (combat credits the last hitter within
  * `killCreditSeconds`), score new events, queue eliminated players, respawn the due ones.
  */
 export function stepMatchRules(args: StepMatchRulesArgs): void {

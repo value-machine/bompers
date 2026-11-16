@@ -1,5 +1,6 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { Rect } from "@/shared/types/gameGeometry.types";
+import { isOutOfBounds } from "@/shared/utils/outOfBounds";
 import { rectHitsSolid, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { LevelDrop } from "@/features/level/api/levelApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
@@ -34,7 +35,7 @@ export interface StepWeaponCratesArgs {
   /** Players who can take a crate (in play and not eliminated). */
   players: readonly PlayerState[];
   terrain: TerrainGrid;
-  /** The level's in-bounds area: a crate below it or beside it vanishes. */
+  /** The level's in-bounds area: a crate below it vanishes. */
   bounds: Rect;
   tunables: GameTunables;
   dt: number;
@@ -105,9 +106,8 @@ export function stepWeaponCrates(args: StepWeaponCratesArgs): CrateStepResult {
   const size = args.tunables.combat.drops.size;
   args.crates.list = args.crates.list.filter((crate) => {
     fall(args, crate);
-    // Drop points may sit above the bounds top; only the bottom and sides remove a crate.
-    const { x, w, y, h } = args.bounds;
-    if (crate.y > y + h || crate.x < x || crate.x > x + w) return false;
+    // Sides and top are open space; only falling below the bounds removes a crate.
+    if (isOutOfBounds(args.bounds, crate)) return false;
     const player = firstToucher(crateBox(crate, size), args.players);
     if (!player) return true;
     result.collected.push({ itemId: crate.itemId, slot: player.slot });

@@ -1,4 +1,5 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import { isOutOfBounds } from "@/shared/utils/outOfBounds";
 import { isSolidAt } from "@/features/arena/api/arenaApi";
 import { playerBody, type PlayerState } from "@/features/player/api/playerApi";
 import { helmetPoint, rectContains } from "@/features/combat/services/combatGeometry";
@@ -8,7 +9,7 @@ import type { RocketState } from "@/features/combat/types/combat.types";
 
 /**
  * Rockets: leave the helmet along the unit aim, fly straight, and explode on the first contact
- * with terrain, another player or the level bounds. Motion is swept in sub-steps of at most
+ * with terrain, another player or the bottom of the level bounds (sides and top are open). Motion is swept in sub-steps of at most
  * half a terrain cell, so no speed tunnels through a one-cell wall or a player.
  */
 export function fireRocket(ctx: CombatContext, shooter: PlayerState): void {
@@ -42,7 +43,7 @@ export function fireRocket(ctx: CombatContext, shooter: PlayerState): void {
 
 /** True when a rocket at `point` touches something it explodes on. */
 function touchesSomething(ctx: CombatContext, rocket: RocketState, point: Vec2): boolean {
-  if (!rectContains(ctx.bounds, point)) return true;
+  if (isOutOfBounds(ctx.bounds, point)) return true;
   if (isSolidAt(ctx.terrain, point.x, point.y)) return true;
   const margin = ctx.tunables.combat.rocket.radius;
   return ctx.players.some(
