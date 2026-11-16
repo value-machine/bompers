@@ -13,6 +13,7 @@ import {
   type GameRenderer,
 } from "@/features/match/services/gameRenderer";
 import { isPastRestartLock, isRestartPress } from "@/features/match/services/matchRules";
+import { useAudioEngine, type AudioEngine } from "@/features/sound/api/soundApi";
 import { createMatchSound } from "@/features/match/services/matchSound";
 
 // Pixi nulls these on destroy although the types say they are always set.
@@ -55,14 +56,16 @@ const backPressed = (menus: readonly MenuInput[], previous: readonly MenuInput[]
 const FONT_WAIT_MS = 1500;
 
 /** Starts matches of `setup` on a live app; returns the teardown. */
-function startSession(
-  app: Application,
-  setup: MatchSetup,
-  exitRef: { current: () => void }
-): () => void {
+interface SessionDeps {
+  app: Application;
+  engine: AudioEngine;
+  exitRef: { current: () => void };
+}
+
+function startSession({ app, engine, exitRef }: SessionDeps, setup: MatchSetup): () => void {
   const { level, tunables, inputSources } = setup;
   const stepSeconds = 1 / tunables.sim.stepHz;
-  const sound = createMatchSound(window);
+  const sound = createMatchSound(engine);
   /** A fresh round on the same level and settings; its first frame cues the round start. */
   const startRound = (): { state: GameState; renderer: GameRenderer } => {
     const state = createGameState({ level, tunables });
@@ -142,6 +145,7 @@ export function useGameSession(
 ): void {
   const exitRef = useRef(onExitToLobby);
   exitRef.current = onExitToLobby;
+  const engine = useAudioEngine();
 
   useEffect(() => {
     if (!app) return undefined;
@@ -149,11 +153,11 @@ export function useGameSession(
     let stop: (() => void) | null = null;
     // Pixi Text rasterises with the face available at creation: wait for Fredoka first.
     void waitForGameFont(FONT_WAIT_MS).then(() => {
-      if (!cancelled && isAppAlive(app)) stop = startSession(app, setup, exitRef);
+      if (!cancelled && isAppAlive(app)) stop = startSession({ app, engine, exitRef }, setup);
     });
     return () => {
       cancelled = true;
       stop?.();
     };
-  }, [app, setup]);
+  }, [app, engine, setup]);
 }

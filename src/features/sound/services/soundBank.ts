@@ -37,7 +37,7 @@ export function playbackRateFor(slot: number | null): number {
   return 2 ** (semitones / 12);
 }
 
-/** Mix settings. Music has no tracks yet; its bus exists so explosions already duck it. */
+/** Mix settings (DESIGN_LANGUAGE § 8). Bus volumes come from the player's sound settings. */
 export const SOUND_MIX = {
   masterGain: 0.8,
   /** Explosions duck the music bus by this much … */
