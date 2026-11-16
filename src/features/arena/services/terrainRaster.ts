@@ -6,6 +6,7 @@ import {
   cellRangeOf,
   createTerrainGrid,
   getCellInfo,
+  isBreakableSlot,
   setCellSlot,
   slotFor,
 } from "@/features/arena/services/terrainGrid";
@@ -30,7 +31,7 @@ function shapeBounds(shape: TerrainShape) {
 const UNKNOWN_MATERIAL = {
   id: "",
   defaultColor: "",
-  destructible: false,
+  toughness: null,
   friction: 1,
   surface: "plain",
 } as const;
@@ -42,7 +43,7 @@ export function pieceCellSlot(piece: TerrainPiece): TerrainCellSlot {
   return {
     materialId: entry.id,
     colorId: piece.colorId ?? entry.defaultColor,
-    destructible: entry.destructible,
+    toughness: entry.toughness,
     friction: entry.friction,
     surface: entry.surface,
   };
@@ -54,14 +55,15 @@ const slotOfPiece = (grid: TerrainGrid, piece: TerrainPiece): number =>
 
 function rasterizePiece(grid: TerrainGrid, piece: TerrainPiece): void {
   const slot = slotOfPiece(grid, piece);
-  const breakable = grid.slots[slot]?.destructible === true;
+  const breakable = isBreakableSlot(grid.slots[slot]);
   const size = grid.cellSize;
   const range = cellRangeOf(grid, shapeBounds(piece.shape));
   for (let cy = range.minY; cy <= range.maxY; cy += 1) {
     for (let cx = range.minX; cx <= range.maxX; cx += 1) {
       if (!shapeContains(piece.shape, { x: (cx + 0.5) * size, y: (cy + 0.5) * size })) continue;
       // An unbreakable cell is never overwritten by a breakable piece (LEVEL_FORMAT § 4).
-      if (breakable && getCellInfo(grid, cx, cy)?.destructible === false) continue;
+      const below = getCellInfo(grid, cx, cy);
+      if (breakable && below !== null && !isBreakableSlot(below)) continue;
       setCellSlot(grid, { cx, cy, slot });
     }
   }

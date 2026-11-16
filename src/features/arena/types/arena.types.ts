@@ -8,8 +8,8 @@ export interface TerrainCellSlot {
   materialId: string;
   /** Catalog colour ID (palette `terrainSwatches`); looks only. */
   colorId: string;
-  /** Blasts clear it (the material's `destructible`). */
-  destructible: boolean;
+  /** The material's `toughness`: blasts clear it where distance × toughness ≤ crater reach; `null` = unbreakable. */
+  toughness: number | null;
   /** 0 = ice … 1 = grippy (the material's `friction`). */
   friction: number;
   /** Surface pattern the renderer draws (the material's `surface`). */

@@ -9,10 +9,12 @@ import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 export type { TerrainCellSlot, TerrainGrid } from "@/features/arena/types/arena.types";
 export { EMPTY_CELL } from "@/features/arena/types/arena.types";
 export {
-  clearCircle,
+  clearCrater,
   getCellInfo,
+  isBreakableSlot,
   type ClearedCells,
   type ClearedLook,
+  type Crater,
   groundFrictionBelow,
   isSolidAt,
   rectHitsSolid,

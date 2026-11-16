@@ -117,6 +117,7 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       // A kick opposite the aim on every shot: a hop when firing down, a push back when firing
       // level (strongest in the air; ground decel soaks most of it).
       recoil: 200,
+      power: 50,
     },
     // Dodgeable (homing-missiles D2, D3): 1.4 × run speed and a turn radius of 480 / 2.6 ≈ 185
     // units (≈ 6.6 blob widths), so a late sidestep or jump makes it overshoot; fuel ends loops.
@@ -130,10 +131,13 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       turnRate: 2.6,
       fuelSeconds: 1.6,
       lockConeDegrees: 70,
+      // Same blast as the rocket.
+      power: 50,
     },
-    // Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units; with the recoil (1080 + 200) ≈ 585,
-    // well above a full jump (≈ 250).
-    explosion: { radius: 64, craterRadius: 34, impulse: 1080, minFalloff: 0.35 },
+    // Chosen so power 50 (the rocket) keeps the pre-power blast: push 1080, reach 64, crater 34 on
+    // toughness 1 (blast-power D3, D10). Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units;
+    // with the recoil (1080 + 200) ≈ 585, well above a full jump (≈ 250).
+    blast: { pushPerPower: 21.6, reachPerPower: 1.28, craterPerPower: 0.68, minFalloff: 0.35 },
     drops: { firstDelaySeconds: 3, intervalSeconds: 7, maxActive: 2, size: 22 },
   },
   camera: {

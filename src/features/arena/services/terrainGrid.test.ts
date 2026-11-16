@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 import {
-  clearCircle,
+  clearCrater,
   createTerrainGrid,
   getCellInfo,
   groundFrictionBelow,
@@ -46,7 +46,7 @@ describe("terrainGrid", () => {
 
   it("should remove breakable cells but keep unbreakable cells when a circle is blasted", () => {
     const grid = buildTerrainFromLevel(level);
-    const cleared = clearCircle(grid, { x: 200, y: 115, radius: 25 });
+    const cleared = clearCrater(grid, { x: 200, y: 115, reach: 25 });
     expect(cleared.removed).toBeGreaterThan(0);
     expect(cleared.byLook).toEqual([
       { materialId: "earth", colorId: "clay", cells: cleared.removed },
@@ -62,7 +62,7 @@ describe("terrainGrid", () => {
         { shape: { type: "rect", x: 0, y: 100, w: 40, h: 10 }, materialId: "ice", colorId: "clay" },
       ],
     });
-    expect(clearCircle(grid, { x: 20, y: 105, radius: 30 }).removed).toBe(0);
+    expect(clearCrater(grid, { x: 20, y: 105, reach: 30 }).removed).toBe(0);
   });
 
   it("should report each colour of a material separately when a blast clears both", () => {
@@ -81,7 +81,7 @@ describe("terrainGrid", () => {
         },
       ],
     });
-    const cleared = clearCircle(grid, { x: 20, y: 105, radius: 30 });
+    const cleared = clearCrater(grid, { x: 20, y: 105, reach: 30 });
     expect(cleared.byLook).toEqual([
       { materialId: "earth", colorId: "rose", cells: 2 },
       { materialId: "earth", colorId: "mint", cells: 2 },
@@ -104,7 +104,7 @@ describe("terrainGrid", () => {
   it("should mark only the touched chunks dirty when a circle is blasted", () => {
     const grid = buildTerrainFromLevel(level);
     takeDirtyChunks(grid);
-    clearCircle(grid, { x: 15, y: 105, radius: 6 });
+    clearCrater(grid, { x: 15, y: 105, reach: 6 });
     expect(takeDirtyChunks(grid)).toEqual([0]);
     expect(grid.dirtyChunks.size).toBe(0);
   });
@@ -119,5 +119,36 @@ describe("terrainGrid", () => {
     expect(surfaceBelow(grid, { x: 20, y: 40, w: 10, range: 240 })).toBe(100);
     expect(surfaceBelow(grid, { x: 20, y: 40, w: 10, range: 30 })).toBeNull();
     expect(surfaceBelow(grid, { x: 900, y: 40, w: 10, range: 240 })).toBeNull();
+  });
+});
+
+describe("clearCrater toughness", () => {
+  it("should cut a wider crater in soft cardboard than in earth and none in stone when the reach is the same", () => {
+    const grid = buildTerrainFromLevel({
+      ...level,
+      settings: { cellSize: 2, gravity: 1 },
+      terrain: [
+        { shape: { type: "rect", x: 0, y: 100, w: 400, h: 100 }, materialId: "cardboard" },
+        { shape: { type: "rect", x: 400, y: 100, w: 400, h: 100 }, materialId: "earth" },
+        { shape: { type: "rect", x: 800, y: 100, w: 400, h: 100 }, materialId: "stone" },
+      ],
+      worldSize: { w: 1200, h: 200 },
+    });
+    // Rocket at power 50: crater reach 34 at toughness 1; cardboard (0.7) opens to 34 / 0.7 ≈ 48.6.
+    const widthAt = (x: number): number => {
+      clearCrater(grid, { x, y: 100, reach: 34 });
+      let cleared = 0;
+      for (let cx = Math.floor((x - 60) / 2); cx <= Math.floor((x + 60) / 2); cx += 1) {
+        if (getCellInfo(grid, cx, 50) === null) cleared += 1;
+      }
+      return cleared * 2;
+    };
+    const cardboard = widthAt(200);
+    const earth = widthAt(600);
+    expect(cardboard).toBeGreaterThanOrEqual(94);
+    expect(cardboard).toBeLessThanOrEqual(98);
+    expect(earth).toBeGreaterThanOrEqual(66);
+    expect(earth).toBeLessThanOrEqual(70);
+    expect(widthAt(1000)).toBe(0);
   });
 });

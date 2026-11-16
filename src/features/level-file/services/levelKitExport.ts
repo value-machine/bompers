@@ -53,8 +53,8 @@ const SURFACE_NOTES = {
 
 function entryNotes<K extends ContentKind>(kind: K, entry: CatalogEntryByKind[K]): string {
   const facts: string[] = [];
-  if ("destructible" in entry) {
-    facts.push(entry.destructible ? "breakable" : "unbreakable");
+  if ("toughness" in entry) {
+    facts.push(entry.toughness === null ? "unbreakable" : `toughness ${entry.toughness}`);
     if (entry.friction < 1) facts.push("slippery");
     facts.push(`looks: ${SURFACE_NOTES[entry.surface]}`);
   }

@@ -1,5 +1,5 @@
 import { EMPTY_CELL, type TerrainGrid } from "@/features/arena/types/arena.types";
-import { getCellSlot } from "@/features/arena/services/terrainGrid";
+import { getCellSlot, isBreakableSlot } from "@/features/arena/services/terrainGrid";
 
 /**
  * Destructible cells are drawn as visual tiles of `tileCells × tileCells` sim cells
@@ -15,18 +15,18 @@ export const tileCellsFor = (cellSize: number): number =>
 export interface TileState {
   /** Destructible slot of the first filled cell, or EMPTY_CELL when none is filled. */
   slot: number;
-  /** Row-major filled flags for the tile's cells (destructible cells only). */
+  /** Row-major filled flags for the tile's cells (breakable cells only). */
   filled: boolean[];
-  /** Every cell of the tile is a filled destructible cell. */
+  /** Every cell of the tile is a filled breakable cell. */
   intact: boolean;
   /** A cell of the tile or of its one-cell ring was filled at load and is empty now (D6). */
   cracked: boolean;
 }
 
-const isDestructible = (grid: TerrainGrid, slot: number): boolean =>
-  slot !== EMPTY_CELL && grid.slots[slot]?.destructible === true;
+const isBreakable = (grid: TerrainGrid, slot: number): boolean =>
+  slot !== EMPTY_CELL && isBreakableSlot(grid.slots[slot]);
 
-/** True when the cell held a destructible cell at load and is empty now. */
+/** True when the cell held a breakable cell at load and is empty now. */
 function wasBlasted(
   grid: TerrainGrid,
   initial: Uint8Array,
@@ -34,7 +34,7 @@ function wasBlasted(
 ): boolean {
   if (cx < 0 || cy < 0 || cx >= grid.widthCells || cy >= grid.heightCells) return false;
   const before = initial[cy * grid.widthCells + cx] ?? EMPTY_CELL;
-  return isDestructible(grid, before) && getCellSlot(grid, cx, cy) === EMPTY_CELL;
+  return isBreakable(grid, before) && getCellSlot(grid, cx, cy) === EMPTY_CELL;
 }
 
 function hasBlastNear(grid: TerrainGrid, initial: Uint8Array, box: TileBox): boolean {
@@ -65,7 +65,7 @@ export function readTile(
   for (let dy = 0; dy < tile.k; dy += 1) {
     for (let dx = 0; dx < tile.k; dx += 1) {
       const cellSlot = getCellSlot(grid, box.cx0 + dx, box.cy0 + dy);
-      const on = isDestructible(grid, cellSlot);
+      const on = isBreakable(grid, cellSlot);
       filled.push(on);
       if (on && slot === EMPTY_CELL) slot = cellSlot;
     }
