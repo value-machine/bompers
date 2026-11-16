@@ -213,5 +213,10 @@
     "title": "Side and top map edges stop killing players",
     "description": "Feedback round 2 § 3. Players die unexpectedly at the sides and top of the map ('killed by the air'). Only the bottom (falling to your death) should feel lethal; sides and top must feel like open space. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
     "status": "done"
+  },
+  {
+    "title": "Uniform material system for level maps",
+    "description": "Feedback round 2 § 4.1. Externally generated HTML levels need unambiguous materials. Destructible and indestructible blocks share shape and base structure (the current purple ground) but differ clearly in colour (e.g. cardboard tint for destructible). Add material behaviours such as ice (slippery) and colour variants (ice, earth, cardboard, indestructible). Design question for the lap: decouple physical behaviour from colour (any colour on any behaviour, no LittleBigPlanet-style material explosion) while a player still recognises destructible vs slippery at a glance. No backwards compatibility needed: old levels may break; update the shipped levels, LEVEL_FORMAT.md and the level kit. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "status": "done"
   }
 ]
