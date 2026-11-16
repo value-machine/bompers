@@ -220,6 +220,11 @@
     "status": "done"
   },
   {
+    "title": "Music",
+    "description": "Upbeat ukulele/marimba loops around 128 BPM per DESIGN_LANGUAGE.md § 8 (lobby loop + match loop + short stingers). The audio duck bus is already wired (explosions duck music). Same owner-guided process as the SFX lap; confirm credit cost with the orchestrator before generating long tracks. Add a music volume next to the SFX volume. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md.  Also covers the missing end-phase audio (feedback round 2 § 3): a tension loop or stinger for the last 30 seconds of a match.",
+    "status": "done"
+  },
+  {
     "title": "Game juice design system",
     "description": "Feedback round 2 § 4.2. New game elements keep arriving; define one consistent set of constants and guidelines for sounds, squash-and-stretch and visual feedback (extend DESIGN_LANGUAGE.md and the feel tunables; an agent skill or several, the lap decides) so every new element gets the same style and feel. Skill or rule files need the owner's yes. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
     "status": "done"

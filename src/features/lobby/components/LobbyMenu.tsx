@@ -99,7 +99,8 @@ const startLabel = (players: number): string =>
   players === 1 ? "Start test round (1 player)" : `Start match (${players} players)`;
 
 /**
- * The shared menu: level, load a level file, match length, gravity, start. Joined players
+ * The shared menu: level, load a level file, match length, gravity, start, then the music and
+ * sound volumes (player preferences, below start). Joined players
  * drive it with their own controls (the highlighted row is the cursor); every row also works
  * with the pointer.
  */
@@ -143,6 +144,12 @@ export const LobbyMenu = ({ lobby, library, pickerRef, onFile, onAction }: Lobby
         >
           {players === 0 ? "Join to start" : startLabel(players)}
         </Button>
+      </Row>
+      <Row row="musicVolume" label="Music" focused={focusedRow === "musicVolume"}>
+        <Stepper row="musicVolume" onAction={onAction} value={view.musicVolume} />
+      </Row>
+      <Row row="sfxVolume" label="Sounds" focused={focusedRow === "sfxVolume"}>
+        <Stepper row="sfxVolume" onAction={onAction} value={view.sfxVolume} />
       </Row>
     </div>
   );

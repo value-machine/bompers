@@ -1,6 +1,7 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import { INPUT_DEVICES, inputSourceKey } from "@/shared/utils/gameInputMapping";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
+import { VOLUME_STEPS, type SoundSettings } from "@/features/sound/api/soundApi";
 import { canStart, LOBBY_ROWS } from "@/features/lobby/services/lobbyMenu";
 import {
   deviceKeys,
@@ -23,11 +24,15 @@ export interface LobbyViewArgs {
   context: LobbyContext;
   /** The level a round would play now, or null while none is playable. */
   level: LevelDefinition | null;
+  /** The player's sound settings (volumes shown on the volume rows). */
+  sound: SoundSettings;
 }
+
+const formatVolume = (volume: number): string => String(Math.round(volume * VOLUME_STEPS));
 
 export function lobbyView(
   state: LobbyState,
-  { tunables, context, level }: LobbyViewArgs
+  { tunables, context, level, sound }: LobbyViewArgs
 ): LobbyView {
   const effective = level ? effectiveSettings(tunables, state.settings, level.settings) : null;
   const levelGravity = level?.settings.gravity ?? 1;
@@ -53,5 +58,7 @@ export function lobbyView(
       effective && levelGravity !== 1
         ? `${formatGravity(levelGravity)} = ${formatGravity(effective.gravityScale)}`
         : null,
+    musicVolume: formatVolume(sound.musicVolume),
+    sfxVolume: formatVolume(sound.sfxVolume),
   };
 }

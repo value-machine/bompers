@@ -209,6 +209,8 @@ Which moments get a sound, how loud and when it ducks the music: [`GAME_JUICE.md
 
 **Toy-box pop.** Everything sounds like a squishy, rubbery toy: short, bright, a little silly, never harsh. Explosions are big cartoon "BOOMF"s with a confetti-crackle tail, not realistic bass rumble. Music is upbeat ukulele and marimba with slap bass and hand claps, around 128 BPM, major key, built from short loops plus stingers. Each player's sounds are pitched slightly differently (P1 0, P2 +2, P3 −2, P4 +4 semitones) so four blobs never sound identical. Mix: player actions above music; explosions duck the music by about 4 dB for 300 ms.
 
+**Owner listens first (owner, 2026-11-16).** Every generated audio file (SFX, music loop, stinger, re-take) goes on an artifact page where the owner can play it, as processed for the game (cut, faded, levelled; loops with a loop toggle to hear the seam). It is wired into the game only after the owner approves it there. Links into the generator's own app don't count. If artifacts can't serve the audio from the cloud session, say so and agree another listening path with the owner before wiring.
+
 ### SFX set (for the sound task)
 
 | Sound | Character |
@@ -243,6 +245,22 @@ Every SFX prompt is built from one template: **material + action + palette words
 **Post-processing** for every file: trim leading and trailing silence, cut to the target length with a short fade-out, loudness-normalise to −16 LUFS, mono, short mp3.
 
 **Chosen takes** (owner, 2026-11-14; files in `public/audio/sfx/`, wiring in `src/features/sound/`): jump, tumble bounce, rocket fire and respawn from the first batch (one take each); explosion 3 takes and pickup 2 takes from the first batch; hit from the test batch; round start, all 4 test takes; land, dive launch, dive impact and elimination from round two; round end, all 6 round-two takes, one picked at random each time. Spares kept for later: dive impact × 4 (future material-specific collisions), elimination × 2.
+
+### Music (the music lap, 2026-11-16)
+
+Three tracks, all instrumental, 128 BPM, major key, ukulele + marimba + slap bass + hand claps, generated with `eleven_music_v2_5` (prompts describe the sound only; "no intro or outro so it loops seamlessly" for loops).
+
+| Track | When | Length | Character |
+|-------|------|--------|-----------|
+| Lobby | the lobby screen | 60 s loop (32 bars) | relaxed, bouncy, cheerful |
+| Match | a round, until 0:30 left | 60 s loop (32 bars) | driving, cheeky, tight drum groove |
+| Final | the last 30 s of a round, started in time with the clock | 30 s, once | builds: rising marimba runs, doubling drums, climbing chords, ends on one big bright hit at 0:00 |
+
+No extra round start / end stingers: the round-start and round-end SFX play there. Tracks crossfade over 0.8 s; the round's music fades out when it ends. Explosions duck the music (above). Music and Sounds volumes (0–10) are set in the lobby; M mutes everything.
+
+**Post-processing:** loops cut to exactly 32 bars (60.0 s) with 10–20 ms edge fades so the seam does not click; the final piece cut to 30.0 s with a 150 ms tail fade; one fixed gain to −16 LUFS (no time-varying normaliser, which would bend a loop seam), limiter at −1.5 dBTP, stereo mp3 128 kbps, in `public/audio/music/`.
+
+**Cost:** 15 credits per second of music (60 s = 900).
 
 ---
 
