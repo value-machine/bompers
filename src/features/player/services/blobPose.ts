@@ -24,6 +24,9 @@ export interface BlobAnim {
   seenLandings: number;
   seenTumbleBounces: number;
   active: { kind: SquashKind; startMs: number; amount: number } | null;
+  /** Crouch pose progress 0 (standing) … 1 (sunk), and the render clock it was stepped at. */
+  crouchBlend: number;
+  crouchAtMs: number | null;
 }
 
 export interface BlobShadow {
@@ -73,7 +76,39 @@ export const createBlobAnim = (player: PlayerState): BlobAnim => ({
   seenLandings: player.landCount,
   seenTumbleBounces: player.tumbleBounceCount,
   active: null,
+  crouchBlend: player.crouching ? 1 : 0,
+  crouchAtMs: null,
 });
+
+export type CrouchTunables = GameTunables["player"]["crouch"];
+
+/**
+ * Moves the crouch blend toward the sim's `crouching` over `easeSeconds` of render time
+ * (frame-rate independent). Call once per frame before `blobPose`.
+ */
+export function stepCrouchBlend(
+  anim: BlobAnim,
+  frame: { player: PlayerState; crouch: CrouchTunables; nowMs: number }
+): void {
+  const { player, crouch, nowMs } = frame;
+  const elapsed = anim.crouchAtMs === null ? 0 : Math.max(0, nowMs - anim.crouchAtMs) / 1000;
+  anim.crouchAtMs = nowMs;
+  const target = player.crouching ? 1 : 0;
+  const step = crouch.easeSeconds > 0 ? elapsed / crouch.easeSeconds : 1;
+  anim.crouchBlend =
+    target > anim.crouchBlend
+      ? Math.min(target, anim.crouchBlend + step)
+      : Math.max(target, anim.crouchBlend - step);
+}
+
+/** Crouch pose factors at the anim's blend: body (sx, sy) and feet scale; all 1 when standing. */
+function crouchScale(anim: BlobAnim, crouch: CrouchTunables | undefined) {
+  const k = crouch ? smoothstep(anim.crouchBlend) : 0;
+  const lerp = (to: number): number => 1 + (to - 1) * k;
+  return crouch
+    ? { sx: lerp(crouch.bodySx), sy: lerp(crouch.bodySy), feet: lerp(crouch.feetScale) }
+    : { sx: 1, sy: 1, feet: 1 };
+}
 
 /** Back-out ease 0 → 1 with a small overshoot past 1. */
 const easeOutBack = (t: number): number => {
@@ -153,20 +188,24 @@ export function blobShadow(player: PlayerState): BlobShadow | null {
   return { y: player.groundBelowY, ...shadow };
 }
 
-/** The pose to draw this frame. Call `noteBlobEvents` first. */
+/**
+ * The pose to draw this frame. Call `noteBlobEvents` (and `stepCrouchBlend` when `crouch` is
+ * given) first. The crouch sinks the body and shrinks the feet to almost nothing.
+ */
 export function blobPose(
   anim: BlobAnim,
-  frame: { player: PlayerState; squash: SquashTunables; nowMs: number }
+  frame: { player: PlayerState; squash: SquashTunables; nowMs: number; crouch?: CrouchTunables }
 ): BlobPose {
   const { player, squash, nowMs } = frame;
   const body = eventSquash(anim, { squash, atMs: nowMs });
   const feet = eventSquash(anim, { squash, atMs: nowMs - FEET_LAG_MS });
   const stretch = motionStretch(player, frame);
+  const crouched = crouchScale(anim, frame.crouch);
   return {
-    bodySx: body.sx / stretch,
-    bodySy: body.sy * stretch,
-    feetSx: 1 + (feet.sx - 1) * FEET_SQUASH_GAIN,
-    feetSy: Math.max(0.3, 1 + (feet.sy - 1) * FEET_SQUASH_GAIN),
+    bodySx: (body.sx / stretch) * crouched.sx,
+    bodySy: body.sy * stretch * crouched.sy,
+    feetSx: (1 + (feet.sx - 1) * FEET_SQUASH_GAIN) * crouched.feet,
+    feetSy: Math.max(0.3, 1 + (feet.sy - 1) * FEET_SQUASH_GAIN) * crouched.feet,
     shadow: blobShadow(player),
   };
 }

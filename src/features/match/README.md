@@ -46,6 +46,7 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 - Kill zone: falling below the level bounds eliminates at once; the side and top kill lines lie `outOfBoundsMargin` = (jumpSpeed + explosion.impulse + strongest weapon recoil)² / gravity beyond the bounds (twice the apex of a jump plus a point-blank blast and its recoil, jumps-and-recoil D2; the largest recoil of any weapon from combat's `maxWeaponRecoil`, one shot per launch, homing-missiles D5; with the match's effective gravity), so nobody notices them, even with chained jumps. Combat (rockets) and collectibles (crates) get the same zone as their `bounds` (open-map-edges D1–D3).
 - Eliminated players are out of play for the respawn delay: not stepped, hit, drawn or framed (match-rules D3).
 - Respawn at the spawn maximising the distance to the nearest opponent in play; ties → lowest index; level spawns are the author's safe points (match-rules D4).
+- The match passes `player.crouch` to the player renderer and `crouchCount` into the sound snapshot (crouch lap).
 - Spawn protection only blocks damage (combat), the player moves and fires freely; blink + dashed ring per DESIGN_LANGUAGE § 6 (match-rules D5).
 - Round end: every top scorer wins (a draw lists them); restart by a jump press after `restartLockSeconds`; that press is consumed, so nobody jumps on the first frame of the new round (match-rules D6). A back press after the lock returns to the lobby (lobby D5).
 - HUD drawn on the canvas with fixed canvas colours, never theme tokens (match-rules D7).

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { CombatEvent } from "@/features/combat/api/combatApi";
 import { readSoundCues, type SoundSnapshot } from "@/features/sound/services/soundCues";
 import type { SoundPlayerSnapshot } from "@/features/sound/types/sound.types";
+import { SOUND_MIX } from "@/features/sound/services/soundBank";
 
 const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPlayerSnapshot => ({
   slot,
@@ -10,6 +11,7 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   landCount: 0,
   lastLandingSpeed: 0,
   tumbleBounceCount: 0,
+  crouchCount: 0,
   inPlay: true,
   divePhase: "idle",
   diveBonked: false,
@@ -119,5 +121,14 @@ describe("readSoundCues", () => {
     const after = readSoundCues(ended.cursor, snapshot({ roundPhase: "ended" }));
     expect(idsOf(ended.cues)).toEqual(["round-end"]);
     expect(after.cues).toEqual([]);
+  });
+});
+
+describe("readSoundCues — crouch", () => {
+  it("should play a soft land thud when a player starts a crouch", () => {
+    const { cursor } = readSoundCues(null, snapshot());
+    const frame = snapshot({ players: [player(0, { crouchCount: 1 }), player(1)] });
+    const { cues } = readSoundCues(cursor, frame);
+    expect(cues).toEqual([{ soundId: "land", slot: 0, gain: SOUND_MIX.crouchGain }]);
   });
 });

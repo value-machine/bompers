@@ -1,0 +1,9 @@
+# Decisions — crouch
+
+| ID | Decision | Alternatives | Why |
+|---|---|---|---|
+| D1 | Halve with floor: `floor(damage × 0.5)` | round, ceil | The only rounding that meets both owner rules (halved; 1 → 0). |
+| D2 | Damage step lives in combat `applyHit` | in `reactToHit` | `applyHit` is the one damage path; `reactToHit` is knockback and has no damage. |
+| D3 | Crouch is an explicit `PlayerInput.crouch`, grounded only | derive from `aimY` | Gamepad aims with the right stick; crouch must follow the move stick / d-pad. Air down stays aim-down, so dive-down and rocket-down are untouched. |
+| D4 | Aim, fire and jump stay live while crouching; facing still turns | lock them | Owner only asked to stop walking; turning lets the blob face an attacker (back hits hurt more). |
+| D5 | Hitbox unchanged (render-only sink) | shorter hitbox | Spec is a damage stance; ducking under rockets would be a second mechanic. |

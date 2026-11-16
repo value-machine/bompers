@@ -17,6 +17,8 @@ import {
   type BlobAnim,
   type BlobPose,
   type BlobPoseOverlay,
+  type CrouchTunables,
+  stepCrouchBlend,
   type HelmetTunables,
   type HelmetWobble,
   type SquashTunables,
@@ -116,6 +118,8 @@ export interface SyncPlayersOptions {
   helmet?: HelmetTunables;
   /** Foot motion settings. Defaults to the shared tunables. */
   feet?: FeetTunables;
+  /** Crouch pose settings. Defaults to the shared tunables. */
+  crouch?: CrouchTunables;
 }
 
 /** What the renderer needs of a hit (the effects feature's `PlayerHitFeel` fits). */
@@ -421,6 +425,12 @@ function pruneSprites(view: PlayersView, seen: ReadonlySet<string>): void {
   }
 }
 
+/** Squash and crouch settings, defaulting to the shared tunables. */
+const bodyTunables = (options: SyncPlayersOptions) => ({
+  squash: options.squash ?? DEFAULT_GAME_TUNABLES.player.squash,
+  crouch: options.crouch ?? DEFAULT_GAME_TUNABLES.player.crouch,
+});
+
 /** Matches the layer to the current players and poses them. Call once per rendered frame. */
 export function syncPlayersView(
   view: PlayersView,
@@ -428,12 +438,13 @@ export function syncPlayersView(
   options: SyncPlayersOptions = {}
 ): void {
   const nowMs = options.nowMs ?? performance.now();
-  const squash = options.squash ?? DEFAULT_GAME_TUNABLES.player.squash;
+  const { squash, crouch } = bodyTunables(options);
   const { helmet } = options;
   for (const player of players) {
     const sprite = spriteFor(view, player);
     const moment = noteBlobEvents(sprite.anim, { player, squash, nowMs });
-    const pose = blobPose(sprite.anim, { player, squash, nowMs });
+    stepCrouchBlend(sprite.anim, { player, crouch, nowMs });
+    const pose = blobPose(sprite.anim, { player, squash, nowMs, crouch });
     syncInk(sprite, options.zoom ?? 1);
     applyPose(sprite, player, {
       pose,

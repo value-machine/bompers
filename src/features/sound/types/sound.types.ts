@@ -22,6 +22,8 @@ export interface SoundPlayerSnapshot {
   /** Downward speed at the last landing, units / s. */
   lastLandingSpeed: number;
   tumbleBounceCount: number;
+  /** Crouch starts (monotonic). */
+  crouchCount: number;
   /** False while eliminated and waiting to respawn. */
   inPlay: boolean;
   /** Dive phase, and whether the current recovery is a head-on terrain bonk. */

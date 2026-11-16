@@ -23,7 +23,7 @@ What each cue comes from:
 | Cue                                  | Source                                                               |
 | ------------------------------------ | -------------------------------------------------------------------- |
 | `jump`                               | `jumpCount` / `wallJumpCount` rises                                  |
-| `land`                               | `landCount` rises; gain scales with `lastLandingSpeed`               |
+| `land`                               | `landCount` rises; gain scales with `lastLandingSpeed`. Also `crouchCount` rises, at `SOUND_MIX.crouchGain` (soft thud) |
 | `tumble-bounce`                      | `tumbleBounceCount` rises                                            |
 | `dive-launch`                        | dive phase enters `travel`                                           |
 | `dive-impact`                        | `playerHit` with source `dive`, or a dive ending in a terrain bonk   |

@@ -9,6 +9,7 @@ import {
   kickHelmetForHit,
   kickHelmetForSquash,
   noteBlobEvents,
+  stepCrouchBlend,
   stepHelmetWobble,
   createFeetMotion,
   stepFeetMotion,
@@ -264,5 +265,33 @@ describe("stepFeetMotion", () => {
     const { pose } = run(feetPlayer({ grounded: false, vx: 900, vy: 0 }), 600);
     expect(pose[0].rotation).toBeCloseTo(-feet.airTilt, 1);
     expect(pose[1].rotation).toBeCloseTo(-feet.airTilt, 1);
+  });
+});
+
+describe("crouch pose", () => {
+  const crouch = DEFAULT_GAME_TUNABLES.player.crouch;
+
+  it("should sink the body and hide the feet once the crouch has eased in", () => {
+    const player = standing();
+    const anim = createBlobAnim(player);
+    player.crouching = true;
+    stepCrouchBlend(anim, { player, crouch, nowMs: 0 });
+    stepCrouchBlend(anim, { player, crouch, nowMs: crouch.easeSeconds * 500 });
+    expect(anim.crouchBlend).toBeCloseTo(0.5, 6);
+    stepCrouchBlend(anim, { player, crouch, nowMs: crouch.easeSeconds * 1000 });
+    const pose = blobPose(anim, { player, squash, nowMs: 0, crouch });
+    expect(pose.bodySy).toBeCloseTo(crouch.bodySy, 6);
+    expect(pose.bodySx).toBeCloseTo(crouch.bodySx, 6);
+    expect(pose.feetSy).toBeCloseTo(crouch.feetScale, 6);
+  });
+
+  it("should stand back up when the crouch ends", () => {
+    const player = standing();
+    player.crouching = true;
+    const anim = createBlobAnim(player);
+    player.crouching = false;
+    stepCrouchBlend(anim, { player, crouch, nowMs: 0 });
+    stepCrouchBlend(anim, { player, crouch, nowMs: 1000 });
+    expect(blobPose(anim, { player, squash, nowMs: 0, crouch }).feetSy).toBe(1);
   });
 });
