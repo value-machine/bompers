@@ -94,6 +94,16 @@ Quick reference guide to all rules and their relationships.
 
 ---
 
+### Game Juice (`.claude/rules/game-juice.md`)
+- Every game moment's feedback picks an impact tier from `src/shared/config/gameJuice.ts`; no invented shake / flash / hit-stop numbers
+- Durations inside the timing windows, squash inside the volume band (`gameJuice.test.ts`)
+- At least one sound and one visual per moment; render only
+- Pointer to `documentation/game/GAME_JUICE.md` and the `spec-apply-game-juice` skill
+
+**Related to:** architecture
+
+---
+
 ### Debugging (`.claude/rules/debugging.md`)
 - Debugging strategies and logging practices (API troubleshooting and pagination: `app-code`)
 - Pointer to the `spec-debug-runtime` skill for the scientific-method procedure
@@ -140,6 +150,7 @@ When modifying a rule, check these related rules and skills (SSOT — always-on 
 | `agent-behavior` | git-workflow, debugging, architecture (layer-consistency stop), loop-build + loop-ship + loop-verdict + loop-orchestrate skills |
 | `platform` | git-workflow, security, `DOC_WINDOWS_SHELL.md`, spec-debug-runtime patterns (platform command SSOT) |
 | `api-integration` | security |
+| `game-juice` | architecture, spec-apply-game-juice skill, `documentation/game/GAME_JUICE.md` |
 | `debugging` | app-code, testing, architecture, agent-behavior, spec-debug-runtime skill |
 | `file-placement` | architecture, app-code |
 | `app-code` | architecture, code-style, debugging, file-placement, spec-optimize-performance skill |
