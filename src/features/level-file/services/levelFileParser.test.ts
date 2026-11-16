@@ -109,11 +109,13 @@ describe("parseLevelFile — kit files", () => {
     }
   });
 
-  it("should give the default start arena 4 spawns, 5 drops and 5 collectibles when imported", () => {
+  it("should give the default start arena 4 spawns, 5 drops, 5 point orbs and 3 headbutt resets when imported", () => {
     const { level: def } = okLevel(parseLevelFile(BUILT_INS[0]!.text));
     expect(def.spawns).toHaveLength(4);
     expect(def.drops).toHaveLength(5);
-    expect(def.collectibles).toHaveLength(5);
+    const items = def.collectibles.map((point) => point.itemId);
+    expect(items.filter((id) => id === "point-orb")).toHaveLength(5);
+    expect(items.filter((id) => id === "dive-reset")).toHaveLength(3);
   });
 
   it("should import both AUTHORING.md examples without errors", () => {

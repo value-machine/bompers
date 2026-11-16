@@ -103,6 +103,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
     "rocket-launcher": { id: "rocket-launcher", label: "Rocket launcher", use: "drop" },
     "homing-launcher": { id: "homing-launcher", label: "Homing launcher", use: "drop" },
     "point-orb": { id: "point-orb", label: "Point orb", use: "collectible" },
+    // Placed, not dropped: gives a spent dive its charge back mid-flight (headbutt-reset D1).
+    "dive-reset": { id: "dive-reset", label: "Headbutt reset", use: "collectible" },
   },
 };
 

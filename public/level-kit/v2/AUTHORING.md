@@ -10,7 +10,7 @@ You are writing **one HTML file** that holds **one inline `<svg>`**. The SVG is 
    - `terrain` — ground (rect, polygon, circle). What it does comes from `data-material`, how it looks from `data-color`.
    - `spawn` — player start point (circle; the centre counts). **At least 4.**
    - `drop` — weapons fall from here (circle). **At least 1.** Put them high up.
-   - `collectible` — point pickups appear here (circle). Optional.
+   - `collectible` — a pickup point (circle). Optional. `data-item="point-orb"` (the default): point orbs fall from the sky onto it. `data-item="dive-reset"`: a **headbutt reset** floats there from the start; a player who has spent their headbutt in the air gets it back by flying through it (gone 2.5 s after use). Hang them in the air between platforms and off edges to make headbutt chains and saves. Never on `drop`.
    - `bounds` — **exactly one** rect: the play area; leaving it eliminates a player.
 4. **Material = behaviour, colour = looks.** On every `terrain` shape:
    - `data-material`: `stone` (solid, never breaks; the default), `earth` or `cardboard` (explosions clear it), `ice` (solid and slippery).
@@ -68,6 +68,7 @@ Link the preview kit in `<head>` (works offline without it):
 | item | `rocket-launcher` | Rocket launcher | use: drop, default for drop |
 | item | `homing-launcher` | Homing launcher | use: drop |
 | item | `point-orb` | Point orb | use: collectible, default for collectible |
+| item | `dive-reset` | Headbutt reset | use: collectible |
 <!-- level-kit:catalog-ids:end -->
 
 ## Minimal valid level

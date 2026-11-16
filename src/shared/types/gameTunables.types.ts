@@ -44,6 +44,16 @@ export interface GameTunables {
     dropHeight: number;
     /** Touch box (square), world units. */
     size: number;
+    /**
+     * Headbutt reset (catalog item `dive-reset`): a fixed pickup on its collectible point that
+     * gives a player with a spent dive the charge back mid-flight (headbutt-reset D2–D3).
+     */
+    diveRefill: {
+      /** Seconds a taken pickup stays gone before it is back on its point. */
+      respawnSeconds: number;
+      /** Touch box (square), world units. */
+      size: number;
+    };
   };
   /** Player avatar: size, movement feel (GDD § 2) and render squash (DESIGN_LANGUAGE § 6). */
   player: {

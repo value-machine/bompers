@@ -49,6 +49,7 @@ describe("contentCatalog", () => {
       "rocket-launcher",
       "homing-launcher",
       "point-orb",
+      "dive-reset",
     ]);
     expect(exported.behavior).toEqual([]);
     exported.material[0]!.label = "changed";

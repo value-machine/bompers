@@ -28,6 +28,7 @@ export function soundSnapshotOf(state: GameState): SoundSnapshot {
         inPlay: isInPlay(state.rules, player),
         divePhase: dive?.phase ?? "idle",
         diveBonked: dive?.bonked ?? false,
+        diveRefillCount: state.dive.refillCounts[player.id] ?? 0,
       };
     }),
     events: state.combat.events,

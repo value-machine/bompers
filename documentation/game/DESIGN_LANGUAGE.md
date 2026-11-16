@@ -76,6 +76,7 @@ Named colours a level puts on any material (`data-color`; catalog kind `color`).
 | Homing missile body / seeker light / trail | `#c9a7ff` / `#e0103f` (blinks 6 Hz) / `#d9c4ff`; fins in the shooter's body colour |
 | Weapon pickup crate | `#fff4e2`; its face shows the weapon's tube silhouette in ink inside a ring in the weapon accent (§ 9) |
 | Point collectible (falls from the roof) | `#ff8fc8` bubblegum star |
+| Headbutt reset (floats on its point) | `#5fe0ff` aqua diamond crystal, ink outline, white gloss facet, ink up-chevron; while gone, an ink ghost outline at 30 % alpha |
 | Timer warning (last 10 s) | `#ff8a1f` |
 | Weapon accents (§ 9) | rocket launcher sky `#8fd6ff`; homing launcher lilac `#b08cff`; planned: flamethrower ember `#ff8a1f` |
 

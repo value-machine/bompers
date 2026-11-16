@@ -68,6 +68,8 @@ const PLAYER_RULES: readonly [soundId: string, fired: PlayerRule][] = [
   ["dive-launch", (p, n) => n.divePhase === "travel" && p.divePhase !== "travel"],
   ["dive-impact", (p, n) => n.divePhase === "recovery" && n.diveBonked && p.divePhase === "travel"],
   ["respawn", (p, n) => n.inPlay && !p.inPlay],
+  // A headbutt reset reuses the pickup sound, pitched by the collector (headbutt-reset D5).
+  ["pickup", (p, n) => n.diveRefillCount > p.diveRefillCount],
 ];
 
 function playerCues(
