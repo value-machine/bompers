@@ -9,7 +9,8 @@ Multi-target camera (GDD § 2): pure math that turns the active players' feet po
 | Layer | Path | Purpose |
 |-------|------|---------|
 | Types | `types/camera.types.ts` | `CameraView`, `Viewport`, `CameraSettings`, `CameraFrameArgs` (`targets`, `bounds`, `viewport`, `previous`, `padding`, `dt`, optional `settings`) |
-| Services | `services/cameraView.ts` | `computeCameraView(args)` — goal view → deadzone → zoom limits → bounds clamp → damping → hard containment; `applyCameraView(world, view, viewport)` |
+| Services | `services/cameraView.ts` | `computeCameraView(args)` — goal view → deadzone → zoom limits → bounds clamp → damping → hard containment; `applyCameraView(world, view, { viewport, offset? })` (offset = screen shake) |
+| Services | `services/cameraShake.ts` | Screen shake: a fixed pool of kicks (`createCameraShake`, `kickCameraShake`), each decaying as (1 − t / seconds)²; live kicks sum as a root of squares, capped at `feel.shake.maxPx`; `cameraShakeOffset` writes a reused offset (deterministic sines, no allocation) |
 | API | `api/cameraApi.ts` | Public seam |
 
 Pipeline per frame (`computeCameraView`):
@@ -32,4 +33,5 @@ Tunables: the `camera` section of `src/shared/config/gameTunables.ts`. `match/se
 - The camera runs per rendered frame, outside the fixed-step simulation: it is presentation and depends on the viewport size (game-engine-foundation).
 - Zoom limits are in world units (min visible height, arena fit), not raw zoom factors, so the framing is the same on every screen size (multi-target-camera).
 - Keeping every player on screen beats the zoom-out limit and the level-bounds clamp; out-of-bounds kills bound how far it zooms out (multi-target-camera).
+- Shake is a screen-px offset added when the view is applied, never part of `CameraView`, so framing, zoom and the outline clamp never see it (game-feel D2).
 - `settings` is optional on `CameraFrameArgs` (defaults to the shared tunables) so tests and other callers stay short; the match renderer passes the match's tunables (multi-target-camera).

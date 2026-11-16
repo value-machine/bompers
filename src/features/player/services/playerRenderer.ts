@@ -5,21 +5,30 @@ import { outlineWidth } from "@/shared/utils/outlineWidth";
 import {
   blobPose,
   createBlobAnim,
+  createHelmetWobble,
+  kickHelmetForHit,
+  kickHelmetForSquash,
   noteBlobEvents,
+  stepHelmetWobble,
   type BlobAnim,
   type BlobPose,
   type BlobPoseOverlay,
+  type HelmetTunables,
+  type HelmetWobble,
   type SquashTunables,
 } from "@/features/player/services/blobPose";
 import {
   blobMetrics,
+  drawBodyFill,
+  drawBodyFlash,
   drawBodyGloss,
+  drawBodyInk,
   drawEye,
   drawFootFill,
   drawFootInk,
   drawHelmetDetails,
-  drawTorsoFill,
-  drawTorsoInk,
+  drawHelmetFill,
+  drawHelmetInk,
   drawTubeFill,
   drawTubeInk,
   type BlobMetrics,
@@ -39,7 +48,10 @@ import type { PlayerState } from "@/features/player/types/player.types";
  * changes step. The spawn blink fades the fill tree; the outline stays.
  *
  * Contact shadows live in `shadows`, which the match renderer places on the shadow layer (§ 5 step 4).
- * Not yet: helmet spring wobble, hit flash (motion polish).
+ *
+ * Game feel (§ 6): a hit flashes a white egg over the body fill (the ink stays, so the silhouette
+ * never changes), and the helmet with its emblem rides a damped spring (`HelmetWobble`) kicked by
+ * landings, jumps, wall-jumps, tumble bounces and hits.
  */
 export interface PlayersView {
   container: Container;
@@ -64,11 +76,16 @@ interface BlobSprite {
   body: PartPair;
   feet: [PartPair, PartPair];
   tube: PartPair;
-  inks: { torso: Graphics; feet: [Graphics, Graphics]; tube: Graphics };
+  /** Helmet parts on one spring: ink, dome fill (under the eyes), gloss + emblem (over them). */
+  helmet: Container[];
+  /** White egg over the body fill; alpha = hit flash. */
+  flash: Graphics;
+  inks: { body: Graphics; helmet: Graphics; feet: [Graphics, Graphics]; tube: Graphics };
   eyes: [Container, Container];
   pupils: [Graphics, Graphics];
   shadow: Graphics;
   anim: BlobAnim;
+  wobble: HelmetWobble;
   metrics: BlobMetrics;
   /** Outline step the ink was drawn at (null before the first draw). */
   inkStep: number | null;
@@ -86,6 +103,18 @@ export interface SyncPlayersOptions {
   armedIds?: ReadonlySet<string>;
   /** Camera zoom (screen px per world unit) for the outline width clamp. Defaults to 1. */
   zoom?: number;
+  /** Hit feedback by player id: flash alpha this frame, and a new `startMs` kicks the helmet. */
+  hits?: ReadonlyMap<string, BlobHitFeel>;
+  /** Helmet spring settings. Defaults to the shared tunables. */
+  helmet?: HelmetTunables;
+}
+
+/** What the renderer needs of a hit (the effects feature's `PlayerHitFeel` fits). */
+export interface BlobHitFeel {
+  startMs: number;
+  dirX: number;
+  hard: boolean;
+  flash: number;
 }
 
 export const createPlayersView = (): PlayersView => ({
@@ -126,7 +155,30 @@ function applyProtection(sprite: BlobSprite, isProtected: boolean, nowMs: number
   sprite.fills.alpha = isProtected && low ? BLINK.lowAlpha : 1;
 }
 
-/** Torso (body centre origin) in both trees: tube under the body, then body + helmet, details. */
+/** The helmet's three layers, each a container that the spring moves together. */
+function buildHelmet(slot: number, m: BlobMetrics, ink: Graphics): Container[] {
+  const layers = [new Container(), new Container(), new Container()];
+  layers[0]!.addChild(ink);
+  layers[1]!.addChild(drawHelmetFill(m));
+  layers[2]!.addChild(...drawHelmetDetails(slot, m));
+  // Rock around the middle of the rim.
+  for (const layer of layers) layer.pivot.set(0, m.helmet.rim);
+  return layers;
+}
+
+/**
+ * Torso (body centre origin) in both trees: tube under the body; then body, flash, helmet dome,
+ * gloss, eyes, and the helmet's gloss + emblem on top.
+ */
+function buildEyes(u: number) {
+  const left = drawEye(u);
+  const right = drawEye(u);
+  const eyes: [Container, Container] = [new Container(), new Container()];
+  eyes[0].addChild(left.white, left.pupil);
+  eyes[1].addChild(right.white, right.pupil);
+  return { eyes, pupils: [left.pupil, right.pupil] as [Graphics, Graphics] };
+}
+
 function buildTorso(
   sprite: Pick<BlobSprite, "body" | "tube" | "inks">,
   slot: number,
@@ -136,35 +188,38 @@ function buildTorso(
   eachSide(torso, (c) => c.position.set(0, -m.bodyLift));
   sprite.tube.ink.addChild(sprite.inks.tube);
   sprite.tube.fill.addChild(drawTubeFill(m.u));
-  torso.ink.addChild(sprite.tube.ink, sprite.inks.torso);
-  const left = drawEye(m.u);
-  const right = drawEye(m.u);
-  const eyes: [Container, Container] = [new Container(), new Container()];
-  eyes[0].addChild(left.white, left.pupil);
-  eyes[1].addChild(right.white, right.pupil);
+  const helmet = buildHelmet(slot, m, sprite.inks.helmet);
+  const [helmetInk, helmetDome, helmetDetails] = helmet as [Container, Container, Container];
+  torso.ink.addChild(sprite.tube.ink, sprite.inks.body, helmetInk);
+  const { eyes, pupils } = buildEyes(m.u);
+  const flash = drawBodyFlash(m);
+  flash.visible = false;
   torso.fill.addChild(
     sprite.tube.fill,
-    drawTorsoFill(slot, m),
+    drawBodyFill(slot, m),
+    flash,
+    helmetDome,
     drawBodyGloss(m),
     ...eyes,
-    ...drawHelmetDetails(slot, m)
+    helmetDetails
   );
   sprite.body.ink.addChild(torso.ink);
   sprite.body.fill.addChild(torso.fill);
-  return { eyes, pupils: [left.pupil, right.pupil] as [Graphics, Graphics] };
+  return { eyes, pupils, helmet, flash };
 }
 
 function createBlobSprite(player: PlayerState): BlobSprite {
   const m = blobMetrics(player.height);
   const inks = {
-    torso: new Graphics(),
+    body: new Graphics(),
+    helmet: new Graphics(),
     feet: [new Graphics(), new Graphics()] as [Graphics, Graphics],
     tube: new Graphics(),
   };
   const feet: [PartPair, PartPair] = [pair(), pair()];
   const body = pair();
   const tube = pair();
-  const { eyes, pupils } = buildTorso({ body, tube, inks }, player.slot, m);
+  const { eyes, pupils, helmet, flash } = buildTorso({ body, tube, inks }, player.slot, m);
   const inkTree = new Container({ label: "ink" });
   const fills = new Container({ label: "fill" });
   feet.forEach((foot, i) => {
@@ -185,11 +240,14 @@ function createBlobSprite(player: PlayerState): BlobSprite {
     body,
     feet,
     tube,
+    helmet,
+    flash,
     inks,
     eyes,
     pupils,
     shadow: new Graphics().ellipse(0, 0, 1, 1).fill(GAME_PALETTE.ink),
     anim: createBlobAnim(player),
+    wobble: createHelmetWobble(),
     metrics: m,
     inkStep: null,
   };
@@ -200,7 +258,8 @@ function syncInk(sprite: BlobSprite, zoom: number): void {
   const outline = outlineWidth("character", zoom);
   if (outline.step === sprite.inkStep) return;
   const { metrics: m, inks } = sprite;
-  drawTorsoInk(inks.torso, m, outline.width);
+  drawBodyInk(inks.body, m, outline.width);
+  drawHelmetInk(inks.helmet, m, outline.width);
   inks.feet.forEach((foot) => drawFootInk(foot, m, outline.width));
   drawTubeInk(inks.tube, m.u, outline.width);
   sprite.inkStep = outline.step;
@@ -285,6 +344,44 @@ function applyPose(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
   sprite.shadow.alpha = shadow.alpha;
 }
 
+interface FeelFrame {
+  moment: BlobAnim["active"];
+  hit: BlobHitFeel | undefined;
+  helmet: HelmetTunables | undefined;
+  nowMs: number;
+}
+
+/** Kicks the helmet spring for this frame's squash moment and for a new hit. */
+function kickHelmet(wobble: HelmetWobble, player: PlayerState, frame: FeelFrame): void {
+  const { moment, hit } = frame;
+  const helmet = frame.helmet ?? DEFAULT_GAME_TUNABLES.feel.helmet;
+  if (moment) {
+    const tumbling = player.tumbleSeconds > 0;
+    kickHelmetForSquash(wobble, { ...moment, vx: player.vx, tumbling }, helmet);
+  }
+  if (hit && hit.startMs !== wobble.seenHitMs) {
+    wobble.seenHitMs = hit.startMs;
+    kickHelmetForHit(wobble, hit, helmet);
+  }
+}
+
+/** Hit flash on the fill, and the helmet spring: kicked by this frame's moments, then stepped. */
+function applyFeel(sprite: BlobSprite, player: PlayerState, frame: FeelFrame): void {
+  const { wobble } = sprite;
+  kickHelmet(wobble, player, frame);
+  const helmet = frame.helmet ?? DEFAULT_GAME_TUNABLES.feel.helmet;
+  stepHelmetWobble(wobble, { nowMs: frame.nowMs, helmet });
+  const { rim } = sprite.metrics.helmet;
+  const drop = wobble.pose.drop * sprite.metrics.u;
+  for (const layer of sprite.helmet) {
+    layer.position.set(0, rim + drop);
+    layer.rotation = wobble.pose.tilt;
+  }
+  const flash = frame.hit?.flash ?? 0;
+  sprite.flash.visible = flash > 0;
+  sprite.flash.alpha = flash;
+}
+
 /** The sprite for this player, created and added to the layer on first sight. */
 function spriteFor(view: PlayersView, player: PlayerState): BlobSprite {
   const existing = view.sprites.get(player.id);
@@ -314,9 +411,10 @@ export function syncPlayersView(
 ): void {
   const nowMs = options.nowMs ?? performance.now();
   const squash = options.squash ?? DEFAULT_GAME_TUNABLES.player.squash;
+  const { helmet } = options;
   for (const player of players) {
     const sprite = spriteFor(view, player);
-    noteBlobEvents(sprite.anim, { player, squash, nowMs });
+    const moment = noteBlobEvents(sprite.anim, { player, squash, nowMs });
     const pose = blobPose(sprite.anim, { player, squash, nowMs });
     syncInk(sprite, options.zoom ?? 1);
     applyPose(sprite, player, {
@@ -324,6 +422,7 @@ export function syncPlayersView(
       overlay: options.overlays?.get(player.id),
       armed: options.armedIds?.has(player.id) === true,
     });
+    applyFeel(sprite, player, { moment, hit: options.hits?.get(player.id), helmet, nowMs });
     applyProtection(sprite, options.protectedIds?.has(player.id) === true, nowMs);
   }
   pruneSprites(view, new Set(players.map((player) => player.id)));

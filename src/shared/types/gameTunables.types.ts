@@ -234,4 +234,52 @@ export interface GameTunables {
     /** Screen-edge margin in world units that every target keeps on every frame, even mid-ease. */
     edgeMargin: number;
   };
+  /**
+   * Game feel (DESIGN_LANGUAGE § 6): render-only feedback on hits, explosions and tumbles. Never
+   * read by the simulation. Shake is in screen px; helmet offsets in mockup units (u = R / 30).
+   */
+  feel: {
+    /** White flash over the victim's body fill (the outline stays). */
+    hitFlash: {
+      /** Seconds at full strength, then a linear fade over `fadeSeconds`. */
+      holdSeconds: number;
+      fadeSeconds: number;
+      /** Peak alpha of a front hit and of a back hit. */
+      front: number;
+      back: number;
+      /** Peak alpha multiplier under the OS reduced-motion setting. */
+      reducedMotionScale: number;
+    };
+    /** Camera shake kicks: each decays as (1 − t / seconds)²; live kicks sum as a root of squares. */
+    shake: {
+      /** Cap on the summed offset, screen px. */
+      maxPx: number;
+      /** Wobble rate of the offset direction. */
+      frequencyHz: number;
+      hit: { px: number; seconds: number };
+      /** A back hit (the hard one: more damage, starts a tumble) multiplies the hit kick. */
+      hardHitScale: number;
+      /** Scaled by blast radius / `combat.explosion.radius` (capped at 1.5). */
+      explosion: { px: number; seconds: number };
+      /** Scaled by bounce speed / `fullSpeed` (capped at 1). */
+      tumbleBounce: { px: number; seconds: number; fullSpeed: number };
+    };
+    /** Helmet (with its emblem) on a damped spring that lags behind the body. */
+    helmet: {
+      /** Spring stiffness (1/s²) and damping (1/s); underdamped so it wobbles. */
+      stiffness: number;
+      damping: number;
+      /** Output caps: tilt in radians, drop in mockup units. */
+      maxTilt: number;
+      maxDrop: number;
+      /** Velocity kicks: drop in mockup units / s (positive = sinks), tilt in rad / s. */
+      landDrop: number;
+      jumpDrop: number;
+      wallJumpTilt: number;
+      hitTilt: number;
+      hitDrop: number;
+    };
+    /** Render-only freeze after a hard hit (the sim keeps running); 0 turns it off. */
+    hitStop: { seconds: number };
+  };
 }
