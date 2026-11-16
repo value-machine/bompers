@@ -7,9 +7,10 @@ import { explode } from "@/features/combat/services/explosions";
 import type { RocketState } from "@/features/combat/types/combat.types";
 
 /**
- * Rockets: leave the helmet along the unit aim, fly straight, and explode on the first contact
- * with terrain, another player or the level bounds. Motion is swept in sub-steps of at most
- * half a terrain cell, so no speed tunnels through a one-cell wall or a player.
+ * Rockets: leave the helmet along the unit aim (kicking the shooter back by the recoil), fly
+ * straight, and explode on the first contact with terrain, another player or the level bounds.
+ * Motion is swept in sub-steps of at most half a terrain cell, so no speed tunnels through a
+ * one-cell wall or a player.
  */
 export function fireRocket(ctx: CombatContext, shooter: PlayerState): void {
   const helmet = helmetPoint(shooter);
@@ -26,6 +27,7 @@ export function fireRocket(ctx: CombatContext, shooter: PlayerState): void {
   };
   ctx.combat.nextEntityId += 1;
   ctx.combat.rockets.push(rocket);
+  kickShooter(shooter, ctx.tunables.combat.rocket.recoil);
   emitCombatEvent(
     ctx.combat,
     {
@@ -38,6 +40,13 @@ export function fireRocket(ctx: CombatContext, shooter: PlayerState): void {
     },
     ctx.timeSeconds
   );
+}
+
+/** Recoil: pushes the shooter opposite the aim; an upward kick leaves the ground. */
+function kickShooter(shooter: PlayerState, recoil: number): void {
+  shooter.vx -= shooter.aimX * recoil;
+  shooter.vy -= shooter.aimY * recoil;
+  if (shooter.aimY > 0) shooter.grounded = false;
 }
 
 /** True when a rocket at `point` touches something it explodes on. */
