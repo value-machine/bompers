@@ -23,14 +23,14 @@ What each cue comes from:
 | Cue                                  | Source                                                               |
 | ------------------------------------ | -------------------------------------------------------------------- |
 | `jump`                               | `jumpCount` / `wallJumpCount` rises                                  |
-| `land`                               | `landCount` rises; gain scales with `lastLandingSpeed`. Also `crouchCount` rises, at `SOUND_MIX.crouchGain` (soft thud) |
+| `land`                               | `landCount` rises; gain scales with `lastLandingSpeed` (`intensityGain`, `SOUND_MIX.landingFullSpeed`); also the blob part of a wall bonk. Also `crouchCount` rises, at `SOUND_MIX.crouchGain` (soft thud) |
 | `tumble-bounce`                      | `tumbleBounceCount` rises                                            |
 | `dive-launch`                        | dive phase enters `travel`                                           |
-| `dive-impact`                        | `playerHit` with source `dive`, or a dive ending in a terrain bonk   |
+| `dive-impact`                        | `playerHit` with source `dive`                                       |
 | `hit`                                | `playerHit` (rocket)                                                 |
 | `elimination`                        | `playerEliminated`                                                   |
 | `rocket-fire`, `explosion`, `pickup` | `rocketFired`, `explosion`, `pickupCollected`                        |
-| material sound                       | `terrainDestroyed.soundId` (silent until the bank has a file for it) |
+| material sound (`thud` stone, `crumble` earth, `thwap` cardboard, `clink` ice) | `terrainDestroyed.soundId`; and a head-on dive bonk: `land` (pitched) plus the wall's material sound (`diveBonkSoundId`, unpitched), both at the bonk's intensity |
 | `respawn`                            | a player comes back into play                                        |
 | `pickup` (headbutt reset)            | `diveRefillCount` rises (no file of its own; headbutt-reset D5)      |
 | `round-start`, `round-end`           | a fresh round's first frame; round phase turns `ended`               |
@@ -50,7 +50,9 @@ Hits and eliminations take the victim's pitch; actions (jump, fire, pickup) take
 
 - Every sound ID is a content-catalog ID (kind `sound`), so levels and materials can name sounds. File paths stay in the bank because they are an engine detail, not level data (game-sound D1).
 - Sounds that the sim does not emit as events come from the players' monotonic counters and phase changes, not from new sim events (game-sound D2).
-- Spare takes the owner kept for later are in `public/audio/sfx/` but not in the bank: `dive-impact-spare-1…4` for future material collisions, and `elimination-spare-1…2` (game-sound D3).
+- Spare takes the owner kept for later are in `public/audio/sfx/` but not in the bank: `dive-impact-spare-2…3` and `elimination-spare-1…2` (game-sound D3). Spares 1 and 4 became `crumble-2` and `clink-2` (material-sounds D5).
+- Volume follows intensity (owner, 2026-11-16): landings by fall speed, hits by the victim's knockback speed, wall bonks by the speed into the wall; `SOUND_MIX.landingFullSpeed` and `hitFullSpeed` are the two knobs, the curve is `intensityGain` in `shared/config/gameJuice.ts` (material-sounds D6).
+- A wall bonk's blob part is the landing splut, not `dive-impact` (owner's A/B, material-sounds D5).
 - The music bus exists before there is music, so explosion ducking is already wired (game-sound D5). Ducking now sits on its own node in front of the music bus, so it never fights the music volume (music D1).
 - One audio engine for the app lifetime, not one per match: music carries across screens and both buses share one context (music D1).
 - Sounds and Music volumes plus on/off switches per channel; M stays a master mute (music D2).

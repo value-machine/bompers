@@ -36,8 +36,8 @@ Link the preview kit in `<head>` (works offline without it):
 |---|---|---|---|
 | material | `stone` | Stone | unbreakable, looks: smooth slab, effect `none`, sound `thud`, default for terrain |
 | material | `earth` | Earth | toughness 1, looks: seam grid, effect `dust-burst`, sound `crumble` |
-| material | `cardboard` | Cardboard | toughness 0.7, looks: seam grid, effect `dust-burst`, sound `crumble` |
-| material | `ice` | Ice | unbreakable, slippery, looks: gloss streaks + white rim, effect `none`, sound `thud` |
+| material | `cardboard` | Cardboard | toughness 0.7, looks: seam grid, effect `dust-burst`, sound `thwap` |
+| material | `ice` | Ice | unbreakable, slippery, looks: gloss streaks + white rim, effect `none`, sound `clink` |
 | color | `plum` | Plum | default for stone |
 | color | `slate` | Slate |  |
 | color | `cardboard` | Cardboard | default for cardboard |
@@ -51,6 +51,8 @@ Link the preview kit in `<head>` (works offline without it):
 | sound | `none` | Silent |  |
 | sound | `thud` | Thud |  |
 | sound | `crumble` | Crumble |  |
+| sound | `thwap` | Thwap |  |
+| sound | `clink` | Clink |  |
 | sound | `jump` | Jump |  |
 | sound | `land` | Land |  |
 | sound | `tumble-bounce` | Tumble bounce |  |

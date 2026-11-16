@@ -50,7 +50,7 @@ export const CONTENT_CATALOG: ContentCatalog = {
       surface: "breakable",
       defaultColor: "cardboard",
       effect: "dust-burst",
-      sound: "crumble",
+      sound: "thwap",
     },
     ice: {
       id: "ice",
@@ -61,7 +61,7 @@ export const CONTENT_CATALOG: ContentCatalog = {
       surface: "ice",
       defaultColor: "frost",
       effect: "none",
-      sound: "thud",
+      sound: "clink",
     },
   },
   // Any colour goes on any material; RGB per ID in gamePalette.terrainSwatches.
@@ -83,6 +83,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
     none: { id: "none", label: "Silent" },
     thud: { id: "thud", label: "Thud" },
     crumble: { id: "crumble", label: "Crumble" },
+    thwap: { id: "thwap", label: "Thwap" },
+    clink: { id: "clink", label: "Clink" },
     // Game SFX (DESIGN_LANGUAGE § 8); files and takes live in the sound feature's bank.
     jump: { id: "jump", label: "Jump" },
     land: { id: "land", label: "Land" },

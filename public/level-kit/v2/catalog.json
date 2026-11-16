@@ -45,7 +45,7 @@
       "surface": "breakable",
       "defaultColor": "cardboard",
       "effect": "dust-burst",
-      "sound": "crumble"
+      "sound": "thwap"
     },
     {
       "id": "ice",
@@ -56,7 +56,7 @@
       "surface": "ice",
       "defaultColor": "frost",
       "effect": "none",
-      "sound": "thud"
+      "sound": "clink"
     }
   ],
   "color": [
@@ -131,6 +131,14 @@
     {
       "id": "crumble",
       "label": "Crumble"
+    },
+    {
+      "id": "thwap",
+      "label": "Thwap"
+    },
+    {
+      "id": "clink",
+      "label": "Clink"
     },
     {
       "id": "jump",
