@@ -112,6 +112,19 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       // level (strongest in the air; ground decel soaks most of it).
       recoil: 200,
     },
+    // Dodgeable (homing-missiles D2, D3): 1.4 × run speed and a turn radius of 480 / 2.6 ≈ 185
+    // units (≈ 6.6 blob widths), so a late sidestep or jump makes it overshoot; fuel ends loops.
+    homing: {
+      speed: 480,
+      ammo: 3,
+      fireCooldown: 0.7,
+      recoil: 120,
+      maxLifetime: 3,
+      lockDelaySeconds: 0.2,
+      turnRate: 2.6,
+      fuelSeconds: 1.6,
+      lockConeDegrees: 70,
+    },
     // Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units; with the recoil (1080 + 200) ≈ 585,
     // well above a full jump (≈ 250).
     explosion: { radius: 64, craterRadius: 34, impulse: 1080, minFalloff: 0.35 },
