@@ -10,23 +10,33 @@
     "status": "to-do"
   },
   {
-    "title": "Slower jumps and rocket recoil",
-    "description": "Feedback round 2 § 3. Jumps are too fast to coordinate trick jumps: lower gravity for more air control, balanced with a lower jump impulse so max height stays sensible. Firing a rocket gives no recoil today: add a physical kick on the shooter (impact and tactical movement, e.g. small rocket-assisted moves). Tunables in gameTunables. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
-    "status": "to-do"
-  },
-  {
-    "title": "Side and top map edges stop killing players",
-    "description": "Feedback round 2 § 3. Players die unexpectedly at the sides and top of the map ('killed by the air'). Only the bottom (falling to your death) should feel lethal; sides and top must feel like open space. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
-    "status": "to-do"
-  },
-  {
-    "title": "Music",
-    "description": "Upbeat ukulele/marimba loops around 128 BPM per DESIGN_LANGUAGE.md § 8 (lobby loop + match loop + short stingers). The audio duck bus is already wired (explosions duck music). Same owner-guided process as the SFX lap; confirm credit cost with the orchestrator before generating long tracks. Add a music volume next to the SFX volume. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md.  Also covers the missing end-phase audio (feedback round 2 § 3): a tension loop or stinger for the last 30 seconds of a match.",
-    "status": "to-do"
-  },
-  {
     "title": "Game juice design system",
     "description": "Feedback round 2 § 4.2. New game elements keep arriving; define one consistent set of constants and guidelines for sounds, squash-and-stretch and visual feedback (extend DESIGN_LANGUAGE.md and the feel tunables; an agent skill or several, the lap decides) so every new element gets the same style and feel. Skill or rule files need the owner's yes. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "status": "to-do"
+  },
+  {
+    "title": "Finer headbutt directions (16 ways)",
+    "description": "Owner request 2026-11-16: the headbutt/dive can only aim in 45° steps (diveSim AIM_STEP = π/4, 8 ways); halve it to 22.5° (16 ways). Keyboard aim is 8-way from the keys, so the lap checks how keyboard players reach the in-between angles and asks the owner if a new control scheme is needed. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "to-do"
+  },
+  {
+    "title": "Material responses: blast power and spreading fire",
+    "description": "Owner direction 2026-11-16 (supersedes the earlier fire-only scope): one shared model where a source only says WHERE and HOW STRONG, and the material decides the result. (1) Blasts: a rocket picks only its explosion point and power (no fixed crater radius); each material's toughness decides the cutout. Blast power also drives the push on players (owner 2026-11-16): one scalable blast power from 0 (barely moves a player) through a small shove to sending them flying, so each weapon is tuned by its blast power alone. (2) Fire: a fire source at a point; fire spreads per tick outward in a circle from the origin, and each material decides whether and how it burns — so part of a block can burn while the rest does not (the terrain cell grid makes that per-cell, not a split entity). (3) A flamethrower weapon. (4) A hit reaction when a blob touches fire. Design with the owner, with examples, before building. Laps: blast-by-power refactor first, then fire + burn reaction, then flamethrower. Build waits on the uniform material system (#36). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "to-do"
+  },
+  {
+    "title": "Shared roll: dash-hold roll and hit tumble",
+    "description": "Owner request 2026-11-16: one shared rolling system for all player rolling. (1) Holding the dash button after a dash makes the blob keep rolling. (2) Being hit or launched by a blast uses the same roll, with or without damage. (3) Consolidate: find every existing system that rolls, tumbles or bounces the player (tumble state, dive bonk, body collisions, blast push, landing squash) and fold them into this one roll, removing the duplicates. (4) Real rolling physics: in roll mode the blob actually rolls — on a slope it rolls down the hill, with ground contact, friction and spin. (5) Roll intensity follows the blast power (see Material responses: 0 = barely moves, small = a little shove, strong = flying), so weapons are tuned by blast power. Today a separate tumble state starts only above a fixed impulse threshold (gameTunables player.tumble.minImpulse 800) — replace the threshold with the continuous scale. Waits on the blast-power lap of Material responses and the headbutt 16-ways PR (#37, same dive code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "to-do"
+  },
+  {
+    "title": "Weapon and crate visual design system",
+    "description": "Owner request 2026-11-16. Design with the owner first, with examples, before building. (1) Crates show what's inside. (2) A visual system for weapons: today every weapon is a tube on the blob's head. Owner idea: replace the figure on the head with the weapon's icon instead of the team; but in team games blob colour identifies the player and the helmet might identify the team — so what identifies the weapon? Define the logic: player = blob colour, team = ?, weapon = ?, consistent across crate, HUD and blob. Build waits on the feet animation lap (same player renderer). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md once #34 lands. ",
+    "status": "to-do"
+  },
+  {
+    "title": "Homing missiles (dodgeable)",
+    "description": "Owner request 2026-11-16. A homing-missile weapon: missiles track a target but are dodgeable, never a guaranteed hit (limited turn rate, lock delay, fuel/lifetime or similar — the lap proposes the dodge rule). Picked up from crates like the rocket launcher. A separate weapon from the normal rocket launcher (owner 2026-11-16): the missile itself looks different — another colour or a red blinking part — and its crate looks different too. Uses the weapon visual system once defined (placeholder until then). Waits on slower jumps and rocket recoil (#31, same rocket code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md once #34 lands. ",
     "status": "to-do"
   },
   {

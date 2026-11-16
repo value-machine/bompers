@@ -254,6 +254,30 @@ describe("combat — blast hurt reaction", () => {
   });
 });
 
+describe("combat — rocket recoil", () => {
+  it("should kick the shooter back opposite the aim by the recoil when a rocket is fired", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    arm(world, 0);
+    world.step([{ aimX: 1, aimY: 0, fire: true }]);
+    expect(eventsOf(world, "rocketFired")).toHaveLength(1);
+    expect(world.players[0]!.vx).toBeCloseTo(-C.rocket.recoil, 6);
+  });
+
+  it("should lift the shooter off the ground when firing straight down", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    arm(world, 0);
+    const fighter = world.combat.fighters.get("p0")!;
+    const shooter = world.players[0]!;
+    // Fire through stepAttacks alone so the rocket's blast does not mask the recoil.
+    shooter.aimX = 0;
+    shooter.aimY = 1;
+    stepAttacks(world.ctx(), [{ ...EMPTY_PLAYER_INPUT, connected: true, fire: true }], { dt });
+    expect(fighter.weapon?.ammo).toBe(C.rocket.ammo - 1);
+    expect(shooter.vy).toBeCloseTo(-C.rocket.recoil, 6);
+    expect(shooter.grounded).toBe(false);
+  });
+});
+
 describe("combat — rockets", () => {
   it("should lift the shooter higher than a full jump when firing straight down from standing", () => {
     const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });

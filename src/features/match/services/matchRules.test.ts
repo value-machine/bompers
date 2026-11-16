@@ -6,6 +6,8 @@ import { applyHit, type CombatEvent } from "@/features/combat/api/combatApi";
 import { createGameState, playersInPlay, stepGame } from "@/features/match/services/gameSim";
 import {
   isRestartPress,
+  killZoneOf,
+  outOfBoundsMargin,
   roundResultLabel,
   roundWinners,
   scoreEvent,
@@ -183,6 +185,72 @@ describe("match rules in the sim", () => {
     state.rules.scores[1] = 3;
     stepFor(state, 1.1);
     expect(state.round).toMatchObject({ phase: "ended", winners: [1] });
+  });
+});
+
+describe("outOfBoundsMargin and killZoneOf", () => {
+  const withGravity = (scale: number) => ({
+    ...tunables,
+    world: { ...tunables.world, gravity: tunables.world.gravity * scale },
+  });
+
+  it("should be twice the apex of a jump plus a point-blank blast and its recoil when gravity is the default", () => {
+    const { jumpSpeed } = tunables.player;
+    const launch = jumpSpeed + tunables.combat.explosion.impulse + tunables.combat.rocket.recoil;
+    const apex = (launch * launch) / (2 * tunables.world.gravity);
+    expect(outOfBoundsMargin(tunables)).toBeCloseTo(apex * 2);
+  });
+
+  it("should widen the margin when the rocket recoil is stronger", () => {
+    const { combat } = tunables;
+    const stronger = {
+      ...tunables,
+      combat: { ...combat, rocket: { ...combat.rocket, recoil: combat.rocket.recoil + 300 } },
+    };
+    expect(outOfBoundsMargin(stronger)).toBeGreaterThan(outOfBoundsMargin(tunables));
+  });
+
+  it("should widen the margin when the match gravity is lower", () => {
+    expect(outOfBoundsMargin(withGravity(0.5))).toBeCloseTo(outOfBoundsMargin(tunables) * 2);
+  });
+
+  it("should push the sides and top out by the margin when it keeps the bottom on the bounds", () => {
+    const bounds = { x: 0, y: 0, w: 1000, h: 600 };
+    const margin = outOfBoundsMargin(tunables);
+    const zone = killZoneOf(bounds, tunables);
+    expect(zone.x).toBeCloseTo(-margin);
+    expect(zone.y).toBeCloseTo(-margin);
+    expect(zone.x + zone.w).toBeCloseTo(bounds.w + margin);
+    expect(zone.y + zone.h).toBeCloseTo(bounds.h);
+  });
+});
+
+describe("kill zone in the sim", () => {
+  it("should keep a player in play when they are well past the side or top edge but inside the margin", () => {
+    const state = newGame();
+    const margin = outOfBoundsMargin(state.tunables);
+    const [left, high] = state.players;
+    left!.x = level.bounds.x - margin * 0.9;
+    high!.y = level.bounds.y - margin * 0.9;
+    stepFor(state, 0.05);
+    expect(playersInPlay(state).map((p) => p.slot)).toEqual([0, 1]);
+  });
+
+  it("should eliminate a player when they pass the side or top kill line", () => {
+    const state = newGame();
+    const margin = outOfBoundsMargin(state.tunables);
+    const [right, high] = state.players;
+    right!.x = level.bounds.x + level.bounds.w + margin + 10;
+    high!.y = level.bounds.y - margin - 10;
+    stepFor(state, 0.05);
+    expect(playersInPlay(state)).toEqual([]);
+  });
+
+  it("should eliminate a player right when they fall below the bounds bottom", () => {
+    const state = newGame();
+    state.players[0]!.y = level.bounds.y + level.bounds.h + 1;
+    stepFor(state, 1 / 120);
+    expect(playersInPlay(state).map((p) => p.slot)).toEqual([1]);
   });
 });
 
