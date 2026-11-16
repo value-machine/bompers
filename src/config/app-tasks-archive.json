@@ -233,5 +233,10 @@
     "title": "Homing missiles (dodgeable)",
     "description": "Owner request 2026-11-16. A homing-missile weapon: missiles track a target but are dodgeable, never a guaranteed hit (limited turn rate, lock delay, fuel/lifetime or similar — the lap proposes the dodge rule). Picked up from crates like the rocket launcher. A separate weapon from the normal rocket launcher (owner 2026-11-16): the missile itself looks different — another colour or a red blinking part — and its crate looks different too. Uses the weapon visual system once defined (placeholder until then). Waits on slower jumps and rocket recoil (#31, same rocket code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md once #34 lands. ",
     "status": "done"
+  },
+  {
+    "title": "Weapon and crate visual design system",
+    "description": "Owner request 2026-11-16. Design with the owner first, with examples, before building. (1) Crates show what's inside. (2) A visual system for weapons: today every weapon is a tube on the blob's head. Owner idea: replace the figure on the head with the weapon's icon instead of the team; but in team games blob colour identifies the player and the helmet might identify the team — so what identifies the weapon? Define the logic: player = blob colour, team = ?, weapon = ?, consistent across crate, HUD and blob. Build waits on the feet animation lap (same player renderer). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md once #34 lands. ",
+    "status": "done"
   }
 ]
