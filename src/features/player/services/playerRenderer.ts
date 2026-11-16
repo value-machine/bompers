@@ -5,6 +5,10 @@ import { outlineWidth } from "@/shared/utils/outlineWidth";
 import {
   blobPose,
   createBlobAnim,
+  createFeetMotion,
+  stepFeetMotion,
+  type FeetMotion,
+  type FeetTunables,
   createHelmetWobble,
   kickHelmetForHit,
   kickHelmetForSquash,
@@ -19,6 +23,7 @@ import {
 } from "@/features/player/services/blobPose";
 import {
   blobMetrics,
+  FOOT_CENTRE_UNITS,
   drawBodyFill,
   drawBodyFlash,
   drawBodyGloss,
@@ -43,7 +48,7 @@ import type { PlayerState } from "@/features/player/types/player.types";
  *
  * Each blob is two trees with identical transforms: `ink` (every part stroked in ink at twice the
  * outline width) under `fill` (the coloured parts, no stroke), so only the outer half of the ink
- * shows. No filters. Shapes are drawn once; per frame only transforms change (squash, foot lift,
+ * shows. No filters. Shapes are drawn once; per frame only transforms change (squash, foot motion,
  * tumble roll, dive overlays, aim), and the ink redraws only when the zoom-clamped outline width
  * changes step. The spawn blink fades the fill tree; the outline stays.
  *
@@ -51,7 +56,8 @@ import type { PlayerState } from "@/features/player/types/player.types";
  *
  * Game feel (§ 6): a hit flashes a white egg over the body fill (the ink stays, so the silhouette
  * never changes), and the helmet with its emblem rides a damped spring (`HelmetWobble`) kicked by
- * landings, jumps, wall-jumps, tumble bounces and hits.
+ * landings, jumps, wall-jumps, tumble bounces and hits. The feet step, swing, tilt and splay, and
+ * turn their soles to the wall while wall-sliding (`blobPose.ts`).
  */
 export interface PlayersView {
   container: Container;
@@ -86,6 +92,7 @@ interface BlobSprite {
   shadow: Graphics;
   anim: BlobAnim;
   wobble: HelmetWobble;
+  feetMotion: FeetMotion;
   metrics: BlobMetrics;
   /** Outline step the ink was drawn at (null before the first draw). */
   inkStep: number | null;
@@ -107,6 +114,8 @@ export interface SyncPlayersOptions {
   hits?: ReadonlyMap<string, BlobHitFeel>;
   /** Helmet spring settings. Defaults to the shared tunables. */
   helmet?: HelmetTunables;
+  /** Foot motion settings. Defaults to the shared tunables. */
+  feet?: FeetTunables;
 }
 
 /** What the renderer needs of a hit (the effects feature's `PlayerHitFeel` fits). */
@@ -248,6 +257,7 @@ function createBlobSprite(player: PlayerState): BlobSprite {
     shadow: new Graphics().ellipse(0, 0, 1, 1).fill(GAME_PALETTE.ink),
     anim: createBlobAnim(player),
     wobble: createHelmetWobble(),
+    feetMotion: createFeetMotion(player),
     metrics: m,
     inkStep: null,
   };
@@ -265,13 +275,6 @@ function syncInk(sprite: BlobSprite, zoom: number): void {
   sprite.inkStep = outline.step;
 }
 
-/** Alternating foot lift while running on the ground, from the distance travelled. */
-function footLift(player: PlayerState, r: number): [number, number] {
-  if (!player.grounded || Math.abs(player.vx) < 20) return [0, 0];
-  const wave = Math.sin(player.x / (0.9 * r));
-  return [Math.max(0, wave) * 0.22 * r, Math.max(0, -wave) * 0.22 * r];
-}
-
 /** A tumbling blob rolls with the distance it travels, like a ball; 0 when not tumbling. */
 const tumbleRoll = (player: PlayerState, r: number): number =>
   player.tumbleSeconds > 0 ? (player.x / (1.6 * r)) % (Math.PI * 2) : 0;
@@ -280,6 +283,8 @@ interface PoseFrame {
   pose: BlobPose;
   overlay: BlobPoseOverlay | undefined;
   armed: boolean;
+  feet: FeetTunables | undefined;
+  nowMs: number;
 }
 
 /** Places and scales the blob. The root turns around the body centre (overlay rotation, roll). */
@@ -299,14 +304,27 @@ function placeBlob(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
   });
 }
 
-/** Feet lag the body's squash a little and step while running. */
-function placeFeet(sprite: BlobSprite, player: PlayerState, pose: BlobPose): void {
-  const { r } = sprite.metrics;
-  const lift = footLift(player, r);
+/**
+ * Feet lag the body's squash a little and move per `stepFeetMotion`. Each foot turns around its own
+ * centre; the centre drops with the squash so the sole stays on the ground.
+ */
+function placeFeet(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): void {
+  const { r, u } = sprite.metrics;
+  const { pose } = frame;
+  const poses = stepFeetMotion(sprite.feetMotion, {
+    player,
+    feet: frame.feet ?? DEFAULT_GAME_TUNABLES.feel.feet,
+    r,
+    bodySx: pose.bodySx,
+    nowMs: frame.nowMs,
+  });
+  const centre = FOOT_CENTRE_UNITS * u;
   sprite.feet.forEach((foot, i) => {
-    const side = i === 0 ? -1 : 1;
+    const p = poses[i]!;
     eachSide(foot, (c) => {
-      c.position.set(side * 0.45 * r * pose.bodySx, -lift[i]!);
+      c.pivot.set(0, -centre);
+      c.position.set(p.x, p.y - centre * pose.feetSy);
+      c.rotation = p.rotation;
       c.scale.set(pose.feetSx, pose.feetSy);
     });
   });
@@ -334,7 +352,7 @@ function placeFace(sprite: BlobSprite, player: PlayerState, armed: boolean): voi
 function applyPose(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): void {
   const { pose } = frame;
   placeBlob(sprite, player, frame);
-  placeFeet(sprite, player, pose);
+  placeFeet(sprite, player, frame);
   placeFace(sprite, player, frame.armed);
   const { shadow } = pose;
   sprite.shadow.visible = shadow !== null;
@@ -421,6 +439,8 @@ export function syncPlayersView(
       pose,
       overlay: options.overlays?.get(player.id),
       armed: options.armedIds?.has(player.id) === true,
+      feet: options.feet,
+      nowMs,
     });
     applyFeel(sprite, player, { moment, hit: options.hits?.get(player.id), helmet, nowMs });
     applyProtection(sprite, options.protectedIds?.has(player.id) === true, nowMs);
