@@ -218,5 +218,25 @@
     "title": "Slower jumps and rocket recoil",
     "description": "Feedback round 2 § 3. Jumps are too fast to coordinate trick jumps: lower gravity for more air control, balanced with a lower jump impulse so max height stays sensible. Firing a rocket gives no recoil today: add a physical kick on the shooter (impact and tactical movement, e.g. small rocket-assisted moves). Tunables in gameTunables. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
     "status": "done"
+  },
+  {
+    "title": "Music",
+    "description": "Upbeat ukulele/marimba loops around 128 BPM per DESIGN_LANGUAGE.md § 8 (lobby loop + match loop + short stingers). The audio duck bus is already wired (explosions duck music). Same owner-guided process as the SFX lap; confirm credit cost with the orchestrator before generating long tracks. Add a music volume next to the SFX volume. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md.  Also covers the missing end-phase audio (feedback round 2 § 3): a tension loop or stinger for the last 30 seconds of a match.",
+    "status": "done"
+  },
+  {
+    "title": "Feet animation: rotation, dynamics and wall-facing feet",
+    "description": "Feedback round 2 § 2.5 and § 3. The feet only move straight up and down; they lost the rotation, dynamics and feel of the pre-restyle version. Bring back rotation and dynamic motion (earlier ideas like taller sprites or changed collision are dropped). While wall-sliding and wall-jumping, the feet turn to face the wall surface. Render-only. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Homing missiles (dodgeable)",
+    "description": "Owner request 2026-11-16. A homing-missile weapon: missiles track a target but are dodgeable, never a guaranteed hit (limited turn rate, lock delay, fuel/lifetime or similar — the lap proposes the dodge rule). Picked up from crates like the rocket launcher. A separate weapon from the normal rocket launcher (owner 2026-11-16): the missile itself looks different — another colour or a red blinking part — and its crate looks different too. Uses the weapon visual system once defined (placeholder until then). Waits on slower jumps and rocket recoil (#31, same rocket code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md once #34 lands. ",
+    "status": "done"
+  },
+  {
+    "title": "Crouch: defensive stance",
+    "description": "Feedback round 2 § 2.4. Holding down puts the blob in a fixed crouch: it cannot walk, sinks to the ground, feet nearly invisible. All incoming damage is halved; attacks or hazards that normally deal 1 damage deal 0. Waits on slower jumps and the feet animation lap (same player code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "status": "done"
   }
 ]

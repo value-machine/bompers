@@ -14,7 +14,8 @@ import type { CombatState, RocketState } from "@/features/combat/types/combat.ty
 /**
  * Combat render layers (DESIGN_LANGUAGE § 1 Effects, § 4 shadows, § 5 draw order). The match
  * renderer places them: shadows (4, contact shadows of rockets) → [weapon crates (5), the
- * `collectibles` feature] → [effects (6), the `effects` feature] → rockets (7, with smoke trail)
+ * `collectibles` feature] → [effects (6), the `effects` feature] → rockets (7, with smoke trail;
+ * homing missiles: lilac hull, 6 Hz seeker light, a lilac trail that follows their curve)
  * → players (8, which wear the rocket tube while armed) → overlay (health chunks above each
  * player). Effects therefore never cover a player outline. Shapes follow mockup variant E at
  * `DESIGN_SCALE`; outlines use the zoom-clamped prop width. Sprites are drawn once; per frame
@@ -90,7 +91,70 @@ function drawRocket(rocket: RocketState, width: number): Container {
   return root;
 }
 
+/** Homing trail: positions kept per sprite (newest last), so the lilac puffs follow the curve. */
+const homingTrails = new WeakMap<Container, { x: number; y: number }[]>();
+const HOMING_TRAIL = { points: 12, spacing: 7 * S, blinkHz: 6 };
+
+/**
+ * Homing missile (weapon-visuals spec): shorter, rounder lilac hull, fins in the shooter's colour,
+ * a red seeker light on the nose (child 1, blinks at 6 Hz). The sprite is a world-space root:
+ * child 0 the trail (drawn in world coordinates), child 1 the body (placed and rotated).
+ */
+function drawHomingMissile(rocket: RocketState, width: number): Container {
+  const { body, seeker } = GAME_PALETTE.homing;
+  const fin = slotColor(rocket.ownerSlot);
+  const hull = new Container();
+  const shape = new Graphics()
+    .circle(-10 * S, 0, 5 * S)
+    .fill(GAME_PALETTE.rocket.flame)
+    .poly([-5 * S, -6 * S, -12 * S, -11 * S, -2 * S, -6 * S])
+    .poly([-5 * S, 6 * S, -12 * S, 11 * S, -2 * S, 6 * S])
+    .fill(fin)
+    .stroke(ink(width))
+    .roundRect(-8 * S, -7 * S, 18 * S, 14 * S, 7 * S)
+    .fill(body)
+    .stroke(ink(width));
+  const light = new Graphics().circle(7 * S, 0, 3 * S).fill(seeker);
+  hull.addChild(shape, light);
+  const root = new Container();
+  root.addChild(new Graphics(), hull);
+  homingTrails.set(root, []);
+  return root;
+}
+
+function drawHomingTrail(trail: Graphics, points: readonly { x: number; y: number }[]): void {
+  trail.clear();
+  const count = points.length;
+  points.forEach((point, i) => {
+    const fromHead = count - i;
+    trail
+      .circle(point.x, point.y, (3 + fromHead * 0.9) * S)
+      .fill({ color: GAME_PALETTE.homing.trail, alpha: Math.max(0, 0.85 - fromHead * 0.065) });
+  });
+}
+
+function placeHomingMissile(sprite: Container, rocket: RocketState): void {
+  const [trail, hull] = sprite.children;
+  if (!(trail instanceof Graphics) || !hull) return;
+  hull.position.set(rocket.x, rocket.y);
+  hull.rotation = Math.atan2(rocket.dirY, rocket.dirX);
+  const light = hull.children[1];
+  if (light) light.visible = (rocket.age * HOMING_TRAIL.blinkHz) % 1 < 0.5;
+  const points = homingTrails.get(sprite) ?? [];
+  const last = points[points.length - 1];
+  if (!last || Math.hypot(rocket.x - last.x, rocket.y - last.y) >= HOMING_TRAIL.spacing) {
+    points.push({ x: rocket.x, y: rocket.y });
+    if (points.length > HOMING_TRAIL.points) points.shift();
+  }
+  // The newest puff sits behind the tail, not on the hull.
+  drawHomingTrail(trail, points.slice(0, -1));
+}
+
 function placeRocket(sprite: Container, rocket: RocketState): void {
+  if (rocket.kind === "homing") {
+    placeHomingMissile(sprite, rocket);
+    return;
+  }
   sprite.position.set(rocket.x, rocket.y);
   sprite.rotation = Math.atan2(rocket.dirY, rocket.dirX);
   const trail = sprite.children[0];
@@ -168,7 +232,10 @@ export function syncCombatView(view: CombatView, frame: CombatFrame): void {
   syncDisplayById(view.rocketSprites, view.rockets, {
     list: combat.rockets,
     key: (rocket) => rocket.id,
-    create: (rocket) => drawRocket(rocket, width.width),
+    create: (rocket) =>
+      rocket.kind === "homing"
+        ? drawHomingMissile(rocket, width.width)
+        : drawRocket(rocket, width.width),
     place: placeRocket,
   });
   syncShadows(view, frame);

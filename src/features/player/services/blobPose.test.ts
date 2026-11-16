@@ -5,11 +5,15 @@ import {
   blobShadow,
   createBlobAnim,
   createHelmetWobble,
+  crouchFace,
   eventSquash,
   kickHelmetForHit,
   kickHelmetForSquash,
   noteBlobEvents,
+  stepCrouchBlend,
   stepHelmetWobble,
+  createFeetMotion,
+  stepFeetMotion,
 } from "@/features/player/services/blobPose";
 import { createPlayer } from "@/features/player/services/playerController";
 import type { PlayerState } from "@/features/player/types/player.types";
@@ -159,5 +163,162 @@ describe("helmet wobble", () => {
     const { drops, tilts } = settle(wobble, 500);
     expect(Math.max(...drops.map(Math.abs))).toBeLessThanOrEqual(helmet.maxDrop);
     expect(Math.max(...tilts.map(Math.abs))).toBeLessThanOrEqual(helmet.maxTilt);
+  });
+});
+
+// --- Foot motion ---
+
+const feet = DEFAULT_GAME_TUNABLES.feel.feet;
+const R = 12;
+
+const feetPlayer = (patch: Partial<PlayerState> = {}): PlayerState => ({
+  ...createPlayer(0, { x: 0, y: 100 }, DEFAULT_GAME_TUNABLES),
+  grounded: true,
+  ...patch,
+});
+
+/** Steps the motion at 60 fps for `ms` more and returns the last pose. */
+function run(p: PlayerState, ms: number, motion = createFeetMotion(p)) {
+  const start = motion.lastMs === null ? 0 : motion.lastMs + 16;
+  let pose = stepFeetMotion(motion, { player: p, feet, r: R, bodySx: 1, nowMs: start });
+  for (let t = start + 16; t <= start + ms; t += 16) {
+    pose = stepFeetMotion(motion, { player: p, feet, r: R, bodySx: 1, nowMs: t });
+  }
+  return { pose, motion };
+}
+
+describe("stepFeetMotion", () => {
+  it("should rest both feet flat and level when standing still", () => {
+    const { pose } = run(feetPlayer(), 200);
+    expect(pose[0]).toEqual({ x: -0.45 * R, y: 0, rotation: 0 });
+    expect(pose[1].x).toBeCloseTo(0.45 * R);
+    expect(pose[1].rotation).toBeCloseTo(0);
+  });
+
+  it("should lift, swing forward and tip the toe up of the stepping foot when running", () => {
+    // Phase π/2 for the left foot: fully lifted, mid-swing.
+    const p = feetPlayer({ vx: 340, x: (Math.PI / 2) * feet.stride * R });
+    const { pose } = run(p, 0);
+    expect(pose[0].y).toBeCloseTo(-feet.stepLift * R);
+    expect(pose[0].rotation).toBeCloseTo(-feet.stepTilt);
+    expect(pose[1].y).toBeCloseTo(0);
+    expect(pose[1].rotation).toBeCloseTo(0);
+  });
+
+  it("should swing the lifted foot forward when running left", () => {
+    const at = (x: number) => {
+      const p = feetPlayer({ vx: -340, x });
+      return run(p, 0).pose[0].x;
+    };
+    // Running left, x falls from phase π·0.75 to π·0.25 while the left foot is lifted.
+    const early = at(0.75 * Math.PI * feet.stride * R);
+    const late = at(0.25 * Math.PI * feet.stride * R);
+    expect(late).toBeLessThan(early);
+  });
+
+  it("should turn both soles toward the wall when sliding on a right wall", () => {
+    const { pose } = run(feetPlayer({ grounded: false, wallDir: 1, vy: 120 }), 300);
+    for (const foot of pose) {
+      expect(foot.rotation).toBeCloseTo(-Math.PI / 2);
+      expect(foot.x).toBeCloseTo(feet.wallX * R);
+    }
+    // The near (right) foot sits higher than the far one.
+    expect(pose[1].y).toBeLessThan(pose[0].y);
+  });
+
+  it("should keep the feet on the wall just after a wall-jump and let go after the hold", () => {
+    const p = feetPlayer({ grounded: false, wallDir: -1, lastWallDir: -1 });
+    const { motion } = run(p, 300);
+    p.wallDir = 0;
+    p.wallJumpCount += 1;
+    p.vx = 300;
+    const t0 = 316;
+    const held = stepFeetMotion(motion, { player: p, feet, r: R, bodySx: 1, nowMs: t0 });
+    expect(held[0].rotation).toBeCloseTo(Math.PI / 2);
+    let pose = held;
+    for (let t = t0 + 16; t <= t0 + 600; t += 16) {
+      pose = stepFeetMotion(motion, { player: p, feet, r: R, bodySx: 1, nowMs: t });
+    }
+    expect(motion.wall).toBe(0);
+    expect(Math.abs(pose[0].rotation)).toBeLessThan(1);
+  });
+
+  it("should not turn the feet when the render clock jumps back", () => {
+    const { motion } = run(feetPlayer(), 200);
+    const pose = stepFeetMotion(motion, { player: feetPlayer(), feet, r: R, bodySx: 1, nowMs: 0 });
+    expect(motion.wall).toBe(0);
+    expect(pose[0].rotation).toBeCloseTo(0);
+  });
+
+  it("should spread the feet outward after a hard landing and settle back", () => {
+    const p = feetPlayer();
+    const { motion } = run(p, 100);
+    p.landCount += 1;
+    p.lastLandingSpeed = 900;
+    const { pose } = run(p, 50, motion);
+    expect(pose[1].x).toBeGreaterThan(0.45 * R);
+    expect(pose[0].x).toBeLessThan(-0.45 * R);
+    const settled = run(p, 1500, motion).pose;
+    expect(settled[1].x).toBeCloseTo(0.45 * R, 1);
+  });
+
+  it("should tilt the feet behind the motion when flying sideways", () => {
+    const { pose } = run(feetPlayer({ grounded: false, vx: 900, vy: 0 }), 600);
+    expect(pose[0].rotation).toBeCloseTo(-feet.airTilt, 1);
+    expect(pose[1].rotation).toBeCloseTo(-feet.airTilt, 1);
+  });
+});
+
+describe("crouch pose", () => {
+  const crouch = DEFAULT_GAME_TUNABLES.player.crouch;
+
+  it("should sink the body and keep the feet once the crouch has eased in", () => {
+    const player = standing();
+    const anim = createBlobAnim(player);
+    player.crouching = true;
+    stepCrouchBlend(anim, { player, crouch, nowMs: 0 });
+    stepCrouchBlend(anim, { player, crouch, nowMs: crouch.easeSeconds * 500 });
+    expect(anim.crouchBlend).toBeCloseTo(0.5, 6);
+    stepCrouchBlend(anim, { player, crouch, nowMs: crouch.easeSeconds * 1000 });
+    const pose = blobPose(anim, { player, squash, nowMs: 0, crouch });
+    expect(pose.bodySy).toBeCloseTo(crouch.bodySy, 6);
+    expect(pose.bodySx).toBeCloseTo(crouch.bodySx, 6);
+    expect(pose.feetSy).toBe(1);
+    expect(pose.feetSx).toBe(1);
+  });
+
+  it("should stand back up when the crouch ends", () => {
+    const player = standing();
+    player.crouching = true;
+    const anim = createBlobAnim(player);
+    player.crouching = false;
+    stepCrouchBlend(anim, { player, crouch, nowMs: 0 });
+    stepCrouchBlend(anim, { player, crouch, nowMs: 1000 });
+    expect(anim.crouchBlend).toBe(0);
+    expect(blobPose(anim, { player, squash, nowMs: 0, crouch }).bodySy).toBe(1);
+  });
+});
+
+describe("crouch face", () => {
+  const crouch = DEFAULT_GAME_TUNABLES.player.crouch;
+
+  it("should lower the helmet, lift the eyes and tuck them under the dome when crouched", () => {
+    const player = standing();
+    player.crouching = true;
+    const anim = createBlobAnim(player);
+    expect(crouchFace(anim, crouch)).toEqual({
+      helmetDrop: crouch.helmetDrop,
+      eyeLift: crouch.eyeLift,
+      eyesUnderHelmet: true,
+    });
+  });
+
+  it("should keep the standing face when not crouching", () => {
+    const anim = createBlobAnim(standing());
+    expect(crouchFace(anim, crouch)).toEqual({
+      helmetDrop: 0,
+      eyeLift: 0,
+      eyesUnderHelmet: false,
+    });
   });
 });

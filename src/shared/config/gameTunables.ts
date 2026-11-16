@@ -49,6 +49,9 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     wallJumpSpeedX: 420,
     wallJumpSpeedY: 720,
     wallJumpControlLock: 0.16,
+    // Defensive crouch (feedback round 2 § 2.4): sink fast, stand up a touch slower.
+    // Helmet down 4 u and eyes up 2 u: the rim lands on about the middle of the eyes (crouch D7).
+    crouch: { bodySx: 1.18, bodySy: 0.68, easeSeconds: 0.07, helmetDrop: 4, eyeLift: 2 },
     squash: {
       land: { sx: 1.25, sy: 0.75, seconds: 0.18 },
       landFullImpact: 1100,
@@ -100,6 +103,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     eventRetentionSeconds: 1,
     // Body hits from behind hurt more; explosions stay exactly 1 chunk from any side (GDD § 3).
     hitDamage: { contact: { front: 1, back: 2 }, blast: { front: 1, back: 1 } },
+    // Crouching halves damage, rounded down: 2 → 1, 1 → 0 (feedback round 2 § 2.4, crouch D1).
+    crouchDamageScale: 0.5,
     // 6 rockets, no time limit: the count stays legible without a HUD timer (combat D5).
     rocket: {
       speed: 950,
@@ -111,6 +116,19 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       // A kick opposite the aim on every shot: a hop when firing down, a push back when firing
       // level (strongest in the air; ground decel soaks most of it).
       recoil: 200,
+    },
+    // Dodgeable (homing-missiles D2, D3): 1.4 × run speed and a turn radius of 480 / 2.6 ≈ 185
+    // units (≈ 6.6 blob widths), so a late sidestep or jump makes it overshoot; fuel ends loops.
+    homing: {
+      speed: 480,
+      ammo: 3,
+      fireCooldown: 0.7,
+      recoil: 120,
+      maxLifetime: 3,
+      lockDelaySeconds: 0.2,
+      turnRate: 2.6,
+      fuelSeconds: 1.6,
+      lockConeDegrees: 70,
     },
     // Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units; with the recoil (1080 + 200) ≈ 585,
     // well above a full jump (≈ 250).
@@ -154,6 +172,25 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       wallJumpTilt: 5,
       hitTilt: 7,
       hitDrop: 40,
+    },
+    feet: {
+      stiffness: 260,
+      damping: 13,
+      stride: 0.9,
+      stepLift: 0.24,
+      stepSwing: 0.16,
+      stepTilt: 0.5,
+      fullStepSpeed: 300,
+      airTilt: 0.45,
+      airTiltSpeed: 900,
+      landKick: 9,
+      jumpKick: 6,
+      maxSplay: 0.6,
+      wallX: 0.85,
+      wallLow: 0.15,
+      wallHigh: 0.7,
+      wallBlendSeconds: 0.08,
+      wallJumpHoldSeconds: 0.12,
     },
     // About 3 frames at 60 fps.
     hitStop: { seconds: 0.05 },

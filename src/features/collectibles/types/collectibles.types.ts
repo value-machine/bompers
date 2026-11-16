@@ -1,3 +1,5 @@
+import type { WeaponItemId } from "@/shared/types/weaponItems.types";
+
 /**
  * Everything that drops from the sky (combat D2, match-rules D2): point orbs (GDD § 5: points
  * falling from the roof) and weapon crates (GDD § 3, § 4: weapons fall from the sky). Pure data;
@@ -16,10 +18,10 @@ export interface PointOrb {
   vy: number;
 }
 
-/** A weapon crate (only the rocket launcher exists for the MVP). */
+/** A weapon crate: holds one weapon (`WeaponItemId`). */
 export interface WeaponCrate {
   id: number;
-  itemId: "rocket-launcher";
+  itemId: WeaponItemId;
   /** Bottom-centre of the crate box (like the player feet point). */
   x: number;
   y: number;
@@ -34,6 +36,8 @@ export interface WeaponCratesState {
   dropTimer: number;
   /** Next drop point to release a crate (round-robin). */
   nextDropIndex: number;
+  /** Counts released crates; picks the weapon among a drop point's items (homing-missiles D4). */
+  nextItemIndex: number;
   nextId: number;
 }
 
