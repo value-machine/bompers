@@ -233,5 +233,10 @@
     "title": "Homing missiles (dodgeable)",
     "description": "Owner request 2026-11-16. A homing-missile weapon: missiles track a target but are dodgeable, never a guaranteed hit (limited turn rate, lock delay, fuel/lifetime or similar — the lap proposes the dodge rule). Picked up from crates like the rocket launcher. A separate weapon from the normal rocket launcher (owner 2026-11-16): the missile itself looks different — another colour or a red blinking part — and its crate looks different too. Uses the weapon visual system once defined (placeholder until then). Waits on slower jumps and rocket recoil (#31, same rocket code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md once #34 lands. ",
     "status": "done"
+  },
+  {
+    "title": "Crouch: defensive stance",
+    "description": "Feedback round 2 § 2.4. Holding down puts the blob in a fixed crouch: it cannot walk, sinks to the ground, feet nearly invisible. All incoming damage is halved; attacks or hazards that normally deal 1 damage deal 0. Waits on slower jumps and the feet animation lap (same player code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "status": "done"
   }
 ]
