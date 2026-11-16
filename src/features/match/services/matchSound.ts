@@ -24,6 +24,7 @@ export function soundSnapshotOf(state: GameState): SoundSnapshot {
         landCount: player.landCount,
         lastLandingSpeed: player.lastLandingSpeed,
         tumbleBounceCount: player.tumbleBounceCount,
+        crouchCount: player.crouchCount,
         inPlay: isInPlay(state.rules, player),
         divePhase: dive?.phase ?? "idle",
         diveBonked: dive?.bonked ?? false,

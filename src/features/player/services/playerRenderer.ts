@@ -17,6 +17,9 @@ import {
   type BlobAnim,
   type BlobPose,
   type BlobPoseOverlay,
+  type CrouchFace,
+  type CrouchTunables,
+  stepCrouchBlend,
   type HelmetTunables,
   type HelmetWobble,
   type SquashTunables,
@@ -116,6 +119,8 @@ export interface SyncPlayersOptions {
   helmet?: HelmetTunables;
   /** Foot motion settings. Defaults to the shared tunables. */
   feet?: FeetTunables;
+  /** Crouch pose settings. Defaults to the shared tunables. */
+  crouch?: CrouchTunables;
 }
 
 /** What the renderer needs of a hit (the effects feature's `PlayerHitFeel` fits). */
@@ -188,6 +193,22 @@ function buildEyes(u: number) {
   return { eyes, pupils: [left.pupil, right.pupil] as [Graphics, Graphics] };
 }
 
+/** Draw rank in the torso fill: eyes over the helmet dome (4), or under it while crouching. */
+const EYES_OVER_HELMET = 6;
+const EYES_UNDER_HELMET = 3;
+
+/**
+ * Adds children with a fixed draw rank (zIndex). The crouch re-ranks the eyes under the helmet
+ * dome (`placeEyes`), so the order is kept by rank, not by insertion.
+ */
+function addRanked(parent: Container, children: readonly [Container, number][]): void {
+  parent.sortableChildren = true;
+  for (const [child, rank] of children) {
+    child.zIndex = rank;
+    parent.addChild(child);
+  }
+}
+
 function buildTorso(
   sprite: Pick<BlobSprite, "body" | "tube" | "inks">,
   slot: number,
@@ -203,15 +224,15 @@ function buildTorso(
   const { eyes, pupils } = buildEyes(m.u);
   const flash = drawBodyFlash(m);
   flash.visible = false;
-  torso.fill.addChild(
-    sprite.tube.fill,
-    drawBodyFill(slot, m),
-    flash,
-    helmetDome,
-    drawBodyGloss(m),
-    ...eyes,
-    helmetDetails
-  );
+  addRanked(torso.fill, [
+    [sprite.tube.fill, 0],
+    [drawBodyFill(slot, m), 1],
+    [flash, 2],
+    [helmetDome, 4],
+    [drawBodyGloss(m), 5],
+    ...eyes.map((eye): [Container, number] => [eye, EYES_OVER_HELMET]),
+    [helmetDetails, 7],
+  ]);
   sprite.body.ink.addChild(torso.ink);
   sprite.body.fill.addChild(torso.fill);
   return { eyes, pupils, helmet, flash };
@@ -330,14 +351,24 @@ function placeFeet(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
   });
 }
 
-/** Eyes sit under the helmet rim and look toward the aim; the tube pivots toward it. */
-function placeFace(sprite: BlobSprite, player: PlayerState, armed: boolean): void {
-  const { r, u, helmet } = sprite.metrics;
+/**
+ * Eyes sit under the helmet rim and look toward the aim. While crouching they rise a little and
+ * slip under the dome, so the lowered rim covers about half of each eye (crouch D7).
+ */
+function placeEyes(sprite: BlobSprite, player: PlayerState, face: CrouchFace): void {
+  const { r, u } = sprite.metrics;
+  const y = 0.12 * r + player.aimY * 2 * u - face.eyeLift * u;
   sprite.eyes.forEach((eye, i) => {
     const side = i === 0 ? -1 : 1;
-    eye.position.set(side * 0.27 * r + player.aimX * 5 * u, 0.12 * r + player.aimY * 2 * u);
+    eye.position.set(side * 0.27 * r + player.aimX * 5 * u, y);
+    eye.zIndex = face.eyesUnderHelmet ? EYES_UNDER_HELMET : EYES_OVER_HELMET;
     sprite.pupils[i]!.position.set(player.aimX * 1.6 * u, 1.5 * u + player.aimY * 1.2 * u);
   });
+}
+
+/** The tube pivots toward the aim. */
+function placeFace(sprite: BlobSprite, player: PlayerState, armed: boolean): void {
+  const { r, u, helmet } = sprite.metrics;
   const angle = Math.atan2(player.aimY, player.aimX);
   eachSide(sprite.tube, (c) => {
     c.visible = armed;
@@ -353,6 +384,7 @@ function applyPose(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
   const { pose } = frame;
   placeBlob(sprite, player, frame);
   placeFeet(sprite, player, frame);
+  placeEyes(sprite, player, pose.face);
   placeFace(sprite, player, frame.armed);
   const { shadow } = pose;
   sprite.shadow.visible = shadow !== null;
@@ -367,6 +399,8 @@ interface FeelFrame {
   hit: BlobHitFeel | undefined;
   helmet: HelmetTunables | undefined;
   nowMs: number;
+  /** Extra helmet sink of the crouch, mockup units. */
+  crouchDrop: number;
 }
 
 /** Kicks the helmet spring for this frame's squash moment and for a new hit. */
@@ -390,7 +424,7 @@ function applyFeel(sprite: BlobSprite, player: PlayerState, frame: FeelFrame): v
   const helmet = frame.helmet ?? DEFAULT_GAME_TUNABLES.feel.helmet;
   stepHelmetWobble(wobble, { nowMs: frame.nowMs, helmet });
   const { rim } = sprite.metrics.helmet;
-  const drop = wobble.pose.drop * sprite.metrics.u;
+  const drop = (wobble.pose.drop + frame.crouchDrop) * sprite.metrics.u;
   for (const layer of sprite.helmet) {
     layer.position.set(0, rim + drop);
     layer.rotation = wobble.pose.tilt;
@@ -421,6 +455,12 @@ function pruneSprites(view: PlayersView, seen: ReadonlySet<string>): void {
   }
 }
 
+/** Squash and crouch settings, defaulting to the shared tunables. */
+const bodyTunables = (options: SyncPlayersOptions) => ({
+  squash: options.squash ?? DEFAULT_GAME_TUNABLES.player.squash,
+  crouch: options.crouch ?? DEFAULT_GAME_TUNABLES.player.crouch,
+});
+
 /** Matches the layer to the current players and poses them. Call once per rendered frame. */
 export function syncPlayersView(
   view: PlayersView,
@@ -428,12 +468,13 @@ export function syncPlayersView(
   options: SyncPlayersOptions = {}
 ): void {
   const nowMs = options.nowMs ?? performance.now();
-  const squash = options.squash ?? DEFAULT_GAME_TUNABLES.player.squash;
+  const { squash, crouch } = bodyTunables(options);
   const { helmet } = options;
   for (const player of players) {
     const sprite = spriteFor(view, player);
     const moment = noteBlobEvents(sprite.anim, { player, squash, nowMs });
-    const pose = blobPose(sprite.anim, { player, squash, nowMs });
+    stepCrouchBlend(sprite.anim, { player, crouch, nowMs });
+    const pose = blobPose(sprite.anim, { player, squash, nowMs, crouch });
     syncInk(sprite, options.zoom ?? 1);
     applyPose(sprite, player, {
       pose,
@@ -442,7 +483,13 @@ export function syncPlayersView(
       feet: options.feet,
       nowMs,
     });
-    applyFeel(sprite, player, { moment, hit: options.hits?.get(player.id), helmet, nowMs });
+    applyFeel(sprite, player, {
+      moment,
+      hit: options.hits?.get(player.id),
+      helmet,
+      nowMs,
+      crouchDrop: pose.face.helmetDrop,
+    });
     applyProtection(sprite, options.protectedIds?.has(player.id) === true, nowMs);
   }
   pruneSprites(view, new Set(players.map((player) => player.id)));

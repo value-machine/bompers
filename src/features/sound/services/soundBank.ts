@@ -49,6 +49,8 @@ export const SOUND_MIX = {
   /** Landing speed (units / s) that plays the land sound at full gain; slower is quieter. */
   fullLandingSpeed: 900,
   minLandingGain: 0.35,
+  /** Sinking into a crouch replays the land sound this soft. */
+  crouchGain: 0.3,
 } as const;
 
 /** Sounds that duck the music bus when they play. */

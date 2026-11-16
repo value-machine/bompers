@@ -17,6 +17,7 @@ De besturing combineert lichte, fysieke blob-fysica met vloeiende momentum-mecha
 
 > * **Bewegingsfysica & Momentum:** Karakter voelt licht en fysiek aan als een blob (deukt in en zakt licht door de bolvormige voetjes bij landingen, geïnspireerd op LocoRoco/Fall Guys). Bewegingen volgen vloeiende, gebogen patronen met responsieve acceleratie en vertraging bij richtingswisselingen.  
 > * **Sprongen & Mobiliteit:** Hoge sprongen (schaalbaar op basis van zwaartekracht per map/instelling), luchtcontrole (air steering) en ondersteuning voor wall-jumps.  
+> * **Hurken (verdediging):** Omlaag ingedrukt op de grond = vaste hurkhouding: de blob staat stil (draaien, richten, vuren en springen blijven mogelijk), zakt (lijf en hoofd) naar de grond; de voetjes blijven zoals ze zijn en de helm zakt tot over ongeveer de helft van de ogen. Alle inkomende schade wordt gehalveerd en naar beneden afgerond (2 → 1, 1 → 0). In de lucht is omlaag alleen richten.  
 > * **Rocket Jumping:** Spelers kunnen raketten op oppervlakken of nabij zichzelf afvuren om zichzelf met de explosiekracht door de arena te lanceren zonder zelf schade op te lopen.  
 > * **Dynamische Multi-Target Camera:** Een generieke dynamische multi-target camera volgt automatisch alle actieve spelers en past het kader en de zoom aan op hun posities, voorzien van een centrale deadzone om alle spelers gelijktijdig in beeld te houden.
 
