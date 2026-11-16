@@ -2,7 +2,7 @@ import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { PlayerState } from "@/features/player/types/player.types";
-import { moveAxis } from "@/features/player/services/playerController";
+import { moveAxis, type ContactArgs } from "@/features/player/services/playerController";
 
 /**
  * Blob-vs-blob contact (sim step 2b, right after `stepPlayers`). Bodies are circles of equal
@@ -55,7 +55,7 @@ function contactNormal(a: PlayerState, b: PlayerState): { normal: Vec2; distance
 const isBlocked = (player: PlayerState, push: Vec2): boolean => player.grounded && push.y > 0.5;
 
 /** Moves both blobs apart by the overlap (half each, all of it for one if the other is blocked). */
-function separate(contact: BodyContact, overlap: number, terrain: TerrainGrid): void {
+function separate(contact: BodyContact, overlap: number, terrain: ContactArgs): void {
   const { a, b, normal } = contact;
   const aBlocked = isBlocked(a, { x: -normal.x, y: -normal.y });
   const bBlocked = isBlocked(b, normal);
@@ -121,7 +121,7 @@ export function resolveBodyContacts(args: ResolveBodyContactsArgs): BodyContact[
       if (!found) continue;
       const { overlap, ...contact } = found;
       contact.impulse = respond(contact, tunables.bodyCollision);
-      separate(contact, overlap, terrain);
+      separate(contact, overlap, { terrain, slope: tunables.player.slope });
       contacts.push(contact);
     }
   }

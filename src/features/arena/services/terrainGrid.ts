@@ -32,8 +32,11 @@ const EMPTY_SLOT: TerrainCellSlot = {
 export const isBreakableSlot = (info: TerrainCellSlot | null | undefined): boolean =>
   info !== null && info !== undefined && info.toughness !== null;
 
-/** Distances are clamped to this many samples either side of an edge (terrain-field D2). */
-export const FIELD_BAND_SAMPLES = 4;
+/**
+ * Distances are clamped to this many samples either side of an edge (terrain-field D2). Five, so
+ * the field and its normal stay exact one body radius (14 units) off the surface (slope-walking A5).
+ */
+export const FIELD_BAND_SAMPLES = 5;
 
 /**
  * Half a sample's diagonal, in samples: an edge between a solid and an empty sample centre lies
