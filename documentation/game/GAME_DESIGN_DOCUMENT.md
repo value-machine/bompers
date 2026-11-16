@@ -17,6 +17,7 @@ De besturing combineert lichte, fysieke blob-fysica met vloeiende momentum-mecha
 
 > * **Bewegingsfysica & Momentum:** Karakter voelt licht en fysiek aan als een blob (deukt in en zakt licht door de bolvormige voetjes bij landingen, geïnspireerd op LocoRoco/Fall Guys). Bewegingen volgen vloeiende, gebogen patronen met responsieve acceleratie en vertraging bij richtingswisselingen.  
 > * **Sprongen & Mobiliteit:** Hoge sprongen (schaalbaar op basis van zwaartekracht per map/instelling), luchtcontrole (air steering) en ondersteuning voor wall-jumps.  
+> * **Hurken (verdediging):** Omlaag ingedrukt op de grond = vaste hurkhouding: de blob staat stil (draaien, richten, vuren en springen blijven mogelijk), zakt (lijf en hoofd) naar de grond; de voetjes blijven zoals ze zijn en de helm zakt tot over ongeveer de helft van de ogen. Alle inkomende schade wordt gehalveerd en naar beneden afgerond (2 → 1, 1 → 0). In de lucht is omlaag alleen richten.  
 > * **Rocket Jumping:** Spelers kunnen raketten op oppervlakken of nabij zichzelf afvuren om zichzelf met de explosiekracht door de arena te lanceren zonder zelf schade op te lopen.  
 > * **Dynamische Multi-Target Camera:** Een generieke dynamische multi-target camera volgt automatisch alle actieve spelers en past het kader en de zoom aan op hun posities, voorzien van een centrale deadzone om alle spelers gelijktijdig in beeld te houden.
 
@@ -29,7 +30,8 @@ Spelers beschikken over een minimaal, gesegmenteerd gezondheidssysteem. Wapens e
 | **Gezondheidssysteem** | Minimaal gesegmenteerd systeem met 4 discrete eenheden (chunks) van gezondheid per speler. |
 | **Ongewapende Aanval (Beuk)** | Geactiveerd via de schietknop wanneer ongewapend; brengt schade toe aan de gezondheidssegmenten en lanceert tegenstanders met knockback achteruit. |
 | **Basiswapen (MVP)** | Raketwerper (valt uit de lucht als pickup, afgevuurd vanuit de helm). |
-| **Richtmechaniek** | Projectiel vliegt recht in de richting waar de speler naartoe mikt. |
+| **Zoekraketwerper** | Tweede wapen uit dezelfde kratten (eigenaar, 2026-11-16): 3 zoekraketten die afbuigen naar de dichtstbijzijnde tegenstander in de schietrichting, maar ontwijkbaar zijn — trager dan een raket, beperkte draaisnelheid en beperkte stuurtijd; dezelfde ontploffing. Lila raket met rood knipperend zoeklicht; krat met lila ring. |
+| **Richtmechaniek** | Projectiel vliegt recht in de richting waar de speler naartoe mikt (de zoekraket buigt daarna af naar haar doel). |
 | **Impact op Spelers & Omgeving** | Ontploft bij contact, verwijdert exact 1 gezondheidssegment (chunk) bij geraakte tegenstanders (elimineert bij 0 resterende chunks), doet geen schade aan de schutter zelf (maakt schade-vrije rocket jumps mogelijk) en vernietigt destructieve arena-secties. |
 
 ## **4\. Arena Ontwerp: Startmap**

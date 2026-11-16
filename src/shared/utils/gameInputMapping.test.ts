@@ -25,7 +25,20 @@ describe("gameInputMapping", () => {
       jump: true,
       fire: true,
       pause: false,
+      crouch: false,
     });
+  });
+
+  it("should crouch and aim down when a keyboard half holds down", () => {
+    expect(mapKeyboardInput(new Set(["KeyS"]), "left")).toMatchObject({ crouch: true, aimY: 1 });
+    expect(mapKeyboardInput(new Set(["ArrowDown"]), "right").crouch).toBe(true);
+  });
+
+  it("should crouch when the pad's d-pad or move stick points mostly down", () => {
+    expect(mapGamepadInput(pad([0, 0, 0, 0], [13])).crouch).toBe(true);
+    expect(mapGamepadInput(pad([0.3, 0.8, 0, 0])).crouch).toBe(true);
+    expect(mapGamepadInput(pad([0.9, 0.6, 0, 0])).crouch).toBe(false);
+    expect(mapGamepadInput(pad([0, 0, 0, 1])).crouch).toBe(false);
   });
 
   it("should ignore the other half's keys when mapping one keyboard half", () => {

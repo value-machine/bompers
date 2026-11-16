@@ -18,6 +18,11 @@ export interface PlayerInput {
    * press edge per slot like `jump`.
    */
   pause: boolean;
+  /**
+   * Down on the move control (keyboard down, d-pad down, move stick mostly down). Crouches only
+   * on the ground; in the air down is just aim (`aimY`).
+   */
+  crouch: boolean;
 }
 
 /** Inputs for all player slots, index = slot (0–3). */

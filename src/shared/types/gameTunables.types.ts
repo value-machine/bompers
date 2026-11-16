@@ -77,6 +77,22 @@ export interface GameTunables {
     wallJumpSpeedY: number;
     /** Seconds after a wall-jump in which input steering is reduced (stops instant re-cling). */
     wallJumpControlLock: number;
+    /**
+     * Defensive crouch (grounded + crouch held): the blob stands still. Render-only numbers:
+     * body scale (anchored at the feet point) and the seconds to sink in / stand up. The feet
+     * keep their normal pose (owner, crouch D6).
+     */
+    crouch: {
+      bodySx: number;
+      bodySy: number;
+      easeSeconds: number;
+      /**
+       * Face while crouched, in mockup units (u = r / 30): the helmet sinks this far and the eyes
+       * rise this far, drawn under the dome so the rim covers about half of each eye.
+       */
+      helmetDrop: number;
+      eyeLift: number;
+    };
     /** Render-only squash and stretch (sx, sy pairs; seconds). */
     squash: {
       land: { sx: number; sy: number; seconds: number };
@@ -182,6 +198,8 @@ export interface GameTunables {
       contact: { front: number; back: number };
       blast: { front: number; back: number };
     };
+    /** Damage multiplier while the victim crouches, rounded down (0.5: 2 → 1, 1 → 0). */
+    crouchDamageScale: number;
     rocket: {
       /** Flight speed, units / s (straight line, no gravity). */
       speed: number;
@@ -195,6 +213,32 @@ export interface GameTunables {
       muzzleOffset: number;
       /** Seconds before a rocket that hit nothing explodes in the air. */
       maxLifetime: number;
+      /** Velocity change on the shooter per shot, opposite the aim, units / s. */
+      recoil: number;
+    };
+    /**
+     * Homing launcher (homing-missiles D2): a slower rocket that steers toward the opponent it
+     * locked at launch, with a capped turn rate and limited steering fuel so a moving player can
+     * dodge it. Uses the rocket's `radius` and `muzzleOffset`; explodes with the same blast.
+     */
+    homing: {
+      /** Flight speed, units / s (constant; steering only turns it). */
+      speed: number;
+      /** Missiles per pickup; the launcher is dropped when empty. */
+      ammo: number;
+      fireCooldown: number;
+      /** Velocity change on the shooter per shot, opposite the aim, units / s. */
+      recoil: number;
+      /** Seconds before a missile that hit nothing explodes in the air. */
+      maxLifetime: number;
+      /** Seconds after launch it flies straight before it starts steering. */
+      lockDelaySeconds: number;
+      /** Maximum turn rate while steering, radians / s (turn radius = speed / turnRate). */
+      turnRate: number;
+      /** Seconds after launch steering stops; it then flies straight until it hits or expires. */
+      fuelSeconds: number;
+      /** Half-angle of the forward cone (degrees from the aim) in which it picks its target. */
+      lockConeDegrees: number;
     };
     explosion: {
       /** Players within this distance of the blast (nearest body point) are hit and pushed. */
@@ -278,6 +322,37 @@ export interface GameTunables {
       wallJumpTilt: number;
       hitTilt: number;
       hitDrop: number;
+    };
+    /**
+     * Foot motion (DESIGN_LANGUAGE § 6): run-cycle swing and toe tilt, air tilt from velocity,
+     * landing / jump splay on a damped spring, and feet turned to the wall while wall-sliding.
+     * Lengths in body radii R, angles in radians.
+     */
+    feet: {
+      /** Spring stiffness (1/s²) and damping (1/s) for the tilt lag and the splay. */
+      stiffness: number;
+      damping: number;
+      /** Run cycle: distance per step (R), lift and forward swing of the stepping foot (R), toe tilt. */
+      stride: number;
+      stepLift: number;
+      stepSwing: number;
+      stepTilt: number;
+      /** Ground speed (units / s) at which the run cycle reaches full size. */
+      fullStepSpeed: number;
+      /** Air tilt at `airTiltSpeed` (units / s): feet trail the horizontal speed and droop / flare with vy. */
+      airTilt: number;
+      airTiltSpeed: number;
+      /** Splay velocity kicks (rad / s): landings spread the feet, jumps pull them in. Cap in radians. */
+      landKick: number;
+      jumpKick: number;
+      maxSplay: number;
+      /** Wall pose: feet centre out from the body centre (R), heights of the low and high foot (R). */
+      wallX: number;
+      wallLow: number;
+      wallHigh: number;
+      /** Seconds to turn to / from the wall, and to keep facing it after a wall-jump. */
+      wallBlendSeconds: number;
+      wallJumpHoldSeconds: number;
     };
     /** Render-only freeze after a hard hit (the sim keeps running); 0 turns it off. */
     hitStop: { seconds: number };

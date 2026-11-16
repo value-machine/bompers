@@ -1,5 +1,6 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { Rect } from "@/shared/types/gameGeometry.types";
+import { isWeaponItemId } from "@/shared/config/weaponItems";
 import { rectHitsSolid, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { LevelDrop } from "@/features/level/api/levelApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
@@ -13,17 +14,18 @@ import type {
 /**
  * Weapon crates (GDD § 3, § 4: weapons fall from the sky). Deterministic schedule: after
  * `firstDelaySeconds`, then every `intervalSeconds` while fewer than `maxActive` lie in the
- * arena, the next drop point (round-robin) releases a launcher crate. Crates fall with the match
+ * arena, the next drop point (round-robin) releases a weapon crate. Which weapon: the drop point's
+ * weapon items in turn, by a counter over all released crates (homing-missiles D4), so a level
+ * that lists both weapons everywhere alternates them. Crates fall with the match
  * gravity, land on terrain (and fall again when the ground is blasted away), vanish out of
  * bounds, and are taken by the first player touching them. Combat arms the collector (`match`
  * hands it the step result). Numbers: the `combat.drops` tunables.
  */
-const LAUNCHER = "rocket-launcher";
-
 export const createWeaponCratesState = (tunables: GameTunables): WeaponCratesState => ({
   list: [],
   dropTimer: tunables.combat.drops.firstDelaySeconds,
   nextDropIndex: 0,
+  nextItemIndex: 0,
   nextId: 1,
 });
 
@@ -34,7 +36,7 @@ export interface StepWeaponCratesArgs {
   /** Players who can take a crate (in play and not eliminated). */
   players: readonly PlayerState[];
   terrain: TerrainGrid;
-  /** The level's in-bounds area: a crate below it or beside it vanishes. */
+  /** The in-bounds area (the match passes its kill zone): a crate below it or beside it vanishes. */
   bounds: Rect;
   tunables: GameTunables;
   dt: number;
@@ -51,17 +53,13 @@ function spawnCrate(args: StepWeaponCratesArgs, result: CrateStepResult): void {
   const { crates: state, drops } = args;
   const drop = drops[state.nextDropIndex % drops.length];
   state.nextDropIndex += 1;
-  if (!drop?.itemIds.includes(LAUNCHER)) return;
-  state.list.push({
-    id: state.nextId,
-    itemId: LAUNCHER,
-    x: drop.at.x,
-    y: drop.at.y,
-    vy: 0,
-    grounded: false,
-  });
+  const weapons = drop?.itemIds.filter(isWeaponItemId) ?? [];
+  const itemId = weapons[state.nextItemIndex % Math.max(1, weapons.length)];
+  if (!drop || !itemId) return;
+  state.nextItemIndex += 1;
+  state.list.push({ id: state.nextId, itemId, x: drop.at.x, y: drop.at.y, vy: 0, grounded: false });
   state.nextId += 1;
-  result.spawned.push({ itemId: LAUNCHER, x: drop.at.x, y: drop.at.y });
+  result.spawned.push({ itemId, x: drop.at.x, y: drop.at.y });
 }
 
 function stepDropSchedule(args: StepWeaponCratesArgs, result: CrateStepResult): void {

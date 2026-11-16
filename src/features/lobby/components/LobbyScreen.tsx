@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { useFileDrop } from "@/shared/hooks/useFileDrop";
 import type { LevelFilePicker, LevelLibrary } from "@/features/level-file/api/levelFileApi";
 import type { MatchSetup } from "@/features/match/api/matchApi";
+import { useMusicTrack } from "@/features/sound/api/soundApi";
 import type { Lobby } from "@/features/lobby/hooks/useLobby";
 import { useLobbyInput, type DeviceActivity } from "@/features/lobby/hooks/useLobbyInput";
 import type { LobbyAction } from "@/features/lobby/types/lobby.types";
@@ -27,6 +28,7 @@ const subtitle = (players: number): string => {
  */
 export const LobbyScreen = ({ lobby, library, onStart }: LobbyScreenProps) => {
   const pickerRef = useRef<LevelFilePicker>(null);
+  useMusicTrack("lobby");
 
   const run = (action: LobbyAction): void => {
     const effect = lobby.dispatch(action);

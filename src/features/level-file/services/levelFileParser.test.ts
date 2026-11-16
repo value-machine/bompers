@@ -65,8 +65,8 @@ describe("parseLevelFile — kit files", () => {
       { x: 1040, y: 436 },
     ]);
     expect(def.drops).toEqual([
-      { at: { x: 600, y: 80 }, itemIds: ["rocket-launcher"] },
-      { at: { x: 1000, y: 80 }, itemIds: ["rocket-launcher"] },
+      { at: { x: 600, y: 80 }, itemIds: ["rocket-launcher", "homing-launcher"] },
+      { at: { x: 1000, y: 80 }, itemIds: ["rocket-launcher", "homing-launcher"] },
     ]);
     expect(def.collectibles).toHaveLength(3);
   });

@@ -1,42 +1,22 @@
 [
   {
-    "title": "Uniform material system for level maps",
-    "description": "Feedback round 2 § 4.1. Externally generated HTML levels need unambiguous materials. Destructible and indestructible blocks share shape and base structure (the current purple ground) but differ clearly in colour (e.g. cardboard tint for destructible). Add material behaviours such as ice (slippery) and colour variants (ice, earth, cardboard, indestructible). Design question for the lap: decouple physical behaviour from colour (any colour on any behaviour, no LittleBigPlanet-style material explosion) while a player still recognises destructible vs slippery at a glance. No backwards compatibility needed: old levels may break; update the shipped levels, LEVEL_FORMAT.md and the level kit. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "title": "Material responses: blast power and spreading fire",
+    "description": "Owner direction 2026-11-16 (supersedes the earlier fire-only scope): one shared model where a source only says WHERE and HOW STRONG, and the material decides the result. (1) Blasts: a rocket picks only its explosion point and power (no fixed crater radius); each material's toughness decides the cutout. Blast power also drives the push on players (owner 2026-11-16): one scalable blast power from 0 (barely moves a player) through a small shove to sending them flying, so each weapon is tuned by its blast power alone. (2) Fire: a fire source at a point; fire spreads per tick outward in a circle from the origin, and each material decides whether and how it burns — so part of a block can burn while the rest does not (the terrain cell grid makes that per-cell, not a split entity). (3) A flamethrower weapon. (4) A hit reaction when a blob touches fire. Design with the owner, with examples, before building. Laps: blast-by-power refactor first, then fire + burn reaction, then flamethrower. Build waits on the uniform material system (#36). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. Owner 2026-11-16: the material system (#36) is fine but its destructibility must match this paradigm — the breakable flag becomes toughness (stone/ice unbreakable), shared by level format, kit, catalog and the generation prompt. ",
     "status": "to-do"
   },
   {
-    "title": "Slower jumps and rocket recoil",
-    "description": "Feedback round 2 § 3. Jumps are too fast to coordinate trick jumps: lower gravity for more air control, balanced with a lower jump impulse so max height stays sensible. Firing a rocket gives no recoil today: add a physical kick on the shooter (impact and tactical movement, e.g. small rocket-assisted moves). Tunables in gameTunables. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "title": "Smooth destruction: Worms / LittleBigPlanet-style terrain",
+    "description": "Owner request 2026-11-16: destruction must not look or feel restricted to blocks (today: Minecraft/Terraria-like stepped craters on the 8-unit cell grid). Craters and explosions get custom, smooth shapes, like Worms or LittleBigPlanet, and terrain reads as one sheet rather than cells. Owner picked (2026-11-16, after an A-vs-vector deep dive): a fine true-distance field (~4 units) with a truly curved edge (spline or shader), collision and fire on the same field, craters per sample by toughness with custom shapes per weapon; untouched authored shapes may stay sharp. Owned by the blast-power thread (same terrain code); build after the material system (#36) and the blast-power lap. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. Laps (blast-power thread, D18–D19): a2 distance field + crater on the field, a2r curved edge renderer (shader-vs-spline spike first), a3 collision on the field; after blast power (a); fire (b) after a2r; Shared roll after a3. ",
     "status": "to-do"
   },
   {
-    "title": "Feet animation: rotation, dynamics and wall-facing feet",
-    "description": "Feedback round 2 § 2.5 and § 3. The feet only move straight up and down; they lost the rotation, dynamics and feel of the pre-restyle version. Bring back rotation and dynamic motion (earlier ideas like taller sprites or changed collision are dropped). While wall-sliding and wall-jumping, the feet turn to face the wall surface. Render-only. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
-    "status": "to-do"
-  },
-  {
-    "title": "Side and top map edges stop killing players",
-    "description": "Feedback round 2 § 3. Players die unexpectedly at the sides and top of the map ('killed by the air'). Only the bottom (falling to your death) should feel lethal; sides and top must feel like open space. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
-    "status": "to-do"
-  },
-  {
-    "title": "Music",
-    "description": "Upbeat ukulele/marimba loops around 128 BPM per DESIGN_LANGUAGE.md § 8 (lobby loop + match loop + short stingers). The audio duck bus is already wired (explosions duck music). Same owner-guided process as the SFX lap; confirm credit cost with the orchestrator before generating long tracks. Add a music volume next to the SFX volume. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md.  Also covers the missing end-phase audio (feedback round 2 § 3): a tension loop or stinger for the last 30 seconds of a match.",
-    "status": "to-do"
-  },
-  {
-    "title": "Game juice design system",
-    "description": "Feedback round 2 § 4.2. New game elements keep arriving; define one consistent set of constants and guidelines for sounds, squash-and-stretch and visual feedback (extend DESIGN_LANGUAGE.md and the feel tunables; an agent skill or several, the lap decides) so every new element gets the same style and feel. Skill or rule files need the owner's yes. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "title": "Shared roll: dash-hold roll and hit tumble",
+    "description": "Owner request 2026-11-16: one shared rolling system for all player rolling. (1) Holding the dash button after a dash makes the blob keep rolling. (2) Being hit or launched by a blast uses the same roll, with or without damage. (3) Consolidate: find every existing system that rolls, tumbles or bounces the player (tumble state, dive bonk, body collisions, blast push, landing squash) and fold them into this one roll, removing the duplicates. (4) Real rolling physics: in roll mode the blob actually rolls — on a slope it rolls down the hill, with ground contact, friction and spin. (5) Roll intensity follows the blast power (see Material responses: 0 = barely moves, small = a little shove, strong = flying), so weapons are tuned by blast power. Today a separate tumble state starts only above a fixed impulse threshold (gameTunables player.tumble.minImpulse 800) — replace the threshold with the continuous scale. Waits on the blast-power lap of Material responses and the collision-on-field lap (a3) of Smooth destruction and the headbutt 16-ways PR (#37, same dive code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
   },
   {
     "title": "In-game pause menu",
-    "description": "Feedback round 2 § 2.2. During a match any player can open a pause menu (keyboard and gamepad Start) that fully freezes gameplay. In it: back to main menu, SFX on/off, music on/off, general options. Match settings stay lobby-only. Waits on gamepad support (Start button) and music (music toggle). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
-    "status": "to-do"
-  },
-  {
-    "title": "Crouch: defensive stance",
-    "description": "Feedback round 2 § 2.4. Holding down puts the blob in a fixed crouch: it cannot walk, sinks to the ground, feet nearly invisible. All incoming damage is halved; attacks or hazards that normally deal 1 damage deal 0. Waits on slower jumps and the feet animation lap (same player code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "description": "Feedback round 2 § 2.2. During a match any player can open a pause menu (keyboard and gamepad Start) that fully freezes gameplay. In it: back to main menu, SFX on/off, music on/off, general options. Match settings stay lobby-only. Must open on Escape (owner 2026-11-16) as well as any pad's Start. Gamepad support (#35) and music (#33) are on main. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
     "status": "to-do"
   },
   {
@@ -52,6 +32,16 @@
   {
     "title": "Copyable level-generation prompt",
     "description": "Feedback round 2 § 2.1. Next to the 'Your Level' import, a one-click copy button for a standard system prompt the user pastes into an external AI agent (e.g. Gemini) to generate a valid, playable HTML level in one shot: all required constants, variables, entities and material definitions. Owner example prompt (format v1): documentation/game/LEVEL_PROMPT_EXAMPLE.md — sections 1–6 must be generated from the live format, catalog and tunables (the jumps lap changes gravity and jump numbers), section 7 is the user's map request. Owner note: 'only the variable settings in it' (lap clarifies with the owner). Waits on the uniform material system and the headbutt reset power-up so the prompt describes the final format. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; owner feedback: documentation/game/FEEDBACK_ROUND_2.md. ",
+    "status": "to-do"
+  },
+  {
+    "title": "Loose terrain falls",
+    "description": "Owner idea 2026-11-16 (future, not scheduled): terrain cut off from its support by a blast or burnt-out fuel breaks loose and falls. On the distance field: flood-fill the touched region for islands not connected to anchored material or the level edge, lift each island out as a contour polygon into a falling body (simple custom body or a physics library — a new dependency is an owner choice), and stamp it back into the field when it settles; falling chunks can hit players. Precedent: Noita (pixel islands become rigid bodies). Waits on the distance field (a2) and collision on the field (a3). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "to-do"
+  },
+  {
+    "title": "Weapon visuals: embellish",
+    "description": "Owner 2026-11-16 signed off the weapon and crate visual system (#38) as a work in progress: 'we will embellish further later on'. Polish pass on crates, helmet tubes, muzzle lights and HUD ammo once the owner names what to improve. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
   },
   {

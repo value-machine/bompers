@@ -22,7 +22,7 @@ export interface CombatContext {
   combat: CombatState;
   players: PlayerState[];
   terrain: TerrainGrid;
-  /** The level's in-bounds area: rockets explode outside it. */
+  /** The in-bounds area (the match passes its kill zone): rockets explode outside it. */
   bounds: Rect;
   tunables: GameTunables;
   timeSeconds: number;
@@ -157,6 +157,9 @@ export const hitDamageFor = (
   zone: HitZone
 ): number => table[kind][zone];
 
+/** Damage a crouching victim takes: scaled and rounded down, so a 1-chunk hit deals 0 (crouch D1). */
+export const crouchDamage = (damage: number, scale: number): number => Math.floor(damage * scale);
+
 const playerInSlot = (world: HitWorld, slot: number): PlayerState | undefined =>
   world.players.find((player) => player.slot === slot);
 
@@ -202,8 +205,11 @@ export function applyHit(world: HitWorld, hit: Hit): HitResult {
   const { combat, tunables, timeSeconds } = world;
   const victim = playerInSlot(world, hit.victimSlot);
   const zone = victim ? classifyHitZone(victim.facing, hit.direction) : "front";
-  const damage = hitDamageFor(tunables.combat.hitDamage, hit.kind, zone);
   if (!victim) return { landed: false, zone, damage: 0 };
+  const baseDamage = hitDamageFor(tunables.combat.hitDamage, hit.kind, zone);
+  const damage = victim.crouching
+    ? crouchDamage(baseDamage, tunables.combat.crouchDamageScale)
+    : baseDamage;
   const fighter = fighterFor(combat, victim, tunables);
   if (fighter.eliminated || timeSeconds < fighter.invulnerableUntil) {
     return { landed: false, zone, damage: 0 };

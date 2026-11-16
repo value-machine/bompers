@@ -151,6 +151,28 @@ describe("playerController — jumping", () => {
     expect(Math.abs(rise - (P.jumpSpeed * P.jumpSpeed) / (2 * G))).toBeLessThan(P.jumpSpeed * dt);
   });
 
+  // Owner feedback round 2 § 3: the previously shipped pair (gravity 2200, jumpSpeed 1050) reached
+  // its apex too fast to coordinate trick jumps. The jump must hang at least 20 % longer and reach
+  // about the same height.
+  it("should hang 20 % longer at the old apex height when jump is held at default tunables", () => {
+    const old = { gravity: 2200, jumpSpeed: 1050 };
+    const oldApexSeconds = old.jumpSpeed / old.gravity;
+    const oldApex = (old.jumpSpeed * old.jumpSpeed) / (2 * old.gravity);
+    const sim = grounded();
+    const startY = sim.player.y;
+    let minY = startY;
+    let apexStep = 0;
+    for (let i = 0; i < 240; i += 1) {
+      sim.step({ jump: true });
+      if (sim.player.y < minY) {
+        minY = sim.player.y;
+        apexStep = i;
+      }
+    }
+    expect(apexStep * dt).toBeGreaterThanOrEqual(oldApexSeconds * 1.2);
+    expect(Math.abs(startY - minY - oldApex) / oldApex).toBeLessThan(0.05);
+  });
+
   it("should jump twice as high when gravity is halved", () => {
     const low: GameTunables = {
       ...DEFAULT_GAME_TUNABLES,
@@ -257,5 +279,41 @@ describe("playerController — aim", () => {
     sim.step({ aimX: 3, aimY: 4 });
     expect(sim.player.aimX).toBeCloseTo(0.6, 6);
     expect(sim.player.aimY).toBeCloseTo(0.8, 6);
+  });
+});
+
+describe("playerController — crouch", () => {
+  it("should stop walking and keep turning when crouch is held on the ground", () => {
+    const sim = grounded();
+    sim.step({ moveX: 1 }, 60);
+    sim.step({ moveX: -1, crouch: true }, 30);
+    expect(sim.player.crouching).toBe(true);
+    expect(sim.player.vx).toBe(0);
+    expect(sim.player.facing).toBe(-1);
+    const x = sim.player.x;
+    sim.step({ moveX: -1, crouch: true }, 30);
+    expect(sim.player.x).toBe(x);
+  });
+
+  it("should count one crouch start and stand up when crouch is released", () => {
+    const sim = grounded();
+    sim.step({ crouch: true }, 10);
+    expect(sim.player.crouchCount).toBe(1);
+    sim.step({}, 1);
+    expect(sim.player.crouching).toBe(false);
+  });
+
+  it("should not crouch when crouch is held in the air", () => {
+    const sim = createSim({ x: 300, y: 100 });
+    sim.step({ crouch: true }, 5);
+    expect(sim.player.crouching).toBe(false);
+  });
+
+  it("should jump out of a crouch when jump is pressed", () => {
+    const sim = grounded();
+    sim.step({ crouch: true }, 10);
+    sim.step({ crouch: true, jump: true }, 1);
+    expect(sim.player.crouching).toBe(false);
+    expect(sim.player.vy).toBeLessThan(0);
   });
 });
