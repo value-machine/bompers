@@ -22,5 +22,6 @@ export type { BlobPoseOverlay } from "@/features/player/services/blobPose";
 export {
   createPlayersView,
   syncPlayersView,
+  type BlobWeapon,
   type PlayersView,
 } from "@/features/player/services/playerRenderer";

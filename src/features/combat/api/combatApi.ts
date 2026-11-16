@@ -18,6 +18,7 @@ export { stepCombat, type StepCombatArgs } from "@/features/combat/services/comb
 export {
   maxWeaponRecoil,
   takeWeaponPickups,
+  weaponTunables,
   type WeaponPickups,
 } from "@/features/combat/services/weapons";
 export {
