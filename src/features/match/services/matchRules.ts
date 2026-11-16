@@ -82,10 +82,39 @@ export interface StepMatchRulesArgs {
   dive: DiveState;
   players: PlayerState[];
   spawns: readonly Vec2[];
-  /** Leaving this area eliminates a player. */
+  /** The level's in-bounds area (the respawn fallback is its middle). */
   bounds: Rect;
+  /** Leaving this area eliminates a player (`killZoneOf`: far past the sides and top). */
+  killZone: Rect;
   tunables: GameTunables;
   timeSeconds: number;
+}
+
+/**
+ * How far past the level bounds' sides and top the kill lines lie, derived from movement
+ * (open-map-edges D1a). The fastest single launch is a jump plus a point-blank blast (a rocket
+ * jump off a jump): it climbs `v² / 2g`. The margin is twice that, room for a second full launch
+ * chained on top; it is also the 45° flight range `v² / g` of that launch, so it covers sideways
+ * flights too. Uses the match's effective gravity (engine × lobby × level).
+ */
+export function outOfBoundsMargin(tunables: GameTunables): number {
+  const launchSpeed = tunables.player.jumpSpeed + tunables.combat.explosion.impulse;
+  return (launchSpeed * launchSpeed) / tunables.world.gravity;
+}
+
+/**
+ * The kill zone: leaving it eliminates a player, and rockets and crates vanish outside it. The
+ * level bounds grown by `outOfBoundsMargin` on the left, right and top, so nobody notices those
+ * kill lines even with chained jumps; the bottom stays put (falling off is lethal right there).
+ */
+export function killZoneOf(bounds: Rect, tunables: GameTunables): Rect {
+  const margin = outOfBoundsMargin(tunables);
+  return {
+    x: bounds.x - margin,
+    y: bounds.y - margin,
+    w: bounds.w + margin * 2,
+    h: bounds.h + margin,
+  };
 }
 
 const isOutside = (player: PlayerState, zone: Rect): boolean =>
@@ -97,7 +126,7 @@ const isOutside = (player: PlayerState, zone: Rect): boolean =>
 function eliminateOutOfBounds(args: StepMatchRulesArgs): void {
   const { combat, tunables, timeSeconds } = args;
   for (const player of args.players) {
-    if (!isInPlay(args.rules, player) || !isOutside(player, args.bounds)) continue;
+    if (!isInPlay(args.rules, player) || !isOutside(player, args.killZone)) continue;
     eliminateFighter({ combat, player, cause: "out-of-bounds", tunables, timeSeconds });
   }
 }
@@ -130,7 +159,7 @@ function respawn(args: StepMatchRulesArgs, player: PlayerState): void {
 }
 
 /**
- * Step 5: out of bounds → elimination (combat credits the last hitter within
+ * Step 5: out of the kill zone → elimination (combat credits the last hitter within
  * `killCreditSeconds`), score new events, queue eliminated players, respawn the due ones.
  */
 export function stepMatchRules(args: StepMatchRulesArgs): void {
