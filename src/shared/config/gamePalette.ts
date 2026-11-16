@@ -4,6 +4,7 @@
  * there first. The one place game colors live; do not inline colors elsewhere.
  * Player arrays are indexed by slot (0–3).
  */
+import type { WeaponItemId } from "@/shared/types/weaponItems.types";
 import type { WeaponTubeShape } from "@/shared/utils/weaponTube";
 
 export interface WeaponLook {
@@ -38,17 +39,18 @@ export const GAME_PALETTE = {
   /** Effects (DESIGN_LANGUAGE § 1 Effects). Rocket fins use the shooter's body colour. */
   explosion: { outer: 0xff8a1f, mid: 0xffe14d, core: 0xffffff },
   rocket: { body: 0xfff4e2, nose: 0x2b1d3a, flame: 0xffb21a, tubeCap: 0xd9c7ae },
+  /** Homing missile (weapon-visuals spec): lilac hull, cherry seeker light (not a player hue), lilac trail. */
+  homing: { body: 0xc9a7ff, seeker: 0xe0103f, trail: 0xd9c4ff },
   pickupCrate: 0xfff4e2,
   /**
    * Per-weapon look, keyed by the held weapon's item id (DESIGN_LANGUAGE § Weapon identity):
    * accent for the crate ring, HUD ammo pills and muzzle light; tube silhouette on helmet and crate.
-   * Accents never reuse a player body colour.
+   * Accents never reuse a player body colour. A new weapon id is a compile error here until listed.
    */
   weaponLooks: {
     "rocket-launcher": { accent: 0x8fd6ff, tube: "capped" },
-  } as Readonly<Record<string, WeaponLook>>,
-  /** Look for an item id with no entry. */
-  fallbackWeaponLook: { accent: 0x8fd6ff, tube: "capped" } as WeaponLook,
+    "homing-launcher": { accent: 0xb08cff, tube: "twin-pod" },
+  } as Readonly<Record<WeaponItemId, WeaponLook>>,
   /** Lost health chunk (DESIGN_LANGUAGE § 7). */
   healthLost: 0xe9dfd0,
   /** Point orb: bubblegum star (DESIGN_LANGUAGE § 1 Effects). */
@@ -82,12 +84,8 @@ export const GAME_PALETTE = {
   fallbackLook: { fill: 0x5a3f7a, accent: 0x7d5fa6 } as MaterialLook,
 } as const;
 
-/** The look of a weapon item; own keys only, so prototype names fall back. */
-export function weaponLook(itemId: string): WeaponLook {
-  return Object.prototype.hasOwnProperty.call(GAME_PALETTE.weaponLooks, itemId)
-    ? (GAME_PALETTE.weaponLooks[itemId] ?? GAME_PALETTE.fallbackWeaponLook)
-    : GAME_PALETTE.fallbackWeaponLook;
-}
+/** The look of a weapon item (crate ring and mark, helmet tube, HUD ammo pills). */
+export const weaponLook = (itemId: WeaponItemId): WeaponLook => GAME_PALETTE.weaponLooks[itemId];
 
 /** A palette colour as CSS, for DOM next to the canvas (hints, lobby blobs). */
 export const toCssColor = (color: number): string => `#${color.toString(16).padStart(6, "0")}`;

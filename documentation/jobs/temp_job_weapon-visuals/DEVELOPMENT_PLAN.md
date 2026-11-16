@@ -55,6 +55,8 @@ Plan review 2026-11-16, merged lenses (naming + code-style, rebel + precedent, s
 | A3 | plan-review | F2 marker: the shared module names the copy; `blobShapes.tubePath` gets its marker removed-with-copy in phase 2, because `blobShapes` stays untouched while PR #32 (player renderer) is open, to avoid a merge conflict. |
 | A4 | loop-build | Pre-commit `validate:feature-size`: `match/services` was at its 10-file budget. The pill layout moved to `shared/utils/pillRow.ts`, and the health chunks now use it too (two consumers), instead of raising the budget. |
 
+| A5 | loop-build | Merged main after homing-missiles (#39): its `drawCrate` homing branch, `pickupRing` / `pickupRingHoming` folded into `weaponLooks["homing-launcher"] = { accent 0xb08cff, tube "twin-pod" }`; table typed `Record<WeaponItemId, WeaponLook>` (no fallback: a new weapon id fails to compile until it has a look); crate mark fitted by the tube's span; HUD max ammo from combat's `weaponTunables` (exported through `combatApi`), replacing the rocket-only accessor. |
+
 ### Notes during development
 
 - Advisory: `gamePalette` imports the `WeaponTubeShape` type from `shared/utils/weaponTube` (type-only; no runtime cycle). Kept.

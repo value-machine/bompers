@@ -4,6 +4,7 @@ import { traceEmblem } from "@/shared/services/emblemRenderer";
 import { GAME_FONT_FAMILY } from "@/shared/utils/gameFont";
 import { playerEmblemShape } from "@/shared/utils/playerEmblem";
 import { pillRow } from "@/shared/utils/pillRow";
+import { weaponTunables, type HeldWeapon } from "@/features/combat/api/combatApi";
 import type { GameState } from "@/features/match/services/gameSim";
 import { roundResultLabel } from "@/features/match/services/matchRules";
 
@@ -113,12 +114,8 @@ function createPlayerCard(slot: number): PlayerCard {
   };
 }
 
-/** Shots a full weapon holds. One weapon today; per-weapon ammo moves here when a second lands. */
-const maxAmmoFor = (_itemId: string, tunables: GameState["tunables"]): number =>
-  tunables.combat.rocket.ammo;
-
 interface AmmoLook {
-  weapon: { itemId: string; ammo: number } | null;
+  weapon: HeldWeapon | null;
   max: number;
   /** Health row width, so both rows line up. */
   rowWidth: number;
@@ -271,7 +268,7 @@ function syncCards(view: HudView, frame: HudFrame, scale: number): void {
     const weapon = fighter?.weapon ?? null;
     drawAmmo(card, {
       weapon,
-      max: weapon ? maxAmmoFor(weapon.itemId, state.tunables) : 0,
+      max: weapon ? weaponTunables(state.tunables, weapon.itemId).ammo : 0,
       rowWidth: healthRowWidth(max),
     });
     card.score.text = String(state.rules.scores[player.slot] ?? 0);

@@ -1,4 +1,5 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
+import type { SoundChannel } from "@/features/sound/api/soundApi";
 import type {
   LobbyAction,
   LobbyButton,
@@ -6,6 +7,7 @@ import type {
   LobbyEffect,
   LobbyRow,
   LobbyState,
+  VolumeRow,
 } from "@/features/lobby/types/lobby.types";
 import type { InputSource } from "@/shared/types/gameInput.types";
 import {
@@ -22,14 +24,34 @@ import {
   GRAVITY_OPTIONS,
 } from "@/features/lobby/services/matchSettings";
 
-/** Menu rows top to bottom; the cursor starts on Start so joined players can go at once. */
+/**
+ * Menu rows top to bottom; the cursor starts on Start so joined players can go at once. The
+ * volume rows sit below Start: they are player preferences, not match settings.
+ */
 export const LOBBY_ROWS: readonly LobbyRow[] = [
   "level",
   "loadFile",
   "duration",
   "gravity",
   "start",
+  "musicVolume",
+  "sfxVolume",
 ];
+
+/** The sound channel each volume row steps. */
+const CHANNEL_OF_VOLUME_ROW: Record<VolumeRow, SoundChannel> = {
+  musicVolume: "music",
+  sfxVolume: "sfx",
+};
+
+export const channelOfVolumeRow = (row: VolumeRow): SoundChannel => CHANNEL_OF_VOLUME_ROW[row];
+
+const isVolumeRow = (row: LobbyRow): row is VolumeRow => row in CHANNEL_OF_VOLUME_ROW;
+
+/** A volume row's effect, or null for any other row. */
+function volumeEffect(row: LobbyRow, step: 1 | -1, wrap: boolean): LobbyEffect {
+  return isVolumeRow(row) ? { type: "volume", row, step, wrap } : null;
+}
 
 const START_ROW = LOBBY_ROWS.indexOf("start");
 
@@ -98,7 +120,15 @@ function cycleRow(state: LobbyState, { row, step, context }: CycleArgs): LobbySt
 function activateRow(state: LobbyState, row: LobbyRow, context: LobbyContext): LobbyResult {
   if (row === "start") return { state, effect: canStart(state, context) ? "start" : null };
   if (row === "loadFile") return { state, effect: "pickFile" };
+  const volume = volumeEffect(row, 1, true);
+  if (volume) return { state, effect: volume };
   return none(cycleRow(state, { row, step: 1, context }));
+}
+
+/** Left / right (keys, pads or the pointer's steppers) on a row. */
+function stepRow(state: LobbyState, args: CycleArgs): LobbyResult {
+  const volume = args.row ? volumeEffect(args.row, args.step, false) : null;
+  return volume ? { state, effect: volume } : none(cycleRow(state, args));
 }
 
 const moveCursor = (state: LobbyState, step: 1 | -1): LobbyState => ({
@@ -130,7 +160,7 @@ function press(
   if (button === "confirm") return activateRow(state, row, context);
   if (step === undefined) return none(state);
   if (button === "up" || button === "down") return none(moveCursor(state, step));
-  return none(cycleRow(state, { row, step, context }));
+  return stepRow(state, { row, step, context });
 }
 
 /** The lobby's state machine: pure, so every input path (keys, pads, pointer) shares it. */
@@ -149,7 +179,7 @@ export function reduceLobby(
         context
       );
     case "cycle":
-      return none(cycleRow(state, { row: action.row, step: action.step, context }));
+      return stepRow(state, { row: action.row, step: action.step, context });
     case "selectLevel":
       return none({ ...state, levelId: action.levelId });
     case "leave":

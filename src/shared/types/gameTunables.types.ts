@@ -195,6 +195,32 @@ export interface GameTunables {
       muzzleOffset: number;
       /** Seconds before a rocket that hit nothing explodes in the air. */
       maxLifetime: number;
+      /** Velocity change on the shooter per shot, opposite the aim, units / s. */
+      recoil: number;
+    };
+    /**
+     * Homing launcher (homing-missiles D2): a slower rocket that steers toward the opponent it
+     * locked at launch, with a capped turn rate and limited steering fuel so a moving player can
+     * dodge it. Uses the rocket's `radius` and `muzzleOffset`; explodes with the same blast.
+     */
+    homing: {
+      /** Flight speed, units / s (constant; steering only turns it). */
+      speed: number;
+      /** Missiles per pickup; the launcher is dropped when empty. */
+      ammo: number;
+      fireCooldown: number;
+      /** Velocity change on the shooter per shot, opposite the aim, units / s. */
+      recoil: number;
+      /** Seconds before a missile that hit nothing explodes in the air. */
+      maxLifetime: number;
+      /** Seconds after launch it flies straight before it starts steering. */
+      lockDelaySeconds: number;
+      /** Maximum turn rate while steering, radians / s (turn radius = speed / turnRate). */
+      turnRate: number;
+      /** Seconds after launch steering stops; it then flies straight until it hits or expires. */
+      fuelSeconds: number;
+      /** Half-angle of the forward cone (degrees from the aim) in which it picks its target. */
+      lockConeDegrees: number;
     };
     explosion: {
       /** Players within this distance of the blast (nearest body point) are hit and pushed. */

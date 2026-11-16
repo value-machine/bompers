@@ -29,7 +29,8 @@ Spelers beschikken over een minimaal, gesegmenteerd gezondheidssysteem. Wapens e
 | **Gezondheidssysteem** | Minimaal gesegmenteerd systeem met 4 discrete eenheden (chunks) van gezondheid per speler. |
 | **Ongewapende Aanval (Beuk)** | Geactiveerd via de schietknop wanneer ongewapend; brengt schade toe aan de gezondheidssegmenten en lanceert tegenstanders met knockback achteruit. |
 | **Basiswapen (MVP)** | Raketwerper (valt uit de lucht als pickup, afgevuurd vanuit de helm). |
-| **Richtmechaniek** | Projectiel vliegt recht in de richting waar de speler naartoe mikt. |
+| **Zoekraketwerper** | Tweede wapen uit dezelfde kratten (eigenaar, 2026-11-16): 3 zoekraketten die afbuigen naar de dichtstbijzijnde tegenstander in de schietrichting, maar ontwijkbaar zijn — trager dan een raket, beperkte draaisnelheid en beperkte stuurtijd; dezelfde ontploffing. Lila raket met rood knipperend zoeklicht; krat met lila ring. |
+| **Richtmechaniek** | Projectiel vliegt recht in de richting waar de speler naartoe mikt (de zoekraket buigt daarna af naar haar doel). |
 | **Impact op Spelers & Omgeving** | Ontploft bij contact, verwijdert exact 1 gezondheidssegment (chunk) bij geraakte tegenstanders (elimineert bij 0 resterende chunks), doet geen schade aan de schutter zelf (maakt schade-vrije rocket jumps mogelijk) en vernietigt destructieve arena-secties. |
 
 ## **4\. Arena Ontwerp: Startmap**

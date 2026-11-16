@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Everything that drops from the sky (combat D2, match-rules D2). **Point orbs** (GDD § 5: "points that fall from the roof"): they appear above the level's `point-orb` collectible points on a fixed schedule, fall onto the authored point and hover there; the first player touching one takes it; match turns what was collected into score. **Weapon crates** (GDD § 3, § 4): the rocket launcher drops from the level's drop points, falls and lands on terrain (falls again when the ground is blasted away), vanishes out of bounds (match passes its kill zone); the first player touching one takes it and match hands that to combat, which arms them.
+Everything that drops from the sky (combat D2, match-rules D2). **Point orbs** (GDD § 5: "points that fall from the roof"): they appear above the level's `point-orb` collectible points on a fixed schedule, fall onto the authored point and hover there; the first player touching one takes it; match turns what was collected into score. **Weapon crates** (GDD § 3, § 4): the rocket launcher and the homing launcher drop from the level's drop points (a drop point's weapon items in turn, by one counter over all released crates, homing-missiles D4), falls and lands on terrain (falls again when the ground is blasted away), vanishes out of bounds (match passes its kill zone); the first player touching one takes it and match hands that to combat, which arms them.
 
 ## Structure
 
@@ -11,7 +11,7 @@ Everything that drops from the sky (combat D2, match-rules D2). **Point orbs** (
 | Types    | `types/collectibles.types.ts`      | `PointOrb`, `WeaponCrate`, `WeaponCratesState`, `CollectiblesState` (orbs, spawn timer, round-robin index, `crates`), `OrbCollected`, `CrateStepResult`                            |
 | Services | `services/skyDrops.ts`             | Shared drop mechanics: `tickDropTimer` (deterministic schedule), `fallSpeed` (match gravity), `firstToucher` (touch pickup)                                                       |
 | Services | `services/weaponCrates.ts`         | `createWeaponCratesState`, `stepWeaponCrates({ crates, drops, players, terrain, bounds, tunables, dt })` → `{ spawned, collected }`; round-robin drop points, half-cell fall sub-steps, landing |
-| Services | `services/weaponCrateRenderer.ts`  | Style-E crate whose face shows its weapon (tube silhouette from `shared/utils/weaponTube` in ink inside a ring in the weapon accent, `gamePalette.weaponLook`), keyed by id, item and outline step; contact shadow of a falling crate (shared `contactShadowLayer`)                                                 |
+| Services | `services/weaponCrateRenderer.ts`  | Style-E crate whose face shows its weapon: `drawCrate({ itemId })` draws the weapon's tube silhouette (`shared/utils/weaponTube`; capped tube for the rocket launcher, twin pod for the homing launcher) in ink inside a ring in the weapon accent (`gamePalette.weaponLook`); keyed by id, item and outline step; contact shadow of a falling crate (shared `contactShadowLayer`) |
 | Services | `services/collectiblesSim.ts`      | `createCollectiblesState(tunables)` (orbs + crates), `stepCollectibles({ collectibles, points, players, tunables, dt })` → orbs collected this step. Pure TS, no randomness or clock               |
 | Services | `services/collectiblesRenderer.ts` | View layers `shadows`, `crates`, `orbs`; bubblegum star (DESIGN_LANGUAGE § 1 Effects) with the zoom-clamped prop outline (rebuilt when its step changes), hover bob; `createCollectiblesView`, `syncCollectiblesView` |
 | API      | `api/collectiblesApi.ts`           | The seam `match` uses                                                                                                                                                              |
@@ -19,7 +19,7 @@ Everything that drops from the sky (combat D2, match-rules D2). **Point orbs** (
 ## Dependencies
 
 - `level` (collectible and drop points), `player` (`playerBody` for touch), `arena` (`rectHitsSolid`, `surfaceBelow` for crates) through their `api/` files.
-- Shared: `gameTunables` (`collectibles` section, `combat.drops` for crates, world gravity), `gamePalette` (`pointOrb`, `pickupCrate`, `weaponLook`), `weaponTube` + `weaponTubeRenderer` (crate mark), `contactShadowLayer`.
+- Shared: `gameTunables` (`collectibles` section, `combat.drops` for crates, world gravity), `gamePalette` (`pointOrb`, `pickupCrate`, `weaponLook`), `weaponTube` + `weaponTubeRenderer` (crate mark), `weaponItems` (`isWeaponItemId`), `weaponItems.types` (`WeaponItemId`), `contactShadowLayer`.
 - Used by `match` (sim step 3a crates → combat's `takeWeaponPickups`, step 4 orbs; render layers). No dependency on `combat`.
 
 ## Decisions

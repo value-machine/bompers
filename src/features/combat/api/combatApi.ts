@@ -10,11 +10,17 @@ export type {
   HitKind,
   HitSource,
   HitZone,
+  RocketKind,
   RocketState,
 } from "@/features/combat/types/combat.types";
 export type { UnarmedAttackHook, UnarmedFirePress } from "@/features/combat/services/attacks";
 export { stepCombat, type StepCombatArgs } from "@/features/combat/services/combatSim";
-export { takeWeaponPickups, type WeaponPickups } from "@/features/combat/services/weaponPickups";
+export {
+  maxWeaponRecoil,
+  takeWeaponPickups,
+  weaponTunables,
+  type WeaponPickups,
+} from "@/features/combat/services/weapons";
 export {
   applyHit,
   classifyHitZone,

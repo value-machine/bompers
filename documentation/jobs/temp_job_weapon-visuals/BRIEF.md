@@ -27,7 +27,7 @@ A per-weapon look table (keyed by the weapon item id string) drives the crate fa
 | `collectibles` | `weaponCrateRenderer.drawCrate` draws fixed ring + rocket bar | crate key/draw from `crate.itemId` | ride |
 | `match` (hudRenderer, gameRenderer) | card: chip, label, 4 health pills, score; `armedIds` from fighters | ammo row under health pills from `fighter.weapon`; pass cooldown fraction to player view | ride |
 | `player` (blobShapes, playerRenderer) | `tubePath` one shape; `armedIds` toggles tube | tube shape by itemId; muzzle light alpha per frame | ride — **waits for PR #32** |
-| `combat` | `fighter.weapon`, `attackCooldown`, `combat.rocket.fireCooldown` | read only (no change) | ride |
+| `combat` | `fighter.weapon`, `attackCooldown`, `weaponTunables` (ammo, fireCooldown per weapon) | read only; `combatApi` re-exports `weaponTunables` for the HUD | ride |
 | `documentation/game/DESIGN_LANGUAGE.md` | § 1 effects palette, § 2 tube, § 7 HUD | add weapon identity section | ride |
 
 Overrun rule (skill-loop D51): a diff that touches a feature area **not** in this table stops the lap.
