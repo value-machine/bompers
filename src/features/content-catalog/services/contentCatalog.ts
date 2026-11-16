@@ -35,7 +35,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
       toughness: 1,
       friction: 1,
       bounce: 0,
-      surface: "breakable",
+      // Looks like any slab; only colour and how it reacts tell it apart (terrain-curves D5).
+      surface: "plain",
       defaultColor: "clay",
       effect: "dust-burst",
       sound: "crumble",
@@ -47,7 +48,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
       toughness: 0.7,
       friction: 1,
       bounce: 0,
-      surface: "breakable",
+      // Looks like any slab; only colour and how it reacts tell it apart (terrain-curves D5).
+      surface: "plain",
       defaultColor: "cardboard",
       effect: "dust-burst",
       sound: "thwap",

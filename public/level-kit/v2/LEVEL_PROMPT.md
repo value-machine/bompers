@@ -73,7 +73,7 @@ Drop items: `rocket-launcher`, `homing-launcher`. Collectible items: `point-orb`
 
 Reference content **by ID only**; IDs are lowercase-kebab. Unknown IDs fall back to the default with a warning.
 
-- `data-material` (behaviour; players read it from the surface pattern the game draws):
+- `data-material` (behaviour; breakable terrain looks like any slab in the game, so pick colours that tell materials apart):
   - `stone`: never breaks, default; default colour `plum` (`fill="#5a3f7a"`).
   - `earth`: breakable, toughness 1 (a rocket clears ~34 units around the hit); default colour `clay` (`fill="#c4673f"`).
   - `cardboard`: breakable, toughness 0.7 (a rocket clears ~49 units around the hit); default colour `cardboard` (`fill="#c99a62"`).

@@ -51,6 +51,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     wallJumpSpeedX: 420,
     wallJumpSpeedY: 720,
     wallJumpControlLock: 0.16,
+    // Two 4-unit terrain samples: walks curved hills and crater rims up to ≈ 60°; steeper is a wall.
+    stepUp: 8,
     // Defensive crouch (feedback round 2 § 2.4): sink fast, stand up a touch slower.
     // Helmet down 4 u and eyes up 2 u: the rim lands on about the middle of the eyes (crouch D7).
     crouch: { bodySx: 1.18, bodySy: 0.68, easeSeconds: 0.07, helmetDrop: 4, eyeLift: 2 },

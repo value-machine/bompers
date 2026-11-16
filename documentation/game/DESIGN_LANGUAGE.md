@@ -42,9 +42,7 @@ Rules:
 | Clouds | `#ffffff` with `#bfe3f5` 4-unit edge | Far layer: soft edge colour instead of ink, so it reads as background. |
 | Far hills / near hills | `#bfe8d0` / `#9fd8b8` | No outline. Parallax 0.2 / 0.4. |
 | Terrain | one swatch per piece (§ Terrain swatches) | Every material uses the same slab look; the swatch is chosen per piece. |
-| Breakable seams / pips | the swatch's seam colour | 0.9-unit lines between intact 16-unit tiles, one centre pip per tile (50 % alpha). |
 | Ice gloss and rim | `#ffffff` | Two 45° streaks (60 % alpha) and an inner rim (75 % alpha). |
-| Crack (cells next to a crater) | `#2b1d3a` | 2-unit zig-zag. |
 | Helmet shell | `#fff4e2`; weapon tubes are the same cream, with an accent muzzle light (§ 9) | Same for every player. |
 | Eye white / pupil | `#ffffff` / `#2b1d3a` | |
 | Contact shadow | `#2b1d3a` at 28 % alpha max | See § 4. |
@@ -91,17 +89,17 @@ Named colours a level puts on any material (`data-color`; catalog kind `color`).
 - **Terrain:** every piece, whatever its material, is a big rounded slab (corner radius 14 units) with a lighter lip on top, in its colour swatch. A blast cuts a smoothly curved crater out of a breakable slab (the terrain distance field's contour, terrain-curves D1); a slab no blast has touched keeps its authored sharp corners. A softer material (lower toughness, e.g. cardboard) opens a wider crater from the same blast.
 - **Props and pickups:** chunky and short; nothing thinner than 0.2 R.
 
-### Material behaviour: the rule (owner, material-system D1)
+### Material behaviour: the rule (owner, material-system D1; terrain-curves D5)
 
-Colour is free: any swatch on any material. Players read behaviour at a glance from the **surface pattern**, never from colour:
+Colour is free: any swatch on any material. Breakable terrain is drawn exactly like solid terrain: one solid colour slab with the same lip and outline, no block, tile or seam pattern (owner, 2026-11-16, superseding the seam-grid cue). Ice keeps its gloss.
 
 | | Solid (`stone`) | Breakable (`earth`, `cardboard`) | Slippery (`ice`) |
 |---|---|---|---|
-| Surface | smooth, one lip highlight | seam grid between 16-unit tiles, one pip per tile | two white gloss streaks and a white inner rim |
+| Surface | smooth, one lip highlight | the same: smooth, one lip highlight | two white gloss streaks and a white inner rim |
 | Silhouette | one continuous rounded slab | the same slab; craters cut curved edges | the same slab |
-| When hit | nothing changes | cells disappear, neighbours crack, swatch-coloured debris flies | nothing changes |
+| When hit | nothing changes | a curved crater opens, swatch-coloured debris flies (an effect, not a lasting pattern) | nothing changes |
 
-Never draw seams on an unbreakable piece or gloss on a non-slippery one, even for decoration. A new behaviour gets its own pattern before it ships.
+Never draw gloss on a non-slippery piece, even for decoration. A new behaviour that needs a lasting look gets the owner's sign-off first.
 
 ---
 
@@ -151,7 +149,7 @@ Back to front:
 
 1. Sky gradient, sun
 2. Far hills, clouds, near hills (parallax)
-3. Terrain: ink pass, slab fills (breakable slabs clipped to their standing cells), then seams, pips and cracks
+3. Terrain: ink pass, slab fills (breakable slabs clipped to the standing terrain, curved along crater rims)
 4. Contact shadows
 5. Pickups and collectibles
 6. **Effects:** smoke, rocket trails, explosions, debris

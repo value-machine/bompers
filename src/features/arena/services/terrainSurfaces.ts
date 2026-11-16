@@ -9,10 +9,9 @@ import { fieldBand, isBreakableSlot } from "@/features/arena/services/terrainGri
 
 /**
  * Terrain slab drawing shared by every material (DESIGN_LANGUAGE § 2): one rounded slab with a
- * lighter lip on top, in the piece's colour swatch. The surface pattern is the behaviour cue that
- * never depends on colour: ice gets gloss streaks and a white inner rim; breakable pieces get a
- * seam grid (drawn per tile by the renderer). Also builds the cell masks that clip breakable slabs
- * to the cells still standing.
+ * lighter lip on top, in the piece's colour swatch. Ice gets gloss streaks and a white inner rim;
+ * breakable pieces are plain slabs like stone (owner, terrain-curves D5). Also builds the masks
+ * that clip breakable slabs to the terrain still standing.
  */
 export interface SlabPiece {
   shape: TerrainShape;

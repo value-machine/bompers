@@ -23,7 +23,9 @@ After a blast, a breakable slab is clipped exactly along the crater rim (the mas
 | Feature area | Loop today | Hook point | Ride / new |
 |---|---|---|---|
 | arena | `drawBreakableMasks` rect runs of standing breakable cells; `syncTerrainView` redraws masks on dirty | contour mask builder in `terrainSurfaces.ts`; view keeps the load-time distances | ride |
-| documentation/game | DESIGN_LANGUAGE "craters cut stepped edges" | curved crater edges | ride |
+| documentation/game | DESIGN_LANGUAGE "craters cut stepped edges" | curved crater edges; breakable = plain slab (D5) | ride |
+| player (Change verdict) | axis-separated move, no step-up | grounded step-up + snap-down (D6), tunable `player.stepUp` | ride |
+| content-catalog, level-kit, shared types (Change verdict) | earth / cardboard `surface: "breakable"` (seam grid) | `"plain"`; kit notes / prompt / preview wording | ride |
 
 Overrun rule (skill-loop D51): a diff that touches a feature area **not** in this table stops the lap.
 
