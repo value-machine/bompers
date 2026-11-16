@@ -80,6 +80,8 @@ describe("gameSim", () => {
     const start = { x: 300, y: level.bounds.y + 50 };
     state.combat.rockets.push({
       id: 99,
+      kind: "rocket",
+      targetId: null,
       ownerSlot: 0,
       ownerId: "p0",
       ...start,

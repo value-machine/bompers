@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES, type GameTunables } from "@/shared/config/gameTunables";
 import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import type { PlayerInput } from "@/shared/types/gameInput.types";
+import type { WeaponItemId } from "@/shared/types/weaponItems.types";
 import { buildTerrainFromLevel, getCellInfo } from "@/features/arena/api/arenaApi";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { createPlayer, stepPlayers, type PlayerState } from "@/features/player/api/playerApi";
@@ -15,6 +16,7 @@ import {
 } from "@/features/combat/services/combatState";
 import { explode } from "@/features/combat/services/explosions";
 import { stepAttacks } from "@/features/combat/services/attacks";
+import { takeWeaponPickups } from "@/features/combat/services/weapons";
 import type { CombatEvent, CombatState } from "@/features/combat/types/combat.types";
 
 // Cell size 8. Stone floor top y = 320 (x 0–1200). Thin stone wall x 800–808 (y 0–320).
@@ -115,9 +117,9 @@ function createWorld({ at, tunables = DEFAULT_GAME_TUNABLES }: WorldOptions): Wo
   return { players, combat, ctx, step, seen, time: () => time };
 }
 
-const arm = (world: World, slot: number): void => {
+const arm = (world: World, slot: number, itemId: WeaponItemId = "rocket-launcher"): void => {
   const fighter = world.combat.fighters.get(`p${slot}`)!;
-  fighter.weapon = { itemId: "rocket-launcher", ammo: C.rocket.ammo };
+  fighter.weapon = { itemId, ammo: C.rocket.ammo };
 };
 
 const health = (world: World, slot: number): number =>
@@ -251,6 +253,30 @@ describe("combat — blast hurt reaction", () => {
     explode(world.ctx(), { at: { x: 100, y: FLOOR_Y }, ownerSlot: 0, ownerId: "p0" });
     expect(world.players[0]!.vy).toBeLessThan(0);
     expect(world.players[0]!.tumbleSeconds).toBe(0);
+  });
+});
+
+describe("combat — rocket recoil", () => {
+  it("should kick the shooter back opposite the aim by the recoil when a rocket is fired", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    arm(world, 0);
+    world.step([{ aimX: 1, aimY: 0, fire: true }]);
+    expect(eventsOf(world, "rocketFired")).toHaveLength(1);
+    expect(world.players[0]!.vx).toBeCloseTo(-C.rocket.recoil, 6);
+  });
+
+  it("should lift the shooter off the ground when firing straight down", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    arm(world, 0);
+    const fighter = world.combat.fighters.get("p0")!;
+    const shooter = world.players[0]!;
+    // Fire through stepAttacks alone so the rocket's blast does not mask the recoil.
+    shooter.aimX = 0;
+    shooter.aimY = 1;
+    stepAttacks(world.ctx(), [{ ...EMPTY_PLAYER_INPUT, connected: true, fire: true }], { dt });
+    expect(fighter.weapon?.ammo).toBe(C.rocket.ammo - 1);
+    expect(shooter.vy).toBeCloseTo(-C.rocket.recoil, 6);
+    expect(shooter.grounded).toBe(false);
   });
 });
 
@@ -418,6 +444,101 @@ describe("combat — out of bounds", () => {
     expect(eventsOfLive(world.combat, "playerEliminated")).toEqual([
       expect.objectContaining({ victimSlot: 1, byPlayerSlot: 0, cause: "out-of-bounds" }),
     ]);
+  });
+});
+
+describe("combat — homing missiles", () => {
+  const H = C.homing;
+  // Shooter at x 100, opponent 400 units right on the same floor; the stone wall is at x 800.
+  const duel = (): World =>
+    createWorld({
+      at: [
+        { x: 100, y: FLOOR_Y },
+        { x: 500, y: FLOOR_Y },
+      ],
+    });
+  const missile = (world: World) => world.combat.rockets.find((r) => r.kind === "homing");
+  const distanceToTarget = (world: World): number => {
+    const m = missile(world);
+    const t = world.players[1]!;
+    return m ? Math.hypot(m.x - t.x, m.y - (t.y - t.height / 2)) : Infinity;
+  };
+  // Aimed 30° above the opponent: a straight rocket sails over them.
+  const highAim: InputPatch = { aimX: 1, aimY: -0.58 };
+
+  it("should curve into a standing opponent when the shot is aimed off to the side", () => {
+    const world = duel();
+    arm(world, 0, "homing-launcher");
+    shoot(world, highAim, 240);
+    expect(health(world, 1)).toBe(C.maxHealth - 1);
+  });
+
+  it("should miss with a plain rocket when the same off-side shot is fired", () => {
+    const world = duel();
+    arm(world, 0);
+    shoot(world, highAim, 240);
+    expect(health(world, 1)).toBe(C.maxHealth);
+  });
+
+  it("should miss an opponent who jumps when the missile is close", () => {
+    const world = duel();
+    arm(world, 0, "homing-launcher");
+    world.step([{ aimX: 1, fire: true }]);
+    let jumped = false;
+    for (let i = 0; i < 480; i += 1) {
+      jumped ||= distanceToTarget(world) < 90;
+      world.step([{ aimX: 1 }, { jump: jumped }]);
+    }
+    expect(jumped).toBe(true);
+    expect(health(world, 1)).toBe(C.maxHealth);
+    expect(eventsOf(world, "explosion")).toHaveLength(1);
+  });
+
+  it("should lock the nearest opponent in the aim cone when fired", () => {
+    const world = createWorld({
+      at: [
+        { x: 300, y: FLOOR_Y },
+        { x: 100, y: FLOOR_Y }, // behind the shooter: outside the cone
+        { x: 600, y: FLOOR_Y },
+      ],
+    });
+    arm(world, 0, "homing-launcher");
+    world.step([{ aimX: 1, fire: true }]);
+    expect(missile(world)?.targetId).toBe("p2");
+  });
+
+  it("should fly straight when no opponent is inside the aim cone", () => {
+    const world = duel();
+    arm(world, 0, "homing-launcher");
+    world.step([{ aimX: -1, fire: true }]);
+    world.step([{ aimX: -1 }], 12); // short of the bounds at x 0
+    expect(missile(world)).toMatchObject({ targetId: null, dirX: -1, dirY: 0 });
+  });
+
+  it("should stop turning once its steering fuel runs out", () => {
+    const world = duel();
+    arm(world, 0, "homing-launcher");
+    world.step([{ aimX: -1, aimY: -1, fire: true }]); // away from the target, up-left
+    const m = missile(world)!;
+    m.targetId = "p1"; // force a lock it cannot reach in time
+    world.step([], Math.round(H.fuelSeconds / dt));
+    const heading = { x: m.dirX, y: m.dirY };
+    world.step([], 20);
+    expect(m.dirX).toBeCloseTo(heading.x, 6);
+    expect(m.dirY).toBeCloseTo(heading.y, 6);
+  });
+
+  it("should use the homing ammo, cooldown and recoil when the homing launcher fires", () => {
+    const world = duel();
+    takeWeaponPickups(world.ctx(), {
+      spawned: [],
+      collected: [{ itemId: "homing-launcher", slot: 0 }],
+    });
+    const fighter = world.combat.fighters.get("p0")!;
+    expect(fighter.weapon).toEqual({ itemId: "homing-launcher", ammo: H.ammo });
+    world.step([{ aimX: 1, fire: true }]);
+    expect(fighter.attackCooldown).toBe(H.fireCooldown); // set after this step's countdown
+    expect(eventsOf(world, "rocketFired")[0]).toMatchObject({ kind: "homing" });
   });
 });
 

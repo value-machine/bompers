@@ -22,9 +22,29 @@ export interface SoundPlayerSnapshot {
   /** Downward speed at the last landing, units / s. */
   lastLandingSpeed: number;
   tumbleBounceCount: number;
+  /** Crouch starts (monotonic). */
+  crouchCount: number;
   /** False while eliminated and waiting to respawn. */
   inPlay: boolean;
   /** Dive phase, and whether the current recovery is a head-on terrain bonk. */
   divePhase: "idle" | "windup" | "travel" | "recovery";
   diveBonked: boolean;
 }
+
+/** The two volume channels: sound effects and music. */
+export type SoundChannel = "sfx" | "music";
+
+/**
+ * The player's audio settings (remembered by the browser). Volumes are 0–1 in tenths; the
+ * enabled flags are on/off switches kept apart from the volume (a pause menu can toggle them
+ * without losing the level). The M key is a separate master mute.
+ */
+export interface SoundSettings {
+  sfxVolume: number;
+  musicVolume: number;
+  sfxEnabled: boolean;
+  musicEnabled: boolean;
+}
+
+/** Music tracks: the lobby loop, the match loop, and the piece for the last 30 s of a round. */
+export type MusicTrackId = "lobby" | "match" | "final";

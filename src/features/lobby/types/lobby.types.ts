@@ -10,7 +10,7 @@ export interface MatchSettings {
 export type LobbySlots = readonly (InputSource | null)[];
 
 /** The lobby menu, top to bottom. */
-export type LobbyRow = "level" | "loadFile" | "duration" | "gravity" | "start";
+export type LobbyRow = "level" | "loadFile" | "duration" | "gravity" | "start" | VolumeRow;
 
 export interface LobbyState {
   slots: LobbySlots;
@@ -35,8 +35,20 @@ export type LobbyAction =
   /** Pointer: free a slot. */
   | { type: "leave"; slot: number };
 
+/** The menu rows that set a volume. */
+export type VolumeRow = "musicVolume" | "sfxVolume";
+
+/** Step a volume row (the setting lives in the sound feature, not the lobby; see `channelOfVolumeRow`). */
+export interface VolumeEffect {
+  type: "volume";
+  row: VolumeRow;
+  step: 1 | -1;
+  /** Confirm steps up and wraps from full to 0; left / right stop at the ends. */
+  wrap: boolean;
+}
+
 /** What the screen must do after an action (side effects stay out of the reducer). */
-export type LobbyEffect = "start" | "pickFile" | null;
+export type LobbyEffect = "start" | "pickFile" | VolumeEffect | null;
 
 export interface LobbyContext {
   /** Ids of the levels that can be played now, in picker order. */
@@ -71,4 +83,7 @@ export interface LobbyView {
   levelDuration: string | null;
   /** "0.8× = 1.2×" style note when the level scales gravity, else null. */
   levelGravity: string | null;
+  /** Volumes as "0"–"10". */
+  musicVolume: string;
+  sfxVolume: string;
 }

@@ -66,6 +66,7 @@ Link the preview kit in `<head>` (works offline without it):
 | sound | `round-end` | Round end |  |
 | behavior | — | none yet; leave it out | |
 | item | `rocket-launcher` | Rocket launcher | use: drop, default for drop |
+| item | `homing-launcher` | Homing launcher | use: drop |
 | item | `point-orb` | Point orb | use: collectible, default for collectible |
 <!-- level-kit:catalog-ids:end -->
 

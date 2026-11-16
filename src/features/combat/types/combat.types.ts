@@ -1,4 +1,5 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import type { WeaponItemId } from "@/shared/types/weaponItems.types";
 
 /**
  * Combat slice of the game state (GDD § 3): per-player fighter state keyed by player `id`,
@@ -6,11 +7,14 @@ import type { Vec2 } from "@/shared/types/gameGeometry.types";
  * rules, render). Pure data; the combat sim mutates it in place.
  */
 
-/** A held weapon. Only the rocket launcher exists for the MVP. */
+/** A held weapon: the rocket launcher or the homing launcher (`WeaponItemId`). */
 export interface HeldWeapon {
-  itemId: "rocket-launcher";
+  itemId: WeaponItemId;
   ammo: number;
 }
+
+/** What flies: a straight rocket, or a homing missile that steers toward its target. */
+export type RocketKind = "rocket" | "homing";
 
 export interface FighterState {
   playerId: string;
@@ -32,6 +36,9 @@ export interface FighterState {
 
 export interface RocketState {
   id: number;
+  kind: RocketKind;
+  /** Homing only: the player id locked at launch (null = no target, flies straight). */
+  targetId: string | null;
   ownerSlot: number;
   ownerId: string;
   x: number;
@@ -85,7 +92,15 @@ export type CombatEventBody =
       byPlayerSlot: number | null;
       cause: EliminationCause;
     }
-  | { type: "rocketFired"; slot: number; x: number; y: number; dirX: number; dirY: number }
+  | {
+      type: "rocketFired";
+      kind: RocketKind;
+      slot: number;
+      x: number;
+      y: number;
+      dirX: number;
+      dirY: number;
+    }
   | { type: "explosion"; byPlayerSlot: number; x: number; y: number; radius: number }
   | {
       type: "terrainDestroyed";
@@ -99,7 +114,7 @@ export type CombatEventBody =
       effectId: string;
       soundId: string;
     }
-  | { type: "pickupSpawned"; itemId: string; x: number; y: number }
+  | { type: "pickupSpawned"; itemId: WeaponItemId; x: number; y: number }
   | { type: "pickupCollected"; itemId: string; slot: number };
 
 export type CombatEvent = CombatEventBody & {

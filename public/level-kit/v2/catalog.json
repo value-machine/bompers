@@ -197,6 +197,11 @@
       "use": "drop"
     },
     {
+      "id": "homing-launcher",
+      "label": "Homing launcher",
+      "use": "drop"
+    },
+    {
       "id": "point-orb",
       "label": "Point orb",
       "use": "collectible"

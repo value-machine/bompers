@@ -36,7 +36,11 @@ describe("contentCatalog", () => {
     });
     expect(exported.material.map((m) => m.id)).toEqual(["stone", "earth", "cardboard", "ice"]);
     expect(exported.color.map((c) => c.id)).toContain("plum");
-    expect(exported.item.map((i) => i.id)).toEqual(["rocket-launcher", "point-orb"]);
+    expect(exported.item.map((i) => i.id)).toEqual([
+      "rocket-launcher",
+      "homing-launcher",
+      "point-orb",
+    ]);
     expect(exported.behavior).toEqual([]);
     exported.material[0]!.label = "changed";
     expect(CONTENT_CATALOG.material.stone?.label).toBe("Stone");

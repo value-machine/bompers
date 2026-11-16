@@ -128,6 +128,18 @@ describe("collectibles — weapon crates", () => {
     expect(eventsOf(world, "rocketFired")).toHaveLength(C.rocket.ammo);
   });
 
+  it("should alternate the weapons a drop point lists when crates are released", () => {
+    const both: LevelDrop[] = [
+      { at: { x: 1000, y: -40 }, itemIds: ["rocket-launcher", "homing-launcher", "point-orb"] },
+    ];
+    const world = createWorld({ at: [{ x: 100, y: FLOOR_Y }], drops: both });
+    world.step([], Math.ceil((C.drops.firstDelaySeconds + C.drops.intervalSeconds * 5) / dt));
+    expect(world.crates.list.map((crate) => crate.itemId)).toEqual([
+      "rocket-launcher",
+      "homing-launcher",
+    ]);
+  });
+
   it("should not drop more than maxActive pickups when nobody collects them", () => {
     const world = createWorld({ at: [{ x: 100, y: FLOOR_Y }], drops });
     world.step([], Math.ceil((C.drops.firstDelaySeconds + C.drops.intervalSeconds * 5) / dt));

@@ -499,10 +499,13 @@ module.exports = {
           name: "levels",
           children: [{ name: "*.html" }],
         },
-        // Game sound effects, served at /audio/sfx/ (DESIGN_LANGUAGE § 8; approved by the orchestrator under the owner's delegation, game-sound D4)
+        // Game sound effects and music, served at /audio/sfx/ and /audio/music/ (DESIGN_LANGUAGE § 8; sfx: game-sound D4; music: owner-approved, music D7)
         {
           name: "audio",
-          children: [{ name: "sfx", children: [{ name: "*.mp3" }] }],
+          children: [
+            { name: "sfx", children: [{ name: "*.mp3" }] },
+            { name: "music", children: [{ name: "*.mp3" }] },
+          ],
         },
         // Level kit, served at /level-kit/v2/ (documentation/game/LEVEL_FORMAT.md § 9). v1 was replaced, not kept beside it: the owner waived compatibility (material-system D10, owner consent for this entry)
         {

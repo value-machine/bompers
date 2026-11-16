@@ -63,6 +63,8 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     tumbleBouncesLeft: 0,
     tumbleBounceCount: 0,
     lastTumbleBounceSpeed: 0,
+    crouching: false,
+    crouchCount: 0,
     groundBelowY: null,
     jumpCount: 0,
     wallJumpCount: 0,
@@ -84,10 +86,16 @@ export function placePlayer(player: PlayerState, at: Vec2): void {
   player.wallDir = 0;
   player.wallCoyoteTimer = 0;
   player.wallJumpLockTimer = 0;
+  resetStance(player);
+  endTumble(player);
+}
+
+/** Plain movement again: no ability modifiers, no crouch. */
+function resetStance(player: PlayerState): void {
   player.steerScale = 1;
   player.gravityScale = 1;
   player.jumpLocked = false;
-  endTumble(player);
+  player.crouching = false;
 }
 
 export const playerBody = (player: PlayerState): Rect => ({
@@ -163,6 +171,17 @@ function readJumpButton(player: PlayerState, input: PlayerInput, p: PlayerTunabl
   player.prevJump = input.jump;
 }
 
+/**
+ * Crouch holds while grounded with crouch held, unless tumbling or an ability owns the
+ * steering (the dive). Decided from last step's contacts, before any movement this step.
+ */
+function updateCrouch(player: PlayerState, input: PlayerInput): void {
+  const crouching =
+    input.crouch && player.grounded && !isTumbling(player) && player.steerScale >= 1;
+  if (crouching && !player.crouching) player.crouchCount += 1;
+  player.crouching = crouching;
+}
+
 // ── Horizontal ───────────────────────────────────────────────────────────────
 
 /** Moves `value` toward `target` by at most `maxDelta`. */
@@ -194,7 +213,8 @@ function applyHorizontal(player: PlayerState, input: PlayerInput, args: StepPlay
   if (player.steerScale <= 0) return;
   if (input.moveX !== 0) player.facing = input.moveX > 0 ? 1 : -1;
   if (player.wallJumpLockTimer > 0) return;
-  const target = input.moveX * p.runSpeed;
+  // A crouching blob turns but does not walk: it brakes to a stop.
+  const target = player.crouching ? 0 : input.moveX * p.runSpeed;
   const tumbleSteer = isTumbling(player) ? args.tunables.tumble.steerScale : 1;
   const grip = groundGrip(player, args.terrain);
   const rate = horizontalRate(player, target, p) * player.steerScale * tumbleSteer * grip;
@@ -206,6 +226,7 @@ function applyHorizontal(player: PlayerState, input: PlayerInput, args: StepPlay
 function launch(player: PlayerState, vy: number): void {
   player.vy = vy;
   player.grounded = false;
+  player.crouching = false;
   player.jumpRising = true;
   player.jumpBufferTimer = 0;
   player.coyoteTimer = 0;
@@ -322,6 +343,7 @@ export function stepPlayers(args: StepPlayersArgs): void {
   for (const player of args.players) {
     const input = args.inputs[player.slot] ?? EMPTY_PLAYER_INPUT;
     readJumpButton(player, input, p);
+    updateCrouch(player, input);
     applyHorizontal(player, input, args);
     updateAim(player, input);
     applyJump(player, p);

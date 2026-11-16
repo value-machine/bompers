@@ -104,6 +104,7 @@ export const CONTENT_CATALOG: ContentCatalog = {
   behavior: {},
   item: {
     "rocket-launcher": { id: "rocket-launcher", label: "Rocket launcher", use: "drop" },
+    "homing-launcher": { id: "homing-launcher", label: "Homing launcher", use: "drop" },
     "point-orb": { id: "point-orb", label: "Point orb", use: "collectible" },
   },
 };

@@ -33,8 +33,12 @@ export const GAME_PALETTE = {
   /** Effects (DESIGN_LANGUAGE § 1 Effects). Rocket fins use the shooter's body colour. */
   explosion: { outer: 0xff8a1f, mid: 0xffe14d, core: 0xffffff },
   rocket: { body: 0xfff4e2, nose: 0x2b1d3a, flame: 0xffb21a, tubeCap: 0xd9c7ae },
+  /** Homing missile (weapon-visuals spec): lilac hull, cherry seeker light (not a player hue), lilac trail. */
+  homing: { body: 0xc9a7ff, seeker: 0xe0103f, trail: 0xd9c4ff },
   pickupCrate: 0xfff4e2,
   pickupRing: 0x8fd6ff,
+  /** Homing launcher crate ring and twin-pod mark. */
+  pickupRingHoming: 0xb08cff,
   /** Lost health chunk (DESIGN_LANGUAGE § 7). */
   healthLost: 0xe9dfd0,
   /** Point orb: bubblegum star (DESIGN_LANGUAGE § 1 Effects). */
