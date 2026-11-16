@@ -14,14 +14,14 @@ With one blast power P (0–100, rocket = 50): a blast at the same point clears 
 
 ## In scope
 - One blast power per blast (`Blast.power`); the rocket's power is a tunable (`combat.rocket.power` = 50 or equivalent per weapon).
-- Crater by power: a per-cell test `distance × toughness ≤ craterPerPower × power` replaces the fixed `craterRadius` circle (arena's crater function); toughness comes from the material's catalog `durability` and rides in the terrain cell slot. Unbreakable materials (`destructible: false`) never clear.
+- Crater by power: a per-cell test `shapeDistance × toughness ≤ craterPerPower × power` (round shape only here; written as a distance rule so the smooth-outline lap reuses it, D16/D17) replaces the fixed `craterRadius` circle (arena's crater function); toughness comes from the material's catalog `durability` and rides in the terrain cell slot. Unbreakable materials (`destructible: false`) never clear.
 - Push by power: the blast's reach and centre push derive from power (straight line, D3); the blast still hands each pushed player `{ direction, impulse }` to `reactToHit` — the seam the shared-roll lap replaces.
 - Material values: cardboard 0.7, earth 1.0; stone, ice unbreakable (D2). Kit regen (`pnpm level-kit:sync`) for the changed catalog values; AUTHORING note on toughness.
 - Consumers of the old tunables: explosion event `radius` = this blast's reach; the feel/shake scale and the out-of-bounds margin read the rocket's power instead of the removed constants (same values at P 50).
 - Fold the owner decisions D1–D8 into their homes (combat README, content-catalog README, `DOC_APP_VISION.md` GDD-reading table for the fire rules that govern laps b and c).
 
 ## Out of scope
-- Will NOT do: fire, burn state, burn reaction (lap b); flamethrower (lap c); shared roll / tumble rework (separate queued lap "Shared roll"); shelter / ray absorption and partial wear (owner chose plain power ÷ toughness); breakable ice; new weapons with other powers.
+- Will NOT do: smooth terrain outline, crater shapes other than round, collision on the outline (own laps after this one, D14–D17); fire, burn state, burn reaction (lap b); flamethrower (lap c); shared roll / tumble rework (separate queued lap "Shared roll"); shelter / ray absorption and partial wear (owner chose plain power ÷ toughness); breakable ice; new weapons with other powers.
 - Will NOT touch: hit damage (`combat.hitDamage`), tumble threshold `player.tumble.minImpulse` and the tumble itself, rocket flight, level file format (materials stay referenced by ID; no format bump), explosion art.
 
 ## Edges
@@ -38,7 +38,7 @@ Overrun rule (skill-loop D51): a diff that touches a feature area **not** in thi
 
 ## Size
 M — 6 areas (combat, arena, content-catalog, shared config, match, kit/docs), a tunables reshape with all consumers, and the decision fold; logic itself is small and pure (TDD on the power module and the crater test).
-Cut into laps: (b) Fire spread + burn reaction, (c) Torch flamethrower — follow-ups for the orchestrator's backlog (this thread does not edit `app-tasks.json`).
+Cut into laps: (a2) Smooth terrain outline + crater shapes, (a3) Collision on the smooth outline, (b) Fire spread + burn reaction, (c) Torch flamethrower — follow-ups for the orchestrator's backlog (this thread does not edit `app-tasks.json`).
 
 ## Decisions
-DECISIONS.md D1–D8 owner (via orchestrator, "all recommended"), D9–D13 clear winners.
+DECISIONS.md D1–D8 owner (via orchestrator, "all recommended"), D9–D13 clear winners, D14/D15/D17 owner (smooth outline, collision on it, crater shapes), D16 lap placement.
