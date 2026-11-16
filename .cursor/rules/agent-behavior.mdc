@@ -57,6 +57,14 @@ Away switch: when no other work remains and laps are parked, end with the questi
 
 When only the owner can do something (enter a variable, change a setting, grant access), give the direct link to that exact page, built from the ids you know (project ref, account id, Worker name), with the value to enter next to it. Never make the owner ask for the link or search a dashboard. If you are unsure a deep link still exists, give the dashboard URL for that project and name the page; never invent a path. Links, not click-by-click steps (`.agents/skills/loop-backlog/references/onboarding.md` § Core behavior).
 
+## Token budget
+
+The owner pays per token and works against a weekly usage limit.
+
+- **Weekdays: cheapest proof.** Verify a claim with the cheapest check that proves it: targeted tests on the changed files, typed or logged state, and at most one headless browser smoke run per lap that reads the console and logged values. No image or video capture, screenshot series, frame dumps, visual side-by-sides, or images read back into context; the owner judges the look on the preview. The full test suite runs where the loop requires it, not repeatedly.
+- **Heavy work waits.** Token-heavy work (visual capture, harness or skill audits, review fan-outs beyond the loop's defaults, large asset generations) runs on the weekend (Saturday–Sunday, Europe/Amsterdam) or when the owner asks; otherwise park it as a backlog task marked weekend.
+- **Report the gap.** Say what was not verified (§ Success Validation) instead of buying certainty with tokens.
+
 ## Success Validation
 
 Report outcomes faithfully:

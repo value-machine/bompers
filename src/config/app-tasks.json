@@ -1,12 +1,12 @@
 [
   {
-    "title": "Gamepad support and verification",
-    "description": "The owner has only verified keyboard play. Make up to 4 gamepads work end to end: join, move, aim (stick), jump, fire/dive, hot-plug and disconnect, sensible deadzones; then the owner verifies with real controllers. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "title": "Game feel: hit flash, screen shake, helmet wobble",
+    "description": "Render-only feedback the visual pass left out: hit flash on the victim's fill (back hits stronger), capped decaying screen shake (explosions, hard dive hits, tumble bounces), helmet spring wobble, render-only hit-stop; feel tunables; prefers-reduced-motion respected. No sim change. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
   },
   {
-    "title": "Move launcher pickups into features/collectibles",
-    "description": "Code cleanup (combat D2, match-rules follow-up): one home for everything that drops from the sky. Move the rocket-launcher crate spawning/pickup from features/combat into features/collectibles next to point orbs; combat keeps weapons and firing. No behaviour change. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "title": "Gamepad support and verification",
+    "description": "The owner has only verified keyboard play. Make up to 4 gamepads work end to end: join, move, aim (stick), jump, fire/dive, hot-plug and disconnect, sensible deadzones; then the owner verifies with real controllers. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
   },
   {
@@ -22,6 +22,11 @@
   {
     "title": "Owner checks in Cursor",
     "description": "One-time owner verification of the Cursor hooks from #20 and #24: in Cursor Agent chat on a non-main branch, (1) `git push origin HEAD:main --dry-run` must be blocked; (2) `git status` runs as usual; (3) writing a .ts file with a lint error returns the ESLint errors to the agent. Report any step that behaves differently.",
+    "status": "to-do"
+  },
+  {
+    "title": "Weekend: token-spend pass over skills",
+    "description": "Weekend only (agent-behavior rule § Token budget); the owner starts it. Measure which skills and loop stages spend the most tokens per lap (loop-check: one subagent per rule, plan-compliance subagent, component lens, size-M parallel lenses; loop-plan review fan-out; browser checks; full-suite runs; large generations) using real session usage where available, then propose cuts with meta-audit-harness (context-cost lens extended to runtime spend). Proposals only; protected-file changes need the owner's yes.",
     "status": "to-do"
   }
 ]

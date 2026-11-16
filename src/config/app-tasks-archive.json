@@ -198,5 +198,10 @@
     "title": "Port the no-git-writes-on-main guard to Cursor",
     "description": "Harness: Cursor agents should get the same protection as Claude Code. Add a fail-safe beforeShellExecution hook in .cursor/hooks.json mirroring scripts/deny-git-write-on-main (from the Cursor feedback-hooks lap, #20). Owner follow-up from #20: run the Cursor feedback hooks once in a real Cursor session and fix the tool_input field name if the lint error doesn't come back.",
     "status": "done"
+  },
+  {
+    "title": "Move launcher pickups into features/collectibles",
+    "description": "Code cleanup (combat D2, match-rules follow-up): one home for everything that drops from the sky. Move the rocket-launcher crate spawning/pickup from features/combat into features/collectibles next to point orbs; combat keeps weapons and firing. No behaviour change. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "done"
   }
 ]

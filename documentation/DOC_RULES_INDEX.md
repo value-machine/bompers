@@ -65,6 +65,7 @@ Quick reference guide to all rules and their relationships.
 ### Agent behavior (`.claude/rules/agent-behavior.md`)
 - Protected files manifest (single SSOT)
 - **When to ask** (SSOT): what counts as a choice + the owner stop list; how to ask
+- **Token budget** (SSOT): cheapest proof on weekdays, token-heavy work on weekends or on request
 - Success reporting (verified vs unverified)
 - Agent role and control
 
@@ -136,7 +137,7 @@ When modifying a rule, check these related rules and skills (SSOT — always-on 
 | `testing` | code-style, architecture, debugging |
 | `security` | architecture, code-style, api-integration (MCP-first principle) |
 | `git-workflow` | agent-behavior, platform, testing |
-| `agent-behavior` | git-workflow, debugging, architecture (layer-consistency stop), loop-build + loop-ship + loop-verdict skills |
+| `agent-behavior` | git-workflow, debugging, architecture (layer-consistency stop), loop-build + loop-ship + loop-verdict + loop-orchestrate skills |
 | `platform` | git-workflow, security, `DOC_WINDOWS_SHELL.md`, spec-debug-runtime patterns (platform command SSOT) |
 | `api-integration` | security |
 | `debugging` | app-code, testing, architecture, agent-behavior, spec-debug-runtime skill |

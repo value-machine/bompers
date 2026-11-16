@@ -49,7 +49,7 @@ The pre-commit hook rebuilds both mirrors from staged sources (`agent-sync.confi
 | `.claude/rules/architecture.md` | Architectural patterns and structural organization standards |
 | `.claude/rules/file-placement.md` | CRITICAL: Before creating any new file or folder, validate placement against projectStructure.config.cjs and architecture rules. Check structure whitelist, verify allowed file patterns, and suggest correct locations if invalid. Applies when user requests file/folder creation or assistant needs to create files. |
 | `.claude/rules/code-style.md` | Global code style and formatting standards for all projects |
-| `.claude/rules/agent-behavior.md` | When to ask the owner (choice definition + stop list), success reporting, and protected-file consent |
+| `.claude/rules/agent-behavior.md` | When to ask the owner (choice definition + stop list), token budget (cheap proof on weekdays, heavy work on weekends), success reporting, and protected-file consent |
 | `.claude/rules/testing.md` | Testing standards, patterns, and quality requirements |
 | `.claude/rules/debugging.md` | Logging, reductive strategy, and user test instructions (debugging procedure: spec-debug-runtime) |
 | `.claude/rules/security.md` | Security best practices and vulnerability prevention |
