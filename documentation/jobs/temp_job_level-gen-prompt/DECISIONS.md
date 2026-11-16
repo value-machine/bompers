@@ -13,8 +13,10 @@ Updated: 2026-11-16
 | D4 | Section 7 | closed | Heading + short instruction "describe your map here", left for the user | loop-refine (clear winner) | matches owner example structure |
 | D6 | Feature home | closed | New `level-kit` feature (prompt, kit export, copy button); lobby renders the button in the "Your level" row | loop-build (architecture rule) | the prompt pushed `level-file/services` to 12 files (budget 10); split by concept instead of a budget waiver. `level-file` exports `MIN_SPAWNS` / `RECOMMENDED_SPAWNS` |
 | D5 | Kit origin in the prompt | closed | `https://bompers.tom-fab.workers.dev` (level-file-format D14) | loop-plan (clear winner) | generated file must be deterministic, so not `location.origin` |
+| D7 | Pre-commit kit-check trigger | closed | Add `level-kit` to the `.husky/pre-commit` path regex for `pnpm level-kit:check` (that one change only) | owner via orchestrator (protected-file consent, 2026-11-16) | the prompt builder now lives in `src/features/level-kit/`; without it, edits there skipped the local check |
 
 ## Log
 
 - 2026-11-16 — D1 closed via orchestrator (asked)
 - 2026-11-16 — D2, D4 closed via loop-refine (clear-winner); D3, D5 via loop-plan (clear-winner)
+- 2026-11-16 — D6 closed via loop-build (architecture rule); D7 closed via orchestrator (owner consent for the protected hook)

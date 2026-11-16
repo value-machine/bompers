@@ -22,7 +22,7 @@ pnpm validate:feature-docs:staged || exit 1
 pnpm validate:skills || exit 1
 
 # Level kit generated from the content catalog (SSOT: scripts/sync-level-kit.mjs); only when its inputs or outputs are staged
-if git diff --cached --name-only | grep -qE '^(src/features/(content-catalog|level|level-file)/|src/shared/config/gameTunables\.ts|public/level-kit/|documentation/game/LEVEL_FORMAT\.md)'; then
+if git diff --cached --name-only | grep -qE '^(src/features/(content-catalog|level|level-file|level-kit)/|src/shared/config/gameTunables\.ts|public/level-kit/|documentation/game/LEVEL_FORMAT\.md)'; then
   pnpm level-kit:check || exit 1
 fi
 
