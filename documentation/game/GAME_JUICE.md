@@ -74,6 +74,8 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Rocket fire | light | `rocket-fire` | — | — | — | — | — (visual: the recoil row) | — |
 | Rocket recoil | light | `rocket-fire` (the fire cue) | — | — | — | — | body kick opposite the aim (sim impulse `combat.rocket.recoil`) | — |
 | Pickup collected | light | `pickup` | — | — | — | — | — | — |
+| Headbutt reset taken | light | `pickup` (pitched by the collector) | — | — | — | — | ring burst in the crystal colour, 220 ms; then a ghost outline until it is back | — |
+| Headbutt reset returns | — | — (deliberately silent: a world timer every 2.5 s would be noise) | crystal pop-in, back-out 150 ms | — | — | — | — | — |
 | Respawn | light | `respawn` | — | — | — | — | blink 8 Hz + ring | — |
 | Dive launch | light | `dive-launch` | dive pose | — | — | — | — | — |
 | Front hit taken | medium | `hit` / `dive-impact` | — | 0.75 | 3 px | — | impact pop (not on dive hits) | kick |

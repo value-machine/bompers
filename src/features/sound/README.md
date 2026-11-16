@@ -32,6 +32,7 @@ What each cue comes from:
 | `rocket-fire`, `explosion`, `pickup` | `rocketFired`, `explosion`, `pickupCollected`                        |
 | material sound                       | `terrainDestroyed.soundId` (silent until the bank has a file for it) |
 | `respawn`                            | a player comes back into play                                        |
+| `pickup` (headbutt reset)            | `diveRefillCount` rises (no file of its own; headbutt-reset D5)      |
 | `round-start`, `round-end`           | a fresh round's first frame; round phase turns `ended`               |
 
 Music: the lobby screen plays `lobby`; a round plays `match`, then `final` from 0:30 left, and fades out when the round ends (the round-end SFX plays). Leaving a screen fades its music out.

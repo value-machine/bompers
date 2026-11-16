@@ -59,7 +59,7 @@ import { createHudView, syncHudView, type HudView } from "@/features/match/servi
  *   ├─ world   (camera transform; world units)
  *   │  ├─ terrain   (arena: solid slabs, destructible tiles)
  *   │  ├─ contact shadows: weapon crates (collectibles), rockets (combat), players (player)
- *   │  ├─ weapon crates, point orbs (collectibles)
+ *   │  ├─ weapon crates, headbutt resets, point orbs (collectibles)
  *   │  ├─ effects (debris, explosions, rocket-hit pops — effects), rockets (+ trails — combat)
  *   │  ├─ dive effects (dive impact pops)   (dive)
  *   │  ├─ players   (player; above effects so they never cover a player outline; protected
@@ -106,6 +106,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     combat.shadows.container,
     players.shadows,
     collectibles.crates,
+    collectibles.refills.container,
     collectibles.orbs,
     effects.layer,
     combat.rockets,
@@ -185,6 +186,7 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     collectibles: state.collectibles,
     size: state.tunables.collectibles.size,
     crateSize: state.tunables.combat.drops.size,
+    diveRefill: state.tunables.collectibles.diveRefill,
     terrain: state.arena.terrain,
     nowMs,
     zoom,

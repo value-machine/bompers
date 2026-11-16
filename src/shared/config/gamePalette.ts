@@ -57,6 +57,8 @@ export const GAME_PALETTE = {
   healthLost: 0xe9dfd0,
   /** Point orb: bubblegum star (DESIGN_LANGUAGE § 1 Effects). */
   pointOrb: 0xff8fc8,
+  /** Headbutt reset: aqua crystal with an ink up-chevron (DESIGN_LANGUAGE § 1 Effects). */
+  diveRefill: 0x5fe0ff,
   /** HUD cards (DESIGN_LANGUAGE § 7): card fill, caption text, timer numerals. */
   hud: { card: 0xfffaf0, caption: 0x8a7a99, timer: 0xffd43b },
   sky: { top: 0x8fd6ff, bottom: 0xfff1cf },

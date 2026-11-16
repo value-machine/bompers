@@ -29,6 +29,8 @@ export interface SoundPlayerSnapshot {
   /** Dive phase, and whether the current recovery is a head-on terrain bonk. */
   divePhase: "idle" | "windup" | "travel" | "recovery";
   diveBonked: boolean;
+  /** Headbutt resets taken over the match (monotonic). */
+  diveRefillCount: number;
 }
 
 /** The two volume channels: sound effects and music. */

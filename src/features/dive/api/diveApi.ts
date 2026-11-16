@@ -5,6 +5,8 @@
 export type { DiveHit, DiveMotion, DivePhase, DiveState } from "@/features/dive/types/dive.types";
 export {
   createDiveState,
+  isDiveSpent,
+  refillDive,
   requestDive,
   resetDive,
   stepDives,

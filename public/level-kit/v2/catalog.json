@@ -205,6 +205,11 @@
       "id": "point-orb",
       "label": "Point orb",
       "use": "collectible"
+    },
+    {
+      "id": "dive-reset",
+      "label": "Headbutt reset",
+      "use": "collectible"
     }
   ]
 }

@@ -15,6 +15,7 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   inPlay: true,
   divePhase: "idle",
   diveBonked: false,
+  diveRefillCount: 0,
   ...patch,
 });
 
@@ -130,5 +131,12 @@ describe("readSoundCues — crouch", () => {
     const frame = snapshot({ players: [player(0, { crouchCount: 1 }), player(1)] });
     const { cues } = readSoundCues(cursor, frame);
     expect(cues).toEqual([{ soundId: "land", slot: 0, gain: SOUND_MIX.crouchGain }]);
+  });
+});
+
+describe("readSoundCues — headbutt reset", () => {
+  it("should play the pickup sound pitched by the collector when a player takes a headbutt reset", () => {
+    const frame = snapshot({ players: [player(0), player(1, { diveRefillCount: 1 })] });
+    expect(cuesAfter(frame)).toEqual([{ soundId: "pickup", slot: 1, gain: 1 }]);
   });
 });
