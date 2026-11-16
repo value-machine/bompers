@@ -62,6 +62,7 @@ The pre-commit hook rebuilds both mirrors from staged sources (`agent-sync.confi
 |------|-------------|
 | `.claude/rules/app-code.md` | App source standards: code and edge-case placement, TypeScript, styling scope, API troubleshooting, pagination · `paths: ["src/**"]` |
 | `.claude/rules/api-integration.md` | Principles for researching an external API, vendor, or backend before writing integration code (MCP-first, doc-freshness, POC-before-code) · `paths: ["**/services/**", "**/lib/**", "cloud-functions/**"]` |
+| `.claude/rules/game-juice.md` | Game juice: every game moment's sound, squash, flash, shake and effects come from one scale (`gameJuice.ts`, `documentation/game/GAME_JUICE.md`) · `paths:` game renderers, poses, sound, effects, camera, tunables, `documentation/game/**` |
 
 ## Where things live
 

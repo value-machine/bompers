@@ -1,7 +1,9 @@
 import { FillGradient, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import { traceEmblem } from "@/shared/services/emblemRenderer";
+import { traceWeaponTube } from "@/shared/services/weaponTubeRenderer";
 import { playerEmblemShape } from "@/shared/utils/playerEmblem";
+import type { WeaponTubeParts } from "@/shared/utils/weaponTube";
 
 /**
  * Blob shapes in line style E (DESIGN_LANGUAGE § 2–3, mockup variant E). Geometry is the mockup's
@@ -67,12 +69,6 @@ export const FOOT_CENTRE_UNITS = 6;
 export const footPath = (g: Graphics, m: BlobMetrics): Graphics =>
   g.ellipse(0, -FOOT_CENTRE_UNITS * m.u, 12 * m.u, 7.5 * m.u);
 
-/** Rocket tube (26 × 14) with its cap (8 × 16), along +x from the pivot. */
-export const tubePath = (g: Graphics, u: number): Graphics =>
-  g
-    .roundRect(-3 * u, -7 * u, 26 * u, 14 * u, 6 * u)
-    .roundRect(17 * u, -8 * u, 8 * u, 16 * u, 3.5 * u);
-
 const slotColor = (colors: readonly number[], slot: number): number =>
   colors[slot % colors.length] ?? GAME_PALETTE.ink;
 
@@ -132,8 +128,9 @@ export const drawHelmetInk = (g: Graphics, m: BlobMetrics, width: number): Graph
 export const drawFootInk = (g: Graphics, m: BlobMetrics, width: number): Graphics =>
   footPath(g.clear(), m).stroke(inkStroke(width));
 
-export const drawTubeInk = (g: Graphics, u: number, width: number): Graphics =>
-  tubePath(g.clear(), u).stroke(inkStroke(width));
+/** Ink pass of a weapon's helmet tube (DESIGN_LANGUAGE § 9: the silhouette names the weapon). */
+export const drawTubeInk = (g: Graphics, tube: WeaponTubeParts, width: number): Graphics =>
+  traceWeaponTube(g.clear(), tube).stroke(inkStroke(width));
 
 /** Fill pass of the body: the gradient egg. */
 export const drawBodyFill = (slot: number, m: BlobMetrics): Graphics =>
@@ -175,12 +172,23 @@ export function drawHelmetDetails(slot: number, m: BlobMetrics): Graphics[] {
 export const drawFootFill = (slot: number, m: BlobMetrics): Graphics =>
   footPath(new Graphics(), m).fill(slotColor(GAME_PALETTE.playerShades, slot));
 
-export const drawTubeFill = (u: number): Graphics =>
-  new Graphics()
-    .roundRect(-3 * u, -7 * u, 26 * u, 14 * u, 6 * u)
-    .fill(GAME_PALETTE.helmet)
-    .roundRect(17 * u, -8 * u, 8 * u, 16 * u, 3.5 * u)
-    .fill(GAME_PALETTE.helmetEdge);
+/** Fill pass of a weapon's helmet tube: cream like the helmet shell. */
+export const drawTubeFill = (g: Graphics, tube: WeaponTubeParts): Graphics =>
+  traceWeaponTube(g.clear(), tube).fill(GAME_PALETTE.helmet);
+
+/**
+ * Muzzle ready light (weapon-visuals D3): one accent dot per muzzle, no outline (inner detail,
+ * § 3). The renderer sets its alpha from the shot cooldown: faded while recharging, full when ready.
+ */
+export const drawMuzzleLight = (
+  g: Graphics,
+  tube: WeaponTubeParts,
+  { accent, u }: { accent: number; u: number }
+): Graphics => {
+  g.clear();
+  for (const muzzle of tube.muzzles) g.circle(muzzle.x, muzzle.y, 3.2 * u);
+  return g.fill(accent);
+};
 
 /** Eye white (5 × 7.5) and pupil (2.8 × 4.2), no outline. */
 export function drawEye(u: number): { white: Graphics; pupil: Graphics } {

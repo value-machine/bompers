@@ -4,6 +4,14 @@
  * there first. The one place game colors live; do not inline colors elsewhere.
  * Player arrays are indexed by slot (0–3).
  */
+import type { WeaponItemId } from "@/shared/types/weaponItems.types";
+import type { WeaponTubeShape } from "@/shared/utils/weaponTube";
+
+export interface WeaponLook {
+  accent: number;
+  tube: WeaponTubeShape;
+}
+
 interface MaterialLook {
   fill: number;
   /** Top lip (stone) or alternate cell (destructible). */
@@ -34,9 +42,15 @@ export const GAME_PALETTE = {
   /** Homing missile (weapon-visuals spec): lilac hull, cherry seeker light (not a player hue), lilac trail. */
   homing: { body: 0xc9a7ff, seeker: 0xe0103f, trail: 0xd9c4ff },
   pickupCrate: 0xfff4e2,
-  pickupRing: 0x8fd6ff,
-  /** Homing launcher crate ring and twin-pod mark. */
-  pickupRingHoming: 0xb08cff,
+  /**
+   * Per-weapon look, keyed by the held weapon's item id (DESIGN_LANGUAGE § Weapon identity):
+   * accent for the crate ring, HUD ammo pills and muzzle light; tube silhouette on helmet and crate.
+   * Accents never reuse a player body colour. A new weapon id is a compile error here until listed.
+   */
+  weaponLooks: {
+    "rocket-launcher": { accent: 0x8fd6ff, tube: "capped" },
+    "homing-launcher": { accent: 0xb08cff, tube: "twin-pod" },
+  } as Readonly<Record<WeaponItemId, WeaponLook>>,
   /** Lost health chunk (DESIGN_LANGUAGE § 7). */
   healthLost: 0xe9dfd0,
   /** Point orb: bubblegum star (DESIGN_LANGUAGE § 1 Effects). */
@@ -69,6 +83,9 @@ export const GAME_PALETTE = {
   /** Look for a lookToken with no entry (should not happen after normalisation). */
   fallbackLook: { fill: 0x5a3f7a, accent: 0x7d5fa6 } as MaterialLook,
 } as const;
+
+/** The look of a weapon item (crate ring and mark, helmet tube, HUD ammo pills). */
+export const weaponLook = (itemId: WeaponItemId): WeaponLook => GAME_PALETTE.weaponLooks[itemId];
 
 /** A palette colour as CSS, for DOM next to the canvas (hints, lobby blobs). */
 export const toCssColor = (color: number): string => `#${color.toString(16).padStart(6, "0")}`;
