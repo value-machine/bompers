@@ -203,6 +203,17 @@ describe("stepFeetMotion", () => {
     expect(pose[1].rotation).toBeCloseTo(0);
   });
 
+  it("should swing the lifted foot forward when running left", () => {
+    const at = (x: number) => {
+      const p = feetPlayer({ vx: -340, x });
+      return run(p, 0).pose[0].x;
+    };
+    // Running left, x falls from phase π·0.75 to π·0.25 while the left foot is lifted.
+    const early = at(0.75 * Math.PI * feet.stride * R);
+    const late = at(0.25 * Math.PI * feet.stride * R);
+    expect(late).toBeLessThan(early);
+  });
+
   it("should turn both soles toward the wall when sliding on a right wall", () => {
     const { pose } = run(feetPlayer({ grounded: false, wallDir: 1, vy: 120 }), 300);
     for (const foot of pose) {

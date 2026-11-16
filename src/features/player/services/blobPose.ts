@@ -351,8 +351,8 @@ function stepSprings(motion: FeetMotion, frame: FeetFrame, dt: number): void {
   motion.lastTiltTarget = target;
   stepDampedSpring(motion.tilt, feet, dt);
   stepDampedSpring(motion.splay, feet, dt);
-  motion.splay.value = clamp(motion.splay.value, -feet.maxSplay, feet.maxSplay);
-  motion.tilt.value = clamp(motion.tilt.value, -feet.maxSplay, feet.maxSplay);
+  motion.splay.value = clampAbs(motion.splay.value, feet.maxSplay);
+  motion.tilt.value = clampAbs(motion.tilt.value, feet.maxSplay);
 }
 
 function stepWallBlend(motion: FeetMotion, frame: FeetFrame, dt: number): void {
@@ -373,7 +373,8 @@ function stepCycle(frame: FeetFrame, i: number): FootPose {
   const phase = player.x / (feet.stride * r) + i * Math.PI;
   const up = Math.max(0, Math.sin(phase));
   return {
-    x: -dir * Math.cos(phase) * feet.stepSwing * r * k,
+    // The phase runs with x, so the swing already points along the run.
+    x: -Math.cos(phase) * feet.stepSwing * r * k,
     y: -up * feet.stepLift * r * k,
     // The lifted foot tips its toe up, toward the run.
     rotation: -dir * up * feet.stepTilt * k,

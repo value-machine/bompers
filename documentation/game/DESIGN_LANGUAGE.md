@@ -160,7 +160,7 @@ Squash and stretch keep area roughly constant (`sx × sy` between 0.94 and 1.0).
 | Idle | slow breathing, ±3 % on y | 1.6 s loop |
 
 - Feet lag the body by 2 frames (about 33 ms) and squash flatter than the body.
-- Feet move on their own (tunables `feel.feet`): running, the lifted foot swings forward in an arc and tips its toe up; in the air the feet trail the horizontal speed and droop while rising, flare while falling, with a springy lag; a landing spreads them, a jump pulls them in. While wall-sliding, and for 120 ms after a wall-jump, both feet turn their soles to the wall, the near foot higher.
+- Feet move on their own (tunables `feel.feet`): running, the lifted foot swings forward in an arc and tips its toe up; in the air the feet trail the horizontal speed and droop while rising, flare while falling, with a springy lag; a landing spreads them, a jump pulls them in. While wall-sliding, and a moment after a wall-jump (`wallJumpHoldSeconds`), both feet turn their soles to the wall, the near foot higher.
 - The helmet sits on its own spring (it wobbles after landings and shots).
 - Rocket fire: the body recoils 4 units away from the aim, tube kicks back 3 units.
 - **Hit:** 3 frames (50 ms) of white body fill, silhouette outline unchanged, 3 px screen shake for 80 ms.
