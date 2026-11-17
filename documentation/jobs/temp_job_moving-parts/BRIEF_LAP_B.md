@@ -15,7 +15,7 @@ In a level with `<g data-motion="slide 0,-160">`, the part follows `motionPose(t
   - A new sim step `stepMovers`, before players: pose from round time, then carry riders (players, crates) by the contact point's displacement, rotation included, then push overlapping bodies out along the part's motion (D12).
   - Rockets explode on parts with no crater, and homing steering ignores them (D15).
   - The spawn picker skips spawns a part covers.
-  - Render: same slab plus the one-rule outline from the part's own field (D16), and the 2A cue: a faint dashed track with end ticks, or a pivot rivet (B1).
+  - Render: same slab plus the one-rule outline from the part's own field (D16). There is no motion cue (2B, B1).
   - A body that cannot be pushed free is left overlapping for B-2. It is logged in dev and never crashes.
 - **B-2 (next lap, S/M): crush and part sounds.**
   - Crush detection (squeezed between a part and static terrain or another part) leads to elimination, with credit to the last hitter (D13).
