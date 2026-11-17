@@ -6,8 +6,10 @@ import {
   type LevelCollectible,
   type LevelDefinition,
   type LevelDrop,
+  type LevelMover,
   type TerrainPiece,
 } from "@/features/level/api/levelApi";
+import { checkMoverSweeps, collectMovers } from "@/features/level-file/services/levelFileMotion";
 import {
   checkPointBehavior,
   collectRoleElements,
@@ -56,12 +58,20 @@ export const RECOMMENDED_SPAWNS = 4;
 const ofRole = <R extends RoleElement["role"]>(items: readonly RoleElement[], ...roles: R[]) =>
   items.filter((item): item is RoleElement & { role: R } => roles.includes(item.role as R));
 
-/** Terrain pieces in document order (the raster resolves overlaps, LEVEL_FORMAT § 4). */
-function readTerrain(items: readonly RoleElement[], log: LevelIssueLog): TerrainPiece[] {
-  return ofRole(items, "terrain").flatMap((item) => {
+/** Terrain pieces in document order (the raster resolves overlaps, LEVEL_FORMAT § 4), with the element of each. */
+function readTerrain(
+  items: readonly RoleElement[],
+  log: LevelIssueLog
+): { pieces: TerrainPiece[]; els: Element[] } {
+  const pieces: TerrainPiece[] = [];
+  const els: Element[] = [];
+  for (const item of ofRole(items, "terrain")) {
     const shape = readShape(item, log);
-    return shape ? [{ shape, ...readTerrainRefs(item, log) }] : [];
-  });
+    if (!shape) continue;
+    pieces.push({ shape, ...readTerrainRefs(item, log) });
+    els.push(item.el);
+  }
+  return { pieces, els };
 }
 
 /** E4: exactly one bounds rect, inside the world. */
@@ -155,16 +165,50 @@ const readCollectibles = (items: readonly RoleElement[], ctx: PointContext): Lev
 
 type LevelContent = Pick<
   LevelDefinition,
-  "terrain" | "spawns" | "drops" | "collectibles" | "bounds"
+  "terrain" | "spawns" | "drops" | "collectibles" | "bounds" | "movers"
 >;
 
-function readContent(
-  root: Element,
-  world: { w: number; h: number },
-  log: LevelIssueLog
-): LevelContent | null {
+/** Engine note while moving parts are import-only (moving-parts lap A). */
+export const MOVERS_STATIC_NOTE =
+  "Moving parts stand still at their drawn place in this version of the game.";
+
+interface ContentArgs {
+  root: Element;
+  world: { w: number; h: number };
+  cellSize: number;
+  log: LevelIssueLog;
+}
+
+/** Moving parts (W12–W14) once terrain, spawns and bounds are known. */
+function readMovers(
+  args: ContentArgs,
+  content: {
+    items: readonly RoleElement[];
+    terrain: ReturnType<typeof readTerrain>;
+    spawns: Vec2[];
+    bounds: Rect;
+  }
+): LevelMover[] {
+  const { root, cellSize, log } = args;
+  const { items, terrain, spawns, bounds } = content;
+  const movers = collectMovers({
+    root,
+    items,
+    terrain: terrain.pieces,
+    terrainEls: terrain.els,
+    cellSize,
+    log,
+  });
+  checkMoverSweeps({ movers, terrain: terrain.pieces, spawns, bounds, log });
+  if (movers.length > 0) log.warnings.push({ message: MOVERS_STATIC_NOTE });
+  return movers.map(({ mover }) => mover);
+}
+
+function readContent(args: ContentArgs): LevelContent | null {
+  const { root, world, log } = args;
   const items = collectRoleElements(root, log);
-  const terrain = readTerrain(items, log);
+  const terrainRead = readTerrain(items, log);
+  const terrain = terrainRead.pieces;
   if (terrain.length === 0) {
     addError(log, "E6", "No valid terrain: add at least one platform or destructible shape.");
   }
@@ -173,7 +217,9 @@ function readContent(
   const spawns = readSpawns(items, ctx);
   const drops = readDrops(items, ctx);
   const collectibles = readCollectibles(items, ctx);
-  return bounds ? { terrain, spawns, drops, collectibles, bounds } : null;
+  if (!bounds) return null;
+  const movers = readMovers(args, { items, terrain: terrainRead, spawns, bounds });
+  return { terrain, spawns, drops, collectibles, bounds, ...(movers.length > 0 && { movers }) };
 }
 
 const rejected = (log: LevelIssueLog): LevelImportResult => ({
@@ -197,7 +243,7 @@ export function parseLevelFile(
   if (!worldSize) return rejected(log);
   const meta = readLevelMeta(root, log);
   const settings = readLevelSettings(root, log);
-  const content = readContent(root, worldSize, log);
+  const content = readContent({ root, world: worldSize, cellSize: settings.cellSize, log });
   if (!content || log.errors.length > 0) return rejected(log);
   const formatVersion = options.toVersion ?? LEVEL_FORMAT_VERSION;
   const normalized = normalizeLevelDefinition({

@@ -43,6 +43,11 @@
         <circle id="top-knob" data-role="terrain" data-material="earth" data-color="rose" data-effect="dust-burst" data-sound="crumble" cx="800" cy="300" r="28" fill="#c95a86" />
       </g>
 
+      <!-- Moving part: drawn where it rests; rises 240 and back every 6 s (LEVEL_FORMAT § 11) -->
+      <g id="left-lift" data-motion="slide 0,-240 6s">
+        <rect data-role="terrain" data-material="stone" data-color="slate" data-label="Lift" x="168" y="640" width="128" height="24" fill="#4f6178" />
+      </g>
+
       <g id="spawns">
         <circle data-role="spawn" cx="480" cy="616" r="14" fill="#3f8f5f" />
         <circle data-role="spawn" cx="1120" cy="616" r="14" fill="#3f8f5f" />

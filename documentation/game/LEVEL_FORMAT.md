@@ -72,7 +72,7 @@ Recommended: make terrain edges multiples of the cell size, so the picture and t
 | `<rect>` | terrain, `bounds` | `x`, `y`, `width`, `height`. `rx`/`ry` are visual only (ignored). |
 | `<polygon>` | terrain | `points="x,y x,y …"`, ≥ 3 points; implicitly closed. |
 | `<circle>` | terrain, points | `cx`, `cy`, `r`. |
-| `<g>` | grouping only | No `transform`, no `data-role`. Role attributes are never inherited from a group. |
+| `<g>` | grouping; with `data-motion`, a moving part (§ 11) | No `transform`, no `data-role`. Role attributes are never inherited from a group. |
 | `<title>`, `<desc>`, `<text>`, comments, `<defs>`, `<style>` | presentation | Ignored by the game. |
 
 **Not allowed on role elements, and why:**
@@ -192,6 +192,10 @@ The importer produces **errors** (level rejected, readable message naming the el
 | W10 | Unknown `data-*` attribute on a role element. | Ignored (forward compatibility). |
 | W11 | A known item ID on the wrong point role: a `collectible` item in a drop's `data-items`, or a `drop` item in a collectible's `data-item` (the item's `use` in the catalog). | As W4: left out of the drop (default drop items when none remain); default collectible. |
 
+| W12 | A `data-motion` that does not parse, a group without terrain, or more than 16 moving parts; also notes a clamped period or an offset off the cell grid (§ 11). | The group stays still (its shapes stay static terrain); clamped / off-grid values are used as noted. |
+| W13 | Inside a moving group: a non-terrain role, a nested `data-motion`, or a breakable material. | The point stays still; the inner motion is ignored; the material acts unbreakable. |
+| W14 | Over one cycle the part leaves `bounds`, runs into static terrain, comes within half a player of a spawn point, or moves faster than a player runs (sampled 48 times per cycle; the first time is named). | Level loads as written. |
+
 The preview kit runs a subset of these checks in the browser and lists them under the legend.
 
 ## 8. Versioning and migration
@@ -222,3 +226,34 @@ Agent-written levels link the kit with absolute URLs on `https://bompers.tom-fab
 ## 10. Mapping to the game
 
 The importer (`src/features/level-file/`, `parseLevelFile`) produces `LevelDefinition`, owned by the engine. Expected mapping: root settings → level settings; viewBox + cell size → terrain grid dimensions; terrain shapes → per-cell material ID, colour ID, breakable flag, friction and surface pattern; points → typed point lists; bounds → a world rectangle; every reference → a resolved catalog ID plus collected warnings.
+
+## 11. Moving parts
+
+A `<g data-motion="…">` turns the `terrain` shapes inside it into **one moving part** (additive, no version bump, § 8; an older game keeps them still). Decisions: moving-parts D1–D16 (lap ledger, folded into the `level` and `level-file` READMEs).
+
+- **Rest pose:** draw the shapes where the part rests, in ordinary absolute coordinates. The motion is relative to that place, so the part lines up with the rest of the level the way static terrain does. Never use `transform`; W3 still applies.
+- **Grammar:** `<kind> <args> [Ns] [@phase] [pivot] [ccw]`. The kind comes first; the optional tokens follow in any order.
+
+| Kind | Args | Moves |
+|---|---|---|
+| `slide` | one `dx,dy` | Back and forth between rest and rest + `dx,dy`, easing at both ends (`(1 − cos 2πu) / 2`). |
+| `path` | one or more `dx,dy` | Closed loop rest → each offset → rest at constant speed. |
+| `spin` | — | One full turn per period about the pivot; clockwise on screen, `ccw` reverses. |
+| `swing` | one angle in degrees, 0 < a ≤ 180 | Pendulum `a · sin 2πu` about the pivot, starting at rest; `ccw` starts the other way. |
+
+- **Timing:** `Ns` = seconds per cycle (default `4s`, clamped to 1–30). `@f` starts `f` of a cycle ahead. Parts with the same period and phase move in lockstep; `@0.5` moves opposite. The pose is a pure function of round time (`motionPose` in `src/shared/utils/levelMotion.ts`), so a restart replays it exactly.
+- **Pivot:** a named point of the bounding box of the part's shapes: `center` (default for `spin`), `top` (default for `swing`), `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right`. Shapes on the grid give pivots on the grid, so no arithmetic is needed.
+- **What moves:** terrain only. A spawn, drop or collectible inside the group stays still (W13). A nested `data-motion` is ignored (W13). Moving parts never break and never burn: a breakable material acts unbreakable (W13) but keeps its colour.
+- **Limits:** at most 16 parts. Offsets go on the cell grid. Over a whole cycle the part stays inside `bounds`, never overlaps static terrain, keeps half a player (14) from spawn centres, and its fastest point stays at or below a player's run speed (W14). The importer checks 48 poses per cycle, with edge points 8 units apart, and lets touching (up to 2 units deep) pass. A clean import is therefore strong evidence, not proof: leave a margin around thin posts.
+- **Engine mapping:** `LevelDefinition.movers[]` = `{ motion, pivot, terrainIndices }`. The pieces stay in `terrain` at their rest pose. Until the runtime lap (moving parts lap B) the arena rasterises them as static terrain, and import adds the note "Moving parts stand still at their drawn place in this version of the game."
+- **Runtime contract (lap B):** each part is a kinematic body with its own local distance field, queried in the part's frame and never baked into the static field. Riders (players, crates) are carried by the contact point's velocity, rotation included, and overlaps push bodies out. Rockets explode on parts without making a crater, and homing ignores them. The look is the same slab plus a one-rule outline from the part's own field. A player squeezed between a part and static terrain or another part is eliminated, with credit to the last hitter (owner, D13).
+
+```html
+<g data-motion="slide 0,-160">
+  <rect data-role="terrain" x="640" y="560" width="160" height="32" fill="#5a3f7a" />
+</g>
+<g data-motion="swing 40 3s @0.5">
+  <rect data-role="terrain" x="1000" y="240" width="16" height="200" fill="#5a3f7a" />
+  <rect data-role="terrain" x="960" y="440" width="96" height="24" fill="#5a3f7a" />
+</g>
+```

@@ -60,4 +60,19 @@ describe("buildLevelPrompt", () => {
     expect(result.ok).toBe(true);
     expect(result.warnings).toEqual([]);
   });
+
+  it("should teach moving parts with an example that imports with no motion warnings", () => {
+    const [snippet] = [...prompt.matchAll(/```svg\n([\s\S]*?)```/g)].map((m) => m[1] ?? "");
+    expect(prompt).toContain("### Moving parts");
+    const file = `<svg viewBox="0 0 1600 1000" data-level-format="${LEVEL_FORMAT_VERSION}" data-title="M">
+      <rect data-role="bounds" x="0" y="0" width="1600" height="1000" />
+      <rect data-role="terrain" x="0" y="900" width="1600" height="64" />
+      ${[100, 200, 300, 400].map((x) => `<circle data-role="spawn" cx="${x}" cy="876" r="14" />`).join("")}
+      <circle data-role="drop" cx="200" cy="80" r="12" />
+      ${snippet ?? ""}</svg>`;
+    const result = parseLevelFile(file);
+    if (!result.ok) throw new Error(JSON.stringify(result.errors));
+    expect(result.level.movers).toHaveLength(2);
+    expect(result.warnings.filter((w) => w.code !== undefined)).toEqual([]);
+  });
 });
