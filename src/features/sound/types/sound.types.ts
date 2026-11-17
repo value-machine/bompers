@@ -21,7 +21,10 @@ export interface SoundPlayerSnapshot {
   landCount: number;
   /** Downward speed at the last landing, units / s. */
   lastLandingSpeed: number;
-  tumbleBounceCount: number;
+  /** Roll terrain bounces, dash-roll starts and hit rolls that came to rest (monotonic). */
+  rollBounceCount: number;
+  dashRollCount: number;
+  rollRestCount: number;
   /** Crouch starts (monotonic). */
   crouchCount: number;
   /** False while eliminated and waiting to respawn. */

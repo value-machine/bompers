@@ -140,7 +140,7 @@ describe("helmet wobble", () => {
 
   it("should sink, bounce back past rest and settle when a landing kicks it", () => {
     const wobble = createHelmetWobble();
-    kickHelmetForSquash(wobble, { kind: "land", amount: 1, vx: 0, tumbling: false }, helmet);
+    kickHelmetForSquash(wobble, { kind: "land", amount: 1, vx: 0, rolling: false }, helmet);
     const { drops, tilts } = settle(wobble, 1200);
     expect(Math.max(...drops)).toBeGreaterThan(0);
     expect(Math.min(...drops)).toBeLessThan(0);

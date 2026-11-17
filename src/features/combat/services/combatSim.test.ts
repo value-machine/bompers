@@ -239,28 +239,31 @@ describe("combat — blast hurt reaction", () => {
       ],
     });
 
-  it("should send a victim tumbling off the floor when the blast is close", () => {
+  it("should send a victim rolling off the floor and to rest when the blast is close", () => {
     const world = twoPlayers();
     const victim = world.players[1]!;
     explode(world.ctx(), p0Blast({ x: 284, y: blastY + 6 }));
-    expect(victim.tumbleSeconds).toBeGreaterThan(0);
-    world.step([], 240);
-    expect(victim.tumbleBounceCount).toBeGreaterThan(0);
-    expect(victim.tumbleSeconds).toBe(0);
+    expect(victim.rollSource).toBe("hit");
+    world.step([], 900);
+    expect(victim.rollBounceCount).toBeGreaterThan(0);
+    expect(victim.rollSource).toBeNull();
   });
 
-  it("should only push the victim when the blast is at the edge of its range", () => {
-    const world = twoPlayers();
-    explode(world.ctx(), p0Blast({ x: 240, y: blastY }));
-    expect(world.players[1]!.vx).toBeGreaterThan(0);
-    expect(world.players[1]!.tumbleSeconds).toBe(0);
+  it("should roll the victim shorter when the blast is at the edge of its range", () => {
+    const close = twoPlayers();
+    explode(close.ctx(), p0Blast({ x: 284, y: blastY + 6 }));
+    const edge = twoPlayers();
+    explode(edge.ctx(), p0Blast({ x: 240, y: blastY }));
+    expect(edge.players[1]!.vx).toBeGreaterThan(0);
+    expect(edge.players[1]!.rollLockSeconds).toBeGreaterThan(0);
+    expect(edge.players[1]!.rollLockSeconds).toBeLessThan(close.players[1]!.rollLockSeconds);
   });
 
-  it("should never send the shooter tumbling when they stand in their own blast", () => {
+  it("should never send the shooter rolling when they stand in their own blast", () => {
     const world = twoPlayers();
     explode(world.ctx(), p0Blast({ x: 100, y: FLOOR_Y }));
     expect(world.players[0]!.vy).toBeLessThan(0);
-    expect(world.players[0]!.tumbleSeconds).toBe(0);
+    expect(world.players[0]!.rollSource).toBeNull();
   });
 });
 

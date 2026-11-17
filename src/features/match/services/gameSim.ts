@@ -330,6 +330,7 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
     players,
     combat: state.combat,
     contacts,
+    inputs,
     tunables,
     timeSeconds,
     dt,

@@ -4,7 +4,7 @@ import type { CombatEvent } from "@/features/combat/api/combatApi";
 
 /**
  * Game-feel cues (DESIGN_LANGUAGE § 6): reads the new combat events (by `seq`) and the players'
- * tumble-bounce counters once per rendered frame and turns them into render-only feedback —
+ * roll-bounce counters once per rendered frame and turns them into render-only feedback —
  * camera-shake kicks, per-player hit flashes (with the side the hit came from, for the helmet
  * wobble), and a short hit-stop after hard hits. Wall-clock based, like the blob squash; it never
  * writes game state. Per frame it mutates its own state and allocates only when a hit is new.
@@ -16,8 +16,8 @@ export interface FeelBody {
   id: string;
   slot: number;
   x: number;
-  tumbleBounceCount: number;
-  lastTumbleBounceSpeed: number;
+  rollBounceCount: number;
+  lastRollBounceSpeed: number;
 }
 
 export interface PlayerHitFeel {
@@ -25,7 +25,7 @@ export interface PlayerHitFeel {
   startMs: number;
   /** −1 / 1: the hit pushed toward −x / +x (helmet tilts that way); 0 = straight on. */
   dirX: number;
-  /** Back hit (more damage, tumble): stronger flash and shake, hit-stop. */
+  /** Back hit (more damage, a longer roll): stronger flash and shake, hit-stop. */
   hard: boolean;
   /** Flash alpha to draw this frame (0 = none). */
   flash: number;
@@ -116,15 +116,15 @@ function noteEvents(state: FeelState, frame: FeelFrame): void {
   }
 }
 
-function noteTumbleBounces(state: FeelState, frame: FeelFrame): void {
-  const { tumbleBounce } = frame.feel.shake;
+function noteRollBounces(state: FeelState, frame: FeelFrame): void {
+  const { rollBounce } = frame.feel.shake;
   for (const body of frame.bodies) {
     const seen = state.seenBounces.get(body.id);
-    state.seenBounces.set(body.id, body.tumbleBounceCount);
-    if (seen === undefined || seen === body.tumbleBounceCount) continue;
+    state.seenBounces.set(body.id, body.rollBounceCount);
+    if (seen === undefined || seen === body.rollBounceCount) continue;
     kickCameraShake(frame.shake, {
-      px: tumbleBounce.px * Math.min(1, body.lastTumbleBounceSpeed / tumbleBounce.fullSpeed),
-      seconds: tumbleBounce.seconds,
+      px: rollBounce.px * Math.min(1, body.lastRollBounceSpeed / rollBounce.fullSpeed),
+      seconds: rollBounce.seconds,
       nowMs: frame.nowMs,
     });
   }
@@ -133,7 +133,7 @@ function noteTumbleBounces(state: FeelState, frame: FeelFrame): void {
 /** Reads this frame's new events into shake kicks, hits and hit-stop; updates flash alphas. */
 export function readFeelCues(state: FeelState, frame: FeelFrame): void {
   noteEvents(state, frame);
-  noteTumbleBounces(state, frame);
+  noteRollBounces(state, frame);
   for (const hit of state.hits.values()) {
     hit.flash = hitFlashAmount(
       frame.nowMs - hit.startMs,

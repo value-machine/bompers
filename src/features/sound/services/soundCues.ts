@@ -20,7 +20,7 @@ export interface SoundCursor {
 
 /**
  * Turns one frame of the match into sound cues: combat events by `seq` (combat D3), the
- * players' monotonic event counters (jump, land, tumble bounce), dive phase changes, respawns
+ * players' monotonic event counters (jump, land, roll bounce, roll start / rest), dive phase changes, respawns
  * and the round phase. Pure: the caller keeps the returned cursor for the next frame, and a
  * fresh round starts from a `null` cursor (which cues the round start).
  */
@@ -72,7 +72,11 @@ const PLAYER_RULES: readonly [
     (p, n) => n.landCount > p.landCount,
     (n) => intensityGain(n.lastLandingSpeed, SOUND_MIX.landingFullSpeed),
   ],
-  ["tumble-bounce", (p, n) => n.tumbleBounceCount > p.tumbleBounceCount, () => 1],
+  // The roll bounce keeps the `tumble-bounce` file (shared-roll D8).
+  ["tumble-bounce", (p, n) => n.rollBounceCount > p.rollBounceCount, () => 1],
+  // Rolling on from a dash, and a roll coming to rest: a soft thud, like a crouch.
+  ["land", (p, n) => n.dashRollCount > p.dashRollCount, () => SOUND_MIX.crouchGain],
+  ["land", (p, n) => n.rollRestCount > p.rollRestCount, () => SOUND_MIX.crouchGain],
   ["dive-launch", (p, n) => n.divePhase === "travel" && p.divePhase !== "travel", () => 1],
   ["respawn", (p, n) => n.inPlay && !p.inPlay, () => 1],
   // A headbutt reset reuses the pickup sound, pitched by the collector (headbutt-reset D5).

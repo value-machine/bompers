@@ -41,8 +41,8 @@ const body = (over: Partial<FeelBody> = {}): FeelBody => ({
   id: "p2",
   slot: 1,
   x: 100,
-  tumbleBounceCount: 0,
-  lastTumbleBounceSpeed: 0,
+  rollBounceCount: 0,
+  lastRollBounceSpeed: 0,
   ...over,
 });
 
@@ -114,14 +114,14 @@ describe("readFeelCues", () => {
     expect(liveKicks(f)[0]!.px).toBeCloseTo(FEEL.shake.explosion.px / 2);
   });
 
-  it("should shake on a tumble bounce but not on the first sight of a player", () => {
+  it("should shake on a roll bounce but not on the first sight of a player", () => {
     const state = createFeelState();
-    const f = frame({ bodies: [body({ tumbleBounceCount: 4 })] });
+    const f = frame({ bodies: [body({ rollBounceCount: 4 })] });
     readFeelCues(state, f);
     expect(liveKicks(f)).toHaveLength(0);
-    f.bodies = [body({ tumbleBounceCount: 5, lastTumbleBounceSpeed: 450 })];
+    f.bodies = [body({ rollBounceCount: 5, lastRollBounceSpeed: 450 })];
     readFeelCues(state, f);
-    expect(liveKicks(f)[0]!.px).toBeCloseTo(FEEL.shake.tumbleBounce.px / 2);
+    expect(liveKicks(f)[0]!.px).toBeCloseTo(FEEL.shake.rollBounce.px / 2);
   });
 
   it("should end the flash when its time is up", () => {

@@ -15,7 +15,9 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   wallJumpCount: 0,
   landCount: 0,
   lastLandingSpeed: 0,
-  tumbleBounceCount: 0,
+  rollBounceCount: 0,
+  dashRollCount: 0,
+  rollRestCount: 0,
   crouchCount: 0,
   inPlay: true,
   divePhase: "idle",
@@ -71,9 +73,16 @@ describe("readSoundCues", () => {
     expect(hard[0]?.gain).toBe(1);
   });
 
-  it("should cue a tumble bounce when the tumble bounce counter rises", () => {
-    const cues = cuesAfter(snapshot({ players: [player(0, { tumbleBounceCount: 2 }), player(1)] }));
+  it("should cue a roll bounce when the roll bounce counter rises", () => {
+    const cues = cuesAfter(snapshot({ players: [player(0, { rollBounceCount: 2 }), player(1)] }));
     expect(idsOf(cues)).toEqual(["tumble-bounce"]);
+  });
+
+  it("should cue a soft thud when a dash roll starts or a roll comes to rest", () => {
+    for (const patch of [{ dashRollCount: 1 }, { rollRestCount: 1 }]) {
+      const cues = cuesAfter(snapshot({ players: [player(0, patch), player(1)] }));
+      expect(cues).toEqual([{ soundId: "land", slot: 0, gain: SOUND_MIX.crouchGain }]);
+    }
   });
 
   it("should cue a dive launch when a dive enters travel", () => {

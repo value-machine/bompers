@@ -225,7 +225,7 @@ describe("gameSim — dive headbutt", () => {
     }
   };
 
-  it("should score the kill and give the victim a fresh dive and no tumble when a dive takes the last chunk", () => {
+  it("should score the kill and give the victim a fresh dive and no roll when a dive takes the last chunk", () => {
     const state = closeSpawns();
     const victim = state.players[1]!;
     state.combat.fighters.get(victim.id)!.health = 1;
@@ -235,7 +235,7 @@ describe("gameSim — dive headbutt", () => {
     expect(state.rules.respawnAt.has(victim.id)).toBe(true);
     stepFor(state, respawnDelay + 0.05);
     expect(state.rules.respawnAt.has(victim.id)).toBe(false);
-    expect(victim.tumbleSeconds).toBe(0);
+    expect(victim.rollSource).toBeNull();
     expect(state.dive.motions[victim.id]).toMatchObject({ phase: "idle", stagger: 0, cooldown: 0 });
     expect(state.combat.fighters.get(victim.id)!.invulnerableUntil).toBeGreaterThan(
       state.timeSeconds

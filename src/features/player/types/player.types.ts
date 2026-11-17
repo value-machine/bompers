@@ -55,15 +55,23 @@ export interface PlayerState {
   terrainHitSpeedX: number;
   terrainHitSpeedY: number;
   /**
-   * Tumble (hurt reaction to a hard hit, `services/tumble.ts`): seconds left (0 = not
-   * tumbling) and terrain bounces left. The count and speed are render events (squash).
+   * Roll (`services/roll.ts`, shared-roll D2): what started it (`null` = not rolling), seconds
+   * of lock left (no jump-out, weak steering) and seconds rolled. `rollAngle` is the body's spin
+   * (radians, eases back upright after a roll) and `rollSpin` its rate. Counters and the bounce
+   * speed are render events (squash, shake, sound): dash-roll starts, hit rolls that came to
+   * rest, terrain bounces.
    */
-  tumbleSeconds: number;
-  tumbleBouncesLeft: number;
-  tumbleBounceCount: number;
-  lastTumbleBounceSpeed: number;
+  rollSource: RollSource | null;
+  rollLockSeconds: number;
+  rollSeconds: number;
+  rollAngle: number;
+  rollSpin: number;
+  dashRollCount: number;
+  rollRestCount: number;
+  rollBounceCount: number;
+  lastRollBounceSpeed: number;
   /**
-   * Defensive crouch (grounded + crouch held, not tumbling or ability-steered): the blob stands
+   * Defensive crouch (grounded + crouch held, not rolling or ability-steered): the blob stands
    * still and combat halves the damage it takes. `crouchCount` counts crouch starts (render).
    */
   crouching: boolean;
@@ -82,3 +90,6 @@ export interface PlayerState {
   /** Slope under the feet while grounded, radians (+ = rising to the right); 0 in the air. */
   groundAngle: number;
 }
+
+/** Why a blob rolls: knocked by a hit (any attack) or rolling on from a held dash. */
+export type RollSource = "hit" | "dash";
