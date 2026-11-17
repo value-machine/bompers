@@ -176,6 +176,43 @@ describe("fireSim — burn-out (blast-power D6)", () => {
     expect(reports.length).toBeLessThanOrEqual(Math.ceil(window / F.burnOutInterval) + 1);
   });
 
+  it("should place a batch's debris spots on burnt samples when two separate pieces burn out together", () => {
+    // Two pieces 120 apart, lit at the same moment: the middle of the batch's box is open air.
+    const pieces = [
+      [40, 100, 40, 40],
+      [200, 100, 40, 40],
+    ] as const;
+    const b = burn(pieces.map((piece) => rect(piece, "cardboard")));
+    b.light(60, 120);
+    b.light(220, 120);
+    const spots: { x: number; y: number }[] = [];
+    for (let t = 0; t < F.burnSeconds + spreadFor(60); t += dt) {
+      b.time += dt;
+      const batch = stepFire(b.fire, b.grid, { now: b.time, tunables: DEFAULT_GAME_TUNABLES });
+      if (batch) spots.push(...batch.spots);
+    }
+    expect(spots.length).toBeGreaterThan(0);
+    const inPiece = (spot: { x: number; y: number }) =>
+      pieces.some(([x, y, w, h]) => spot.x > x && spot.x < x + w && spot.y > y && spot.y < y + h);
+    expect(spots.every(inPiece)).toBe(true);
+    expect(spots.some((spot) => spot.x < 80)).toBe(true);
+    expect(spots.some((spot) => spot.x > 200)).toBe(true);
+  });
+
+  it("should give a batch at most three debris spots and a small one just one when samples burn out", () => {
+    const b = burn([rect([100, 100, 120, 60], "cardboard")]);
+    b.light(110, 110);
+    const counts: number[] = [];
+    for (let t = 0; t < F.burnSeconds + spreadFor(40); t += dt) {
+      b.time += dt;
+      const batch = stepFire(b.fire, b.grid, { now: b.time, tunables: DEFAULT_GAME_TUNABLES });
+      if (batch) counts.push(batch.spots.length);
+    }
+    expect(counts[0]).toBe(1);
+    expect(Math.max(...counts)).toBeLessThanOrEqual(3);
+    expect(Math.min(...counts)).toBeGreaterThanOrEqual(1);
+  });
+
   it("should keep burning around a crater when a blast removes burning samples", () => {
     const b = burn([rect([100, 100, 120, 60], "cardboard")]);
     b.light(110, 110);

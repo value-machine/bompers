@@ -241,20 +241,25 @@ function stepHeadbuttResets(state: GameState, dt: number): void {
   }
 }
 
-/** Step 3c: fire spreads and burns out; a burnt batch is reported like a crater (one event per look). */
+/**
+ * Step 3c: fire spreads and burns out. A burnt batch throws debris from a few places in the
+ * batch itself (a fire burns out along a front, so one centre would sit where nothing burns),
+ * and sounds once however many places it shows.
+ */
 function stepFireOnTerrain(state: GameState): void {
-  const { terrain } = state.arena;
-  const cleared = stepFire(state.fire, terrain, {
+  const batch = stepFire(state.fire, state.arena.terrain, {
     now: state.timeSeconds,
     tunables: state.tunables,
   });
-  if (!cleared) return;
-  const size = terrain.cellSize;
-  const at = {
-    x: ((cleared.box.minX + cleared.box.maxX + 1) / 2) * size,
-    y: ((cleared.box.minY + cleared.box.maxY + 1) / 2) * size,
-  };
-  reportTerrainDestroyed(state.combat, { cleared, at, timeSeconds: state.timeSeconds });
+  if (!batch) return;
+  batch.spots.forEach((at, i) => {
+    reportTerrainDestroyed(state.combat, {
+      cleared: batch,
+      at,
+      timeSeconds: state.timeSeconds,
+      silent: i > 0,
+    });
+  });
 }
 
 /**
