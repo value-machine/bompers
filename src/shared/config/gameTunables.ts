@@ -118,13 +118,14 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     staggerSeconds: 0.3,
     staggerSteerScale: 0.15,
   },
-  // Fire on the field (blast-power D6, owner starting values): 40 units / s, burn 1.5 s.
+  // Fire on the field: 13 units / s, burn 7.5 s (owner tuning, fire-clusters D5: "way slower";
+  // blast-power D6 started at 40 units / s and 1.5 s). The burning band is speed × burn ≈ 98 units deep.
   // Burn-outs are applied in batches every 0.25 s (at most that late), one effect / sound per batch.
   // A blob on fire burns 2 s: a chunk at 1 s and a second at 2 s unless crouching then (owner
   // fire-burn D10); 0.5 s grace after going out.
   fire: {
-    spreadSpeed: 40,
-    burnSeconds: 1.5,
+    spreadSpeed: 13,
+    burnSeconds: 7.5,
     burnOutInterval: 0.25,
     blob: { firstTickSeconds: 1, burnSeconds: 2, graceSeconds: 0.5, momentSeconds: 0.6 },
   },

@@ -39,6 +39,7 @@ Tests: `services/fireSim.test.ts` (axis arrival = distance / speed, roundness wi
 
 ## Decisions
 
+- Fire pace (owner, fire-clusters D5, 2026-11-17: "spread way slower and destroy waaaay slower"): `fire.spreadSpeed` 13 units / s (was 40) and `fire.burnSeconds` 7.5 s (was 1.5), starting values the owner tunes from. The burning band is speed × burn ≈ 98 units deep (was 60). Blob burn, the torch and the burn-out batch beat are unchanged; the sim tests take their run times from the tunables.
 - Fire clusters (owner, fire-clusters D1, 2026-11-17): "Big flames" from the options page (over a joined crown and a bonfire peak), plus the owner's additions: taller toward the middle of the burn and a bit of randomness in size, as long as it costs no frames (it adds no shapes). The merged outline is body slabs plus top-edge flames under one ink pass, not a per-frame contour of a heat field, which would re-contour and re-tessellate the whole fire every frame (D2). The fire body replaces the char darkening (D3).
 - Fire look (owner, fire-visuals D1–D3, 2026-11-17): "Sticker flames" over gumdrop puffs, paper burn and lava bubbles; the spray billows and sheds flames upward on a rolling-cloud head with a half-cone neck, and the hit area stays straight and unchanged. The burning-blob look below is untouched (D4).
 - Lap cut (owner, fire-spread D1): b1 = torch + fire on terrain; b2 = blobs catching fire (2 s, then −1 chunk; ice or a dive puts it out; a bump passes it on), with the burn state kept in this feature.
