@@ -1,22 +1,7 @@
 [
   {
-    "title": "Fire and flamethrower visuals",
-    "description": "Owner 2026-11-17: 'Fire visuals looked shit on my last test. I didn't see examples yet of the flamethrower visuals. Need a full lap for those.' Redesign the look of terrain fire (flames on burning cardboard, spread front, burn-out, scorch, smoke), the torch/flamethrower spray and nozzle, and blobs on fire (#55 look kept unless the owner says otherwise). Options page first (loop-refine step 6), owner picks, then build. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; look: documentation/game/DESIGN_LANGUAGE.md; juice: documentation/game/GAME_JUICE.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Moving parts in levels",
     "description": "Owner request 2026-11-17 (full lap): level parts can rotate and move, and the level builder (format, importer, level kit preview, Copy AI prompt) supports them. Must be easy for an agent that only has the level-builder prompt to author correctly and align shapes without seeing them (e.g. anchors, pivots, relative/snap coordinates, named groups). Keep the prompt and format token-light. Cover second-order effects: players/crates/pickups riding and being pushed or crushed by moving parts, collision against moving geometry vs the static distance field, destructibility and fire on moving parts, camera bounds, spawn safety, homing/rockets, determinism, validation warnings, performance. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; level format: documentation/game/LEVEL_FORMAT.md. ",
-    "status": "to-do"
-  },
-  {
-    "title": "Shared roll: dash-hold roll and hit tumble",
-    "description": "Owner request 2026-11-16: one shared rolling system for all player rolling. (1) Holding the dash button after a dash makes the blob keep rolling. (2) Being hit or launched by a blast uses the same roll, with or without damage. (3) Consolidate: find every existing system that rolls, tumbles or bounces the player (tumble state, dive bonk, body collisions, blast push, landing squash) and fold them into this one roll, removing the duplicates. (4) Real rolling physics: in roll mode the blob actually rolls — on a slope it rolls down the hill, with ground contact, friction and spin. (5) Roll intensity follows the blast power (see Material responses: 0 = barely moves, small = a little shove, strong = flying), so weapons are tuned by blast power. Today a separate tumble state starts only above a fixed impulse threshold (gameTunables player.tumble.minImpulse 800) — replace the threshold with the continuous scale. Waits on the blast-power lap of Material responses and the collision-on-field lap (a3) of Smooth destruction and the headbutt 16-ways PR (#37, same dive code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
-    "title": "Elimination: ragdoll and fall apart",
-    "description": "Owner request 2026-11-16: when a blob is lethally hit it ragdolls, or falls apart into pieces that ragdoll; the pieces then blink until they disappear, and the player respawns. Design first: an artifact with live examples of the options before the owner picks. Fills the game-juice gap 'elimination has sound but no visual'. Relates to the Shared roll lap (ragdoll/tumble state) and the loose-parts idea (falling bodies). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md. ",
     "status": "to-do"
   },
   {
