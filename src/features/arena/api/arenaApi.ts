@@ -6,7 +6,7 @@ import type { LevelDefinition } from "@/features/level/api/levelApi";
 import type { TerrainGrid } from "@/features/arena/types/arena.types";
 import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 
-export type { TerrainCellSlot, TerrainGrid } from "@/features/arena/types/arena.types";
+export type { MoverBody, TerrainCellSlot, TerrainGrid } from "@/features/arena/types/arena.types";
 export { EMPTY_CELL } from "@/features/arena/types/arena.types";
 export {
   burnOut,
@@ -18,6 +18,9 @@ export {
   type Crater,
   groundFrictionBelow,
   isSolidAt,
+  moverAt,
+  moverDistanceAt,
+  moversDistanceAt,
   rectHitsSolid,
   surfaceBelow,
 } from "@/features/arena/services/terrainGrid";

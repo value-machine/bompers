@@ -9,7 +9,6 @@ import {
 } from "@/features/arena/api/arenaApi";
 import { LEVEL_FILE_MIGRATIONS } from "@/features/level-file/services/levelFileMigrations";
 import {
-  MOVERS_STATIC_NOTE,
   parseLevelFile,
   type LevelImportResult,
 } from "@/features/level-file/services/levelFileParser";
@@ -53,8 +52,7 @@ const errorsOf = (result: LevelImportResult): LevelIssue[] => (result.ok ? [] : 
 describe("parseLevelFile — kit files", () => {
   it("should import the kit example with every role and no warnings when the file is the shipped example", () => {
     const { level: def, warnings } = okLevel(parseLevelFile(EXAMPLE));
-    // Only the lap-A note for its lift (moving parts stand still until they move in the game).
-    expect(warnings).toEqual([{ message: MOVERS_STATIC_NOTE }]);
+    expect(warnings).toEqual([]);
     expect(def.movers).toEqual([
       {
         motion: { kind: "slide", offset: { x: 0, y: -240 }, periodS: 6, phase: 0 },

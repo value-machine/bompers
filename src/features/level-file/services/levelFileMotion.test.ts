@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { motionPose } from "@/shared/utils/levelMotion";
 import { parseMotionSpec } from "@/features/level-file/services/levelFileMotion";
 import {
-  MOVERS_STATIC_NOTE,
   parseLevelFile,
   type LevelImportResult,
 } from "@/features/level-file/services/levelFileParser";
@@ -41,7 +40,7 @@ describe("moving parts — import", () => {
       },
     ]);
     expect(def.terrain).toHaveLength(2);
-    expect(warnings).toEqual([{ message: MOVERS_STATIC_NOTE }]);
+    expect(warnings).toEqual([]);
     expect(motionPose(def.movers![0]!.motion, 2)).toMatchObject({ dx: 0, dy: -160 });
   });
 
