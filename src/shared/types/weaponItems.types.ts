@@ -3,4 +3,4 @@
  * collectibles feature drops them and the combat feature arms and fires them; neither imports the
  * other. Runtime check: `isWeaponItemId` in `src/shared/config/weaponItems.ts`.
  */
-export type WeaponItemId = "rocket-launcher" | "homing-launcher";
+export type WeaponItemId = "rocket-launcher" | "homing-launcher" | "torch";

@@ -52,7 +52,11 @@ export const GAME_PALETTE = {
   weaponLooks: {
     "rocket-launcher": { accent: 0x8fd6ff, tube: "capped" },
     "homing-launcher": { accent: 0xb08cff, tube: "twin-pod" },
+    // Flame orange: no player body uses it (players are red, blue, yellow, mint).
+    torch: { accent: 0xff8a1f, tube: "nozzle" },
   } as Readonly<Record<WeaponItemId, WeaponLook>>,
+  /** Fire on terrain and the torch spray (fire-spread b1): outer, mid, core flame colours; scorch. */
+  fire: { outer: 0xff6a1a, mid: 0xffb21a, core: 0xfff1a8, scorch: 0x3a2418 },
   /** Lost health chunk (DESIGN_LANGUAGE § 7). */
   healthLost: 0xe9dfd0,
   /** Point orb: bubblegum star (DESIGN_LANGUAGE § 1 Effects). */

@@ -133,6 +133,9 @@ function combatEventCue(event: CombatEvent, speedOf: (slot: number) => number): 
       return cue("elimination", event.victimSlot);
     case "rocketFired":
       return cue("rocket-fire", event.slot);
+    case "torchStarted":
+      // Placeholder until fire takes exist (fire-spread D8).
+      return cue("rocket-fire", event.slot);
     case "explosion":
       return cue("explosion", null);
     case "pickupCollected":

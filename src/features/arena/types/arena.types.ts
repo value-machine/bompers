@@ -14,6 +14,10 @@ export interface TerrainCellSlot {
   friction: number;
   /** Surface pattern the renderer draws (the material's `surface`). */
   surface: MaterialSurface;
+  /** Fire spreads through it and burns it away (the material's `burns`). */
+  burns: boolean;
+  /** Fuel touching it never catches (the material's `douses`). */
+  douses: boolean;
 }
 
 export const EMPTY_CELL = 0;

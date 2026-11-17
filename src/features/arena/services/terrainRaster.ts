@@ -44,6 +44,8 @@ const UNKNOWN_MATERIAL = {
   toughness: null,
   friction: 1,
   surface: "plain",
+  burns: false,
+  douses: false,
 } as const;
 
 /** What a piece fills: the material's behaviour (catalog) plus the piece's colour. */
@@ -56,6 +58,8 @@ export function pieceCellSlot(piece: TerrainPiece): TerrainCellSlot {
     toughness: entry.toughness,
     friction: entry.friction,
     surface: entry.surface,
+    burns: entry.burns,
+    douses: entry.douses,
   };
 }
 

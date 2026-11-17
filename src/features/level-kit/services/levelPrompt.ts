@@ -217,6 +217,7 @@ function weaponLines({ tunables: t }: PromptContext): string[] {
     ...lines,
     `- Rocket jump (no self-damage): a point-blank blast under a standing player lifts ~\`${round((blastOnly * blastOnly) / (2 * g))}\` units, ~\`${round((withRecoil * withRecoil) / (2 * g))}\` with the shot's recoil.`,
     `- Homing missiles fly \`${t.combat.homing.speed}\` units/s and turn slowly: open spaces make them dodgeable, tight corridors make them deadly.`,
+    `- ${code("torch")}: \`${t.combat.torch.ammo}\` s of flame held on fire, a \`${t.combat.torch.length}\`-unit cone that lights cardboard and lightly pushes players; no blast, no crater. Fire spreads through touching cardboard at \`${t.fire.spreadSpeed}\` units/s, each bit burns \`${t.fire.burnSeconds}\` s and is gone; it never crosses air, flows around stone, stops at earth, and cardboard touching ice never catches. Cardboard bridges and towers become timed hazards with a torch in the drop list.`,
   ];
 }
 

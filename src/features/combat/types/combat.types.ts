@@ -29,6 +29,8 @@ export interface FighterState {
   prevFire: boolean;
   /** Seconds until the next shot is allowed. */
   attackCooldown: number;
+  /** A spray weapon (the torch) sprayed on the previous step (start edge for its sound). */
+  spraying: boolean;
   /** Who hit this player last and when (sim seconds), for elimination credit. */
   lastHitBySlot: number | null;
   lastHitAt: number;
@@ -91,6 +93,13 @@ export type CombatEventBody =
       victimSlot: number;
       byPlayerSlot: number | null;
       cause: EliminationCause;
+    }
+  | {
+      /** A spray weapon started spraying (fire-spread b1): its start cue. */
+      type: "torchStarted";
+      slot: number;
+      x: number;
+      y: number;
     }
   | {
       type: "rocketFired";
