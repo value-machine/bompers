@@ -2,7 +2,7 @@
 
 Task: "Leg animation from wall walk and arced slope walk should transition nicely or be one system" (owner, 2026-11-17) · Lap: temp_job_leg-locomotion · Harness: v0.45.0
 
-Status: **waiting for the owner's pick** on the options page (D1). No game code before the pick (loop-refine step 6).
+Status: the owner picked **B, one surface frame** (D1). Plan (size S): acceptance test "should turn the feet without a snap when a steepening slope becomes a wall" in `blobPose.test.ts`; replace `normalFoot` / `wallFoot` and the wall blend with one sprung angle and `placeFoot`; `feel.feet.surface` replaces the five wall tunables; fold D1 into the README and DESIGN_LANGUAGE § 6. Option C is not built (D4).
 
 ## Problem
 

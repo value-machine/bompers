@@ -301,10 +301,12 @@ export function stepHelmetWobble(
 
 /**
  * Render-only foot motion (DESIGN_LANGUAGE § 6). Each foot gets an offset and a rotation from
- * sim state: a stepping arc with toe tilt while running, a velocity tilt in the air that lags on
- * a damped spring, a splay kicked by landings and jumps, and, while wall-sliding or just after a
- * wall-jump, both feet turned with their soles to the wall. Pure TS so the curves are
- * unit-tested; the renderer only applies the numbers. Never feeds back into the sim.
+ * sim state. One sprung angle says which way the soles face (leg-locomotion D1): the slope under
+ * the blob, the wall it touches, or a tilt that trails the flight in the air. Both feet sit side by
+ * side around the body circle on that side and step along the surface with the distance moved, so
+ * floor, slope and wall are one pose, turned. A splay kicked by landings and jumps rides on top.
+ * Pure TS so the curves are unit-tested; the renderer only applies the numbers. Never feeds back
+ * into the sim.
  */
 export type FeetTunables = GameTunables["feel"]["feet"];
 
@@ -317,17 +319,16 @@ export interface FootPose {
 
 /** Per-player foot memory kept by the render layer. */
 export interface FeetMotion {
-  /** Lag of the air tilt behind its target (rad). */
-  tilt: DampedSpring;
+  /** Lag of the surface angle behind its target (rad). */
+  angle: DampedSpring;
   /** Outward spread (rad; positive = feet spread, outer ends up). */
   splay: DampedSpring;
-  /** Tilt target of the last step, so a target jump becomes spring offset. */
-  lastTiltTarget: number;
-  /** 0 = normal pose, 1 = fully turned to the wall. */
-  wall: number;
-  wallSide: -1 | 1;
-  /** Render clock until which a wall-jump keeps the feet on the wall it left. */
-  wallJumpHoldUntilMs: number;
+  /** Angle target of the last step, so a target jump becomes spring offset. */
+  lastAngleTarget: number;
+  /** Distance moved along the surface (world units); the step cycle runs on it. */
+  travel: number;
+  lastX: number;
+  lastY: number;
   seenLandings: number;
   seenJumps: number;
   seenWallJumps: number;
@@ -344,12 +345,13 @@ const SPLAY_SPREAD = 0.3;
 const restFoot = (): FootPose => ({ x: 0, y: 0, rotation: 0 });
 
 export const createFeetMotion = (player: PlayerState): FeetMotion => ({
-  tilt: createDampedSpring(),
+  angle: createDampedSpring(),
   splay: createDampedSpring(),
-  lastTiltTarget: 0,
-  wall: 0,
-  wallSide: player.lastWallDir,
-  wallJumpHoldUntilMs: -Infinity,
+  lastAngleTarget: 0,
+  // On flat ground the travel is the x position, so the step phase is the same for every viewer.
+  travel: player.x,
+  lastX: player.x,
+  lastY: player.y,
   seenLandings: player.landCount,
   seenJumps: player.jumpCount,
   seenWallJumps: player.wallJumpCount,
@@ -362,8 +364,6 @@ const clamp = (value: number, min: number, max: number): number =>
 
 const smoothstep = (t: number): number => t * t * (3 - 2 * t);
 
-const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
-
 interface FeetFrame {
   player: PlayerState;
   feet: FeetTunables;
@@ -371,20 +371,37 @@ interface FeetFrame {
   r: number;
   /** Body horizontal scale this frame (the feet ride the body's width). */
   bodySx: number;
+  /** Height of a foot's centre above its sole, world units. */
+  footCentre: number;
+  /** Lean the blob's root already carries for the slope (rad, clockwise); the feet turn the rest. */
+  rootLean: number;
   nowMs: number;
 }
 
-/** Splay kicks for sim events since the last step, and the wall-jump hold. */
+/** A frame plus the surface under the feet this step. */
+interface FeetStep extends FeetFrame {
+  /** Slope of that surface (rad, + rising right; a wall is ±90°), or null in the air. */
+  slope: number | null;
+}
+
+/** Moves further than this many R in one step (a respawn, a teleport) don't count as travel. */
+const MAX_STEP_TRAVEL = 4;
+
+/** The surface the feet stand on: the ground, else the wall the blob touches, else none. */
+function surfaceSlope(player: PlayerState): number | null {
+  if (player.grounded) return player.groundAngle;
+  if (player.wallDir !== 0) return player.wallDir * (Math.PI / 2);
+  return null;
+}
+
+/** Splay kicks for sim events since the last step. */
 function noteFeetEvents(motion: FeetMotion, frame: FeetFrame): void {
-  const { player, feet, nowMs } = frame;
+  const { player, feet } = frame;
   if (player.landCount !== motion.seenLandings && player.lastLandingSpeed >= MIN_LANDING_SPEED) {
     motion.splay.velocity += feet.landKick;
   }
   if (player.jumpCount !== motion.seenJumps) motion.splay.velocity -= feet.jumpKick;
-  if (player.wallJumpCount !== motion.seenWallJumps) {
-    motion.splay.velocity -= feet.jumpKick;
-    motion.wallJumpHoldUntilMs = nowMs + feet.wallJumpHoldSeconds * 1000;
-  }
+  if (player.wallJumpCount !== motion.seenWallJumps) motion.splay.velocity -= feet.jumpKick;
   motion.seenLandings = player.landCount;
   motion.seenJumps = player.jumpCount;
   motion.seenWallJumps = player.wallJumpCount;
@@ -396,81 +413,79 @@ function airTiltTarget(player: PlayerState, feet: FeetTunables): number {
   return -clamp(player.vx / feet.airTiltSpeed, -1, 1) * feet.airTilt;
 }
 
-/** Which wall the feet turn to this step, or null. A wall-jump keeps the wall it left. */
-function wallTarget(motion: FeetMotion, frame: FeetFrame): -1 | 1 | null {
-  const { player, nowMs } = frame;
-  if (player.rollSource !== null) return null;
-  if (!player.grounded && player.wallDir !== 0) return player.wallDir;
-  if (nowMs < motion.wallJumpHoldUntilMs) return player.lastWallDir;
-  return null;
+/** Adds the distance moved along the surface since the last step (sideways in the air). */
+function noteTravel(motion: FeetMotion, step: FeetStep): void {
+  const { player } = step;
+  const slope = step.slope ?? 0;
+  const dx = player.x - motion.lastX;
+  const dy = player.y - motion.lastY;
+  motion.lastX = player.x;
+  motion.lastY = player.y;
+  // The surface runs along (cos, -sin): up a slope that rises to the right, up a right wall.
+  const moved = dx * Math.cos(slope) - dy * Math.sin(slope);
+  if (Math.abs(moved) < MAX_STEP_TRAVEL * step.r) motion.travel += moved;
 }
 
-function stepSprings(motion: FeetMotion, frame: FeetFrame, dt: number): void {
-  const { feet } = frame;
-  const target = airTiltTarget(frame.player, feet);
-  // A jump in the target leaves the drawn tilt behind; the spring pulls it after (lag + overshoot).
-  motion.tilt.value -= target - motion.lastTiltTarget;
-  motion.lastTiltTarget = target;
-  stepDampedSpring(motion.tilt, feet, dt);
+/**
+ * Where the soles face, in the root's frame (rad, clockwise): flat on the surface under the feet,
+ * or the air tilt. A rolling blob's feet ride the spin.
+ */
+function angleTarget(step: FeetStep): number {
+  const { player, slope } = step;
+  if (slope === null || player.rollSource !== null) return airTiltTarget(player, step.feet);
+  return -slope - step.rootLean;
+}
+
+function stepSprings(motion: FeetMotion, step: FeetStep, dt: number): void {
+  const { feet } = step;
+  const target = angleTarget(step);
+  // A jump in the target leaves the drawn angle behind; the spring pulls it after, so slope,
+  // wall and air hand over without a snap.
+  motion.angle.value -= target - motion.lastAngleTarget;
+  motion.lastAngleTarget = target;
+  stepDampedSpring(motion.angle, feet.surface, dt);
   stepDampedSpring(motion.splay, feet, dt);
   motion.splay.value = clampAbs(motion.splay.value, feet.maxSplay);
-  motion.tilt.value = clampAbs(motion.tilt.value, feet.maxSplay);
 }
 
-function stepWallBlend(motion: FeetMotion, frame: FeetFrame, dt: number): void {
-  const side = wallTarget(motion, frame);
-  if (side !== null) motion.wallSide = side;
-  const rate = dt / Math.max(frame.feet.wallBlendSeconds, 1e-3);
-  motion.wall = clamp(motion.wall + (side === null ? -rate : rate), 0, 1);
-}
-
-/** Stepping arc of foot `i` while running: lift, forward swing and toe tilt. */
-function stepCycle(frame: FeetFrame, i: number): FootPose {
-  const { player, feet, r } = frame;
-  const speed = Math.abs(player.vx);
-  if (!player.grounded || speed < 20) return restFoot();
+/** Stepping arc of foot `i` while moving on a surface: lift, forward swing and toe tilt. */
+function stepCycle(motion: FeetMotion, step: FeetStep, i: number): FootPose {
+  const { player, feet, r, slope } = step;
+  if (slope === null) return restFoot();
+  const along = player.vx * Math.cos(slope) - player.vy * Math.sin(slope);
+  const speed = Math.abs(along);
+  if (speed < 20) return restFoot();
   const k = Math.min(1, speed / feet.fullStepSpeed);
-  const dir = Math.sign(player.vx);
   // The feet are half a cycle apart; a foot moves forward while it is lifted.
-  const phase = player.x / (feet.stride * r) + i * Math.PI;
+  const phase = motion.travel / (feet.stride * r) + i * Math.PI;
   const up = Math.max(0, Math.sin(phase));
   return {
-    // The phase runs with x, so the swing already points along the run.
+    // The phase runs with the travel, so the swing already points along the run.
     x: -Math.cos(phase) * feet.stepSwing * r * k,
     y: -up * feet.stepLift * r * k,
     // The lifted foot tips its toe up, toward the run.
-    rotation: -dir * up * feet.stepTilt * k,
+    rotation: -Math.sign(along) * up * feet.stepTilt * k,
   };
 }
 
-/** Normal (ground / air) pose of foot `i` (0 = left). */
-function normalFoot(motion: FeetMotion, frame: FeetFrame, i: number): FootPose {
+/** Writes foot `i` (0 = left): its place in the surface frame, turned around the body circle. */
+function placeFoot(motion: FeetMotion, step: FeetStep, i: number): void {
   const side = i === 0 ? -1 : 1;
-  const { r, bodySx, player, feet } = frame;
-  const step = stepCycle(frame, i);
+  const { r, bodySx, player, feet } = step;
+  const cycle = stepCycle(motion, step, i);
   const splay = motion.splay.value;
-  // Rising feet droop at their outer ends, falling feet flare up.
-  const droop = player.grounded ? 0 : clamp(-player.vy / feet.airTiltSpeed, -1, 1) * feet.airTilt;
-  const tilt = motion.lastTiltTarget + motion.tilt.value;
-  return {
-    x: side * (FOOT_SPACING + SPLAY_SPREAD * splay) * r * bodySx + step.x,
-    y: step.y,
-    rotation: step.rotation + tilt + side * (droop - splay),
-  };
-}
-
-/** Wall pose of foot `i`: soles to the wall, the far foot low and the near foot high. */
-function wallFoot(motion: FeetMotion, frame: FeetFrame, i: number): FootPose {
-  const side = i === 0 ? -1 : 1;
-  const wallSide = motion.wallSide;
-  const near = side === wallSide;
-  const { r, feet } = frame;
-  return {
-    x: wallSide * feet.wallX * r,
-    y: -(near ? feet.wallHigh : feet.wallLow) * r,
-    // Local +y (the sole) points at the wall.
-    rotation: -wallSide * (Math.PI / 2),
-  };
+  // In the air, rising feet droop at their outer ends and falling feet flare up.
+  const droop =
+    step.slope === null ? clamp(-player.vy / feet.airTiltSpeed, -1, 1) * feet.airTilt : 0;
+  const angle = motion.lastAngleTarget + motion.angle.value;
+  // The foot centre at rest sits this far under the body circle's centre.
+  const rest = player.width / 2 - step.footCentre;
+  const across = side * (FOOT_SPACING + SPLAY_SPREAD * splay) * r * bodySx + cycle.x;
+  const down = rest + cycle.y;
+  const foot = motion.feet[i]!;
+  foot.x = across * Math.cos(angle) - down * Math.sin(angle);
+  foot.y = across * Math.sin(angle) + down * Math.cos(angle) - rest;
+  foot.rotation = angle + cycle.rotation + side * (droop - splay);
 }
 
 export type GroundTiltTunables = GameTunables["feel"]["groundTilt"];
@@ -508,24 +523,22 @@ export function stepGroundTilt(
   const dt = tilt.lastMs === null ? 0 : Math.max(0, (frame.nowMs - tilt.lastMs) / 1000);
   tilt.lastMs = frame.nowMs;
   stepDampedSpring(tilt.spring, tunables, dt);
-  return target + tilt.spring.value;
+  return groundTiltLean(tilt);
 }
+
+/** The lean after the last `stepGroundTilt` (rad, clockwise); the feet turn the rest of the slope. */
+export const groundTiltLean = (tilt: GroundTilt): number => tilt.target + tilt.spring.value;
 
 /** Advances the foot motion to `nowMs` and writes both feet into `motion.feet`. */
 export function stepFeetMotion(motion: FeetMotion, frame: FeetFrame): [FootPose, FootPose] {
   // A clock that stalls or jumps back (tab switch, reset) steps nothing.
   const dt = motion.lastMs === null ? 0 : Math.max(0, (frame.nowMs - motion.lastMs) / 1000);
   motion.lastMs = frame.nowMs;
+  const step: FeetStep = { ...frame, slope: surfaceSlope(frame.player) };
   noteFeetEvents(motion, frame);
-  stepSprings(motion, frame, dt);
-  stepWallBlend(motion, frame, dt);
-  const w = smoothstep(motion.wall);
-  motion.feet.forEach((foot, i) => {
-    const normal = normalFoot(motion, frame, i);
-    const wall = wallFoot(motion, frame, i);
-    foot.x = lerp(normal.x, wall.x, w);
-    foot.y = lerp(normal.y, wall.y, w);
-    foot.rotation = lerp(normal.rotation, wall.rotation, w);
-  });
+  noteTravel(motion, step);
+  stepSprings(motion, step, dt);
+  placeFoot(motion, step, 0);
+  placeFoot(motion, step, 1);
   return motion.feet;
 }

@@ -242,11 +242,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       landKick: 9,
       jumpKick: 6,
       maxSplay: 0.6,
-      wallX: 0.85,
-      wallLow: 0.15,
-      wallHigh: 0.7,
-      wallBlendSeconds: 0.08,
-      wallJumpHoldSeconds: 0.12,
+      // Turns to a new surface in about a fifth of a second, with a small overshoot.
+      surface: { stiffness: 300, damping: 24 },
     },
     // About 3 frames at 60 fps.
     hitStop: { seconds: JUICE_TIERS.heavy.hitStopSeconds },

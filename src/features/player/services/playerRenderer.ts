@@ -13,6 +13,7 @@ import {
   type FeetTunables,
   createHelmetWobble,
   createGroundTilt,
+  groundTiltLean,
   stepGroundTilt,
   type GroundTilt,
   type GroundTiltTunables,
@@ -68,7 +69,7 @@ import type { PlayerState } from "@/features/player/types/player.types";
  * Game feel (§ 6): a hit flashes a white egg over the body fill (the ink stays, so the silhouette
  * never changes), and the helmet with its emblem rides a damped spring (`HelmetWobble`) kicked by
  * landings, jumps, wall-jumps, roll bounces and hits. The feet step, swing, tilt and splay, and
- * turn their soles to the wall while wall-sliding (`blobPose.ts`).
+ * turn as one pair to the slope or wall under the blob (`blobPose.ts`).
  */
 export interface PlayersView {
   container: Container;
@@ -398,20 +399,24 @@ function placeBlob(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
 }
 
 /**
- * Feet lag the body's squash a little and move per `stepFeetMotion`. Each foot turns around its own
- * centre; the centre drops with the squash so the sole stays on the ground.
+ * Feet lag the body's squash a little and move per `stepFeetMotion`, which turns them around the
+ * body circle to the surface under the blob (the root already carries the slope lean, the feet
+ * turn the rest). Each foot turns around its own centre; the centre drops with the squash so the
+ * sole stays on the ground.
  */
 function placeFeet(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): void {
   const { r, u } = sprite.metrics;
   const { pose } = frame;
+  const centre = FOOT_CENTRE_UNITS * u;
   const poses = stepFeetMotion(sprite.feetMotion, {
     player,
     feet: frame.feet ?? DEFAULT_GAME_TUNABLES.feel.feet,
     r,
     bodySx: pose.bodySx,
+    footCentre: centre,
+    rootLean: groundTiltLean(sprite.groundTilt),
     nowMs: frame.nowMs,
   });
-  const centre = FOOT_CENTRE_UNITS * u;
   sprite.feet.forEach((foot, i) => {
     const p = poses[i]!;
     eachSide(foot, (c) => {
