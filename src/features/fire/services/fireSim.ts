@@ -1,3 +1,4 @@
+import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import {
   EMPTY_CELL,
@@ -197,6 +198,31 @@ export function burningSamples(fire: FireState): number[] {
   return [...fire.lit.slice(fire.litHead), ...fire.dueOut];
 }
 
+/** A burnt-out batch: what was removed, and a few places in it for the debris to fly from. */
+export interface BurnOutBatch extends ClearedCells {
+  /** Centres of up to `MAX_BURN_OUT_SPOTS` of the batch's samples, spread over the batch. */
+  spots: Vec2[];
+}
+
+const MAX_BURN_OUT_SPOTS = 3;
+/** One debris spot per this many burnt samples (a small batch gets one). */
+const SAMPLES_PER_SPOT = 16;
+
+/**
+ * Where a batch shows its debris: a fire burns out along a front, not round one centre, so the
+ * spots are samples of the batch itself, picked evenly through it.
+ */
+function burnOutSpots(grid: TerrainGrid, samples: readonly number[]): Vec2[] {
+  const count = Math.min(MAX_BURN_OUT_SPOTS, Math.ceil(samples.length / SAMPLES_PER_SPOT));
+  return Array.from({ length: count }, (_, i) => {
+    const index = samples[Math.floor(((i + 0.5) * samples.length) / count)] ?? 0;
+    return {
+      x: ((index % grid.widthCells) + 0.5) * grid.cellSize,
+      y: (Math.floor(index / grid.widthCells) + 0.5) * grid.cellSize,
+    };
+  });
+}
+
 /**
  * Advances fire to sim time `now`: lights what the front has reached, then, on the batch beat,
  * removes what has burnt out. Returns what was removed this step (for effects / sound), or null.
@@ -205,7 +231,7 @@ export function stepFire(
   fire: FireState,
   grid: TerrainGrid,
   frame: { now: number; tunables: GameTunables }
-): ClearedCells | null {
+): BurnOutBatch | null {
   const { spreadSpeed, burnSeconds, burnOutInterval } = frame.tunables.fire;
   // Sprays not renewed this step have stopped (the torch sprays before this step runs).
   fire.sprays = fire.sprays.filter((spray) => spray.atSeconds >= frame.now);
@@ -213,8 +239,9 @@ export function stepFire(
   collectBurnt(fire, burnSeconds, frame.now);
   if (frame.now < fire.nextBurnOutAt || fire.dueOut.length === 0) return null;
   fire.nextBurnOutAt = frame.now + burnOutInterval;
+  const spots = burnOutSpots(grid, fire.dueOut);
   const cleared = burnOut(grid, fire.dueOut);
   fire.dueOut = [];
   fire.version += 1;
-  return cleared.removed > 0 ? cleared : null;
+  return cleared.removed > 0 ? { ...cleared, spots } : null;
 }
