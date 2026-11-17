@@ -113,13 +113,24 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   },
   // Fire on the field (blast-power D6, owner starting values): 40 units / s, burn 1.5 s.
   // Burn-outs are applied in batches every 0.25 s (at most that late), one effect / sound per batch.
-  fire: { spreadSpeed: 40, burnSeconds: 1.5, burnOutInterval: 0.25 },
+  // A blob on fire burns 2 s: a chunk at 1 s and a second at 2 s unless crouching then (owner
+  // fire-burn D10); 0.5 s grace after going out.
+  fire: {
+    spreadSpeed: 40,
+    burnSeconds: 1.5,
+    burnOutInterval: 0.25,
+    blob: { firstTickSeconds: 1, burnSeconds: 2, graceSeconds: 0.5, momentSeconds: 0.6 },
+  },
   combat: {
     maxHealth: 4,
     killCreditSeconds: 4,
     eventRetentionSeconds: 1,
     // Body hits from behind hurt more; explosions stay exactly 1 chunk from any side (GDD § 3).
-    hitDamage: { contact: { front: 1, back: 2 }, blast: { front: 1, back: 1 } },
+    hitDamage: {
+      contact: { front: 1, back: 2 },
+      blast: { front: 1, back: 1 },
+      burn: { front: 1, back: 1 },
+    },
     // Crouching halves damage, rounded down: 2 → 1, 1 → 0 (feedback round 2 § 2.4, crouch D1).
     crouchDamageScale: 0.5,
     // 6 rockets, no time limit: the count stays legible without a HUD timer (combat D5).

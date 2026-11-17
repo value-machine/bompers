@@ -10,7 +10,9 @@ import {
 import {
   createPlayersView,
   syncPlayersView,
+  type BlobPoseOverlay,
   type BlobWeapon,
+  type PlayerState,
   type PlayersView,
 } from "@/features/player/api/playerApi";
 import {
@@ -50,7 +52,12 @@ import {
   syncDiveView,
   type DiveView,
 } from "@/features/dive/api/diveApi";
-import { createFireView, syncFireView, type FireView } from "@/features/fire/api/fireApi";
+import {
+  burningBlobPoses,
+  createFireView,
+  syncFireView,
+  type FireView,
+} from "@/features/fire/api/fireApi";
 import { playersInPlay, type GameState } from "@/features/match/services/gameSim";
 import { createHudView, syncHudView, type HudView } from "@/features/match/services/hudRenderer";
 
@@ -165,6 +172,16 @@ const protectedIds = (state: GameState): Set<string> => {
   return ids;
 };
 
+/** Pose overlays: a burning blob's panic hop, under the dive's pose when it dives (that puts it out). */
+const blobOverlays = (
+  state: GameState,
+  frame: { inPlay: readonly PlayerState[]; nowMs: number }
+): Map<string, BlobPoseOverlay> => {
+  const overlays = burningBlobPoses(state.fire, { players: frame.inPlay, nowMs: frame.nowMs });
+  for (const [id, pose] of diveBlobPoses(state.dive, state.tunables)) overlays.set(id, pose);
+  return overlays;
+};
+
 interface LayerFrame {
   inPlay: ReturnType<typeof playersInPlay>;
   nowMs: number;
@@ -177,11 +194,18 @@ interface LayerFrame {
 function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerFrame): void {
   const { inPlay, nowMs, zoom } = frame;
   syncTerrainView(renderer.terrain, state.arena.terrain, zoom);
-  syncFireView(renderer.fire, { fire: state.fire, terrain: state.arena.terrain, nowMs });
+  syncFireView(renderer.fire, {
+    fire: state.fire,
+    terrain: state.arena.terrain,
+    nowMs,
+    players: inPlay,
+    timeSeconds: state.timeSeconds,
+    momentSeconds: state.tunables.fire.blob.momentSeconds,
+  });
   syncPlayersView(renderer.players, inPlay, {
     nowMs,
     protectedIds: protectedIds(state),
-    overlays: diveBlobPoses(state.dive, state.tunables),
+    overlays: blobOverlays(state, { inPlay, nowMs }),
     weapons: blobWeapons(state),
     zoom,
     hits: frame.hits,

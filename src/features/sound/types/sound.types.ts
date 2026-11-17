@@ -37,6 +37,9 @@ export interface SoundPlayerSnapshot {
   terrainHitSpeed: number;
   /** Headbutt resets taken over the match (monotonic). */
   diveRefillCount: number;
+  /** Times caught fire / put out by ice over the match (monotonic; fire-burn D7). */
+  catchFireCount: number;
+  iceDouseCount: number;
 }
 
 /** The two volume channels: sound effects and music. */
