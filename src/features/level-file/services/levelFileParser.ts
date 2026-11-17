@@ -168,10 +168,6 @@ type LevelContent = Pick<
   "terrain" | "spawns" | "drops" | "collectibles" | "bounds" | "movers"
 >;
 
-/** Engine note while moving parts are import-only (moving-parts lap A). */
-export const MOVERS_STATIC_NOTE =
-  "Moving parts stand still at their drawn place in this version of the game.";
-
 interface ContentArgs {
   root: Element;
   world: { w: number; h: number };
@@ -200,7 +196,6 @@ function readMovers(
     log,
   });
   checkMoverSweeps({ movers, terrain: terrain.pieces, spawns, bounds, log });
-  if (movers.length > 0) log.warnings.push({ message: MOVERS_STATIC_NOTE });
   return movers.map(({ mover }) => mover);
 }
 

@@ -1,13 +1,22 @@
-import { shapeSignedDistance } from "@/shared/utils/shapeGeometry";
+import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import { motionPose } from "@/shared/utils/levelMotion";
+import { shapeBounds, shapeSignedDistance } from "@/shared/utils/shapeGeometry";
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
-import type { LevelDefinition, TerrainPiece, TerrainShape } from "@/features/level/api/levelApi";
+import type {
+  LevelDefinition,
+  LevelMover,
+  TerrainPiece,
+  TerrainShape,
+} from "@/features/level/api/levelApi";
 import {
   EMPTY_CELL,
+  type MoverBody,
   type TerrainCellSlot,
   type TerrainGrid,
 } from "@/features/arena/types/arena.types";
 import {
   EDGE_EPSILON,
+  FIELD_BAND_SAMPLES,
   HALF_DIAGONAL,
   cellRangeOf,
   createTerrainGrid,
@@ -26,17 +35,6 @@ import { SLAB_CORNER_RADIUS } from "@/features/arena/services/terrainSurfaces";
  * the non-zero rule; where shapes overlap an unbreakable material wins over a breakable one, and
  * between equals the later piece wins.
  */
-function shapeBounds(shape: TerrainShape) {
-  if (shape.type === "rect") return { x: shape.x, y: shape.y, w: shape.w, h: shape.h };
-  if (shape.type === "circle") {
-    return { x: shape.cx - shape.r, y: shape.cy - shape.r, w: shape.r * 2, h: shape.r * 2 };
-  }
-  const xs = shape.points.map((p) => p.x);
-  const ys = shape.points.map((p) => p.y);
-  const x = Math.min(...xs);
-  const y = Math.min(...ys);
-  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
-}
 
 const UNKNOWN_MATERIAL = {
   id: "",
@@ -153,18 +151,88 @@ function finishSample(grid: TerrainGrid, seed: Float32Array, at: { cx: number; c
   if (unbreakable || cy === grid.heightCells - 1) grid.anchored[index] = 1;
 }
 
-/** Builds the grid a (normalised) level describes: material slots plus the distance field. */
-export function buildTerrainFromLevel(level: LevelDefinition): TerrainGrid {
-  const { cellSize } = level.settings;
+/** Rasterises pieces onto a fresh grid of `size` world units: slots plus the distance field. */
+function rasterizeGrid(
+  pieces: readonly TerrainPiece[],
+  area: { cellSize: number; w: number; h: number }
+): TerrainGrid {
+  const { cellSize } = area;
   const grid = createTerrainGrid({
     cellSize,
-    widthCells: Math.ceil(level.worldSize.w / cellSize),
-    heightCells: Math.ceil(level.worldSize.h / cellSize),
+    widthCells: Math.ceil(area.w / cellSize),
+    heightCells: Math.ceil(area.h / cellSize),
   });
   const seed = new Float32Array(grid.cells.length).fill(-fieldBand(grid));
-  for (const piece of level.terrain) rasterizePiece(grid, piece, seed);
+  for (const piece of pieces) rasterizePiece(grid, piece, seed);
   for (let cy = 0; cy < grid.heightCells; cy += 1) {
     for (let cx = 0; cx < grid.widthCells; cx += 1) finishSample(grid, seed, { cx, cy });
   }
+  return grid;
+}
+
+/** Indices of the level's terrain pieces that belong to a moving part. */
+export function moverPieceIndices(level: LevelDefinition): Set<number> {
+  return new Set((level.movers ?? []).flatMap((mover) => mover.terrainIndices));
+}
+
+const shiftShape = (shape: TerrainShape, by: Vec2): TerrainShape => {
+  if (shape.type === "rect") return { ...shape, x: shape.x - by.x, y: shape.y - by.y };
+  if (shape.type === "circle") return { ...shape, cx: shape.cx - by.x, cy: shape.cy - by.y };
+  return { type: "polygon", points: shape.points.map((p) => ({ x: p.x - by.x, y: p.y - by.y })) };
+};
+
+/**
+ * A moving part's body (moving-parts D11): its pieces rasterised on their own small grid around
+ * their rest pose (bounding box plus the field band), starting at the pose for time 0.
+ */
+function buildMoverBody(level: LevelDefinition, mover: LevelMover): MoverBody {
+  const { cellSize } = level.settings;
+  const pieces = mover.terrainIndices.flatMap((i) => level.terrain[i] ?? []);
+  const boxes = pieces.map((piece) => shapeBounds(piece.shape));
+  const margin = (FIELD_BAND_SAMPLES + 1) * cellSize;
+  const left = Math.floor((Math.min(...boxes.map((b) => b.x)) - margin) / cellSize) * cellSize;
+  const top = Math.floor((Math.min(...boxes.map((b) => b.y)) - margin) / cellSize) * cellSize;
+  const right = Math.max(...boxes.map((b) => b.x + b.w)) + margin;
+  const bottom = Math.max(...boxes.map((b) => b.y + b.h)) + margin;
+  const origin = { x: left, y: top };
+  const field = rasterizeGrid(
+    pieces.map((piece) => ({ ...piece, shape: shiftShape(piece.shape, origin) })),
+    { cellSize, w: right - left, h: bottom - top }
+  );
+  const corners = [
+    { x: left, y: top },
+    { x: right, y: top },
+    { x: left, y: bottom },
+    { x: right, y: bottom },
+  ];
+  const reach = Math.max(
+    ...corners.map((c) => Math.hypot(c.x - mover.pivot.x, c.y - mover.pivot.y))
+  );
+  const frictions = pieces.map((piece) => pieceCellSlot(piece).friction);
+  const pose = motionPose(mover.motion, 0);
+  return {
+    motion: mover.motion,
+    pivot: mover.pivot,
+    origin,
+    field,
+    pose,
+    prevPose: pose,
+    reach,
+    friction: frictions.reduce((sum, f) => sum + f, 0) / Math.max(1, frictions.length),
+    terrainIndices: mover.terrainIndices,
+  };
+}
+
+/**
+ * Builds the grid a (normalised) level describes: material slots plus the distance field of the
+ * static terrain, and one body per moving part (whose pieces stay out of the static samples).
+ */
+export function buildTerrainFromLevel(level: LevelDefinition): TerrainGrid {
+  const moving = moverPieceIndices(level);
+  const grid = rasterizeGrid(
+    level.terrain.filter((_, i) => !moving.has(i)),
+    { cellSize: level.settings.cellSize, ...level.worldSize }
+  );
+  grid.movers = (level.movers ?? []).map((mover) => buildMoverBody(level, mover));
   return grid;
 }

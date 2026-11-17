@@ -56,7 +56,7 @@ export interface LevelCollectible {
 /**
  * A moving part (LEVEL_FORMAT § 11): terrain pieces that move together along one motion. The
  * pieces stay in `LevelDefinition.terrain` at their rest pose; `terrainIndices` names them.
- * Until the runtime lap (moving-parts lap B) the arena rasterises them as static terrain.
+ * The arena keeps them out of its static samples and runs each as a moving body.
  */
 export interface LevelMover {
   motion: LevelMotion;

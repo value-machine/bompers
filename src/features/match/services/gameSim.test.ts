@@ -306,4 +306,31 @@ describe("gameSim — burning blobs (fire-burn b2)", () => {
     );
     expect(state.combat.fighters.get(player.id)?.lastHitBySlot).toBe(1);
   });
+
+  it("should carry a standing player up with a rising lift when the level has a moving part", () => {
+    // A lift under the slot-0 spawn rises 160 and back every 4 s (LEVEL_FORMAT § 11).
+    const lift = {
+      shape: { type: "rect", x: 40, y: 288, w: 120, h: 32 },
+      materialId: "stone",
+    } as const;
+    const state = createGameState({
+      level: {
+        ...level,
+        terrain: [...level.terrain, lift],
+        movers: [
+          {
+            motion: { kind: "slide", offset: { x: 0, y: -160 }, periodS: 4, phase: 0 },
+            pivot: { x: 100, y: 304 },
+            terrainIndices: [1],
+          },
+        ],
+      },
+      tunables: DEFAULT_GAME_TUNABLES,
+    });
+    stepFor(state, 2);
+    const player = state.players.find((p) => p.slot === 0)!;
+    expect(player.grounded).toBe(true);
+    expect(player.x).toBeCloseTo(100, 0);
+    expect(Math.abs(player.y - 128)).toBeLessThan(3);
+  });
 });
