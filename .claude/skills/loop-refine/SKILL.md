@@ -22,7 +22,7 @@ Second half of **Stop 1**. When this skill is done, `BRIEF.md` describes exactly
 | Calls | if repo context is missing → [`spec-load-context`](../spec-load-context/SKILL.md) · if the task is a bug → [`spec-debug-runtime`](../spec-debug-runtime/SKILL.md) (reproduce only) · if the request changes existing behavior → [`spec-check-layer`](../spec-check-layer/SKILL.md) (fired by `architecture` rule § Layer consistency) · if the user flow itself is in question → [`spec-simplify-flow`](../spec-simplify-flow/SKILL.md) · when done → [`loop-plan`](../loop-plan/SKILL.md) |
 | Called by | [`router`](../router/SKILL.md), [`loop-backlog`](../loop-backlog/SKILL.md), [`loop-orchestrate`](../loop-orchestrate/SKILL.md) |
 | Next | [`loop-plan`](../loop-plan/SKILL.md) |
-| Owner stops | Stop list only ([`agent-behavior` rule § When to ask](../../../.claude/rules/agent-behavior.md)), asked per [`references/asking.md`](references/asking.md) |
+| Owner stops | Stop list only ([`agent-behavior` rule § When to ask](../../../.claude/rules/agent-behavior.md)), asked per [`references/asking.md`](references/asking.md); the options-page pick for anything seen or heard (step 6) |
 
 ## Steps
 
@@ -31,9 +31,10 @@ Second half of **Stop 1**. When this skill is done, `BRIEF.md` describes exactly
 3. **Bugs:** call [`spec-debug-runtime`](../spec-debug-runtime/SKILL.md) to reproduce and pin the failing behavior only. The fix depth (patch, refactor, redesign) sets the size like any other work (skill-loop D27).
 4. **Draft `BRIEF.md` silently:** problem, success check, in scope, out of scope (will NOT do / will NOT touch), the edges table, generality (clear winner unless a second consumer is named), and requirements when size ≥ M spans roles or journeys ([`references/requirements.md`](references/requirements.md)).
 5. **Find the open questions.** For each choice in the draft, check it against the stop list. Conflicts with a recorded decision are the most important ones to catch: flag them with proposed resolutions (skill-loop D3). Log clear winners in `DECISIONS.md` after naming the alternatives.
-6. **Ask, one at a time,** only what remains (gaps, true ties, data / irreversible, cost / external service, new dependency, patch-on-top), per [`references/asking.md`](references/asking.md). Update the brief and the ledger after each answer.
-7. **Size it.** Estimate XS / S / M from the edges touched plus the refactor a clean implementation needs (skill-loop D12, [`loop-plan/references/complexity-rubric.md`](../loop-plan/references/complexity-rubric.md)). Anything larger than M is cut into laps of M or smaller: this lap takes the first slice, and the rest become backlog tasks right after the current top task (skill-loop D44).
-8. **Restate and hand off.** Post the restatement line (no wait). If the owner corrects it, update the brief and restate. Then run [`loop-plan`](../loop-plan/SKILL.md).
+6. **Options page before build (owner, 2026-11-17).** When the lap adds or changes anything the player sees or hears (a feature, weapon, effect, sound, music, UI), first publish an artifact page with 2–4 distinct options shown live (inline SVG/canvas or playable audio, processed as in the game), with a recommendation. The owner picks there; no game code for that part is written before the pick. Audio specifics: DESIGN_LANGUAGE § 8 "Owner listens first".
+7. **Ask, one at a time,** only what remains (gaps, true ties, data / irreversible, cost / external service, new dependency, patch-on-top), per [`references/asking.md`](references/asking.md). Update the brief and the ledger after each answer.
+8. **Size it.** Estimate XS / S / M from the edges touched plus the refactor a clean implementation needs (skill-loop D12, [`loop-plan/references/complexity-rubric.md`](../loop-plan/references/complexity-rubric.md)). Anything larger than M is cut into laps of M or smaller: this lap takes the first slice, and the rest become backlog tasks right after the current top task (skill-loop D44).
+9. **Restate and hand off.** Post the restatement line (no wait). If the owner corrects it, update the brief and restate. Then run [`loop-plan`](../loop-plan/SKILL.md).
 
 ## Examples
 
