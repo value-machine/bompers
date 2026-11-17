@@ -90,6 +90,28 @@ export interface GameTunables {
     /** Seconds after a wall-jump in which input steering is reduced (stops instant re-cling). */
     wallJumpControlLock: number;
     /**
+     * Walking on curved ground (slope-walking D1, D3, D8). The round bottom of the body rides the
+     * terrain field; the run target on a slope of angle θ is runSpeed × (1 − uphillLoss · sin θ)
+     * going up and runSpeed × (1 + downhillGain · sin θ) going down.
+     */
+    slope: {
+      uphillLoss: number;
+      downhillGain: number;
+      /** How fast speed above the slope target bleeds off on a slope (a run-up carries), units / s². */
+      carryDecel: number;
+      /** Ground at least this steep (radians) is a wall, unless its top is a lip. */
+      lipAngle: number;
+      /** A lip: the wall's top is at most this far above the feet, world units. */
+      lipRise: number;
+      /** Pull-over speed at a lip, as a share of runSpeed. */
+      lipSpeed: number;
+      /**
+       * Ground that curves more gently than this radius always holds the feet, world units. A
+       * sharper edge (a ledge, a crater rim) launches a blob too fast to follow it under gravity.
+       */
+      stickRadius: number;
+    };
+    /**
      * Defensive crouch (grounded + crouch held): the blob stands still. Render-only numbers:
      * body scale (anchored at the feet point) and the seconds to sink in / stand up. The feet
      * keep their normal pose (owner, crouch D6).
@@ -345,6 +367,17 @@ export interface GameTunables {
       wallJumpTilt: number;
       hitTilt: number;
       hitDrop: number;
+    };
+    /**
+     * Body lean on sloped ground (slope-walking D4, DESIGN_LANGUAGE § 6): the blob turns by `share`
+     * of the slope under its feet, at most `maxAngle` (radians), easing on a damped spring; level in
+     * the air. Render only.
+     */
+    groundTilt: {
+      share: number;
+      maxAngle: number;
+      stiffness: number;
+      damping: number;
     };
     /**
      * Foot motion (DESIGN_LANGUAGE § 6): run-cycle swing and toe tilt, air tilt from velocity,

@@ -111,8 +111,13 @@
       var itemVal = itemAttr && n.getAttribute(itemAttr);
       if (itemVal && catalog) {
         itemVal.trim().split(/\s+/).forEach(function (id) {
-          if (!(catalog.item || []).some(function (e) { return e.id === id; })) {
+          var entry = (catalog.item || []).filter(function (e) { return e.id === id; })[0];
+          if (!entry) {
             issues.push(itemAttr + ' "' + id + '" is not in the catalog; the game falls back to the default.');
+          } else if (entry.use !== role) {
+            // Same check as the game's W11: an item belongs to one point role (catalog "use").
+            issues.push(role + ': "' + id + '" is a ' + entry.use + ' item, not a ' + role + ' item; the game ' +
+              (role === 'drop' ? 'leaves it out.' : 'uses the default collectible.'));
           }
         });
       }

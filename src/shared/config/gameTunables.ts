@@ -52,6 +52,18 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     wallJumpSpeedX: 420,
     wallJumpSpeedY: 720,
     wallJumpControlLock: 0.16,
+    // Slope walking (slope-walking D8): 30° up ≈ 62 % of run, 30° down ≈ 138 %. Ground of 80° and
+    // more is a wall unless its top is within 12 units: then the blob pulls itself over at 25 %.
+    slope: {
+      uphillLoss: 0.75,
+      downhillGain: 0.75,
+      carryDecel: 700,
+      lipAngle: (80 * Math.PI) / 180,
+      lipRise: 12,
+      lipSpeed: 0.25,
+      // Four body radii: hills and crater floors hold; ledges and rims (radius ≈ 14) can launch.
+      stickRadius: 56,
+    },
     // Defensive crouch (feedback round 2 § 2.4): sink fast, stand up a touch slower.
     // Helmet down 4 u and eyes up 2 u: the rim lands on about the middle of the eyes (crouch D7).
     crouch: { bodySx: 1.18, bodySy: 0.68, easeSeconds: 0.07, helmetDrop: 4, eyeLift: 2 },
@@ -184,6 +196,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       hitTilt: 7,
       hitDrop: 40,
     },
+    // Lean with the ground: 60 % of the slope, at most 30°, settling in about a fifth of a second.
+    groundTilt: { share: 0.6, maxAngle: (30 * Math.PI) / 180, stiffness: 160, damping: 24 },
     feet: {
       stiffness: 260,
       damping: 13,

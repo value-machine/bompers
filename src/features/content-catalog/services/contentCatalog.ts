@@ -5,6 +5,7 @@ import type {
   ContentCatalog,
   ContentKind,
   ExportedCatalog,
+  ItemUse,
   ResolvedEntry,
 } from "@/features/content-catalog/types/contentCatalog.types";
 
@@ -35,7 +36,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
       toughness: 1,
       friction: 1,
       bounce: 0,
-      surface: "breakable",
+      // Looks like any slab; only colour and how it reacts tell it apart (terrain-curves D5).
+      surface: "plain",
       defaultColor: "clay",
       effect: "dust-burst",
       sound: "crumble",
@@ -47,7 +49,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
       toughness: 0.7,
       friction: 1,
       bounce: 0,
-      surface: "breakable",
+      // Looks like any slab; only colour and how it reacts tell it apart (terrain-curves D5).
+      surface: "plain",
       defaultColor: "cardboard",
       effect: "dust-burst",
       sound: "thwap",
@@ -134,6 +137,11 @@ const ownKey = (record: object, key: string): boolean =>
 
 export function hasCatalogEntry(kind: ContentKind, id: string): boolean {
   return ownKey(CONTENT_CATALOG[kind], id);
+}
+
+/** The role a known item belongs to (its `use`), or null when the ID is not an item. */
+export function itemUseOf(id: string): ItemUse | null {
+  return ownKey(CONTENT_CATALOG.item, id) ? (CONTENT_CATALOG.item[id]?.use ?? null) : null;
 }
 
 /** Looks up an ID; unknown IDs give the kind's fallback entry with `isFallback: true`. */

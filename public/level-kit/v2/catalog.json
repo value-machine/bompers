@@ -31,7 +31,7 @@
       "toughness": 1,
       "friction": 1,
       "bounce": 0,
-      "surface": "breakable",
+      "surface": "plain",
       "defaultColor": "clay",
       "effect": "dust-burst",
       "sound": "crumble"
@@ -42,7 +42,7 @@
       "toughness": 0.7,
       "friction": 1,
       "bounce": 0,
-      "surface": "breakable",
+      "surface": "plain",
       "defaultColor": "cardboard",
       "effect": "dust-burst",
       "sound": "thwap"

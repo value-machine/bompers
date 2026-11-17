@@ -42,22 +42,29 @@ function segmentDistance(a: Vec2, b: Vec2, p: Vec2): number {
   return Math.hypot(p.x - (a.x + abx * t), p.y - (a.y + aby * t));
 }
 
-function rectSignedDistance(rect: Extract<Shape2D, { type: "rect" }>, p: Vec2): number {
+/** Rounded-box distance (corner radius clamped to half the shorter side), positive inside. */
+function rectSignedDistance(
+  rect: Extract<Shape2D, { type: "rect" }>,
+  p: Vec2,
+  cornerRadius: number
+): number {
   const hx = rect.w / 2;
   const hy = rect.h / 2;
-  const dx = Math.abs(p.x - (rect.x + hx)) - hx;
-  const dy = Math.abs(p.y - (rect.y + hy)) - hy;
+  const r = Math.max(0, Math.min(cornerRadius, hx, hy));
+  const dx = Math.abs(p.x - (rect.x + hx)) - (hx - r);
+  const dy = Math.abs(p.y - (rect.y + hy)) - (hy - r);
   const outside = Math.hypot(Math.max(dx, 0), Math.max(dy, 0));
-  return -(outside + Math.min(Math.max(dx, dy), 0));
+  return -(outside + Math.min(Math.max(dx, dy), 0) - r);
 }
 
 /**
  * Signed distance from `p` to the edge of `shape`, world units: positive inside, negative
  * outside, 0 on the edge (the terrain distance field, terrain-field D3). Polygons take the sign
- * from the non-zero rule, like `shapeContains`.
+ * from the non-zero rule, like `shapeContains`. `cornerRadius` rounds rect corners (the terrain
+ * slab is drawn that way, so its distance field matches the drawn shape; terrain-curves D8).
  */
-export function shapeSignedDistance(shape: Shape2D, p: Vec2): number {
-  if (shape.type === "rect") return rectSignedDistance(shape, p);
+export function shapeSignedDistance(shape: Shape2D, p: Vec2, cornerRadius = 0): number {
+  if (shape.type === "rect") return rectSignedDistance(shape, p, cornerRadius);
   if (shape.type === "circle") return shape.r - Math.hypot(p.x - shape.cx, p.y - shape.cy);
   const { points } = shape;
   let nearest = Infinity;

@@ -106,7 +106,9 @@ describe("terrainGrid", () => {
     const grid = buildTerrainFromLevel(level);
     takeDirtyChunks(grid);
     clearCrater(grid, { x: 15, y: 105, shape: "round", reach: 6 });
-    expect(takeDirtyChunks(grid)).toEqual([0]);
+    // Chunk 0 holds the crater; chunk 3 (below it) holds air within the field band (5 samples,
+    // slope-walking A5) that the blast re-measures. The far chunks stay clean.
+    expect(takeDirtyChunks(grid)).toEqual([0, 3]);
     expect(grid.dirtyChunks.size).toBe(0);
   });
 

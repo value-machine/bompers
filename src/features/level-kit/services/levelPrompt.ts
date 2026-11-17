@@ -171,7 +171,7 @@ function renderCatalog(ctx: PromptContext): string {
     "",
     "Reference content **by ID only**; IDs are lowercase-kebab. Unknown IDs fall back to the default with a warning.",
     "",
-    "- `data-material` (behaviour; players read it from the surface pattern the game draws):",
+    "- `data-material` (behaviour; breakable terrain looks like any slab in the game, so pick colours that tell materials apart):",
     ...catalog.material.map((m) => materialLine(ctx, m)),
     `- \`data-color\` (looks; any colour on any material, names only, no hex) — use the hex as that shape's \`fill\`: ${colours.join(", ")}.`,
     `- \`data-effect\`: ${codeList(catalog.effect.map((e) => e.id))}.`,

@@ -32,8 +32,11 @@ const EMPTY_SLOT: TerrainCellSlot = {
 export const isBreakableSlot = (info: TerrainCellSlot | null | undefined): boolean =>
   info !== null && info !== undefined && info.toughness !== null;
 
-/** Distances are clamped to this many samples either side of an edge (terrain-field D2). */
-export const FIELD_BAND_SAMPLES = 4;
+/**
+ * Distances are clamped to this many samples either side of an edge (terrain-field D2). Five, so
+ * the field and its normal stay exact one body radius (14 units) off the surface (slope-walking A5).
+ */
+export const FIELD_BAND_SAMPLES = 5;
 
 /**
  * Half a sample's diagonal, in samples: an edge between a solid and an empty sample centre lies
@@ -291,6 +294,48 @@ function exposeUnbreakable(grid: TerrainGrid, box: SampleBox): void {
   }
 }
 
+/** Air re-measures smaller than this (world units) are left alone: no redraw for rounding noise. */
+const AIR_TOLERANCE = 0.05;
+
+/**
+ * Distance of an empty sample from the solid terrain still near it: the best of
+ * (solid neighbour's distance − how far away it is) over solid samples within the band, else the
+ * band. A path from the sample to a solid one crosses the edge, so this bounds the true distance
+ * and is exact where the neighbour faces it (terrain-curves D9).
+ */
+function airDistance(grid: TerrainGrid, cx: number, cy: number): number {
+  const reach = FIELD_BAND_SAMPLES;
+  const band = fieldBand(grid);
+  let best = -band;
+  for (let dy = -reach; dy <= reach; dy += 1) {
+    for (let dx = -reach; dx <= reach; dx += 1) {
+      if (getCellSlot(grid, cx + dx, cy + dy) === EMPTY_CELL) continue;
+      const solid = sampleDistance(grid, cx + dx, cy + dy);
+      best = Math.max(best, solid - Math.hypot(dx, dy) * grid.cellSize);
+    }
+  }
+  return Math.min(-EDGE_EPSILON, best);
+}
+
+/**
+ * Re-measures the empty samples around a fresh crater from the terrain that is left, so no
+ * sample keeps the distance to an edge that no longer exists (a blasted-away platform leaves no
+ * outline behind; terrain-curves D9).
+ */
+function remeasureAir(grid: TerrainGrid, box: SampleBox): void {
+  // Only air within the band of a written sample can have measured to terrain that is now gone.
+  const pad = FIELD_BAND_SAMPLES;
+  for (let cy = box.minY - pad; cy <= box.maxY + pad; cy += 1) {
+    for (let cx = box.minX - pad; cx <= box.maxX + pad; cx += 1) {
+      if (cx < 0 || cy < 0 || cx >= grid.widthCells || cy >= grid.heightCells) continue;
+      if (getCellSlot(grid, cx, cy) !== EMPTY_CELL) continue;
+      const distance = airDistance(grid, cx, cy);
+      if (Math.abs(distance - sampleDistance(grid, cx, cy)) < AIR_TOLERANCE) continue;
+      writeSample(grid, { cx, cy, slot: EMPTY_CELL, distance });
+    }
+  }
+}
+
 /**
  * Blasts a crater out of the terrain (blast-power D1, terrain-field D4): each breakable sample's
  * distance is lowered to its distance from the crater rim, where the rim lies at
@@ -312,7 +357,10 @@ export function clearCrater(grid: TerrainGrid, crater: Crater): ClearedCells {
   }
   const byLook = [...pass.bySlot.values()];
   const removed = byLook.reduce((sum, look) => sum + look.cells, 0);
-  if (removed > 0) exposeUnbreakable(grid, pass.box);
+  if (removed > 0) {
+    exposeUnbreakable(grid, pass.box);
+    remeasureAir(grid, pass.box);
+  }
   return { removed, byLook, box: pass.box };
 }
 

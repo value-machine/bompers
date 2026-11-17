@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES, type GameTunables } from "@/shared/config/gameTunables";
 import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import type { PlayerInput } from "@/shared/types/gameInput.types";
-import { buildTerrainFromLevel } from "@/features/arena/api/arenaApi";
+import {
+  buildTerrainFromLevel,
+  clearCrater,
+  type Crater,
+  type TerrainGrid,
+} from "@/features/arena/api/arenaApi";
 import type { Rect } from "@/shared/types/gameGeometry.types";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { createPlayer, stepPlayers } from "@/features/player/services/playerController";
@@ -40,6 +45,7 @@ const G = DEFAULT_GAME_TUNABLES.world.gravity;
 
 interface Sim {
   player: PlayerState;
+  terrain: TerrainGrid;
   step: (patch?: Partial<PlayerInput>, steps?: number) => void;
 }
 
@@ -61,7 +67,7 @@ const createSim = (
       });
     }
   };
-  return { player, step };
+  return { player, terrain, step };
 };
 
 /** A player standing still on the floor at x. */
@@ -336,5 +342,193 @@ describe("playerController — crouch", () => {
     sim.step({ crouch: true, jump: true }, 1);
     expect(sim.player.crouching).toBe(false);
     expect(sim.player.vy).toBeLessThan(0);
+  });
+});
+
+// A curved hill: a dome (circle r 160 centred under the floor) on a flat floor, 4-unit samples,
+// the way a crater rim or authored curve reads after the distance-field laps.
+const hill: LevelDefinition = {
+  ...level,
+  settings: { cellSize: 4, gravity: 1 },
+  terrain: [
+    stone({ x: 0, y: 320, w: 800, h: 32 }),
+    { shape: { type: "circle" as const, cx: 500, cy: 420, r: 160 }, materialId: "earth" },
+  ],
+};
+
+describe("playerController — curved slopes", () => {
+  it("should walk up and over a curved hill when the player holds a direction", () => {
+    const sim = createSim({ x: 300, y: FLOOR_Y - 40 }, DEFAULT_GAME_TUNABLES, hill);
+    sim.step({}, 60);
+    let peak = sim.player.y;
+    for (let i = 0; i < 360 && sim.player.x < 680; i += 1) {
+      sim.step({ moveX: 1 });
+      peak = Math.min(peak, sim.player.y);
+    }
+    expect(sim.player.x).toBeGreaterThan(680);
+    // Crossed the dome top (y 260) on foot, not around it.
+    expect(peak).toBeLessThanOrEqual(264);
+  });
+
+  it("should stay on the ground without new landings when the player walks down the far side", () => {
+    const sim = createSim({ x: 500, y: 240 }, DEFAULT_GAME_TUNABLES, hill);
+    sim.step({}, 60);
+    const landings = sim.player.landCount;
+    for (let i = 0; i < 120; i += 1) sim.step({ moveX: 1 });
+    expect(sim.player.x).toBeGreaterThan(600);
+    expect(sim.player.landCount).toBe(landings);
+  });
+
+  it("should still stop at a wall taller than the step-up when walking into it", () => {
+    const sim = grounded(400);
+    for (let i = 0; i < 120; i += 1) sim.step({ moveX: 1 });
+    expect(sim.player.x).toBeLessThan(480);
+  });
+});
+
+// Slope walking (slope-walking D1, D8): an earth slab (4-unit samples) with a fresh rocket crater,
+// and a 30° ramp. Steady speeds come from the shipped rule: runSpeed × (1 ∓ loss × sin θ).
+const SLAB_TOP = 200;
+const earthWorld: LevelDefinition = {
+  ...level,
+  settings: { cellSize: 4, gravity: 1 },
+  worldSize: { w: 600, h: 400 },
+  terrain: [{ shape: { type: "rect", x: 0, y: SLAB_TOP, w: 600, h: 200 }, materialId: "earth" }],
+  bounds: { x: 0, y: 0, w: 600, h: 400 },
+};
+const rocketCrater: Crater = { x: 300, y: SLAB_TOP, reach: 34, shape: "round" };
+
+/** A blob dropped into a fresh rocket crater in the earth slab, settled at its bottom. */
+const inCrater = (): Sim => {
+  const sim = createSim({ x: 300, y: 225 }, DEFAULT_GAME_TUNABLES, earthWorld);
+  clearCrater(sim.terrain, rocketCrater);
+  sim.step({}, 120);
+  return sim;
+};
+
+const RAMP = { from: 100, to: 700, base: 380 };
+const RAMP_TAN = Math.tan(Math.PI / 6);
+const rampY = (x: number): number => RAMP.base - (x - RAMP.from) * RAMP_TAN;
+const rampWorld: LevelDefinition = {
+  ...level,
+  settings: { cellSize: 4, gravity: 1 },
+  worldSize: { w: 900, h: 420 },
+  terrain: [
+    {
+      shape: {
+        type: "polygon",
+        points: [
+          { x: 0, y: RAMP.base },
+          { x: RAMP.from, y: RAMP.base },
+          { x: RAMP.to, y: rampY(RAMP.to) },
+          { x: 900, y: rampY(RAMP.to) },
+          { x: 900, y: 420 },
+          { x: 0, y: 420 },
+        ],
+      },
+      materialId: "stone",
+    },
+  ],
+  bounds: { x: 0, y: 0, w: 900, h: 420 },
+};
+
+/** Mean speed while the blob crosses the span holding `moveX`. */
+const meanSpeedAcross = (sim: Sim, span: { fromX: number; toX: number; moveX: number }): number => {
+  const low = Math.min(span.fromX, span.toX);
+  const high = Math.max(span.fromX, span.toX);
+  const speeds: number[] = [];
+  for (let i = 0; i < 1200; i += 1) {
+    sim.step({ moveX: span.moveX });
+    const inside = sim.player.x >= low && sim.player.x <= high;
+    if (inside) speeds.push(Math.hypot(sim.player.vx, sim.player.vy));
+    if (!inside && speeds.length > 0) break;
+  }
+  return speeds.reduce((sum, v) => sum + v, 0) / Math.max(1, speeds.length);
+};
+
+describe("playerController — leaving the ground (slope-walking A1, A9)", () => {
+  it("should fly off a ledge keeping its run speed when running off the edge", () => {
+    // The ledge platform: x 80–240, top y 160.
+    const sim = createSim({ x: 120, y: 120 });
+    sim.step({}, 120);
+    for (let i = 0; i < 120 && sim.player.x < 250; i += 1) sim.step({ moveX: 1 });
+    expect(sim.player.grounded).toBe(false);
+    expect(sim.player.vx).toBeGreaterThan(P.runSpeed * 0.9);
+  });
+
+  it("should leave the ground when knocked upward while standing", () => {
+    const sim = grounded();
+    sim.player.vy = -400;
+    sim.step();
+    expect(sim.player.grounded).toBe(false);
+    expect(sim.player.y).toBeLessThan(FLOOR_Y);
+  });
+
+  it("should keep its horizontal speed when jumping while walking up a ramp", () => {
+    const sim = createSim({ x: 40, y: RAMP.base - 30 }, DEFAULT_GAME_TUNABLES, rampWorld);
+    sim.step({}, 60);
+    for (let i = 0; i < 240 && sim.player.x < 450; i += 1) sim.step({ moveX: 1 });
+    const before = sim.player.vx;
+    sim.step({ moveX: 1, jump: true }, 6);
+    expect(sim.player.grounded).toBe(false);
+    expect(sim.player.vx).toBeGreaterThan(before * 0.9);
+  });
+
+  it("should stand still on a slope when there is no input", () => {
+    const sim = createSim({ x: 400, y: rampY(400) - 30 }, DEFAULT_GAME_TUNABLES, rampWorld);
+    sim.step({}, 120);
+    const at = { x: sim.player.x, y: sim.player.y };
+    sim.step({}, 240);
+    expect(Math.abs(sim.player.x - at.x)).toBeLessThan(0.5);
+    expect(Math.abs(sim.player.y - at.y)).toBeLessThan(0.5);
+  });
+});
+
+describe("playerController — slope walking", () => {
+  it("should walk out of a fresh rocket crater without jumping when starting at its bottom", () => {
+    const sim = inCrater();
+    expect(sim.player.y).toBeGreaterThan(SLAB_TOP + 20);
+    // 0.75 s: out of the crater and onto the slab top, well before its far edge (x 600).
+    sim.step({ moveX: 1 }, 90);
+    expect(sim.player.x).toBeGreaterThan(rocketCrater.x + rocketCrater.reach + 14);
+    expect(sim.player.y).toBeCloseTo(SLAB_TOP, 0);
+    expect(sim.player.jumpCount).toBe(0);
+  });
+
+  it("should move without a position jump when walking over the crater rim", () => {
+    const sim = inCrater();
+    let largest = 0;
+    const landings = sim.player.landCount;
+    for (let i = 0; i < 90; i += 1) {
+      const before = { x: sim.player.x, y: sim.player.y };
+      sim.step({ moveX: 1 });
+      largest = Math.max(largest, Math.hypot(sim.player.x - before.x, sim.player.y - before.y));
+    }
+    expect(largest).toBeLessThanOrEqual(P.runSpeed * dt + 0.5);
+    // On the ground all the way: no hop off the lip and no landing (A9).
+    expect(sim.player.landCount).toBe(landings);
+  });
+
+  it("should settle at the slower uphill speed when walking up a 30° ramp", () => {
+    const sim = createSim({ x: 40, y: RAMP.base - 30 }, DEFAULT_GAME_TUNABLES, rampWorld);
+    sim.step({}, 60);
+    const mean = meanSpeedAcross(sim, { fromX: 450, toX: 600, moveX: 1 });
+    const expected = P.runSpeed * (1 - P.slope.uphillLoss * Math.sin(Math.PI / 6));
+    expect(Math.abs(mean - expected) / expected).toBeLessThan(0.05);
+  });
+
+  it("should settle at the faster downhill speed when walking down a 30° ramp", () => {
+    const sim = createSim({ x: 860, y: rampY(RAMP.to) - 30 }, DEFAULT_GAME_TUNABLES, rampWorld);
+    sim.step({}, 60);
+    const mean = meanSpeedAcross(sim, { fromX: 450, toX: 300, moveX: -1 });
+    const expected = P.runSpeed * (1 + P.slope.downhillGain * Math.sin(Math.PI / 6));
+    expect(Math.abs(mean - expected) / expected).toBeLessThan(0.05);
+  });
+
+  it("should report the ground angle under the feet when standing on a ramp", () => {
+    const sim = createSim({ x: 400, y: rampY(400) - 30 }, DEFAULT_GAME_TUNABLES, rampWorld);
+    sim.step({}, 120);
+    expect(sim.player.grounded).toBe(true);
+    expect(sim.player.groundAngle).toBeCloseTo(Math.PI / 6, 1);
   });
 });
