@@ -55,7 +55,7 @@ Link the preview kit in `<head>` (works offline without it):
 | sound | `clink` | Clink |  |
 | sound | `jump` | Jump |  |
 | sound | `land` | Land |  |
-| sound | `tumble-bounce` | Tumble bounce |  |
+| sound | `tumble-bounce` | Roll bounce |  |
 | sound | `dive-launch` | Dive launch |  |
 | sound | `dive-impact` | Dive impact |  |
 | sound | `hit` | Hit |  |

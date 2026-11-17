@@ -22,7 +22,7 @@ export interface BlobAnim {
   seenJumps: number;
   seenWallJumps: number;
   seenLandings: number;
-  seenTumbleBounces: number;
+  seenRollBounces: number;
   active: { kind: SquashKind; startMs: number; amount: number } | null;
   /** Crouch pose progress 0 (standing) … 1 (sunk), and the render clock it was stepped at. */
   crouchBlend: number;
@@ -76,7 +76,7 @@ export const createBlobAnim = (player: PlayerState): BlobAnim => ({
   seenJumps: player.jumpCount,
   seenWallJumps: player.wallJumpCount,
   seenLandings: player.landCount,
-  seenTumbleBounces: player.tumbleBounceCount,
+  seenRollBounces: player.rollBounceCount,
   active: null,
   crouchBlend: player.crouching ? 1 : 0,
   crouchAtMs: null,
@@ -151,9 +151,9 @@ export function noteBlobEvents(
     const impact = Math.min(1, player.lastLandingSpeed / squash.landFullImpact);
     anim.active = { kind: "land", startMs: nowMs, amount: 0.5 + 0.5 * impact };
   }
-  // A tumble bounce (floor or wall) squashes like a landing at that speed.
-  if (player.tumbleBounceCount !== anim.seenTumbleBounces) {
-    const impact = Math.min(1, player.lastTumbleBounceSpeed / squash.landFullImpact);
+  // A roll bounce (floor or wall) squashes like a landing at that speed.
+  if (player.rollBounceCount !== anim.seenRollBounces) {
+    const impact = Math.min(1, player.lastRollBounceSpeed / squash.landFullImpact);
     anim.active = { kind: "land", startMs: nowMs, amount: 0.5 + 0.5 * impact };
   }
   if (player.jumpCount !== anim.seenJumps) {
@@ -168,7 +168,7 @@ export function noteBlobEvents(
 
 function markEventsSeen(anim: BlobAnim, player: PlayerState): void {
   anim.seenLandings = player.landCount;
-  anim.seenTumbleBounces = player.tumbleBounceCount;
+  anim.seenRollBounces = player.rollBounceCount;
   anim.seenJumps = player.jumpCount;
   anim.seenWallJumps = player.wallJumpCount;
 }
@@ -252,17 +252,17 @@ export const createHelmetWobble = (): HelmetWobble => ({
   pose: { tilt: 0, drop: 0 },
 });
 
-/** Velocity kick for a squash moment: landings and tumble bounces sink it, jumps leave it behind. */
+/** Velocity kick for a squash moment: landings and roll bounces sink it, jumps leave it behind. */
 export function kickHelmetForSquash(
   wobble: HelmetWobble,
-  moment: { kind: SquashKind; amount: number; vx: number; tumbling: boolean },
+  moment: { kind: SquashKind; amount: number; vx: number; rolling: boolean },
   helmet: HelmetTunables
 ): void {
   const side = Math.sign(moment.vx);
   if (moment.kind === "land") {
     wobble.drop.velocity += helmet.landDrop * moment.amount;
-    // A tumble bounce also rocks it, against the roll.
-    if (moment.tumbling) wobble.tilt.velocity -= side * helmet.hitTilt * 0.5 * moment.amount;
+    // A roll bounce also rocks it, against the roll.
+    if (moment.rolling) wobble.tilt.velocity -= side * helmet.hitTilt * 0.5 * moment.amount;
   }
   if (moment.kind === "jump") wobble.drop.velocity += helmet.jumpDrop;
   if (moment.kind === "wallJump") wobble.tilt.velocity += side * helmet.wallJumpTilt;
@@ -395,7 +395,7 @@ function airTiltTarget(player: PlayerState, feet: FeetTunables): number {
 /** Which wall the feet turn to this step, or null. A wall-jump keeps the wall it left. */
 function wallTarget(motion: FeetMotion, frame: FeetFrame): -1 | 1 | null {
   const { player, nowMs } = frame;
-  if (player.tumbleSeconds > 0) return null;
+  if (player.rollSource !== null) return null;
   if (!player.grounded && player.wallDir !== 0) return player.wallDir;
   if (nowMs < motion.wallJumpHoldUntilMs) return player.lastWallDir;
   return null;

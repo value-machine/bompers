@@ -26,7 +26,7 @@ export type JuiceTierName = "light" | "medium" | "heavy";
 
 /**
  * - `light`: the player's own actions (jump, land, fire, pickup, respawn) — squash and sound only.
- * - `medium`: something hit you or you bounced (front hit, tumble bounce).
+ * - `medium`: something hit you or you bounced (front hit, roll bounce).
  * - `heavy`: the big moments (back hit, explosion) — strongest shake, full flash, hit-stop.
  */
 export const JUICE_TIERS: Readonly<Record<JuiceTierName, JuiceTier>> = {

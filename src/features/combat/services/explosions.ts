@@ -16,7 +16,7 @@ import {
  * Explosions (GDD § 2 Rocket Jumping, § 3): a `blast` hit (1 chunk by default, from any side)
  * on every OTHER player in range,
  * a radial impulse on everyone in range (the shooter too — damage-free rocket jumps), the
- * tumble hurt reaction on every other player the blast pushed hard (`reactToHit`), and a
+ * roll on every other player as hard as the blast pushed it (`reactToHit`), and a
  * crater in breakable terrain with the material's destroy effect / sound as events. The blast's
  * power sets its reach, push and crater (`@/shared/utils/blastPower`, blast-power D1, D3).
  */
@@ -60,7 +60,7 @@ function hitPlayers(ctx: CombatContext, blast: Blast): void {
     const fighter = fighterFor(ctx.combat, player, ctx.tunables);
     if (fighter.eliminated) continue;
     const push = pushPlayer(ctx, player, blast);
-    // The shooter is only pushed: no damage and no tumble, so rocket jumps stay in control.
+    // The shooter is only pushed: no damage and no roll, so rocket jumps stay in control.
     if (!push || player.id === blast.ownerId) continue;
     reactToHit(player, { impulse: push.impulse }, ctx.tunables);
     applyHit(ctx, {

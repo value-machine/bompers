@@ -22,7 +22,7 @@ The feedback layer of the design system ([`DESIGN_LANGUAGE.md`](DESIGN_LANGUAGE.
 | Tier | Use for | Shake | Flash | Hit-stop | Music duck |
 |------|---------|-------|-------|----------|-----------|
 | `light` | the player's own actions: jump, land, fire, pick up, respawn | — | — | — | — |
-| `medium` | something hit you or you bounced: front hit, tumble bounce | 3 px | 0.75 | — | — |
+| `medium` | something hit you or you bounced: front hit, roll bounce | 3 px | 0.75 | — | — |
 | `heavy` | the big moments: back hit, explosion | 6 px | 1.0 | 50 ms | 4 dB, 300 ms |
 
 - Summed shake is capped at **12 px** (`JUICE_SHAKE_CAP_PX`); live kicks add as a root of squares.
@@ -36,7 +36,7 @@ The feedback layer of the design system ([`DESIGN_LANGUAGE.md`](DESIGN_LANGUAGE.
 |------|--------|----------------|
 | `flash` — flash hold, hit-stop | 30–70 ms | hit flash hold 50 ms, hit-stop 50 ms |
 | `fade` — a flash fading out | 50–150 ms | hit flash fade 80 ms |
-| `shake` — one shake kick | 60–150 ms | hit 80 ms, tumble bounce 100 ms, explosion 120 ms |
+| `shake` — one shake kick | 60–150 ms | hit 80 ms, roll bounce 100 ms, explosion 120 ms |
 | `squash` — squash recovering, HUD pip pop | 100–200 ms | wall-jump 120 ms, jump 150 ms, land 180 ms, health pip 150 ms |
 | `effect` — pop-in effect clearing | 180–320 ms | impact pop 220 ms, explosion star 250 ms |
 | `linger` — things flying off | 300–600 ms | elimination droplets 300 ms, debris 500 ms |
@@ -79,7 +79,9 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Respawn | light | `respawn` | — | — | — | — | blink 8 Hz + ring | — |
 | Dive launch | light | `dive-launch` | dive pose | — | — | — | — | — |
 | Front hit taken | medium | `hit` / `dive-impact` (gain by knockback) | — | 0.75 | 3 px | — | impact pop (not on dive hits) | kick |
-| Tumble bounce | medium | `tumble-bounce` | squash wide (by speed) | — | 3 px (by speed) | — | — | kick |
+| Roll bounce (hit or dash roll) | medium | `tumble-bounce` | squash wide (by speed) | — | 3 px (by speed) | — | — | kick |
+| Dash roll starts (fire held through a dive) | light | `land` soft thud (`crouchGain`) | — | — | — | — | the body spins with its ground speed (sim `rollAngle`) | — |
+| Roll comes to rest | light | `land` soft thud (`crouchGain`) | — | — | — | — | the body turns back upright (stand-up) | — |
 | Dive wall bonk | medium | `land` + the wall's material sound (gain by speed into the wall) | bonk squash (dive pose) | — | — | — | — | — |
 | Back hit taken | heavy | `hit` / `dive-impact` (gain by knockback) | — | 1.0 | 6 px | 50 ms | impact pop (not on dive hits) | kick |
 | Explosion | heavy | `explosion` (ducks music) | — | — | 6 px (by radius) | — | star burst | — |

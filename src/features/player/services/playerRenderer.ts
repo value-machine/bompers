@@ -60,14 +60,14 @@ import type { PlayerState } from "@/features/player/types/player.types";
  * Each blob is two trees with identical transforms: `ink` (every part stroked in ink at twice the
  * outline width) under `fill` (the coloured parts, no stroke), so only the outer half of the ink
  * shows. No filters. Shapes are drawn once; per frame only transforms change (squash, foot motion,
- * tumble roll, dive overlays, aim), and the ink redraws only when the zoom-clamped outline width
+ * roll spin, dive overlays, aim), and the ink redraws only when the zoom-clamped outline width
  * changes step. The spawn blink fades the fill tree; the outline stays.
  *
  * Contact shadows live in `shadows`, which the match renderer places on the shadow layer (§ 5 step 4).
  *
  * Game feel (§ 6): a hit flashes a white egg over the body fill (the ink stays, so the silhouette
  * never changes), and the helmet with its emblem rides a damped spring (`HelmetWobble`) kicked by
- * landings, jumps, wall-jumps, tumble bounces and hits. The feet step, swing, tilt and splay, and
+ * landings, jumps, wall-jumps, roll bounces and hits. The feet step, swing, tilt and splay, and
  * turn their soles to the wall while wall-sliding (`blobPose.ts`).
  */
 export interface PlayersView {
@@ -358,10 +358,6 @@ function syncTube(sprite: BlobSprite, weapon: BlobWeapon | undefined, zoom: numb
   sprite.muzzle.alpha = MUZZLE_MIN_ALPHA + (1 - MUZZLE_MIN_ALPHA) * ready;
 }
 
-/** A tumbling blob rolls with the distance it travels, like a ball; 0 when not tumbling. */
-const tumbleRoll = (player: PlayerState, r: number): number =>
-  player.tumbleSeconds > 0 ? (player.x / (1.6 * r)) % (Math.PI * 2) : 0;
-
 interface PoseFrame {
   pose: BlobPose;
   overlay: BlobPoseOverlay | undefined;
@@ -387,8 +383,8 @@ function placeBlob(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
     nowMs: frame.nowMs,
     tunables: frame.groundTilt ?? DEFAULT_GAME_TUNABLES.feel.groundTilt,
   });
-  const roll = tumbleRoll(player, sprite.metrics.r);
-  sprite.root.rotation = (overlay?.rotation ?? 0) + roll + slopeLean;
+  // The roll's spin is sim state (`roll.ts`): it follows the ball physics and eases upright.
+  sprite.root.rotation = (overlay?.rotation ?? 0) + player.rollAngle + slopeLean;
   const sx = pose.bodySx * (overlay?.sx ?? 1);
   const sy = pose.bodySy * (overlay?.sy ?? 1);
   const lean = overlay ? 0 : Math.max(-0.15, Math.min(0.15, player.vx / 2400));
@@ -481,8 +477,8 @@ function kickHelmet(wobble: HelmetWobble, player: PlayerState, frame: FeelFrame)
   const { moment, hit } = frame;
   const helmet = frame.helmet ?? DEFAULT_GAME_TUNABLES.feel.helmet;
   if (moment) {
-    const tumbling = player.tumbleSeconds > 0;
-    kickHelmetForSquash(wobble, { ...moment, vx: player.vx, tumbling }, helmet);
+    const rolling = player.rollSource !== null;
+    kickHelmetForSquash(wobble, { ...moment, vx: player.vx, rolling }, helmet);
   }
   if (hit && hit.startMs !== wobble.seenHitMs) {
     wobble.seenHitMs = hit.startMs;

@@ -157,7 +157,7 @@ function respawn(args: StepMatchRulesArgs, player: PlayerState): void {
   const centre = { x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 };
   placePlayer(player, args.spawns[index] ?? centre);
   respawnFighter(combat, player, tunables);
-  // A fresh start: `placePlayer` ended any tumble; the dive forgets its phase and cooldown.
+  // A fresh start: `placePlayer` ended any roll; the dive forgets its phase and cooldown.
   resetDive(args.dive, player);
   const fighter = combat.fighters.get(player.id);
   if (fighter) fighter.invulnerableUntil = timeSeconds + tunables.match.spawnProtectionSeconds;

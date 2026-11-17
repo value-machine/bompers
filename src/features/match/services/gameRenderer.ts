@@ -72,7 +72,7 @@ import { createHudView, syncHudView, type HudView } from "@/features/match/servi
  * file only orders and drives them. The camera is computed first, so every layer gets this
  * frame's zoom for its outline width clamp (DESIGN_LANGUAGE § 3).
  *
- * Game feel (DESIGN_LANGUAGE § 6), all render-only: `feel` turns new combat events and tumble
+ * Game feel (DESIGN_LANGUAGE § 6), all render-only: `feel` turns new combat events and roll
  * bounces into hit flashes, helmet kicks and `shake` kicks; the shake offset is added when the
  * camera is applied (none under the OS reduced-motion setting); after a hard hit the world view
  * holds still for `feel.hitStop` (the sim keeps running, the HUD keeps drawing).

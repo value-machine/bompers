@@ -91,7 +91,7 @@ export const CONTENT_CATALOG: ContentCatalog = {
     // Game SFX (DESIGN_LANGUAGE § 8); files and takes live in the sound feature's bank.
     jump: { id: "jump", label: "Jump" },
     land: { id: "land", label: "Land" },
-    "tumble-bounce": { id: "tumble-bounce", label: "Tumble bounce" },
+    "tumble-bounce": { id: "tumble-bounce", label: "Roll bounce" },
     "dive-launch": { id: "dive-launch", label: "Dive launch" },
     "dive-impact": { id: "dive-impact", label: "Dive impact" },
     hit: { id: "hit", label: "Hit" },

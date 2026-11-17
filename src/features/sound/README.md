@@ -23,8 +23,8 @@ What each cue comes from:
 | Cue                                  | Source                                                               |
 | ------------------------------------ | -------------------------------------------------------------------- |
 | `jump`                               | `jumpCount` / `wallJumpCount` rises                                  |
-| `land`                               | `landCount` rises; gain scales with `lastLandingSpeed` (`intensityGain`, `SOUND_MIX.landingFullSpeed`); also the blob part of a wall bonk. Also `crouchCount` rises, at `SOUND_MIX.crouchGain` (soft thud) |
-| `tumble-bounce`                      | `tumbleBounceCount` rises                                            |
+| `land`                               | `landCount` rises; gain scales with `lastLandingSpeed` (`intensityGain`, `SOUND_MIX.landingFullSpeed`); also the blob part of a wall bonk. Also `crouchCount`, `dashRollCount` (a dash rolls on) or `rollRestCount` (a roll comes to rest) rises, at `SOUND_MIX.crouchGain` (soft thud) |
+| `tumble-bounce`                      | `rollBounceCount` rises (the roll bounce keeps this file id, shared-roll D8) |
 | `dive-launch`                        | dive phase enters `travel`                                           |
 | `dive-impact`                        | `playerHit` with source `dive`                                       |
 | `hit`                                | `playerHit` (rocket)                                                 |

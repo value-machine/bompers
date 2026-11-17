@@ -1,8 +1,10 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import {
-  isTumbling,
+  isRolling,
   reactToHit,
+  startRoll,
   type BodyContact,
   type PlayerState,
 } from "@/features/player/api/playerApi";
@@ -29,6 +31,8 @@ export interface StepDivesArgs {
   combat: CombatState;
   /** This step's blob-vs-blob contacts (`resolveBodyContacts`). */
   contacts: readonly BodyContact[];
+  /** This step's inputs: fire still held when a dive ends rolls on (dash-hold). */
+  inputs?: PlayerInputs;
   tunables: GameTunables;
   /** Sim time at the start of this step, seconds. */
   timeSeconds: number;
@@ -176,16 +180,30 @@ function terrainHit(player: PlayerState, minSpeed: number): TerrainHit | null {
 }
 
 /**
- * Terrain ends the dive, never bounces it. Head-on: a bonk (thrown back a little, stunned).
- * Glancing: the controller already stopped the blocked axis; the dive just ends. True if it ended.
+ * Dash-hold (shared-roll D1, D2): a dive that ends while fire is still held rolls on with its
+ * speed instead of recovering. The roll is the player feature's; the dive is idle, cooling down.
  */
-function endOnTerrain(motion: DiveMotion, player: PlayerState, d: DiveTunables): boolean {
+function rollOnIfHeld(motion: DiveMotion, player: PlayerState, args: StepDivesArgs): boolean {
+  if (args.inputs?.[player.slot]?.fire !== true) return false;
+  enterPhase(motion, "idle", 0);
+  motion.cooldown = motion.charged ? 0 : args.tunables.dive.cooldownSeconds;
+  startRoll(player, { source: "dash" }, args.tunables);
+  return true;
+}
+
+/**
+ * Terrain ends the dive, never bounces it. Head-on: a bonk (thrown back a little, stunned).
+ * Glancing: the controller already stopped the blocked axis; the dive just ends (or rolls on
+ * while fire is held). True if it ended.
+ */
+function endOnTerrain(motion: DiveMotion, player: PlayerState, args: StepDivesArgs): boolean {
+  const d = args.tunables.dive;
   const hit = terrainHit(player, d.minTerrainHitSpeed);
   if (!hit) return false;
   const other = hit.axis === "x" ? player.vy : player.vx;
   const headOn = hit.speed / Math.hypot(hit.speed, other) >= d.bonkMinAlignment;
   if (!headOn) {
-    endDive(motion, d);
+    if (!rollOnIfHeld(motion, player, args)) endDive(motion, d);
     return true;
   }
   const rebound = -hit.direction * hit.speed * d.bonkRebound;
@@ -195,11 +213,13 @@ function endOnTerrain(motion: DiveMotion, player: PlayerState, d: DiveTunables):
   return true;
 }
 
-function stepTravel(motion: DiveMotion, player: PlayerState, ctx: { d: DiveTunables; dt: number }) {
-  const { d } = ctx;
-  motion.phaseSeconds += ctx.dt;
-  if (endOnTerrain(motion, player, d)) return;
+function stepTravel(motion: DiveMotion, player: PlayerState, args: StepDivesArgs): void {
+  const d = args.tunables.dive;
+  motion.phaseSeconds += args.dt;
+  if (endOnTerrain(motion, player, args)) return;
   if (motion.phaseSeconds < motion.phaseDuration - EPSILON) return;
+  // Fire still held: roll on at full dive speed.
+  if (rollOnIfHeld(motion, player, args)) return;
   player.vx *= d.exitSpeedScale;
   player.vy *= d.exitSpeedScale;
   endDive(motion, d);
@@ -232,9 +252,9 @@ function stepPhase(motion: DiveMotion, player: PlayerState, args: StepDivesArgs)
   tickTimers(motion, args.dt);
   const active = motion.phase === "windup" || motion.phase === "travel";
   if (player.grounded && !active) motion.charged = true;
-  if (motion.phase === "travel") stepTravel(motion, player, { d, dt: args.dt });
+  if (motion.phase === "travel") stepTravel(motion, player, args);
   else if (motion.phase !== "idle") motion.phaseSeconds += args.dt;
-  else if (canStartDive(motion) && !isTumbling(player)) startWindup(motion, player, d);
+  else if (canStartDive(motion) && !isRolling(player)) startWindup(motion, player, d);
   handOverPhase(motion, player, d);
 }
 
@@ -323,7 +343,7 @@ function applyStrike(strike: Strike, args: StepDivesArgs): DiveHit {
     direction,
   } as const;
   const result = applyHit(args, hit);
-  // A hard hit (or one in the back) sends the victim tumbling: it ricochets off terrain.
+  // The victim rolls as long as the hit was hard (a back hit at least the hard lock).
   reactToHit(victim, { impulse, hard: result.zone === "back" }, args.tunables);
   return { ...hit, ...result, impulse };
 }

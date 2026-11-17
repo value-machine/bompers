@@ -76,16 +76,23 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     },
   },
   bodyCollision: { restitution: 0.9, restingSpeed: 140, maxImpulse: 1100 },
-  // A full-speed dive hit gives about 1000 units / s: hard. A glancing one stays below: light.
-  tumble: {
-    minImpulse: 800,
-    bounces: 3,
-    restitution: 0.75,
-    restitutionDecay: 0.75,
-    surfaceSpeedKeep: 0.6,
+  // A full-speed dive hit gives about 1000 units / s: 0.8 s out of control. A 200 shove: 0.16 s.
+  // Rolling friction 200 + 1.5 × speed: a 1000 roll on the flat stops in ≈ 1.4 s (≈ 480 units);
+  // on 20° it rolls down at ≈ 190 units / s.
+  roll: {
+    lockPerImpulse: 0.0008,
+    maxLockSeconds: 1.2,
+    hardLockSeconds: 0.5,
+    restitution: 0.6,
+    surfaceSpeedKeep: 0.85,
     minBounceSpeed: 160,
-    steerScale: 0.25,
-    maxSeconds: 1.4,
+    rollingDecel: 200,
+    rollingDrag: 1.5,
+    steerAccel: 500,
+    lockSteerScale: 0.25,
+    stopSpeed: 40,
+    maxSeconds: 6,
+    standUpSpeed: 14,
   },
   dive: {
     minHitSpeed: 150,
@@ -182,7 +189,7 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       // medium → heavy: a back hit shakes at the heavy tier.
       hardHitScale: JUICE_TIERS.heavy.shakePx / JUICE_TIERS.medium.shakePx,
       explosion: { px: JUICE_TIERS.heavy.shakePx, seconds: 0.12 },
-      tumbleBounce: { px: JUICE_TIERS.medium.shakePx, seconds: 0.1, fullSpeed: 900 },
+      rollBounce: { px: JUICE_TIERS.medium.shakePx, seconds: 0.1, fullSpeed: 900 },
     },
     helmet: {
       stiffness: 420,

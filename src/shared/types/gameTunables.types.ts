@@ -149,25 +149,35 @@ export interface GameTunables {
     maxImpulse: number;
   };
   /**
-   * Tumble: the hurt reaction to a hard hit (any attack). The victim ricochets off floors and
-   * walls for a few bounces, each weaker than the last, then recovers.
+   * Roll (player `roll.ts`): the one rolling state, from a hit (any attack) or a held dash.
+   * Seconds, world units, units / s.
    */
-  tumble: {
-    /** A hit whose impulse (velocity change) is at least this starts a tumble, units / s. */
-    minImpulse: number;
-    /** Terrain bounces per tumble. */
-    bounces: number;
-    /** Bounciness of the first bounce; each later one is multiplied by `restitutionDecay`. */
+  roll: {
+    /** Lock seconds per unit of hit impulse (out of control: no jump-out, weak steering). */
+    lockPerImpulse: number;
+    /** Longest lock from one hit. */
+    maxLockSeconds: number;
+    /** Least lock from a hit in the back. */
+    hardLockSeconds: number;
+    /** Bounciness of a terrain impact (share of the speed into it that comes back). */
     restitution: number;
-    restitutionDecay: number;
-    /** Share of the speed along the surface kept on each bounce (friction). */
+    /** Share of the speed along the surface kept on each bounce. */
     surfaceSpeedKeep: number;
-    /** Terrain impact speed below which a tumbling blob just lands, units / s. */
+    /** Impact speed below which a rolling blob stays on the surface instead of bouncing. */
     minBounceSpeed: number;
-    /** Steering while tumbling (share of normal); jump is locked. */
-    steerScale: number;
-    /** Longest tumble; it also ends when the blob comes to rest on the ground. */
+    /** Rolling friction on the ground: constant + per unit of speed (× the material's grip). */
+    rollingDecel: number;
+    rollingDrag: number;
+    /** Steering acceleration toward run speed (never brakes a faster roll). */
+    steerAccel: number;
+    /** Share of `steerAccel` while locked. */
+    lockSteerScale: number;
+    /** A hit roll ends on the ground below this speed once the lock ran out. */
+    stopSpeed: number;
+    /** Longest roll of any kind. */
     maxSeconds: number;
+    /** How fast the body turns back upright after a roll, radians / s. */
+    standUpSpeed: number;
   };
   /**
    * Unarmed attack: the dive headbutt ("bomp", GDD § 3). A committed straight missile that
@@ -324,7 +334,7 @@ export interface GameTunables {
     edgeMargin: number;
   };
   /**
-   * Game feel (DESIGN_LANGUAGE § 6): render-only feedback on hits, explosions and tumbles. Never
+   * Game feel (DESIGN_LANGUAGE § 6): render-only feedback on hits, explosions and roll bounces. Never
    * read by the simulation. Shake is in screen px; helmet offsets in mockup units (u = R / 30).
    */
   feel: {
@@ -346,12 +356,12 @@ export interface GameTunables {
       /** Wobble rate of the offset direction. */
       frequencyHz: number;
       hit: { px: number; seconds: number };
-      /** A back hit (the hard one: more damage, starts a tumble) multiplies the hit kick. */
+      /** A back hit (the hard one: more damage, a longer roll) multiplies the hit kick. */
       hardHitScale: number;
       /** Scaled by blast reach / the rocket's reach (capped at 1.5). */
       explosion: { px: number; seconds: number };
       /** Scaled by bounce speed / `fullSpeed` (capped at 1). */
-      tumbleBounce: { px: number; seconds: number; fullSpeed: number };
+      rollBounce: { px: number; seconds: number; fullSpeed: number };
     };
     /** Helmet (with its emblem) on a damped spring that lags behind the body. */
     helmet: {
