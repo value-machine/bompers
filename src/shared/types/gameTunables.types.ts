@@ -149,25 +149,35 @@ export interface GameTunables {
     maxImpulse: number;
   };
   /**
-   * Tumble: the hurt reaction to a hard hit (any attack). The victim ricochets off floors and
-   * walls for a few bounces, each weaker than the last, then recovers.
+   * Roll (player `roll.ts`): the one rolling state, from a hit (any attack) or a held dash.
+   * Seconds, world units, units / s.
    */
-  tumble: {
-    /** A hit whose impulse (velocity change) is at least this starts a tumble, units / s. */
-    minImpulse: number;
-    /** Terrain bounces per tumble. */
-    bounces: number;
-    /** Bounciness of the first bounce; each later one is multiplied by `restitutionDecay`. */
+  roll: {
+    /** Lock seconds per unit of hit impulse (out of control: no jump-out, weak steering). */
+    lockPerImpulse: number;
+    /** Longest lock from one hit. */
+    maxLockSeconds: number;
+    /** Least lock from a hit in the back. */
+    hardLockSeconds: number;
+    /** Bounciness of a terrain impact (share of the speed into it that comes back). */
     restitution: number;
-    restitutionDecay: number;
-    /** Share of the speed along the surface kept on each bounce (friction). */
+    /** Share of the speed along the surface kept on each bounce. */
     surfaceSpeedKeep: number;
-    /** Terrain impact speed below which a tumbling blob just lands, units / s. */
+    /** Impact speed below which a rolling blob stays on the surface instead of bouncing. */
     minBounceSpeed: number;
-    /** Steering while tumbling (share of normal); jump is locked. */
-    steerScale: number;
-    /** Longest tumble; it also ends when the blob comes to rest on the ground. */
+    /** Rolling friction on the ground: constant + per unit of speed (× the material's grip). */
+    rollingDecel: number;
+    rollingDrag: number;
+    /** Steering acceleration toward run speed (never brakes a faster roll). */
+    steerAccel: number;
+    /** Share of `steerAccel` while locked. */
+    lockSteerScale: number;
+    /** A hit roll ends on the ground below this speed once the lock ran out. */
+    stopSpeed: number;
+    /** Longest roll of any kind. */
     maxSeconds: number;
+    /** How fast the body turns back upright after a roll, radians / s. */
+    standUpSpeed: number;
   };
   /**
    * Unarmed attack: the dive headbutt ("bomp", GDD § 3). A committed straight missile that
@@ -215,6 +225,28 @@ export interface GameTunables {
     staggerSeconds: number;
     staggerSteerScale: number;
   };
+  /**
+   * Fire on the terrain field (blast-power D5, D6): it spreads through touching fuel at
+   * `spreadSpeed` (world units / s) the same every way; a lit sample burns `burnSeconds`, then is gone.
+   */
+  fire: {
+    spreadSpeed: number;
+    burnSeconds: number;
+    /** Burnt-out samples are removed together every this many seconds (cost and juice batching). */
+    burnOutInterval: number;
+    /**
+     * Blobs on fire (fire-burn b2): a blob loses a chunk (`hitDamage.burn`) `firstTickSeconds` into
+     * the burn, and at `burnSeconds` goes out with a second chunk unless it is crouching then
+     * (owner D10); one just put out can't catch again for `graceSeconds` (so a bump doesn't pass
+     * the fire straight back). Effects show each moment for `momentSeconds`.
+     */
+    blob: {
+      firstTickSeconds: number;
+      burnSeconds: number;
+      graceSeconds: number;
+      momentSeconds: number;
+    };
+  };
   /** Health, hits, rocket launcher, explosions and weapon drops (GDD § 3). */
   combat: {
     /** Health chunks per player; 0 eliminates. */
@@ -231,6 +263,8 @@ export interface GameTunables {
     hitDamage: {
       contact: { front: number; back: number };
       blast: { front: number; back: number };
+      /** Burning down (fire-burn D5); crouching does not reduce it. */
+      burn: { front: number; back: number };
     };
     /** Damage multiplier while the victim crouches, rounded down (0.5: 2 → 1, 1 → 0). */
     crouchDamageScale: number;
@@ -282,6 +316,24 @@ export interface GameTunables {
       craterShape: CraterShape;
     };
     /**
+     * Torch (blast-power D8, fire-spread b1): held fire sprays a short flame cone from the helmet
+     * along the aim; each of `rays` rays lights the first fuel it meets within `length`; blobs in
+     * the cone are pushed along the aim. `ammo` is seconds of fuel; spraying drains it.
+     */
+    torch: {
+      ammo: number;
+      fireCooldown: number;
+      recoil: number;
+      /** Cone length from the helmet, world units. */
+      length: number;
+      /** Cone half-angle from the aim, degrees. */
+      halfAngleDegrees: number;
+      /** Rays across the cone (odd keeps one on the aim). */
+      rays: number;
+      /** Acceleration on a blob inside the cone, along the aim, units / s². */
+      push: number;
+    };
+    /**
      * One blast power P (0–100, each weapon's `power`) drives everything an explosion does, in
      * straight lines (blast-power D1, D3): players within `reachPerPower · P` of the blast
      * (nearest body point) get `pushPerPower · P` units / s at the centre, falling off linearly to
@@ -324,7 +376,7 @@ export interface GameTunables {
     edgeMargin: number;
   };
   /**
-   * Game feel (DESIGN_LANGUAGE § 6): render-only feedback on hits, explosions and tumbles. Never
+   * Game feel (DESIGN_LANGUAGE § 6): render-only feedback on hits, explosions and roll bounces. Never
    * read by the simulation. Shake is in screen px; helmet offsets in mockup units (u = R / 30).
    */
   feel: {
@@ -346,12 +398,12 @@ export interface GameTunables {
       /** Wobble rate of the offset direction. */
       frequencyHz: number;
       hit: { px: number; seconds: number };
-      /** A back hit (the hard one: more damage, starts a tumble) multiplies the hit kick. */
+      /** A back hit (the hard one: more damage, a longer roll) multiplies the hit kick. */
       hardHitScale: number;
       /** Scaled by blast reach / the rocket's reach (capped at 1.5). */
       explosion: { px: number; seconds: number };
       /** Scaled by bounce speed / `fullSpeed` (capped at 1). */
-      tumbleBounce: { px: number; seconds: number; fullSpeed: number };
+      rollBounce: { px: number; seconds: number; fullSpeed: number };
     };
     /** Helmet (with its emblem) on a damped spring that lags behind the body. */
     helmet: {

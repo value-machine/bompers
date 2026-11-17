@@ -13,11 +13,15 @@ export {
   type ResolveBodyContactsArgs,
 } from "@/features/player/services/bodyCollision";
 export {
-  isTumbling,
+  endRoll,
+  isRolling,
   reactToHit,
-  startTumble,
+  rollLockFor,
+  startRoll,
   type HitReactionArgs,
-} from "@/features/player/services/tumble";
+  type StartRollArgs,
+} from "@/features/player/services/roll";
+export type { RollSource } from "@/features/player/types/player.types";
 export type { BlobPoseOverlay } from "@/features/player/services/blobPose";
 export { drawLooseHelmet, drawLooseTube } from "@/features/player/services/blobShapes";
 export {

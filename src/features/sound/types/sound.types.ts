@@ -21,7 +21,10 @@ export interface SoundPlayerSnapshot {
   landCount: number;
   /** Downward speed at the last landing, units / s. */
   lastLandingSpeed: number;
-  tumbleBounceCount: number;
+  /** Roll terrain bounces, dash-roll starts and hit rolls that came to rest (monotonic). */
+  rollBounceCount: number;
+  dashRollCount: number;
+  rollRestCount: number;
   /** Crouch starts (monotonic). */
   crouchCount: number;
   /** False while eliminated and waiting to respawn. */
@@ -37,6 +40,9 @@ export interface SoundPlayerSnapshot {
   terrainHitSpeed: number;
   /** Headbutt resets taken over the match (monotonic). */
   diveRefillCount: number;
+  /** Times caught fire / put out by ice over the match (monotonic; fire-burn D7). */
+  catchFireCount: number;
+  iceDouseCount: number;
 }
 
 /** The two volume channels: sound effects and music. */

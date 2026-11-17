@@ -56,9 +56,13 @@ describe("contentCatalog", () => {
     expect(exported.item.map((i) => i.id)).toEqual([
       "rocket-launcher",
       "homing-launcher",
+      "torch",
       "point-orb",
       "dive-reset",
     ]);
+    // Fire flags (fire-spread b1): only cardboard burns, only ice douses.
+    expect(exported.material.filter((m) => m.burns).map((m) => m.id)).toEqual(["cardboard"]);
+    expect(exported.material.filter((m) => m.douses).map((m) => m.id)).toEqual(["ice"]);
     expect(exported.behavior).toEqual([]);
     exported.material[0]!.label = "changed";
     expect(CONTENT_CATALOG.material.stone?.label).toBe("Stone");

@@ -19,14 +19,15 @@ The unarmed attack (GDD § 3 "Ongewapende aanval", the "bomp"): fire makes a blo
 - **Dive:** 12 frames of wind-up (hang, crouch, direction locked, 16-way: 22.5° steps), then up to 30 frames dead straight at 900 units / s with no gravity, no steering and no cancel. One dive per airtime.
 - The dive **never moves a player**. It writes velocity at events (launch, bonk, strike) and the controller's motion modifiers (`steerScale`, `gravityScale`, `jumpLocked`) every step; `stepPlayers` does all movement and terrain collision, so a dive cannot tunnel.
 - A **hit** = a `BodyContact` from `resolveBodyContacts` (player feature) where the attacker is travelling toward the other at `dive.minHitSpeed` or more. The body collision has already exchanged the momentum; the dive adds the strike on the victim (push + upward pop + a short steering stagger) and the **ricochet** on the attacker (pops straight up, dive ready again at once).
-- **Hurt reaction:** the strike calls the player feature's `reactToHit` with the impulse it gave. A hard hit (impulse at least `tumble.minImpulse`, or any back hit) sends the victim into a tumble: it ricochets off floors and walls. A tumbling blob cannot start a dive. The attacker itself never bounces off terrain.
-- **Terrain always ends the dive and never bounces it:** head-on is a bonk (small hop back, short stun), a glancing touch a plain recovery.
+- **Hurt reaction:** the strike calls the player feature's `reactToHit` with the impulse it gave: the victim rolls as long as the impulse says (a back hit at least `roll.hardLockSeconds`). A rolling blob cannot start a dive. The attacker itself never bounces off terrain.
+- **Dash-hold roll (shared-roll D1, D2):** a dive whose travel ends (time-out or a glancing terrain touch) while fire is still held rolls on at full dive speed in the player feature's roll (`startRoll`, source `dash`) instead of recovering; the dive goes idle with its cooldown. Letting go of fire ends the roll. `stepDives` reads fire from its optional `inputs`.
+- **Terrain always ends the dive and never bounces it:** head-on is a bonk (small hop back, short stun), a glancing touch a plain recovery (or the dash roll while fire is held).
 - **Combat:** the dive starts from combat's `unarmedAttack` hook (match passes `requestDive`), so it only fires for an unarmed, non-eliminated player, once per press. Every strike goes through combat's `applyHit` with `kind: "contact"`, `source: "dive"`: zone, damage (`combat.hitDamage.contact`), spawn protection, kill credit and the `playerHit` event are combat's. A spawn-protected victim is still bounced (`landed: false`, no damage). The knockback, ricochet and cooldown are the dive's.
 
 ## Dependencies
 
 - `combat` via `api/combatApi.ts` (`applyHit`, `CombatState`); `diveSim.test.ts` steps combat too (`createCombatState()`, `stepCombat` without crates — those moved to `collectibles`).
-- `player` via `api/playerApi.ts` (`PlayerState`, `BodyContact`, `BlobPoseOverlay`, `reactToHit`, `isTumbling`).
+- `player` via `api/playerApi.ts` (`PlayerState`, `BodyContact`, `BlobPoseOverlay`, `reactToHit`, `startRoll`, `isRolling`).
 - Shared: `gameTunables` (`dive` section), `gamePalette`, `gameInput.types`, `gameInputMapping`, `gameGeometry.types`; `pixi.js` in the renderer.
 - Consumed by `match` only.
 

@@ -3,13 +3,16 @@ import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import { drawLooseHelmet, drawLooseTube } from "@/features/player/api/playerApi";
-import { pieceAlpha, splatAlpha } from "@/features/knockout/services/knockoutSim";
+import {
+  pieceAlpha,
+  splatAlpha,
+  type KnockoutWorld,
+} from "@/features/knockout/services/knockoutSim";
 import type {
   GooDroplet,
   GooSplat,
   KnockoutPiece,
   KnockoutTunables,
-  KnockoutWorld,
 } from "@/features/knockout/types/knockout.types";
 
 /**

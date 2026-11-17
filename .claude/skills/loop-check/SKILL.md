@@ -39,7 +39,8 @@ When this skill is done, the change has passed every check the repo can run, and
    - `ARCHITECTURE.md` updated after structural changes;
    - no leftover debug code (but debugging logs stay until the owner confirms they can go — `debugging` rule);
    - no new deep docs without owner approval;
-   - every lap decision folded.
+   - every lap decision folded;
+   - every new or changed look or sound has an owner pick recorded in DECISIONS (options page, [`loop-refine`](../loop-refine/SKILL.md) step 6); a missing pick is a Blocker. Tuning an already-picked design is exempt.
 6. **Write the check summary** and run [`loop-ship`](../loop-ship/SKILL.md).
 
 ## Examples

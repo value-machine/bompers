@@ -8,6 +8,7 @@ import type { LevelDefinition } from "@/features/level/api/levelApi";
 import {
   createPlayer,
   resolveBodyContacts,
+  rollLockFor,
   stepPlayers,
   type PlayerState,
 } from "@/features/player/api/playerApi";
@@ -78,7 +79,9 @@ const createSim = (starts: number[], tunables: GameTunables = T) => {
         dt,
         unarmedAttack: ({ attacker }) => requestDive(dive, attacker, tunables),
       });
-      hits.push(...stepDives({ dive, players, combat, contacts, tunables, timeSeconds, dt }));
+      hits.push(
+        ...stepDives({ dive, players, combat, contacts, inputs, tunables, timeSeconds, dt })
+      );
       timeSeconds += dt;
     }
   };
@@ -413,49 +416,66 @@ describe("stepDives and combat", () => {
 });
 
 describe("stepDives hurt reaction", () => {
-  it("should send the victim tumbling off the floor and block its dive when the hit is hard", () => {
+  it("should roll the victim as long as the hit's impulse says and block its dive", () => {
     const sim = createSim([100, 150]);
     const victim = sim.players[1]!;
     victim.facing = -1;
     sim.step([RIGHT]);
     while (sim.hits.length === 0) sim.step();
-    expect(Math.hypot(sim.hits[0]!.impulse.x, sim.hits[0]!.impulse.y)).toBeGreaterThanOrEqual(
-      T.tumble.minImpulse
-    );
-    expect(victim.tumbleSeconds).toBeGreaterThan(0);
+    expect(victim.rollSource).toBe("hit");
+    const impulse = sim.hits[0]!.impulse;
+    expect(victim.rollLockSeconds).toBeCloseTo(rollLockFor(impulse, T.roll), 5);
     sim.step([{}, { fire: true, aimX: -1 }], 2);
     expect(sim.phaseOf(victim)).toBe("idle");
-    while (victim.tumbleBounceCount === 0 && victim.tumbleSeconds > 0) sim.step();
-    expect(victim.tumbleBounceCount).toBe(1);
-    expect(victim.vy).toBeLessThan(0);
   });
 
-  it("should keep the plain knockback when a front hit is light", () => {
-    const soft: GameTunables = { ...T, tumble: { ...T.tumble, minImpulse: 5000 } };
-    const sim = createSim([100, 150], soft);
-    const victim = sim.players[1]!;
-    victim.facing = -1;
-    sim.step([RIGHT]);
-    while (sim.hits.length === 0) sim.step();
-    expect(victim.tumbleSeconds).toBe(0);
-    expect(victim.steerScale).toBe(D.staggerSteerScale);
-  });
-
-  it("should send the victim tumbling on any back hit", () => {
-    const soft: GameTunables = { ...T, tumble: { ...T.tumble, minImpulse: 5000 } };
+  it("should roll the victim at least the hard lock on any back hit", () => {
+    const soft: GameTunables = { ...T, roll: { ...T.roll, lockPerImpulse: 0 } };
     const sim = createSim([100, 150], soft);
     const victim = sim.players[1]!;
     victim.facing = 1;
     sim.step([RIGHT]);
     while (sim.hits.length === 0) sim.step();
     expect(sim.hits[0]!.zone).toBe("back");
-    expect(victim.tumbleSeconds).toBeGreaterThan(0);
+    expect(victim.rollLockSeconds).toBeGreaterThan(T.roll.hardLockSeconds - 2 * dt);
   });
 
-  it("should never bounce the attacker off terrain when it misses", () => {
+  it("should never bounce the attacker off terrain when it misses and lets go of fire", () => {
     const sim = createSim([520]);
-    sim.step([RIGHT], 200);
-    expect(sim.players[0]!.tumbleBounceCount).toBe(0);
+    sim.step([RIGHT]);
+    sim.step([], 200);
+    expect(sim.players[0]!.rollBounceCount).toBe(0);
+  });
+});
+
+describe("stepDives dash-hold roll", () => {
+  it("should roll on at full dive speed when fire is held through the travel", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    sim.step([RIGHT], frames(D.windupSeconds + D.travelSeconds) + 2);
+    expect(player.rollSource).toBe("dash");
+    expect(sim.phaseOf(player)).toBe("idle");
+    expect(player.vx).toBeGreaterThan(D.launchSpeed * D.exitSpeedScale);
+    expect(player.dashRollCount).toBe(1);
+  });
+
+  it("should recover as before when fire is let go before the travel ends", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    sim.step([RIGHT]);
+    stepsUntilPhaseChange(sim);
+    stepsUntilPhaseChange(sim);
+    expect(sim.phaseOf(player)).toBe("recovery");
+    expect(player.rollSource).toBeNull();
+  });
+
+  it("should stop the dash roll when fire is released", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    sim.step([RIGHT], frames(D.windupSeconds + D.travelSeconds) + 2);
+    expect(player.rollSource).toBe("dash");
+    sim.step([], 1);
+    expect(player.rollSource).toBeNull();
   });
 });
 

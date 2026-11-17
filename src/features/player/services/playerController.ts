@@ -11,7 +11,15 @@ import {
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
 import type { PlayerState } from "@/features/player/types/player.types";
-import { bounceTumble, endTumble, isTumbling, tickTumble } from "@/features/player/services/tumble";
+import {
+  bounceRoll,
+  endRoll,
+  isRolling,
+  isRollLocked,
+  releaseRoll,
+  resetRoll,
+  tickRoll,
+} from "@/features/player/services/roll";
 
 /**
  * Player controller system (sim step 2): blob movement feel (GDD § 2). Per step:
@@ -62,10 +70,15 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     terrainHitY: 0,
     terrainHitSpeedX: 0,
     terrainHitSpeedY: 0,
-    tumbleSeconds: 0,
-    tumbleBouncesLeft: 0,
-    tumbleBounceCount: 0,
-    lastTumbleBounceSpeed: 0,
+    rollSource: null,
+    rollLockSeconds: 0,
+    rollSeconds: 0,
+    rollAngle: 0,
+    rollSpin: 0,
+    dashRollCount: 0,
+    rollRestCount: 0,
+    rollBounceCount: 0,
+    lastRollBounceSpeed: 0,
     crouching: false,
     crouchCount: 0,
     groundBelowY: null,
@@ -92,7 +105,7 @@ export function placePlayer(player: PlayerState, at: Vec2): void {
   player.wallCoyoteTimer = 0;
   player.wallJumpLockTimer = 0;
   resetStance(player);
-  endTumble(player);
+  resetRoll(player);
 }
 
 /** Plain movement again: no ability modifiers, no crouch. */
@@ -236,12 +249,11 @@ function readJumpButton(player: PlayerState, input: PlayerInput, p: PlayerTunabl
 }
 
 /**
- * Crouch holds while grounded with crouch held, unless tumbling or an ability owns the
+ * Crouch holds while grounded with crouch held, unless rolling or an ability owns the
  * steering (the dive). Decided from last step's contacts, before any movement this step.
  */
 function updateCrouch(player: PlayerState, input: PlayerInput): void {
-  const crouching =
-    input.crouch && player.grounded && !isTumbling(player) && player.steerScale >= 1;
+  const crouching = input.crouch && player.grounded && !isRolling(player) && player.steerScale >= 1;
   if (crouching && !player.crouching) player.crouchCount += 1;
   player.crouching = crouching;
 }
@@ -279,9 +291,12 @@ function applyHorizontal(player: PlayerState, input: PlayerInput, args: StepPlay
   if (player.steerScale <= 0) return;
   if (input.moveX !== 0) player.facing = input.moveX > 0 ? 1 : -1;
   if (player.wallJumpLockTimer > 0) return;
-  const tumbleSteer = isTumbling(player) ? args.tunables.tumble.steerScale : 1;
-  const scale = player.steerScale * tumbleSteer * groundGrip(player, args.terrain);
   leaveGroundIfPushedOff(player, args.terrain);
+  if (isRolling(player)) {
+    steerRoll(player, input, args);
+    return;
+  }
+  const scale = player.steerScale * groundGrip(player, args.terrain);
   if (player.grounded) {
     steerOnGround(player, input, { args, scale });
     return;
@@ -378,9 +393,43 @@ function steerOnGround(
   player.vy = next * frame.tangent.y;
 }
 
+// ── Roll (ball physics) ──────────────────────────────────────────────────────
+
+/** Input steering of a roll: pushes toward run speed, never brakes a faster roll. */
+function rollSteer(speed: number, input: PlayerInput, ctx: { args: StepPlayersArgs; dt: number }) {
+  const { roll, player: p } = ctx.args.tunables;
+  if (input.moveX === 0 || speed * Math.sign(input.moveX) >= p.runSpeed) return speed;
+  return speed + input.moveX * roll.steerAccel * ctx.dt;
+}
+
+/**
+ * A rolling blob is a ball (shared-roll D2): on the ground gravity pulls it along the slope
+ * (down a hill it speeds up), rolling friction slows it (× the ground's grip, so ice keeps it
+ * going) and the input only nudges it; in the air it flies, nudged the same way.
+ */
+function steerRoll(player: PlayerState, input: PlayerInput, args: StepPlayersArgs): void {
+  const { roll, world } = args.tunables;
+  const lockScale = isRollLocked(player) ? roll.lockSteerScale : 1;
+  const steer = { args, dt: args.dt * player.steerScale * lockScale };
+  if (!player.grounded) {
+    player.vx = rollSteer(player.vx, input, steer);
+    return;
+  }
+  const frame = groundFrame(player, args.terrain);
+  const gravity = world.gravity * player.gravityScale;
+  let speed = groundSpeed(player, frame) + gravity * frame.tangent.y * args.dt;
+  const friction = (roll.rollingDecel + roll.rollingDrag * Math.abs(speed)) * args.dt;
+  speed = approach(speed, 0, friction * groundGrip(player, args.terrain));
+  speed = rollSteer(speed, input, steer);
+  player.vx = speed * frame.tangent.x;
+  player.vy = speed * frame.tangent.y;
+}
+
 // ── Jump ─────────────────────────────────────────────────────────────────────
 
 function launch(player: PlayerState, vy: number): void {
+  // A jump is the way out of a roll once the lock ran out (shared-roll D6).
+  endRoll(player);
   player.vy = vy;
   player.grounded = false;
   player.crouching = false;
@@ -392,7 +441,7 @@ function launch(player: PlayerState, vy: number): void {
 
 /** Fires a buffered jump off the ground (or within coyote time), else off a wall. */
 function applyJump(player: PlayerState, p: PlayerTunables): void {
-  if (player.jumpBufferTimer <= 0 || player.jumpLocked || isTumbling(player)) return;
+  if (player.jumpBufferTimer <= 0 || player.jumpLocked || isRollLocked(player)) return;
   if (player.grounded || player.coyoteTimer > 0) {
     launch(player, -p.jumpSpeed);
     player.jumpCount += 1;
@@ -610,6 +659,8 @@ function moveOnGround(player: PlayerState, args: StepPlayersArgs): void {
   const lipSpeed = player.facing * Math.abs(speed);
   const kept = outcome === "wall" ? 0 : outcome === "lip" ? lipSpeed : speed;
   followGround(player, next, kept);
+  // A rolling blob that runs into a wall bounces back off it.
+  bounceRoll(player, args.tunables);
 }
 
 /** Axis-separated movement in the air; counts a landing on the step the feet touch down. */
@@ -623,7 +674,7 @@ function moveInAir(player: PlayerState, args: StepPlayersArgs): void {
   player.grounded = hitY && impactSpeed > 0;
   if (hitY) player.vy = 0;
   reportTerrainHit(player, { x: hitX, speedX, y: hitY, speedY: impactSpeed });
-  bounceTumble(player, args.tunables);
+  bounceRoll(player, args.tunables);
   if (player.grounded) land(player, impactSpeed, args.terrain);
 }
 
@@ -698,7 +749,7 @@ function updateContacts(player: PlayerState, args: StepPlayersArgs): void {
     player.wallDir !== 0 ? p.coyoteTime : Math.max(0, player.wallCoyoteTimer - dt);
   player.jumpBufferTimer = Math.max(0, player.jumpBufferTimer - dt);
   player.wallJumpLockTimer = Math.max(0, player.wallJumpLockTimer - dt);
-  tickTumble(player, dt);
+  tickRoll(player, tunables, dt);
 }
 
 /** Advances every player one fixed step. Mutates the players in place. */
@@ -707,6 +758,7 @@ export function stepPlayers(args: StepPlayersArgs): void {
   for (const player of args.players) {
     const input = args.inputs[player.slot] ?? EMPTY_PLAYER_INPUT;
     readJumpButton(player, input, p);
+    releaseRoll(player, input);
     updateCrouch(player, input);
     applyHorizontal(player, input, args);
     updateAim(player, input);

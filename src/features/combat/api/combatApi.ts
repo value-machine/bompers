@@ -13,8 +13,15 @@ export type {
   RocketKind,
   RocketState,
 } from "@/features/combat/types/combat.types";
-export type { UnarmedAttackHook, UnarmedFirePress } from "@/features/combat/services/attacks";
+export type {
+  SprayAttackHook,
+  SprayStep,
+  UnarmedAttackHook,
+  UnarmedFirePress,
+} from "@/features/combat/services/attacks";
 export { stepCombat, type StepCombatArgs } from "@/features/combat/services/combatSim";
+export { helmetPoint } from "@/features/combat/services/combatGeometry";
+export { reportTerrainDestroyed } from "@/features/combat/services/explosions";
 export {
   maxWeaponRecoil,
   takeWeaponPickups,

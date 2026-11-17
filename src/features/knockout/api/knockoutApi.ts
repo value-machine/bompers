@@ -4,7 +4,6 @@ export {
   knockoutBodies,
   noteKnockoutEvents,
   stepKnockouts,
-  type KnockoutVictim,
   type NoteKnockoutsArgs,
   type StepKnockoutsArgs,
 } from "@/features/knockout/services/knockoutSim";
@@ -14,4 +13,8 @@ export {
   type KnockoutFrame,
   type KnockoutView,
 } from "@/features/knockout/services/knockoutRenderer";
-export type { KnockoutBody, KnockoutWorld } from "@/features/knockout/types/knockout.types";
+export type {
+  Knockout,
+  KnockoutBody,
+  KnockoutWorld,
+} from "@/features/knockout/services/knockoutSim";

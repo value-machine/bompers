@@ -21,6 +21,8 @@
       "friction": 1,
       "bounce": 0,
       "surface": "plain",
+      "burns": false,
+      "douses": false,
       "defaultColor": "plum",
       "effect": "none",
       "sound": "thud"
@@ -32,6 +34,8 @@
       "friction": 1,
       "bounce": 0,
       "surface": "plain",
+      "burns": false,
+      "douses": false,
       "defaultColor": "clay",
       "effect": "dust-burst",
       "sound": "crumble"
@@ -43,6 +47,8 @@
       "friction": 1,
       "bounce": 0,
       "surface": "plain",
+      "burns": true,
+      "douses": false,
       "defaultColor": "cardboard",
       "effect": "dust-burst",
       "sound": "thwap"
@@ -54,6 +60,8 @@
       "friction": 0.12,
       "bounce": 0,
       "surface": "ice",
+      "burns": false,
+      "douses": true,
       "defaultColor": "frost",
       "effect": "none",
       "sound": "clink"
@@ -150,7 +158,7 @@
     },
     {
       "id": "tumble-bounce",
-      "label": "Tumble bounce"
+      "label": "Roll bounce"
     },
     {
       "id": "dive-launch",
@@ -203,6 +211,11 @@
     {
       "id": "homing-launcher",
       "label": "Homing launcher",
+      "use": "drop"
+    },
+    {
+      "id": "torch",
+      "label": "Torch",
       "use": "drop"
     },
     {

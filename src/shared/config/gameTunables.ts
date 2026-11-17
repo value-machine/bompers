@@ -77,16 +77,23 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     },
   },
   bodyCollision: { restitution: 0.9, restingSpeed: 140, maxImpulse: 1100 },
-  // A full-speed dive hit gives about 1000 units / s: hard. A glancing one stays below: light.
-  tumble: {
-    minImpulse: 800,
-    bounces: 3,
-    restitution: 0.75,
-    restitutionDecay: 0.75,
-    surfaceSpeedKeep: 0.6,
+  // A full-speed dive hit gives about 1000 units / s: 0.8 s out of control. A 200 shove: 0.16 s.
+  // Rolling friction 200 + 1.5 × speed: a 1000 roll on the flat stops in ≈ 1.4 s (≈ 480 units);
+  // on 20° it rolls down at ≈ 190 units / s.
+  roll: {
+    lockPerImpulse: 0.0008,
+    maxLockSeconds: 1.2,
+    hardLockSeconds: 0.5,
+    restitution: 0.6,
+    surfaceSpeedKeep: 0.85,
     minBounceSpeed: 160,
-    steerScale: 0.25,
-    maxSeconds: 1.4,
+    rollingDecel: 200,
+    rollingDrag: 1.5,
+    steerAccel: 500,
+    lockSteerScale: 0.25,
+    stopSpeed: 40,
+    maxSeconds: 6,
+    standUpSpeed: 14,
   },
   dive: {
     minHitSpeed: 150,
@@ -112,12 +119,26 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     staggerSeconds: 0.3,
     staggerSteerScale: 0.15,
   },
+  // Fire on the field (blast-power D6, owner starting values): 40 units / s, burn 1.5 s.
+  // Burn-outs are applied in batches every 0.25 s (at most that late), one effect / sound per batch.
+  // A blob on fire burns 2 s: a chunk at 1 s and a second at 2 s unless crouching then (owner
+  // fire-burn D10); 0.5 s grace after going out.
+  fire: {
+    spreadSpeed: 40,
+    burnSeconds: 1.5,
+    burnOutInterval: 0.25,
+    blob: { firstTickSeconds: 1, burnSeconds: 2, graceSeconds: 0.5, momentSeconds: 0.6 },
+  },
   combat: {
     maxHealth: 4,
     killCreditSeconds: 4,
     eventRetentionSeconds: 1,
     // Body hits from behind hurt more; explosions stay exactly 1 chunk from any side (GDD § 3).
-    hitDamage: { contact: { front: 1, back: 2 }, blast: { front: 1, back: 1 } },
+    hitDamage: {
+      contact: { front: 1, back: 2 },
+      blast: { front: 1, back: 1 },
+      burn: { front: 1, back: 1 },
+    },
     // Crouching halves damage, rounded down: 2 → 1, 1 → 0 (feedback round 2 § 2.4, crouch D1).
     crouchDamageScale: 0.5,
     // 6 rockets, no time limit: the count stays legible without a HUD timer (combat D5).
@@ -149,6 +170,17 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       // Same blast as the rocket.
       power: 50,
       craterShape: "round",
+    },
+    // Torch (blast-power D8): 3 s of fuel, a cone of ~3 blob widths (84 units) and ±18°, a light
+    // push (900 u/s² ≈ a third of the ground accel), no recoil and no cooldown (it is held).
+    torch: {
+      ammo: 3,
+      fireCooldown: 0,
+      recoil: 0,
+      length: 84,
+      halfAngleDegrees: 18,
+      rays: 7,
+      push: 900,
     },
     // Chosen so power 50 (the rocket) keeps the pre-power blast: push 1080, reach 64, crater 34 on
     // toughness 1 (blast-power D3, D10). Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units;
@@ -183,7 +215,7 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       // medium → heavy: a back hit shakes at the heavy tier.
       hardHitScale: JUICE_TIERS.heavy.shakePx / JUICE_TIERS.medium.shakePx,
       explosion: { px: JUICE_TIERS.heavy.shakePx, seconds: 0.12 },
-      tumbleBounce: { px: JUICE_TIERS.medium.shakePx, seconds: 0.1, fullSpeed: 900 },
+      rollBounce: { px: JUICE_TIERS.medium.shakePx, seconds: 0.1, fullSpeed: 900 },
     },
     helmet: {
       stiffness: 420,

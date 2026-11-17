@@ -3,6 +3,7 @@ import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { mapPlayerInputs } from "@/shared/utils/gameInputMapping";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { applyHit } from "@/features/combat/api/combatApi";
+import { catchFire } from "@/features/fire/api/fireApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
 
 const level: LevelDefinition = {
@@ -224,7 +225,7 @@ describe("gameSim — dive headbutt", () => {
     }
   };
 
-  it("should score the kill and give the victim a fresh dive and no tumble when a dive takes the last chunk", () => {
+  it("should score the kill and give the victim a fresh dive and no roll when a dive takes the last chunk", () => {
     const state = closeSpawns();
     const victim = state.players[1]!;
     state.combat.fighters.get(victim.id)!.health = 1;
@@ -234,7 +235,7 @@ describe("gameSim — dive headbutt", () => {
     expect(state.rules.respawnAt.has(victim.id)).toBe(true);
     stepFor(state, respawnDelay + 0.05);
     expect(state.rules.respawnAt.has(victim.id)).toBe(false);
-    expect(victim.tumbleSeconds).toBe(0);
+    expect(victim.rollSource).toBeNull();
     expect(state.dive.motions[victim.id]).toMatchObject({ phase: "idle", stagger: 0, cooldown: 0 });
     expect(state.combat.fighters.get(victim.id)!.invulnerableUntil).toBeGreaterThan(
       state.timeSeconds
@@ -283,5 +284,26 @@ describe("gameSim — headbutt reset", () => {
     expect(refill.respawnTimer).toBeGreaterThan(0);
     expect(state.dive.motions[player.id]!.charged).toBe(true);
     expect(state.dive.refillCounts[player.id]).toBe(1);
+  });
+});
+
+describe("gameSim — burning blobs (fire-burn b2)", () => {
+  it("should run a burning blob from the fire and take only the first chunk when it crouches", () => {
+    const state = stepGame(newGame(), keys(), dt);
+    const player = state.players[0]!;
+    const startX = player.x;
+    // The fire came from the left (the floor ends 100 units left of the spawn: it would run off).
+    catchFire(state.fire, player, { now: state.timeSeconds, fromX: startX - 50, bySlot: 1 });
+    stepFor(state, 0.3);
+    expect(player.x).toBeGreaterThan(startX + 40);
+    // Crouching is the player's own input: the flee stops; the mid-burn chunk still lands (not
+    // halved), the end chunk is skipped (owner fire-burn D10).
+    stepFor(state, DEFAULT_GAME_TUNABLES.fire.blob.burnSeconds - 0.25, keys("KeyS"));
+    expect(state.fire.blobs.size).toBe(0);
+    expect(state.fire.blobMoments.map((moment) => moment.kind)).toEqual(["smoke"]);
+    expect(state.combat.fighters.get(player.id)?.health).toBe(
+      DEFAULT_GAME_TUNABLES.combat.maxHealth - 1
+    );
+    expect(state.combat.fighters.get(player.id)?.lastHitBySlot).toBe(1);
   });
 });

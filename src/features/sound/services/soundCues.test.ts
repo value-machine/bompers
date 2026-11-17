@@ -15,7 +15,9 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   wallJumpCount: 0,
   landCount: 0,
   lastLandingSpeed: 0,
-  tumbleBounceCount: 0,
+  rollBounceCount: 0,
+  dashRollCount: 0,
+  rollRestCount: 0,
   crouchCount: 0,
   inPlay: true,
   divePhase: "idle",
@@ -24,6 +26,8 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   speed: 0,
   terrainHitSpeed: 0,
   diveRefillCount: 0,
+  catchFireCount: 0,
+  iceDouseCount: 0,
   ...patch,
 });
 
@@ -69,9 +73,16 @@ describe("readSoundCues", () => {
     expect(hard[0]?.gain).toBe(1);
   });
 
-  it("should cue a tumble bounce when the tumble bounce counter rises", () => {
-    const cues = cuesAfter(snapshot({ players: [player(0, { tumbleBounceCount: 2 }), player(1)] }));
+  it("should cue a roll bounce when the roll bounce counter rises", () => {
+    const cues = cuesAfter(snapshot({ players: [player(0, { rollBounceCount: 2 }), player(1)] }));
     expect(idsOf(cues)).toEqual(["tumble-bounce"]);
+  });
+
+  it("should cue a soft thud when a dash roll starts or a roll comes to rest", () => {
+    for (const patch of [{ dashRollCount: 1 }, { rollRestCount: 1 }]) {
+      const cues = cuesAfter(snapshot({ players: [player(0, patch), player(1)] }));
+      expect(cues).toEqual([{ soundId: "land", slot: 0, gain: SOUND_MIX.crouchGain }]);
+    }
   });
 
   it("should cue a dive launch when a dive enters travel", () => {
@@ -187,5 +198,17 @@ describe("readSoundCues — headbutt reset", () => {
   it("should play the pickup sound pitched by the collector when a player takes a headbutt reset", () => {
     const frame = snapshot({ players: [player(0), player(1, { diveRefillCount: 1 })] });
     expect(cuesAfter(frame)).toEqual([{ soundId: "pickup", slot: 1, gain: 1 }]);
+  });
+});
+
+describe("readSoundCues — blobs on fire", () => {
+  it("should play the fire placeholder for the blob when it catches fire", () => {
+    const frame = snapshot({ players: [player(0, { catchFireCount: 1 }), player(1)] });
+    expect(cuesAfter(frame)).toEqual([{ soundId: "rocket-fire", slot: 0, gain: 1 }]);
+  });
+
+  it("should play the ice clink for the blob when ice puts its fire out", () => {
+    const frame = snapshot({ players: [player(0), player(1, { iceDouseCount: 1 })] });
+    expect(cuesAfter(frame)).toEqual([{ soundId: "clink", slot: 1, gain: 1 }]);
   });
 });

@@ -30,7 +30,7 @@ describe("game juice scale", () => {
 describe("feel tunables conform to the juice scale", () => {
   it("should take shake, flash and hit-stop from the tiers when built", () => {
     expect(feel.shake.hit.px).toBe(JUICE_TIERS.medium.shakePx);
-    expect(feel.shake.tumbleBounce.px).toBe(JUICE_TIERS.medium.shakePx);
+    expect(feel.shake.rollBounce.px).toBe(JUICE_TIERS.medium.shakePx);
     expect(feel.shake.explosion.px).toBe(JUICE_TIERS.heavy.shakePx);
     expect(feel.shake.hit.px * feel.shake.hardHitScale).toBe(JUICE_TIERS.heavy.shakePx);
     expect(feel.shake.maxPx).toBe(JUICE_SHAKE_CAP_PX);
@@ -43,7 +43,7 @@ describe("feel tunables conform to the juice scale", () => {
     expect(isInJuiceWindow("flash", feel.hitFlash.holdSeconds)).toBe(true);
     expect(isInJuiceWindow("fade", feel.hitFlash.fadeSeconds)).toBe(true);
     expect(isInJuiceWindow("flash", feel.hitStop.seconds)).toBe(true);
-    for (const kick of [feel.shake.hit, feel.shake.explosion, feel.shake.tumbleBounce]) {
+    for (const kick of [feel.shake.hit, feel.shake.explosion, feel.shake.rollBounce]) {
       expect(isInJuiceWindow("shake", kick.seconds)).toBe(true);
     }
   });

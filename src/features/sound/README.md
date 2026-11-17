@@ -23,16 +23,18 @@ What each cue comes from:
 | Cue                                  | Source                                                               |
 | ------------------------------------ | -------------------------------------------------------------------- |
 | `jump`                               | `jumpCount` / `wallJumpCount` rises                                  |
-| `land`                               | `landCount` rises; gain scales with `lastLandingSpeed` (`intensityGain`, `SOUND_MIX.landingFullSpeed`); also the blob part of a wall bonk. Also `crouchCount` rises, at `SOUND_MIX.crouchGain` (soft thud) |
-| `tumble-bounce`                      | `tumbleBounceCount` rises                                            |
+| `land`                               | `landCount` rises; gain scales with `lastLandingSpeed` (`intensityGain`, `SOUND_MIX.landingFullSpeed`); also the blob part of a wall bonk. Also `crouchCount`, `dashRollCount` (a dash rolls on) or `rollRestCount` (a roll comes to rest) rises, at `SOUND_MIX.crouchGain` (soft thud) |
+| `tumble-bounce`                      | `rollBounceCount` rises (the roll bounce keeps this file id, shared-roll D8) |
 | `dive-launch`                        | dive phase enters `travel`                                           |
 | `dive-impact`                        | `playerHit` with source `dive`                                       |
 | `hit`                                | `playerHit` (rocket)                                                 |
 | `elimination`                        | `playerEliminated`                                                   |
 | `rocket-fire`, `explosion`, `pickup` | `rocketFired`, `explosion`, `pickupCollected`                        |
+| `rocket-fire` (placeholder, fire-spread D8) | `torchStarted` (a torch starts spraying); fire burn-outs play the material sound through `terrainDestroyed` |
 | material sound (`thud` stone, `crumble` earth, `thwap` cardboard, `clink` ice) | `terrainDestroyed.soundId`; and a head-on dive bonk: `land` (pitched) plus the wall's material sound (`diveBonkSoundId`, unpitched), both at the bonk's intensity |
 | `respawn`                            | a player comes back into play                                        |
 | `pickup` (headbutt reset)            | `diveRefillCount` rises (no file of its own; headbutt-reset D5)      |
+| `rocket-fire`, `clink` (placeholders, fire-burn D7) | `catchFireCount` rises (a blob catches fire) / `iceDouseCount` rises (ice puts it out); a dive blowing it off has the dive's launch sound, burning down the `playerHit` hit sound |
 | `round-start`, `round-end`           | a fresh round's first frame; round phase turns `ended`               |
 
 Music: the lobby screen plays `lobby`; a round plays `match`, then `final` from 0:30 left, and fades out when the round ends (the round-end SFX plays). Leaving a screen fades its music out.

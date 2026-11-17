@@ -9,6 +9,7 @@ import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 export type { TerrainCellSlot, TerrainGrid } from "@/features/arena/types/arena.types";
 export { EMPTY_CELL } from "@/features/arena/types/arena.types";
 export {
+  burnOut,
   clearCrater,
   getCellInfo,
   isBreakableSlot,

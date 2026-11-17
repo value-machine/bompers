@@ -8,11 +8,21 @@ import {
   type LevelSettings,
 } from "@/features/level/api/levelApi";
 import {
+  applyHit,
   createCombatState,
+  reportTerrainDestroyed,
   stepCombat,
   takeWeaponPickups,
   type CombatState,
 } from "@/features/combat/api/combatApi";
+import {
+  createFireState,
+  panicInputs,
+  sprayTorch,
+  stepBurningBlobs,
+  stepFire,
+  type FireState,
+} from "@/features/fire/api/fireApi";
 import {
   createCollectiblesState,
   stepCollectibles,
@@ -22,8 +32,10 @@ import {
 } from "@/features/collectibles/api/collectiblesApi";
 import {
   createPlayer,
+  reactToHit,
   resolveBodyContacts,
   stepPlayers,
+  type BodyContact,
   type PlayerState,
 } from "@/features/player/api/playerApi";
 import {
@@ -53,7 +65,13 @@ import {
  *   2. stepPlayers     — player feature: controller + terrain collision
  *   2b. bodyContacts   — player feature: blob-vs-blob bounce; the contacts feed step 3b
  *   3. stepCombat      — combat feature: rockets, blasts (damage, impulse, clearCrater);
- *                        unarmed fire goes through its `unarmedAttack` hook to the dive
+ *                        unarmed fire goes through its `unarmedAttack` hook to the dive, a held
+ *                        torch through its `sprayAttack` hook to the fire feature's `sprayTorch`
+ *   3c. stepFire       — fire feature: the front spreads through fuel; burnt-out samples go
+ *                        (batched), reported as combat `terrainDestroyed` events
+ *   3d. stepBurningBlobs — fire feature: blobs catch, go out (ice, dive), pass it on (bump) or
+ *                        burn down (a chunk through combat's `applyHit`). Before step 2 its
+ *                        `panicInputs` runs a burning blob with no move input away from the fire
  *   3a. stepWeaponCrates — collectibles feature: weapon crates drop, fall, land and get taken;
  *                        combat's `takeWeaponPickups` arms the collector
  *   3b. stepDives      — dive feature: the unarmed attack; its hits go through combat's `applyHit`
@@ -103,6 +121,8 @@ export interface GameState {
   combat: CombatState;
   /** Unarmed attack (dive headbutt) state; `dive.hits` holds the last step's hits. */
   dive: DiveState;
+  /** Fire on the terrain field and this step's torch sprays. */
+  fire: FireState;
   /** Sky drops: point orbs falling onto the collectible points, weapon crates from the drop points. */
   collectibles: CollectiblesState;
   /** Scores and the respawn queue. */
@@ -132,11 +152,13 @@ export function applyLevelSettings(tunables: GameTunables, settings: LevelSettin
 export function createGameState({ level, tunables }: CreateGameStateArgs): GameState {
   const normalized = normalizeLevelDefinition(level);
   const matchTunables = applyLevelSettings(tunables, normalized.level.settings);
+  const arena = createArenaState(normalized.level);
   return {
     tick: 0,
     timeSeconds: 0,
     tunables: matchTunables,
-    arena: createArenaState(normalized.level),
+    arena,
+    fire: createFireState(arena.terrain),
     killZone: killZoneOf(normalized.level.bounds, matchTunables),
     levelWarnings: normalized.warnings,
     players: [],
@@ -219,12 +241,65 @@ function stepHeadbuttResets(state: GameState, dt: number): void {
   }
 }
 
+/** Step 3c: fire spreads and burns out; a burnt batch is reported like a crater (one event per look). */
+function stepFireOnTerrain(state: GameState): void {
+  const { terrain } = state.arena;
+  const cleared = stepFire(state.fire, terrain, {
+    now: state.timeSeconds,
+    tunables: state.tunables,
+  });
+  if (!cleared) return;
+  const size = terrain.cellSize;
+  const at = {
+    x: ((cleared.box.minX + cleared.box.maxX + 1) / 2) * size,
+    y: ((cleared.box.minY + cleared.box.maxY + 1) / 2) * size,
+  };
+  reportTerrainDestroyed(state.combat, { cleared, at, timeSeconds: state.timeSeconds });
+}
+
+/**
+ * Steps 3c and 3d: the terrain fire, then blobs on fire catch, go out or pass it on; each burn
+ * tick takes a chunk through combat's `applyHit` (kind `burn`, credited to whoever lit it) and
+ * gives the hit reaction with no push. Dive phases are the previous step's (the dive steps later).
+ */
+function stepBlobsOnFire(
+  state: GameState,
+  step: { players: PlayerState[]; contacts: readonly BodyContact[] }
+): void {
+  stepFireOnTerrain(state);
+  const { tunables, timeSeconds } = state;
+  const downs = stepBurningBlobs(state.fire, {
+    terrain: state.arena.terrain,
+    players: step.players,
+    contacts: step.contacts,
+    isDiving: (player) => {
+      const phase = state.dive.motions[player.id]?.phase;
+      return phase === "windup" || phase === "travel";
+    },
+    now: timeSeconds,
+    tunables,
+  });
+  const world = { combat: state.combat, players: step.players, tunables, timeSeconds };
+  for (const down of downs) {
+    applyHit(world, {
+      victimSlot: down.player.slot,
+      attackerSlot: down.bySlot,
+      kind: "burn",
+      source: "fire",
+      contactPoint: down.at,
+      direction: { x: 0, y: 1 },
+    });
+    reactToHit(down.player, { impulse: { x: 0, y: 0 } }, tunables);
+  }
+}
+
 function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
   const { tunables, timeSeconds } = state;
   const { level, terrain } = state.arena;
   joinSlots(state, inputs);
   const players = playersInPlay(state);
-  stepPlayers({ players, inputs, terrain, tunables, dt });
+  // A burning blob with no move input runs from the fire (fire-burn D2); combat keeps the real inputs.
+  stepPlayers({ players, inputs: panicInputs(state.fire, players, inputs), terrain, tunables, dt });
   const contacts = resolveBodyContacts({ players, terrain, tunables });
   stepCombat({
     combat: state.combat,
@@ -236,7 +311,17 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
     timeSeconds,
     dt,
     unarmedAttack: ({ attacker }) => requestDive(state.dive, attacker, tunables),
+    sprayAttack: ({ attacker }) =>
+      sprayTorch(state.fire, {
+        terrain,
+        players,
+        holder: attacker,
+        tunables,
+        now: timeSeconds,
+        dt,
+      }),
   });
+  stepBlobsOnFire(state, { players, contacts });
   stepCratePickups(state, dt);
   // The same in-play list as the contacts: a blob eliminated by a rocket this step still
   // finishes its bounce, and `applyHit` refuses damage on it.
@@ -245,6 +330,7 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
     players,
     combat: state.combat,
     contacts,
+    inputs,
     tunables,
     timeSeconds,
     dt,

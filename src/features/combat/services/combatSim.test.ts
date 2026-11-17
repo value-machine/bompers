@@ -239,28 +239,31 @@ describe("combat — blast hurt reaction", () => {
       ],
     });
 
-  it("should send a victim tumbling off the floor when the blast is close", () => {
+  it("should send a victim rolling off the floor and to rest when the blast is close", () => {
     const world = twoPlayers();
     const victim = world.players[1]!;
     explode(world.ctx(), p0Blast({ x: 284, y: blastY + 6 }));
-    expect(victim.tumbleSeconds).toBeGreaterThan(0);
-    world.step([], 240);
-    expect(victim.tumbleBounceCount).toBeGreaterThan(0);
-    expect(victim.tumbleSeconds).toBe(0);
+    expect(victim.rollSource).toBe("hit");
+    world.step([], 900);
+    expect(victim.rollBounceCount).toBeGreaterThan(0);
+    expect(victim.rollSource).toBeNull();
   });
 
-  it("should only push the victim when the blast is at the edge of its range", () => {
-    const world = twoPlayers();
-    explode(world.ctx(), p0Blast({ x: 240, y: blastY }));
-    expect(world.players[1]!.vx).toBeGreaterThan(0);
-    expect(world.players[1]!.tumbleSeconds).toBe(0);
+  it("should roll the victim shorter when the blast is at the edge of its range", () => {
+    const close = twoPlayers();
+    explode(close.ctx(), p0Blast({ x: 284, y: blastY + 6 }));
+    const edge = twoPlayers();
+    explode(edge.ctx(), p0Blast({ x: 240, y: blastY }));
+    expect(edge.players[1]!.vx).toBeGreaterThan(0);
+    expect(edge.players[1]!.rollLockSeconds).toBeGreaterThan(0);
+    expect(edge.players[1]!.rollLockSeconds).toBeLessThan(close.players[1]!.rollLockSeconds);
   });
 
-  it("should never send the shooter tumbling when they stand in their own blast", () => {
+  it("should never send the shooter rolling when they stand in their own blast", () => {
     const world = twoPlayers();
     explode(world.ctx(), p0Blast({ x: 100, y: FLOOR_Y }));
     expect(world.players[0]!.vy).toBeLessThan(0);
-    expect(world.players[0]!.tumbleSeconds).toBe(0);
+    expect(world.players[0]!.rollSource).toBeNull();
   });
 });
 
@@ -390,6 +393,72 @@ describe("combat — rockets", () => {
     explode(world.ctx(), p0Blast({ x: 280, y: FLOOR_Y - 14 }));
     expect(health(world, 1)).toBe(C.maxHealth);
     expect(world.players[1]!.vx).toBeGreaterThan(0);
+  });
+});
+
+describe("combat — spray weapons (torch, fire-spread b1)", () => {
+  const hold = (
+    world: World,
+    steps: number,
+    options: { onSpray?: () => void; fire?: boolean } = {}
+  ): void => {
+    for (let i = 0; i < steps; i += 1) {
+      const fire = options.fire ?? true;
+      stepAttacks(world.ctx(), [{ ...EMPTY_PLAYER_INPUT, connected: true, fire }], {
+        dt,
+        sprayAttack: options.onSpray,
+      });
+    }
+  };
+  const armTorch = (world: World): void => {
+    world.combat.fighters.get("p0")!.weapon = { itemId: "torch", ammo: C.torch.ammo };
+  };
+
+  it("should spray every held step and drop the torch when its fuel runs out", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    armTorch(world);
+    let sprays = 0;
+    const fuelSteps = Math.round(C.torch.ammo / dt);
+    hold(world, fuelSteps - 1, { onSpray: () => (sprays += 1) });
+    expect(world.combat.fighters.get("p0")!.weapon?.itemId).toBe("torch");
+    hold(world, 2, { onSpray: () => (sprays += 1) });
+    expect(world.combat.fighters.get("p0")!.weapon).toBeNull();
+    expect(sprays).toBe(fuelSteps);
+  });
+
+  it("should not drain fuel when the fire button is not held", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    armTorch(world);
+    hold(world, 120, { fire: false });
+    expect(world.combat.fighters.get("p0")!.weapon?.ammo).toBe(C.torch.ammo);
+  });
+
+  it("should not spray when the held weapon is a launcher", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    arm(world, 0, "rocket-launcher");
+    let sprays = 0;
+    hold(world, 10, { onSpray: () => (sprays += 1) });
+    expect(sprays).toBe(0);
+  });
+
+  it("should neither spray nor drain when the holder is eliminated", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    armTorch(world);
+    world.combat.fighters.get("p0")!.eliminated = true;
+    let sprays = 0;
+    hold(world, 30, { onSpray: () => (sprays += 1) });
+    expect(sprays).toBe(0);
+    expect(world.combat.fighters.get("p0")!.weapon?.ammo).toBe(C.torch.ammo);
+  });
+
+  it("should emit one start cue when spraying starts and another after a pause", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    armTorch(world);
+    hold(world, 10);
+    hold(world, 2, { fire: false });
+    hold(world, 10);
+    const starts = world.combat.events.filter((event) => event.type === "torchStarted");
+    expect(starts).toHaveLength(2);
   });
 });
 

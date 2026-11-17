@@ -22,6 +22,8 @@ You are writing **one HTML file** that holds **one inline `<svg>`**. The SVG is 
 7. Give every shape a `fill` so the file looks right with no network. The game ignores `fill`: it paints terrain with `data-color` (the hex per colour is in `catalog.json`).
 8. Design sense: spawns sit just above ground (centre ~24 units above the surface), not inside terrain and not over a pit. Leave the side edges open so players can fall off. Keep `bounds` a bit larger than the terrain so players fly before they die. Snap terrain to multiples of 8.
 
+9. **Moving parts (optional):** wrap terrain shapes in `<g data-motion="…">`. Draw them where the part **rests**; the motion is relative to that. `slide 0,-160` (back and forth), `path 160,0 160,-160` (loop through offsets and back), `spin` (full turn per cycle about the `center`), `swing 30` (pendulum ±30° about the `top`). Optional tokens in any order: `6s` (seconds per cycle, default 4, 1–30), `@0.5` (start half a cycle ahead), a pivot (`center`, `top`, `bottom-left`, …), `ccw`. Only terrain moves. Moving parts never break. Over a full cycle a part stays inside bounds, keeps an 8-unit margin from other terrain (touching at rest is fine), keeps 14 units from spawn centres and its fastest point moves at most 340 units/s. Full rules: LEVEL_FORMAT § 11.
+
 Link the preview kit in `<head>` (works offline without it):
 
 ```html
@@ -55,7 +57,7 @@ Link the preview kit in `<head>` (works offline without it):
 | sound | `clink` | Clink |  |
 | sound | `jump` | Jump |  |
 | sound | `land` | Land |  |
-| sound | `tumble-bounce` | Tumble bounce |  |
+| sound | `tumble-bounce` | Roll bounce |  |
 | sound | `dive-launch` | Dive launch |  |
 | sound | `dive-impact` | Dive impact |  |
 | sound | `hit` | Hit |  |
@@ -69,6 +71,7 @@ Link the preview kit in `<head>` (works offline without it):
 | behavior | — | none yet; leave it out | |
 | item | `rocket-launcher` | Rocket launcher | use: drop, default for drop |
 | item | `homing-launcher` | Homing launcher | use: drop |
+| item | `torch` | Torch | use: drop |
 | item | `point-orb` | Point orb | use: collectible, default for collectible |
 | item | `dive-reset` | Headbutt reset | use: collectible |
 <!-- level-kit:catalog-ids:end -->
@@ -157,4 +160,5 @@ Link the preview kit in `<head>` (works offline without it):
 - [ ] Every terrain shape has a `data-material` (or relies on the `stone` default); colours are catalog names, not hex.
 - [ ] Every ID is lowercase-kebab and listed in `catalog.json` (or left out to use the default).
 - [ ] Spawns and drops are inside `bounds` and not inside terrain.
+- [ ] Each `<g data-motion>` holds only terrain; its sweep stays in bounds, clear of other terrain and spawns.
 - [ ] Open the file in a browser: you see the level. With the kit linked, the panel under it lists no problems.

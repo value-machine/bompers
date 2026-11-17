@@ -60,14 +60,14 @@ import type { PlayerState } from "@/features/player/types/player.types";
  * Each blob is two trees with identical transforms: `ink` (every part stroked in ink at twice the
  * outline width) under `fill` (the coloured parts, no stroke), so only the outer half of the ink
  * shows. No filters. Shapes are drawn once; per frame only transforms change (squash, foot motion,
- * tumble roll, dive overlays, aim), and the ink redraws only when the zoom-clamped outline width
+ * roll spin, dive overlays, aim), and the ink redraws only when the zoom-clamped outline width
  * changes step. The spawn blink fades the fill tree; the outline stays.
  *
  * Contact shadows live in `shadows`, which the match renderer places on the shadow layer (§ 5 step 4).
  *
  * Game feel (§ 6): a hit flashes a white egg over the body fill (the ink stays, so the silhouette
  * never changes), and the helmet with its emblem rides a damped spring (`HelmetWobble`) kicked by
- * landings, jumps, wall-jumps, tumble bounces and hits. The feet step, swing, tilt and splay, and
+ * landings, jumps, wall-jumps, roll bounces and hits. The feet step, swing, tilt and splay, and
  * turn their soles to the wall while wall-sliding (`blobPose.ts`).
  */
 export interface PlayersView {
@@ -358,9 +358,8 @@ function syncTube(sprite: BlobSprite, weapon: BlobWeapon | undefined, zoom: numb
   sprite.muzzle.alpha = MUZZLE_MIN_ALPHA + (1 - MUZZLE_MIN_ALPHA) * ready;
 }
 
-/** A tumbling blob rolls with the distance it travels, like a ball; 0 when not tumbling. */
-const tumbleRoll = (player: PlayerState, r: number): number =>
-  player.tumbleSeconds > 0 ? (player.x / (1.6 * r)) % (Math.PI * 2) : 0;
+/** World units a drawn hop raises the blob (render only; 0 without one). */
+const overlayLift = (overlay: BlobPoseOverlay | undefined): number => overlay?.lift ?? 0;
 
 interface PoseFrame {
   pose: BlobPose;
@@ -378,8 +377,8 @@ interface PoseFrame {
 function placeBlob(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): void {
   const { pose, overlay } = frame;
   // With no overlay, roll or slope this is the plain feet-point placement.
-  const centerY = player.height / 2;
-  sprite.root.pivot.set(0, -centerY);
+  const centerY = player.height / 2 + overlayLift(overlay);
+  sprite.root.pivot.set(0, -player.height / 2);
   sprite.root.position.set(player.x, player.y - centerY);
   const slopeLean = stepGroundTilt(sprite.groundTilt, {
     groundAngle: player.groundAngle,
@@ -387,8 +386,8 @@ function placeBlob(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
     nowMs: frame.nowMs,
     tunables: frame.groundTilt ?? DEFAULT_GAME_TUNABLES.feel.groundTilt,
   });
-  const roll = tumbleRoll(player, sprite.metrics.r);
-  sprite.root.rotation = (overlay?.rotation ?? 0) + roll + slopeLean;
+  // The roll's spin is sim state (`roll.ts`): it follows the ball physics and eases upright.
+  sprite.root.rotation = (overlay?.rotation ?? 0) + player.rollAngle + slopeLean;
   const sx = pose.bodySx * (overlay?.sx ?? 1);
   const sy = pose.bodySy * (overlay?.sy ?? 1);
   const lean = overlay ? 0 : Math.max(-0.15, Math.min(0.15, player.vx / 2400));
@@ -428,7 +427,12 @@ function placeFeet(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
  * Eyes sit under the helmet rim and look toward the aim. While crouching they rise a little and
  * slip under the dome, so the lowered rim covers about half of each eye (crouch D7).
  */
-function placeEyes(sprite: BlobSprite, player: PlayerState, face: CrouchFace): void {
+function placeEyes(
+  sprite: BlobSprite,
+  player: PlayerState,
+  look: { face: CrouchFace; pupilScale: number }
+): void {
+  const { face, pupilScale } = look;
   const { r, u } = sprite.metrics;
   const y = 0.12 * r + player.aimY * 2 * u - face.eyeLift * u;
   sprite.eyes.forEach((eye, i) => {
@@ -436,6 +440,7 @@ function placeEyes(sprite: BlobSprite, player: PlayerState, face: CrouchFace): v
     eye.position.set(side * 0.27 * r + player.aimX * 5 * u, y);
     eye.zIndex = face.eyesUnderHelmet ? EYES_UNDER_HELMET : EYES_OVER_HELMET;
     sprite.pupils[i]!.position.set(player.aimX * 1.6 * u, 1.5 * u + player.aimY * 1.2 * u);
+    sprite.pupils[i]!.scale.set(pupilScale);
   });
 }
 
@@ -457,7 +462,7 @@ function applyPose(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
   const { pose } = frame;
   placeBlob(sprite, player, frame);
   placeFeet(sprite, player, frame);
-  placeEyes(sprite, player, pose.face);
+  placeEyes(sprite, player, { face: pose.face, pupilScale: frame.overlay?.pupilScale ?? 1 });
   placeFace(sprite, player, frame.armed);
   const { shadow } = pose;
   sprite.shadow.visible = shadow !== null;
@@ -481,8 +486,8 @@ function kickHelmet(wobble: HelmetWobble, player: PlayerState, frame: FeelFrame)
   const { moment, hit } = frame;
   const helmet = frame.helmet ?? DEFAULT_GAME_TUNABLES.feel.helmet;
   if (moment) {
-    const tumbling = player.tumbleSeconds > 0;
-    kickHelmetForSquash(wobble, { ...moment, vx: player.vx, tumbling }, helmet);
+    const rolling = player.rollSource !== null;
+    kickHelmetForSquash(wobble, { ...moment, vx: player.vx, rolling }, helmet);
   }
   if (hit && hit.startMs !== wobble.seenHitMs) {
     wobble.seenHitMs = hit.startMs;

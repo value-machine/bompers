@@ -64,6 +64,7 @@ const createFighter = (player: PlayerState, tunables: GameTunables): FighterStat
   weapon: null,
   prevFire: false,
   attackCooldown: 0,
+  spraying: false,
   lastHitBySlot: null,
   lastHitAt: 0,
 });
@@ -251,9 +252,11 @@ export function applyHit(world: HitWorld, hit: Hit): HitResult {
   const zone = victim ? classifyHitZone(victim.facing, hit.direction) : "front";
   if (!victim) return { landed: false, zone, damage: 0 };
   const baseDamage = hitDamageFor(tunables.combat.hitDamage, hit.kind, zone);
-  const damage = victim.crouching
-    ? crouchDamage(baseDamage, tunables.combat.crouchDamageScale)
-    : baseDamage;
+  // Ducking doesn't stop fire (fire-burn D5).
+  const damage =
+    victim.crouching && hit.kind !== "burn"
+      ? crouchDamage(baseDamage, tunables.combat.crouchDamageScale)
+      : baseDamage;
   const fighter = fighterFor(combat, victim, tunables);
   if (fighter.eliminated || timeSeconds < fighter.invulnerableUntil) {
     return { landed: false, zone, damage: 0 };

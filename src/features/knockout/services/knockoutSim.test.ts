@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import type { SolidAt } from "@/shared/utils/fallingBody";
 import type { CombatEvent } from "@/features/combat/api/combatApi";
+import { createPlayer, type PlayerState } from "@/features/player/api/playerApi";
 import {
   createKnockoutWorld,
   knockoutBodies,
@@ -9,11 +10,10 @@ import {
   pieceAlpha,
   splatAlpha,
   stepKnockouts,
+  type KnockoutWorld,
 } from "@/features/knockout/services/knockoutSim";
-import type { KnockoutWorld } from "@/features/knockout/types/knockout.types";
 
 const T = DEFAULT_GAME_TUNABLES.feel.knockout;
-const HEIGHT = DEFAULT_GAME_TUNABLES.player.height;
 const RESPAWN = DEFAULT_GAME_TUNABLES.match.respawnDelaySeconds;
 const GRAVITY = DEFAULT_GAME_TUNABLES.world.gravity;
 
@@ -21,6 +21,28 @@ const GRAVITY = DEFAULT_GAME_TUNABLES.world.gravity;
 const floor: SolidAt = (_x, y) => y >= 500;
 /** Nothing anywhere: free flight. */
 const sky: SolidAt = () => false;
+
+/**
+ * Stand-in for the shared roll (match passes the player controller): ballistic motion that
+ * reports a blocked move down as a terrain hit, the way the controller does. The roll physics
+ * itself is the player feature's, tested there.
+ */
+const rollOver =
+  (solidAt: SolidAt) =>
+  (body: PlayerState, dt: number): void => {
+    body.terrainHitX = 0;
+    body.terrainHitY = 0;
+    body.vy += GRAVITY * dt;
+    body.x += body.vx * dt;
+    const nextY = body.y + body.vy * dt;
+    if (body.vy > 0 && solidAt(body.x, nextY)) {
+      body.terrainHitY = 1;
+      body.terrainHitSpeedY = body.vy;
+      body.vy = 0;
+      return;
+    }
+    body.y = nextY;
+  };
 
 const eliminated = (
   over: Partial<Extract<CombatEvent, { type: "playerEliminated" }>>
@@ -43,8 +65,9 @@ function knockedOut(event: CombatEvent, armed = false): KnockoutWorld {
   const world = createKnockoutWorld();
   noteKnockoutEvents(world, {
     events: [event],
-    victims: [{ id: "p1", slot: 1, height: HEIGHT }],
+    victims: [createPlayer(1, { x: 0, y: 0 }, DEFAULT_GAME_TUNABLES)],
     weaponOf: () => (armed ? "rocket-launcher" : null),
+    tunables: DEFAULT_GAME_TUNABLES,
   });
   return world;
 }
@@ -57,6 +80,7 @@ function run(world: KnockoutWorld, seconds: number, solidAt: SolidAt = floor): v
       dt: 1 / 60,
       gravity: GRAVITY,
       solidAt,
+      roll: rollOver(solidAt),
       tunables: T,
       respawnDelaySeconds: RESPAWN,
     });
@@ -69,13 +93,14 @@ describe("knockout — start", () => {
     run(world, 0.1, sky);
     const [body] = knockoutBodies(world, T);
     expect(body).toMatchObject({ id: "ko-7", victimId: "p1", squash: 0 });
-    expect(body!.x).toBeGreaterThan(400 + 600 * 0.09);
+    expect(body!.player.x).toBeGreaterThan(400 + 600 * 0.09);
+    expect(body!.player.rollSource).toBe("hit");
     expect(world.droplets).toEqual([]);
   });
 
   it("should squash on the spot and burst without flying when the hit is overkill", () => {
     const world = knockedOut(eliminated({ overkill: true, vx: 600, vy: -300 }));
-    expect(knockoutBodies(world, T)[0]!.x).toBe(400);
+    expect(knockoutBodies(world, T)[0]!.player.x).toBe(400);
     run(world, T.squash.seconds + 1 / 60, sky);
     expect(world.knockouts).toEqual([]);
     expect(world.droplets).toHaveLength(T.droplets.count);

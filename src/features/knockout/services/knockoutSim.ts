@@ -1,26 +1,70 @@
+import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { WeaponItemId } from "@/shared/types/weaponItems.types";
 import { stepFallingBody, type FallingBody, type SolidAt } from "@/shared/utils/fallingBody";
 import type { CombatEvent } from "@/features/combat/api/combatApi";
+import { reactToHit, type PlayerState } from "@/features/player/api/playerApi";
 import type {
   GooDroplet,
-  Knockout,
-  KnockoutBody,
+  GooSplat,
   KnockoutPiece,
   KnockoutTunables,
-  KnockoutWorld,
 } from "@/features/knockout/types/knockout.types";
 
 /**
  * Knockout simulation (render-only; the game rules never read it). A `playerEliminated` event from
  * a hit starts a knockout:
- *   - the lethal hit ended exactly at 0 health → the blob flies with the hit's knockback until its
+ *   - the lethal hit ended exactly at 0 health → the blob flies with the hit's knockback in the
+ *     shared roll (a copy of the victim stepped by the player controller, `roll` below) until its
  *     first hard contact (or `flungMaxSeconds`), then squashes;
  *   - overkill (the hit would have gone below 0) → it squashes on the spot, carrying the knockback.
  * After the squash it bursts: goo droplets leave with the blob's momentum plus a small spread and
  * become splats the instant they touch terrain; the helmet and the weapon tube fly off as solid
  * pieces until the victim respawns. Falling off the arena makes no knockout (it is off screen).
- * Physics: `shared/utils/fallingBody`. Spreads are deterministic per event seq (no RNG in render).
+ * Droplets and pieces: `shared/utils/fallingBody`. Spreads are deterministic per event seq.
  */
+
+/**
+ * One knocked-out blob before it bursts. `flung`: rolling with the lethal hit's knockback;
+ * `squash`: flattened in place for `squash.seconds`, then it bursts.
+ */
+export interface Knockout {
+  /** The `playerEliminated` event's seq: keys every sprite this knockout makes. */
+  key: number;
+  victimId: string;
+  slot: number;
+  /** The victim's held weapon at the knockout (its tube flies off), or null. */
+  itemId: WeaponItemId | null;
+  phase: "flung" | "squash";
+  /** Seconds since the knockout started, and since the squash started. */
+  age: number;
+  squashAge: number;
+  /** A copy of the victim, rolling in the shared roll (the sim no longer steps the victim). */
+  body: PlayerState;
+  /** Velocity the burst hands to the droplets and pieces. */
+  carry: { vx: number; vy: number };
+}
+
+/** Everything the knockout layer simulates (render-only, never read by the game rules). */
+export interface KnockoutWorld {
+  /** Newest combat event seq already read. */
+  lastSeq: number;
+  knockouts: Knockout[];
+  droplets: GooDroplet[];
+  pieces: KnockoutPiece[];
+  splats: GooSplat[];
+}
+
+/** A flying or squashing blob, for the player renderer to draw under its own id. */
+export interface KnockoutBody {
+  /** Sprite id, distinct from the victim's own (`ko-<key>`). */
+  id: string;
+  victimId: string;
+  /** The rolling copy of the victim (position, velocity, roll spin). */
+  player: PlayerState;
+  /** 0 … 1 through the squash (0 while flying). */
+  squash: number;
+}
+
 export const createKnockoutWorld = (): KnockoutWorld => ({
   lastSeq: -1,
   knockouts: [],
@@ -37,7 +81,7 @@ const CENTRE_LIFT = 1.3;
 const HELMET_LIFT = 0.65;
 const HELMET_RADIUS = 0.55;
 const TUBE_RADIUS = 0.3;
-/** Physics steps at most this long, so fast droplets cannot skip a terrain cell. */
+/** Physics steps at most this long (the player sim's own step), so nothing skips a cell. */
 const SUBSTEP_SECONDS = 1 / 120;
 /** A droplet that never lands (it fell out of the arena) is dropped after this long. */
 const DROPLET_MAX_SECONDS = 3;
@@ -49,45 +93,47 @@ const noise = (seq: number, i: number): number => {
 };
 const between = (min: number, max: number, t: number): number => min + (max - min) * t;
 
-/** The slice of a player a knockout needs (structural). */
-export interface KnockoutVictim {
-  id: string;
-  slot: number;
-  height: number;
+/** The burst's circle: the rolling copy's body centre, radius R, turned with its roll. */
+function centreOf(knockout: Knockout): FallingBody {
+  const { body } = knockout;
+  const radius = bodyRadius(body.height);
+  return {
+    x: body.x,
+    y: body.y - CENTRE_LIFT * radius,
+    vx: body.vx,
+    vy: body.vy,
+    radius,
+    angle: body.rollAngle,
+    spin: 0,
+  };
 }
 
 export interface NoteKnockoutsArgs {
   events: readonly CombatEvent[];
-  victims: readonly KnockoutVictim[];
+  victims: readonly PlayerState[];
   /** The weapon the victim held, if any (its tube flies off). */
   weaponOf: (playerId: string) => WeaponItemId | null;
+  /** Game tunables: the roll the knockout starts in (`reactToHit`). */
+  tunables: GameTunables;
 }
 
 type Eliminated = Extract<CombatEvent, { type: "playerEliminated" }>;
 
-function startKnockout(event: Eliminated, victim: KnockoutVictim, itemId: WeaponItemId | null) {
-  const radius = bodyRadius(victim.height);
-  const body: FallingBody = {
-    x: event.x,
-    y: event.y - CENTRE_LIFT * radius,
-    vx: event.vx,
-    vy: event.vy,
-    radius,
-    angle: 0,
-    spin: 0,
-  };
-  const knockout: Knockout = {
+function startKnockout(event: Eliminated, victim: PlayerState, args: NoteKnockoutsArgs): Knockout {
+  const body: PlayerState = { ...victim, x: event.x, y: event.y, vx: event.vx, vy: event.vy };
+  // The lethal hit's knockback is the roll's impulse: the shared roll's hit reaction.
+  reactToHit(body, { impulse: { x: event.vx, y: event.vy } }, args.tunables);
+  return {
     key: event.seq,
     victimId: victim.id,
     slot: victim.slot,
-    itemId,
+    itemId: args.weaponOf(victim.id),
     phase: event.overkill ? "squash" : "flung",
     age: 0,
     squashAge: 0,
     body,
     carry: { vx: event.vx, vy: event.vy },
   };
-  return knockout;
 }
 
 /** Starts a knockout for every new elimination by a hit. Call once per rendered frame. */
@@ -98,7 +144,7 @@ export function noteKnockoutEvents(world: KnockoutWorld, args: NoteKnockoutsArgs
     if (event.type !== "playerEliminated" || event.cause === "out-of-bounds") continue;
     const victim = args.victims.find((candidate) => candidate.slot === event.victimSlot);
     if (!victim) continue;
-    world.knockouts.push(startKnockout(event, victim, args.weaponOf(victim.id)));
+    world.knockouts.push(startKnockout(event, victim, args));
   }
 }
 
@@ -106,6 +152,12 @@ export interface StepKnockoutsArgs {
   dt: number;
   gravity: number;
   solidAt: SolidAt;
+  /**
+   * Steps a flung knockout's copy of the victim by `dt` in the shared roll: the player
+   * controller with no input (match passes `stepPlayers`). It reports terrain hits on the copy
+   * (`terrainHitX/Y`, `terrainHitSpeedX/Y`).
+   */
+  roll: (body: PlayerState, dt: number) => void;
   tunables: KnockoutTunables;
   /** The victim respawns this long after the knockout: its pieces vanish then. */
   respawnDelaySeconds: number;
@@ -122,18 +174,26 @@ const fall = (body: FallingBody, step: SubStep, bounce: number) =>
     friction: step.tunables.friction,
   });
 
-/** Flight: the first hard contact (or the time limit) starts the squash. */
+/** The hardest terrain hit of the copy's last roll step, units / s (0 = none). */
+const hitSpeed = (body: PlayerState): number =>
+  Math.max(
+    body.terrainHitX !== 0 ? body.terrainHitSpeedX : 0,
+    body.terrainHitY !== 0 ? body.terrainHitSpeedY : 0
+  );
+
+/** Flight in the shared roll: the first hard contact (or the time limit) starts the squash. */
 function fly(knockout: Knockout, step: SubStep): void {
   const { body } = knockout;
   const before = { vx: body.vx, vy: body.vy };
-  const contact = fall(body, step, step.tunables.bounce);
-  if (contact && contact.speed >= step.tunables.hardContactSpeed) {
+  step.roll(body, step.h);
+  if (hitSpeed(body) >= step.tunables.hardContactSpeed) {
     knockout.phase = "squash";
-    // Off a floor the goo skids on along it; into a wall or ceiling it keeps going into it.
-    knockout.carry =
-      contact.ny < 0
-        ? { vx: before.vx, vy: -Math.abs(before.vy) * step.tunables.bounce }
-        : { ...before };
+    // Off a floor (a blocked move down) the goo skids on along it; into a wall or ceiling it
+    // keeps going into it.
+    const floor = body.terrainHitY === 1;
+    knockout.carry = floor
+      ? { vx: before.vx, vy: -Math.abs(before.vy) * step.tunables.bounce }
+      : { ...before };
     return;
   }
   if (knockout.age >= step.tunables.flungMaxSeconds) {
@@ -143,7 +203,8 @@ function fly(knockout: Knockout, step: SubStep): void {
 }
 
 function burstDroplets(world: KnockoutWorld, knockout: Knockout, tunables: KnockoutTunables) {
-  const { body, carry, key } = knockout;
+  const body = centreOf(knockout);
+  const { carry, key } = knockout;
   const d = tunables.droplets;
   for (let i = 0; i < d.count; i += 1) {
     const turn = noise(key, i) * Math.PI * 2;
@@ -170,7 +231,8 @@ function burstDroplets(world: KnockoutWorld, knockout: Knockout, tunables: Knock
 }
 
 function burstPieces(world: KnockoutWorld, knockout: Knockout, step: SubStep): void {
-  const { body, carry, key } = knockout;
+  const body = centreOf(knockout);
+  const { carry, key } = knockout;
   const { piecePop, blinkSeconds } = step.tunables;
   const lifeSeconds = Math.max(blinkSeconds, step.respawnDelaySeconds - knockout.age);
   const piece = (
@@ -268,10 +330,7 @@ export const knockoutBodies = (world: KnockoutWorld, tunables: KnockoutTunables)
   world.knockouts.map(({ key, victimId, phase, squashAge, body }) => ({
     id: `ko-${key}`,
     victimId,
-    x: body.x,
-    y: body.y + CENTRE_LIFT * body.radius,
-    vx: body.vx,
-    vy: body.vy,
+    player: body,
     squash: phase === "squash" ? Math.min(1, squashAge / tunables.squash.seconds) : 0,
   }));
 

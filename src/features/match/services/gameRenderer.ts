@@ -10,6 +10,7 @@ import {
 } from "@/features/arena/api/arenaApi";
 import {
   createPlayersView,
+  stepPlayers,
   syncPlayersView,
   type BlobPoseOverlay,
   type BlobWeapon,
@@ -64,6 +65,12 @@ import {
   syncDiveView,
   type DiveView,
 } from "@/features/dive/api/diveApi";
+import {
+  burningBlobPoses,
+  createFireView,
+  syncFireView,
+  type FireView,
+} from "@/features/fire/api/fireApi";
 import { playersInPlay, type GameState } from "@/features/match/services/gameSim";
 import { createHudView, syncHudView, type HudView } from "@/features/match/services/hudRenderer";
 
@@ -89,7 +96,7 @@ import { createHudView, syncHudView, type HudView } from "@/features/match/servi
  * file only orders and drives them. The camera is computed first, so every layer gets this
  * frame's zoom for its outline width clamp (DESIGN_LANGUAGE § 3).
  *
- * Game feel (DESIGN_LANGUAGE § 6), all render-only: `feel` turns new combat events and tumble
+ * Game feel (DESIGN_LANGUAGE § 6), all render-only: `feel` turns new combat events and roll
  * bounces into hit flashes, helmet kicks and `shake` kicks; the shake offset is added when the
  * camera is applied (none under the OS reduced-motion setting); after a hard hit the world view
  * holds still for `feel.hitStop` (the sim keeps running, the HUD keeps drawing).
@@ -106,6 +113,7 @@ export interface GameRenderer {
   knockout: KnockoutWorld;
   collectibles: CollectiblesView;
   dive: DiveView;
+  fire: FireView;
   hud: HudView;
   camera: CameraView | null;
   feel: FeelState;
@@ -122,8 +130,10 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const knockouts = createKnockoutView();
   const collectibles = createCollectiblesView();
   const dive = createDiveView();
+  const fire = createFireView();
   world.addChild(
     terrain.container,
+    fire.terrainLayer,
     collectibles.shadows.container,
     combat.shadows.container,
     players.shadows,
@@ -135,6 +145,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     combat.rockets,
     dive.effects,
     players.container,
+    fire.sprayLayer,
     combat.overlay
   );
 
@@ -151,6 +162,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     knockout: createKnockoutWorld(),
     collectibles,
     dive,
+    fire,
     hud,
     camera: null,
     feel: createFeelState(),
@@ -174,6 +186,13 @@ const blobWeapons = (state: GameState): Map<string, BlobWeapon> => {
   return weapons;
 };
 
+/** Ids of the players holding a torch: the fire layer draws the idle flame on their nozzle. */
+const torchHolderIds = (weapons: ReadonlyMap<string, BlobWeapon>): Set<string> => {
+  const ids = new Set<string>();
+  for (const [id, weapon] of weapons) if (weapon.itemId === "torch") ids.add(id);
+  return ids;
+};
+
 /** Ids of players whose spawn protection is still running. */
 const protectedIds = (state: GameState): Set<string> => {
   const ids = new Set<string>();
@@ -181,6 +200,16 @@ const protectedIds = (state: GameState): Set<string> => {
     if (fighter.invulnerableUntil > state.timeSeconds) ids.add(id);
   }
   return ids;
+};
+
+/** Pose overlays: a burning blob's panic hop, under the dive's pose when it dives (that puts it out). */
+const blobOverlays = (
+  state: GameState,
+  frame: { inPlay: readonly PlayerState[]; nowMs: number }
+): Map<string, BlobPoseOverlay> => {
+  const overlays = burningBlobPoses(state.fire, { players: frame.inPlay, nowMs: frame.nowMs });
+  for (const [id, pose] of diveBlobPoses(state.dive, state.tunables)) overlays.set(id, pose);
+  return overlays;
 };
 
 interface LayerFrame {
@@ -196,20 +225,27 @@ interface LayerFrame {
 /** Render frames longer than this step the knockouts as if they were this long (tab switches). */
 const MAX_KNOCKOUT_DT = 0.05;
 
-/** Starts knockouts for new eliminations and advances them (render-only). */
+/**
+ * Starts knockouts for new eliminations and advances them (render-only). A flung knockout rolls
+ * with the player controller's own shared roll (`stepPlayers` on its copy of the victim, no
+ * input), so it tumbles, bounces and rolls downhill exactly like a hit blob.
+ */
 function stepKnockoutLayer(renderer: GameRenderer, state: GameState, dt: number): void {
+  const { tunables } = state;
   const { terrain } = state.arena;
   noteKnockoutEvents(renderer.knockout, {
     events: state.combat.events,
     victims: state.players,
     weaponOf: (id) => state.combat.fighters.get(id)?.weapon?.itemId ?? null,
+    tunables,
   });
   stepKnockouts(renderer.knockout, {
     dt: Math.min(dt, MAX_KNOCKOUT_DT),
-    gravity: state.tunables.world.gravity,
+    gravity: tunables.world.gravity,
     solidAt: (x, y) => isSolidAt(terrain, x, y),
-    tunables: state.tunables.feel.knockout,
-    respawnDelaySeconds: state.tunables.match.respawnDelaySeconds,
+    roll: (body, h) => stepPlayers({ players: [body], inputs: [], terrain, tunables, dt: h }),
+    tunables: tunables.feel.knockout,
+    respawnDelaySeconds: tunables.match.respawnDelaySeconds,
   });
 }
 
@@ -222,44 +258,29 @@ interface BlobFrame {
 }
 
 /**
- * Each flying knockout is the victim's own state moved to the knockout body (tumbling, so it rolls
- * with its travel), wearing the victim's weapon and hit flash; the squash is a pose overlay.
+ * Each flying knockout is its rolling copy of the victim under its own id, wearing the victim's
+ * weapon and hit flash; the squash is a pose overlay.
  */
 function blobFrame(renderer: GameRenderer, state: GameState, frame: LayerFrame): BlobFrame {
   const blobs: BlobFrame = {
     players: [...frame.inPlay],
-    overlays: new Map(diveBlobPoses(state.dive, state.tunables)),
+    overlays: blobOverlays(state, { inPlay: frame.inPlay, nowMs: frame.nowMs }),
     weapons: blobWeapons(state),
     hits: new Map(frame.hits),
   };
   const tunables = state.tunables.feel.knockout;
   for (const body of knockoutBodies(renderer.knockout, tunables)) {
-    const victim = state.players.find((player) => player.id === body.victimId);
-    if (victim) addKnockoutBlob(blobs, { body, victim, squash: tunables.squash });
+    addKnockoutBlob(blobs, { body, squash: tunables.squash });
   }
   return blobs;
 }
 
 function addKnockoutBlob(
   blobs: BlobFrame,
-  {
-    body,
-    victim,
-    squash,
-  }: { body: KnockoutBody; victim: PlayerState; squash: { sx: number; sy: number } }
+  { body, squash }: { body: KnockoutBody; squash: { sx: number; sy: number } }
 ): void {
-  const { id, victimId, x, y, vx, vy } = body;
-  blobs.players.push({
-    ...victim,
-    id,
-    x,
-    y,
-    vx,
-    vy,
-    grounded: false,
-    tumbleSeconds: 1,
-    crouching: false,
-  });
+  const { id, victimId } = body;
+  blobs.players.push({ ...body.player, id });
   const weapon = blobs.weapons.get(victimId);
   if (weapon) blobs.weapons.set(id, weapon);
   const hit = blobs.hits.get(victimId);
@@ -271,10 +292,22 @@ function addKnockoutBlob(
 
 /** Syncs every world-space layer to the state. */
 function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerFrame): void {
-  const { nowMs, zoom } = frame;
+  const { inPlay, nowMs, zoom } = frame;
   stepKnockoutLayer(renderer, state, frame.dt);
   const blobs = blobFrame(renderer, state, frame);
   syncTerrainView(renderer.terrain, state.arena.terrain, zoom);
+  syncFireView(renderer.fire, {
+    fire: state.fire,
+    terrain: state.arena.terrain,
+    nowMs,
+    players: inPlay,
+    timeSeconds: state.timeSeconds,
+    momentSeconds: state.tunables.fire.blob.momentSeconds,
+    zoom,
+    torchHolderIds: torchHolderIds(blobs.weapons),
+    torchLength: state.tunables.combat.torch.length,
+    burnSeconds: state.tunables.fire.burnSeconds,
+  });
   syncKnockoutView(renderer.knockouts, {
     world: renderer.knockout,
     zoom,

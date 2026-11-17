@@ -22,7 +22,7 @@ The feedback layer of the design system ([`DESIGN_LANGUAGE.md`](DESIGN_LANGUAGE.
 | Tier | Use for | Shake | Flash | Hit-stop | Music duck |
 |------|---------|-------|-------|----------|-----------|
 | `light` | the player's own actions: jump, land, fire, pick up, respawn | — | — | — | — |
-| `medium` | something hit you or you bounced: front hit, tumble bounce | 3 px | 0.75 | — | — |
+| `medium` | something hit you or you bounced: front hit, roll bounce | 3 px | 0.75 | — | — |
 | `heavy` | the big moments: back hit, explosion | 6 px | 1.0 | 50 ms | 4 dB, 300 ms |
 
 - Summed shake is capped at **12 px** (`JUICE_SHAKE_CAP_PX`); live kicks add as a root of squares.
@@ -36,7 +36,7 @@ The feedback layer of the design system ([`DESIGN_LANGUAGE.md`](DESIGN_LANGUAGE.
 |------|--------|----------------|
 | `flash` — flash hold, hit-stop | 30–70 ms | hit flash hold 50 ms, hit-stop 50 ms |
 | `fade` — a flash fading out | 50–150 ms | hit flash fade 80 ms |
-| `shake` — one shake kick | 60–150 ms | hit 80 ms, tumble bounce 100 ms, explosion 120 ms |
+| `shake` — one shake kick | 60–150 ms | hit 80 ms, roll bounce 100 ms, explosion 120 ms |
 | `squash` — squash recovering, HUD pip pop | 100–200 ms | wall-jump 120 ms, jump 150 ms, land 180 ms, health pip 150 ms |
 | `effect` — pop-in effect clearing | 180–320 ms | impact pop 220 ms, explosion star 250 ms |
 | `linger` — things flying off | 300–600 ms | elimination droplets 300 ms, debris 500 ms |
@@ -79,11 +79,25 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Respawn | light | `respawn` | — | — | — | — | blink 8 Hz + ring | — |
 | Dive launch | light | `dive-launch` | dive pose | — | — | — | — | — |
 | Front hit taken | medium | `hit` / `dive-impact` (gain by knockback) | — | 0.75 | 3 px | — | impact pop (not on dive hits) | kick |
-| Tumble bounce | medium | `tumble-bounce` | squash wide (by speed) | — | 3 px (by speed) | — | — | kick |
+| Roll bounce (hit or dash roll) | medium | `tumble-bounce` | squash wide (by speed) | — | 3 px (by speed) | — | — | kick |
+| Dash roll starts (fire held through a dive) | light | `land` soft thud (`crouchGain`) | — | — | — | — | the body spins with its ground speed (sim `rollAngle`) | — |
+| Roll comes to rest | light | `land` soft thud (`crouchGain`) | — | — | — | — | the body turns back upright (stand-up) | — |
 | Dive wall bonk | medium | `land` + the wall's material sound (gain by speed into the wall) | bonk squash (dive pose) | — | — | — | — | — |
 | Back hit taken | heavy | `hit` / `dive-impact` (gain by knockback) | — | 1.0 | 6 px | 50 ms | impact pop (not on dive hits) | kick |
 | Explosion | heavy | `explosion` (ducks music) | — | — | 6 px (by radius) | — | star burst | — |
 | Terrain destroyed | light | material's sound (`thud` / `crumble` / `thwap` / `clink`) | — | — | — | — | debris | — |
+| Torch spray (held) | light | `rocket-fire` on spray start (placeholder, fire-spread D8) | — | — | — | — | outlined flame from the nozzle: neck, rolling head, flames peeling off upward, flare at terrain; grows in over 120 ms | — |
+| Torch released | light | — (the spray's start cue covers the action) | — | — | — | — | the head lets go as one rising puff, 300 ms | — |
+| Torch held, idle | — | — (a loop, deliberately silent) | — | — | — | — | small outlined flame on the nozzle | — |
+| Fire spreading | — | — (deliberately silent per sample: a big fire would be noise) | — | — | — | — | outlined flames on burning terrain, tall at the front; cardboard darkens; scorch on earth | — |
+| Fire burn-out (batch) | light | material's sound via `terrainDestroyed`, once per 0.25 s batch | — | — | — | — | debris + a white smoke puff, 450 ms | — |
+| Blob catches fire (fire-burn b2) | light | `rocket-fire` (placeholder, fire-burn D7) | — | — | — | — | amber flame pop (0.6 s linger); then helmet flames, sweat, pinprick pupils while burning | — |
+| Burning blob panic (held) | — | — (the catch cue only) | drawn hop every 0.4 s, sx · sy within the band (±0.08) | — | — | — | drawn 5-unit hop; body and shadow stay on the ground | — |
+| Fire put out by ice | light | `clink` (placeholder) | — | — | — | — | white steam puffs (0.6 s) | — |
+| Fire blown off by a dive | light | the dive's `dive-launch` | — | — | — | — | ember flames thrown up and out (0.6 s) | — |
+| Fire passed by a bump | light | the bump's own cue | — | — | — | — | flame ball arcing to the rival (0.3 s) | — |
+| Burn tick (−1 chunk at 1 s, and at 2 s unless crouching) | medium (a `playerHit`) | `hit` via `playerHit` | as a hit | as a hit | as a hit | — | as a hit | as a hit |
+| Burning blob goes out (2 s) | — | the second tick's `hit` (none when crouching) | — | — | — | — | grey smoke puffs (0.6 s) | — |
 | Elimination (knockout) | heavy | `elimination` (at the elimination, not the burst) | flies with the knockback, then squash `feel.knockout.squash` (the land pose, 100 ms) at the first hard contact; overkill squashes at once | the lethal hit's flash | the lethal hit's shake | — | goo burst: 6 droplets keep the blob's momentum and splat on contact; helmet and tube fly off as solid pieces (knockout feature) | pops off |
 | Health chunk lost (HUD) | — | — | pip pop | — | — | — | — | — |
 | Round start / end | — | `round-start` / `round-end` | — | — | — | — | banner | — |

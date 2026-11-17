@@ -121,16 +121,21 @@ interface AmmoLook {
   rowWidth: number;
 }
 
-/** Redraws the ammo pills only when the weapon, its ammo or capacity changed (weapon-visuals D3). */
+/**
+ * Redraws the ammo pills only when the weapon, its ammo or capacity changed (weapon-visuals D3).
+ * Ammo is rounded up: a spray weapon's fuel drains in fractions of a second (fire-spread D6), one
+ * pill per started second.
+ */
 function drawAmmo(card: PlayerCard, { weapon, max, rowWidth }: AmmoLook): void {
-  const key = weapon ? `${weapon.itemId}:${weapon.ammo}:${max}` : "";
+  const filled = weapon ? Math.ceil(weapon.ammo) : 0;
+  const key = weapon ? `${weapon.itemId}:${filled}:${max}` : "";
   if (card.ammoShown === key) return;
   card.ammoShown = key;
   card.ammo.clear();
   card.ammo.visible = weapon !== null;
   if (!weapon) return;
   const { accent } = weaponLook(weapon.itemId);
-  const pills = pillRow({ count: max, filled: weapon.ammo, width: rowWidth, gap: AMMO.gap });
+  const pills = pillRow({ count: max, filled, width: rowWidth, gap: AMMO.gap });
   for (const pill of pills) {
     card.ammo
       .roundRect(PIP.x + pill.x, AMMO.y, pill.w, AMMO.h, AMMO.radius)
