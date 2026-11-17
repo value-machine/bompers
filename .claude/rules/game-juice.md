@@ -19,3 +19,4 @@ Every game moment's feedback (sound, squash and stretch, flash, shake, hit-stop,
 - Every moment gets at least one sound and one visual channel; feedback is render only.
 - A lap that adds or changes a game element runs `.agents/skills/spec-apply-game-juice/SKILL.md` (juice table in the plan, ledger row in the build).
 - Changing a tier value or a window is a change to a recorded decision: ask (`.claude/rules/agent-behavior.md` § When to ask).
+- **Owner picks first.** A new or changed look or sound (a moment, weapon, effect, pickup, UI, sound or music) is built only after the owner picked it on an options page; record the pick in the lap's DECISIONS. Tuning an already-picked design (a colour, a timing, a volume after owner feedback) is exempt. Procedure: `.agents/skills/loop-refine/SKILL.md` step 6.
