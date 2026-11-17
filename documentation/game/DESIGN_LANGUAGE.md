@@ -77,7 +77,7 @@ Named colours a level puts on any material (`data-color`; catalog kind `color`).
 | Headbutt reset (floats on its point) | `#5fe0ff` aqua diamond crystal, ink outline, white gloss facet, ink up-chevron; while gone, an ink ghost outline at 30 % alpha |
 | Timer warning (last 10 s) | `#ff8a1f` |
 | Weapon accents (§ 9) | rocket launcher sky `#8fd6ff`; homing launcher lilac `#b08cff`; torch ember `#ff8a1f` |
-| Fire on terrain (fire-spread b1) | flames ember `#ff6a1a` with an amber `#ffb21a` heart, flickering, one per 2 × 2 burning samples; torch core `#fff1a8`; scorch on earth `#3a2418` at 40 % alpha |
+| Fire ("Sticker flames", owner fire-visuals D1) | pointed flames, ember `#ff6a1a` with an amber `#ffb21a` heart and a pale `#fff1a8` core while fresh, under one ink line (effect width, § 3): drawn in ink first, in colour on top. On terrain one flame per 2 × 2 burning samples, tall at the front and small behind it; burning cardboard darkens with scorch `#3a2418` at 30 % then 60 % alpha; scorch on earth at 40 % alpha; a white smoke puff with an ink edge per burn-out batch |
 | Burning blob (fire-burn b2) | three ember flames with pale-yellow cores on the helmet; sweat drops sky `#8fd6ff`; pinprick pupils (45 %); a drawn panic hop; steam off ice white `#ffffff`; burn-down smoke `#6e6378` |
 
 ---
@@ -304,7 +304,7 @@ The owner picked this system on 2026-11-16 (lap weapon-visuals, direction A of t
 |---|---|---|---|
 | Rocket launcher | capped tube (§ 2) | sky `#8fd6ff` | cream body, ink nose, fins in the shooter colour (§ 1) |
 | Homing launcher | twin pod (a short mount and two stacked pods) | lilac `#b08cff` | lilac hull, cherry seeker light blinking 6 Hz, lilac trail, shooter-colour fins (§ 1; owner passed this look with #39) |
-| Torch (fire-spread b1) | nozzle: a fuel can behind a thin nozzle that flares at the tip | ember `#ff8a1f` | a flame fan from the helmet while fire is held (ember outer, amber middle, pale-yellow core; ±18°, 84 units); its HUD pills are seconds of fuel |
+| Torch (fire-spread b1) | nozzle: a fuel can behind a thin nozzle that flares at the tip | ember `#ff8a1f` | an outlined flame from the nozzle while fire is held (owner fire-visuals D2–D3): a neck that opens to about half the hit cone, a head of six rolling lobes, a slight lift toward the end, flames peeling off the top, a flare where it meets terrain (ember outer, amber middle, pale-yellow core; fitted inside the ±18°, 84-unit hit rays). On release the head lets go as one puff; held but idle, a small outlined flame sits on the nozzle. Its HUD pills are seconds of fuel |
 
 Rules:
 
