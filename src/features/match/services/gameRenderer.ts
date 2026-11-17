@@ -163,6 +163,13 @@ const blobWeapons = (state: GameState): Map<string, BlobWeapon> => {
   return weapons;
 };
 
+/** Ids of the players holding a torch: the fire layer draws the idle flame on their nozzle. */
+const torchHolderIds = (weapons: ReadonlyMap<string, BlobWeapon>): Set<string> => {
+  const ids = new Set<string>();
+  for (const [id, weapon] of weapons) if (weapon.itemId === "torch") ids.add(id);
+  return ids;
+};
+
 /** Ids of players whose spawn protection is still running. */
 const protectedIds = (state: GameState): Set<string> => {
   const ids = new Set<string>();
@@ -193,6 +200,7 @@ interface LayerFrame {
 /** Syncs every world-space layer to the state. */
 function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerFrame): void {
   const { inPlay, nowMs, zoom } = frame;
+  const weapons = blobWeapons(state);
   syncTerrainView(renderer.terrain, state.arena.terrain, zoom);
   syncFireView(renderer.fire, {
     fire: state.fire,
@@ -201,12 +209,16 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     players: inPlay,
     timeSeconds: state.timeSeconds,
     momentSeconds: state.tunables.fire.blob.momentSeconds,
+    zoom,
+    torchHolderIds: torchHolderIds(weapons),
+    torchLength: state.tunables.combat.torch.length,
+    burnSeconds: state.tunables.fire.burnSeconds,
   });
   syncPlayersView(renderer.players, inPlay, {
     nowMs,
     protectedIds: protectedIds(state),
     overlays: blobOverlays(state, { inPlay, nowMs }),
-    weapons: blobWeapons(state),
+    weapons,
     zoom,
     hits: frame.hits,
     helmet: state.tunables.feel.helmet,
