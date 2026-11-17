@@ -15,7 +15,7 @@ You are writing **one HTML file** that holds **one inline `<svg>`**. The SVG is 
 4. **Material = behaviour, colour = looks.** On every `terrain` shape:
    - `data-material`: `stone` (solid, never breaks; the default), `earth` or `cardboard` (explosions clear it), `ice` (solid and slippery).
    - `data-color` (optional): any named colour from § Catalog IDs, on any material (pink ice, green cardboard, …). Leave it out for the material's own colour. No hex values.
-   Players read the behaviour from the surface pattern the game draws, not from the colour: breakable terrain shows a seam grid, ice shows gloss streaks and a white rim.
+   In the game breakable terrain looks like any slab (one solid colour); only ice shows a pattern (gloss streaks and a white rim). Pick colours that tell materials apart where it matters.
 5. Reference other content **by ID only**, never describe it: `data-items` (space-separated) on `drop`, `data-item` on `collectible`. Optional on terrain: `data-effect`, `data-sound`, `data-behavior`. IDs are lowercase-kebab. Every current ID is in § Catalog IDs below (also `/level-kit/v2/catalog.json`).
    Unknown IDs, or an item on the wrong role (a drop item on a `collectible`, a collectible item on a `drop`), don't break the level; they fall back to the default with a warning.
 6. Optional level settings on the root: `data-gravity` (multiplier, `1` = normal, `0.6` = floaty), `data-match-duration` (seconds), `data-cell-size` (terrain sample spacing, default `4`). Metadata: `data-author`, `data-agent` (your name, e.g. `claude`, `gemini`, `chatgpt`), `data-level-id`, `data-description`.
@@ -35,8 +35,8 @@ Link the preview kit in `<head>` (works offline without it):
 | Kind | ID | Label | Notes |
 |---|---|---|---|
 | material | `stone` | Stone | unbreakable, looks: smooth slab, effect `none`, sound `thud`, default for terrain |
-| material | `earth` | Earth | toughness 1, looks: seam grid, effect `dust-burst`, sound `crumble` |
-| material | `cardboard` | Cardboard | toughness 0.7, looks: seam grid, effect `dust-burst`, sound `thwap` |
+| material | `earth` | Earth | toughness 1, looks: smooth slab, effect `dust-burst`, sound `crumble` |
+| material | `cardboard` | Cardboard | toughness 0.7, looks: smooth slab, effect `dust-burst`, sound `thwap` |
 | material | `ice` | Ice | unbreakable, slippery, looks: gloss streaks + white rim, effect `none`, sound `clink` |
 | color | `plum` | Plum | default for stone |
 | color | `slate` | Slate |  |

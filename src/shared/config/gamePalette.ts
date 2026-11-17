@@ -70,8 +70,6 @@ export const GAME_PALETTE = {
     hillsFar: 0xbfe8d0,
     hillsNear: 0x9fd8b8,
   },
-  /** Crack next to a crater. */
-  crack: 0x2b1d3a,
   /** Ice surface cue: gloss streaks and the inner rim (DESIGN_LANGUAGE § 2). */
   iceGloss: 0xffffff,
   /** Rocket smoke puffs. */
