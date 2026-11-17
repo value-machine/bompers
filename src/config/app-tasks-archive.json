@@ -288,5 +288,45 @@
     "title": "Level import warns on items in the wrong role",
     "description": "Follow-up from the headbutt-reset lap: the level importer and the level kit preview warn when an item id is used on the wrong role (e.g. data-item=\"dive-reset\" on a drop, or a weapon id on a collectible), so hand-made and AI-generated levels fail loudly instead of silently. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "done"
+  },
+  {
+    "title": "Material responses: blast power and spreading fire",
+    "description": "Owner direction 2026-11-16 (supersedes the earlier fire-only scope): one shared model where a source only says WHERE and HOW STRONG, and the material decides the result. (1) Blasts: a rocket picks only its explosion point and power (no fixed crater radius); each material's toughness decides the cutout. Blast power also drives the push on players (owner 2026-11-16): one scalable blast power from 0 (barely moves a player) through a small shove to sending them flying, so each weapon is tuned by its blast power alone. (2) Fire: a fire source at a point; fire spreads per tick outward in a circle from the origin, and each material decides whether and how it burns — so part of a block can burn while the rest does not (the terrain cell grid makes that per-cell, not a split entity). (3) A flamethrower weapon. (4) A hit reaction when a blob touches fire. Design with the owner, with examples, before building. Laps: blast-by-power refactor first, then fire + burn reaction, then flamethrower. Build waits on the uniform material system (#36). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. Owner 2026-11-16: the material system (#36) is fine but its destructibility must match this paradigm — the breakable flag becomes toughness (stone/ice unbreakable), shared by level format, kit, catalog and the generation prompt. ",
+    "status": "done"
+  },
+  {
+    "title": "Smooth destruction: Worms / LittleBigPlanet-style terrain",
+    "description": "Owner request 2026-11-16: destruction must not look or feel restricted to blocks (today: Minecraft/Terraria-like stepped craters on the 8-unit cell grid). Craters and explosions get custom, smooth shapes, like Worms or LittleBigPlanet, and terrain reads as one sheet rather than cells. Owner picked (2026-11-16, after an A-vs-vector deep dive): a fine true-distance field (~4 units) with a truly curved edge (spline or shader), collision and fire on the same field, craters per sample by toughness with custom shapes per weapon; untouched authored shapes may stay sharp. Owned by the blast-power thread (same terrain code); build after the material system (#36) and the blast-power lap. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. Laps (blast-power thread, D18–D19): a2 distance field + crater on the field, a2r curved edge renderer (shader-vs-spline spike first), a3 collision on the field; after blast power (a); fire (b) after a2r; Shared roll after a3. ",
+    "status": "done"
+  },
+  {
+    "title": "Fire and flamethrower visuals",
+    "description": "Owner 2026-11-17: 'Fire visuals looked shit on my last test. I didn't see examples yet of the flamethrower visuals. Need a full lap for those.' Redesign the look of terrain fire (flames on burning cardboard, spread front, burn-out, scorch, smoke), the torch/flamethrower spray and nozzle, and blobs on fire (#55 look kept unless the owner says otherwise). Options page first (loop-refine step 6), owner picks, then build. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; look: documentation/game/DESIGN_LANGUAGE.md; juice: documentation/game/GAME_JUICE.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Shared roll: dash-hold roll and hit tumble",
+    "description": "Owner request 2026-11-16: one shared rolling system for all player rolling. (1) Holding the dash button after a dash makes the blob keep rolling. (2) Being hit or launched by a blast uses the same roll, with or without damage. (3) Consolidate: find every existing system that rolls, tumbles or bounces the player (tumble state, dive bonk, body collisions, blast push, landing squash) and fold them into this one roll, removing the duplicates. (4) Real rolling physics: in roll mode the blob actually rolls — on a slope it rolls down the hill, with ground contact, friction and spin. (5) Roll intensity follows the blast power (see Material responses: 0 = barely moves, small = a little shove, strong = flying), so weapons are tuned by blast power. Today a separate tumble state starts only above a fixed impulse threshold (gameTunables player.tumble.minImpulse 800) — replace the threshold with the continuous scale. Waits on the blast-power lap of Material responses and the collision-on-field lap (a3) of Smooth destruction and the headbutt 16-ways PR (#37, same dive code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Elimination: ragdoll and fall apart",
+    "description": "Owner request 2026-11-16: when a blob is lethally hit it ragdolls, or falls apart into pieces that ragdoll; the pieces then blink until they disappear, and the player respawns. Design first: an artifact with live examples of the options before the owner picks. Fills the game-juice gap 'elimination has sound but no visual'. Relates to the Shared roll lap (ragdoll/tumble state) and the loose-parts idea (falling bodies). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Fire and flamethrower visuals",
+    "description": "Owner 2026-11-17: 'Fire visuals looked shit on my last test. I didn't see examples yet of the flamethrower visuals. Need a full lap for those.' Redesign the look of terrain fire (flames on burning cardboard, spread front, burn-out, scorch, smoke), the torch/flamethrower spray and nozzle, and blobs on fire (#55 look kept unless the owner says otherwise). Options page first (loop-refine step 6), owner picks, then build. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; look: documentation/game/DESIGN_LANGUAGE.md; juice: documentation/game/GAME_JUICE.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Shared roll: dash-hold roll and hit tumble",
+    "description": "Owner request 2026-11-16: one shared rolling system for all player rolling. (1) Holding the dash button after a dash makes the blob keep rolling. (2) Being hit or launched by a blast uses the same roll, with or without damage. (3) Consolidate: find every existing system that rolls, tumbles or bounces the player (tumble state, dive bonk, body collisions, blast push, landing squash) and fold them into this one roll, removing the duplicates. (4) Real rolling physics: in roll mode the blob actually rolls — on a slope it rolls down the hill, with ground contact, friction and spin. (5) Roll intensity follows the blast power (see Material responses: 0 = barely moves, small = a little shove, strong = flying), so weapons are tuned by blast power. Today a separate tumble state starts only above a fixed impulse threshold (gameTunables player.tumble.minImpulse 800) — replace the threshold with the continuous scale. Waits on the blast-power lap of Material responses and the collision-on-field lap (a3) of Smooth destruction and the headbutt 16-ways PR (#37, same dive code). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Elimination: ragdoll and fall apart",
+    "description": "Owner request 2026-11-16: when a blob is lethally hit it ragdolls, or falls apart into pieces that ragdoll; the pieces then blink until they disappear, and the player respawns. Design first: an artifact with live examples of the options before the owner picks. Fills the game-juice gap 'elimination has sound but no visual'. Relates to the Shared roll lap (ragdoll/tumble state) and the loose-parts idea (falling bodies). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md. ",
+    "status": "done"
   }
 ]
