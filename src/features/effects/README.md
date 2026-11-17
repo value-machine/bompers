@@ -14,7 +14,7 @@ Visual feedback drawn from sim events (DESIGN_LANGUAGE § 5 step 6, § 6): explo
 
 Seams for later work:
 
-- **Motion polish:** elimination droplets and landing smoke go here, keyed by their events. Hit flash, screen shake and hit-stop are built (`feelCues.ts`); tunables `feel`.
+- **Motion polish:** landing smoke goes here, keyed by its events (the elimination goo is the `knockout` feature). Hit flash, screen shake and hit-stop are built (`feelCues.ts`); tunables `feel`.
 - **Sound:** reads the same events in its own module; nothing here plays audio.
 
 ## Dependencies

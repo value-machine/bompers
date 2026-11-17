@@ -19,6 +19,7 @@ export {
   type HitReactionArgs,
 } from "@/features/player/services/tumble";
 export type { BlobPoseOverlay } from "@/features/player/services/blobPose";
+export { drawLooseHelmet, drawLooseTube } from "@/features/player/services/blobShapes";
 export {
   createPlayersView,
   syncPlayersView,

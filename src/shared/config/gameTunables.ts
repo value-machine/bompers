@@ -19,7 +19,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   match: {
     durationSeconds: 180,
     maxPlayers: 4,
-    respawnDelaySeconds: 1.2,
+    // Long enough to see the knockout's goo splat land (owner, elimination-goo lap: 1.2 → 2.0).
+    respawnDelaySeconds: 2.0,
     spawnProtectionSeconds: 2.5,
     restartLockSeconds: 2,
     // A kill outweighs an orb; falling off alone costs a point (match-rules D1).
@@ -204,5 +205,25 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     },
     // About 3 frames at 60 fps.
     hitStop: { seconds: JUICE_TIERS.heavy.hitStopSeconds },
+    // Owner's pick from the knockout demo rounds (elimination-goo lap, 2026-11-16).
+    knockout: {
+      hardContactSpeed: 200,
+      flungMaxSeconds: 0.65,
+      // The land pose: the strongest squash the juice band allows.
+      squash: { sx: 1.25, sy: 0.75, seconds: 0.1 },
+      bounce: 0.3,
+      friction: 0.25,
+      droplets: {
+        count: 6,
+        minRadius: 0.28,
+        maxRadius: 0.4,
+        minSpread: 90,
+        maxSpread: 200,
+        startOffset: 0.45,
+      },
+      piecePop: 300,
+      blinkSeconds: 0.5,
+      splatSeconds: 4,
+    },
   },
 };

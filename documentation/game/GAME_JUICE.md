@@ -41,7 +41,7 @@ The feedback layer of the design system ([`DESIGN_LANGUAGE.md`](DESIGN_LANGUAGE.
 | `effect` — pop-in effect clearing | 180–320 ms | impact pop 220 ms, explosion star 250 ms |
 | `linger` — things flying off | 300–600 ms | elimination droplets 300 ms, debris 500 ms |
 
-Loops (idle breathing 1.6 s, respawn blink 8 Hz) are not bound by a window.
+Loops (idle breathing 1.6 s, respawn blink 8 Hz) are not bound by a window. Owner exceptions (elimination-goo lap): knockout pieces stay until the respawn (2 s, blinking 8 Hz for the last 0.5 s) and goo splats fade out by 4 s.
 
 ## 4. Squash and stretch
 
@@ -84,7 +84,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Back hit taken | heavy | `hit` / `dive-impact` (gain by knockback) | — | 1.0 | 6 px | 50 ms | impact pop (not on dive hits) | kick |
 | Explosion | heavy | `explosion` (ducks music) | — | — | 6 px (by radius) | — | star burst | — |
 | Terrain destroyed | light | material's sound (`thud` / `crumble` / `thwap` / `clink`) | — | — | — | — | debris | — |
-| Elimination | heavy | `elimination` | — | — | — | — | **gap:** droplets + confetti (DESIGN_LANGUAGE § 6) not built yet | — |
+| Elimination (knockout) | heavy | `elimination` (at the elimination, not the burst) | flies with the knockback, then squash `feel.knockout.squash` (the land pose, 100 ms) at the first hard contact; overkill squashes at once | the lethal hit's flash | the lethal hit's shake | — | goo burst: 6 droplets keep the blob's momentum and splat on contact; helmet and tube fly off as solid pieces (knockout feature) | pops off |
 | Health chunk lost (HUD) | — | — | pip pop | — | — | — | — | — |
 | Round start / end | — | `round-start` / `round-end` | — | — | — | — | banner | — |
 | Final 30 s build-up | — | music build-up for the last 30 s | — | — | — | — | timer turns orange and pulses in the last 10 s (HUD) | — |

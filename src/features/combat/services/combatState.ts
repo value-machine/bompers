@@ -106,10 +106,25 @@ export function eliminateFighter(args: EliminateArgs): void {
   fighter.eliminated = true;
   emitCombatEvent(
     combat,
-    { type: "playerEliminated", victimSlot: fighter.slot, byPlayerSlot, cause },
+    {
+      type: "playerEliminated",
+      victimSlot: fighter.slot,
+      byPlayerSlot,
+      cause,
+      overkill: false,
+      ...victimMotion(player),
+    },
     timeSeconds
   );
 }
+
+/** Where the victim is and how it moves at the moment it is eliminated (knockout render). */
+const victimMotion = (player: PlayerState) => ({
+  x: player.x,
+  y: player.y,
+  vx: player.vx,
+  vy: player.vy,
+});
 
 /** Back in play after a respawn: full health, unarmed, no pending credit. */
 export function respawnFighter(
@@ -182,7 +197,14 @@ function emitHit(world: HitWorld, hit: Hit, result: HitResult & { healthLeft: nu
   );
 }
 
-function eliminate(world: HitWorld, hit: Hit, fighter: FighterState): void {
+interface Elimination {
+  hit: Hit;
+  fighter: FighterState;
+  victim: PlayerState;
+  overkill: boolean;
+}
+
+function eliminate(world: HitWorld, { hit, fighter, victim, overkill }: Elimination): void {
   fighter.eliminated = true;
   emitCombatEvent(
     world.combat,
@@ -191,9 +213,31 @@ function eliminate(world: HitWorld, hit: Hit, fighter: FighterState): void {
       victimSlot: hit.victimSlot,
       byPlayerSlot: hit.attackerSlot,
       cause: hit.source,
+      overkill,
+      ...victimMotion(victim),
     },
     world.timeSeconds
   );
+}
+
+/**
+ * Takes the damage off (never below 0) and records the attacker for credit. Returns true for an
+ * overkill: the hit would have taken health below 0 (owner, elimination-goo lap), so the
+ * knockout bursts on the spot instead of flying first.
+ */
+function takeDamage(
+  fighter: FighterState,
+  {
+    damage,
+    attackerSlot,
+    timeSeconds,
+  }: { damage: number; attackerSlot: number | null; timeSeconds: number }
+): boolean {
+  const overkill = damage > fighter.health;
+  fighter.health = Math.max(0, fighter.health - damage);
+  fighter.lastHitBySlot = attackerSlot;
+  fighter.lastHitAt = timeSeconds;
+  return overkill;
 }
 
 /**
@@ -214,10 +258,8 @@ export function applyHit(world: HitWorld, hit: Hit): HitResult {
   if (fighter.eliminated || timeSeconds < fighter.invulnerableUntil) {
     return { landed: false, zone, damage: 0 };
   }
-  fighter.health = Math.max(0, fighter.health - damage);
-  fighter.lastHitBySlot = hit.attackerSlot;
-  fighter.lastHitAt = timeSeconds;
+  const overkill = takeDamage(fighter, { damage, attackerSlot: hit.attackerSlot, timeSeconds });
   emitHit(world, hit, { landed: true, zone, damage, healthLeft: fighter.health });
-  if (fighter.health === 0) eliminate(world, hit, fighter);
+  if (fighter.health === 0) eliminate(world, { hit, fighter, victim, overkill });
   return { landed: true, zone, damage };
 }

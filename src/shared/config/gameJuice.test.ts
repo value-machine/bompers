@@ -49,7 +49,13 @@ describe("feel tunables conform to the juice scale", () => {
   });
 
   it("should keep every squash preset inside the volume band and squash window when built", () => {
-    for (const preset of [player.squash.land, player.squash.jump, player.squash.wallJump]) {
+    const knockout = feel.knockout.squash;
+    for (const preset of [
+      player.squash.land,
+      player.squash.jump,
+      player.squash.wallJump,
+      knockout,
+    ]) {
       expect(isJuiceSquash(preset)).toBe(true);
       expect(isInJuiceWindow("squash", preset.seconds)).toBe(true);
     }
