@@ -12,6 +12,10 @@ import {
   type FeetMotion,
   type FeetTunables,
   createHelmetWobble,
+  createGroundTilt,
+  stepGroundTilt,
+  type GroundTilt,
+  type GroundTiltTunables,
   kickHelmetForHit,
   kickHelmetForSquash,
   noteBlobEvents,
@@ -105,6 +109,7 @@ interface BlobSprite {
   anim: BlobAnim;
   wobble: HelmetWobble;
   feetMotion: FeetMotion;
+  groundTilt: GroundTilt;
   metrics: BlobMetrics;
   /** Outline step the ink was drawn at (null before the first draw). */
   inkStep: number | null;
@@ -135,6 +140,8 @@ export interface SyncPlayersOptions {
   helmet?: HelmetTunables;
   /** Foot motion settings. Defaults to the shared tunables. */
   feet?: FeetTunables;
+  /** Lean on sloped ground. Defaults to the shared tunables. */
+  groundTilt?: GroundTiltTunables;
   /** Crouch pose settings. Defaults to the shared tunables. */
   crouch?: CrouchTunables;
 }
@@ -310,6 +317,7 @@ function createBlobSprite(player: PlayerState): BlobSprite {
     anim: createBlobAnim(player),
     wobble: createHelmetWobble(),
     feetMotion: createFeetMotion(player),
+    groundTilt: createGroundTilt(),
     metrics: m,
     inkStep: null,
   };
@@ -359,17 +367,28 @@ interface PoseFrame {
   overlay: BlobPoseOverlay | undefined;
   armed: boolean;
   feet: FeetTunables | undefined;
+  groundTilt: GroundTiltTunables | undefined;
   nowMs: number;
 }
 
-/** Places and scales the blob. The root turns around the body centre (overlay rotation, roll). */
+/**
+ * Places and scales the blob. The root turns around the body centre (overlay rotation, roll, and
+ * the lean on sloped ground).
+ */
 function placeBlob(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): void {
   const { pose, overlay } = frame;
-  // With no overlay and no roll this is the plain feet-point placement.
+  // With no overlay, roll or slope this is the plain feet-point placement.
   const centerY = player.height / 2;
   sprite.root.pivot.set(0, -centerY);
   sprite.root.position.set(player.x, player.y - centerY);
-  sprite.root.rotation = (overlay?.rotation ?? 0) + tumbleRoll(player, sprite.metrics.r);
+  const slopeLean = stepGroundTilt(sprite.groundTilt, {
+    groundAngle: player.groundAngle,
+    grounded: player.grounded,
+    nowMs: frame.nowMs,
+    tunables: frame.groundTilt ?? DEFAULT_GAME_TUNABLES.feel.groundTilt,
+  });
+  const roll = tumbleRoll(player, sprite.metrics.r);
+  sprite.root.rotation = (overlay?.rotation ?? 0) + roll + slopeLean;
   const sx = pose.bodySx * (overlay?.sx ?? 1);
   const sy = pose.bodySy * (overlay?.sy ?? 1);
   const lean = overlay ? 0 : Math.max(-0.15, Math.min(0.15, player.vx / 2400));
@@ -537,6 +556,7 @@ export function syncPlayersView(
       overlay: options.overlays?.get(player.id),
       armed: options.weapons?.has(player.id) === true,
       feet: options.feet,
+      groundTilt: options.groundTilt,
       nowMs,
     });
     applyFeel(sprite, player, {

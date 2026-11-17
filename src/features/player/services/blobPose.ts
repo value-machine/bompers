@@ -469,6 +469,44 @@ function wallFoot(motion: FeetMotion, frame: FeetFrame, i: number): FootPose {
   };
 }
 
+export type GroundTiltTunables = GameTunables["feel"]["groundTilt"];
+
+/** Per-player lean memory kept by the render layer (slope-walking D4). */
+export interface GroundTilt {
+  /** Offset from the target, pulled toward 0. */
+  spring: DampedSpring;
+  /** The last target lean, radians clockwise. */
+  target: number;
+  lastMs: number | null;
+}
+
+export const createGroundTilt = (): GroundTilt => ({
+  spring: createDampedSpring(),
+  target: 0,
+  lastMs: null,
+});
+
+/**
+ * Body lean toward the ground (slope-walking D4): `share` of the slope under the feet, at most
+ * `maxAngle`, level in the air; a new target eases in on the spring. Returns radians, clockwise
+ * (a slope rising to the right leans the blob counter-clockwise, into the hill).
+ */
+export function stepGroundTilt(
+  tilt: GroundTilt,
+  frame: { groundAngle: number; grounded: boolean; nowMs: number; tunables: GroundTiltTunables }
+): number {
+  const { tunables } = frame;
+  const lean = frame.grounded ? clampAbs(tunables.share * frame.groundAngle, tunables.maxAngle) : 0;
+  const target = -lean;
+  // A target jump becomes spring offset, so the lean eases toward it instead of snapping.
+  tilt.spring.value += tilt.target - target;
+  tilt.target = target;
+  const dt = tilt.lastMs === null ? 0 : Math.max(0, (frame.nowMs - tilt.lastMs) / 1000);
+  tilt.lastMs = frame.nowMs;
+  stepDampedSpring(tilt.spring, tunables, dt);
+  return target + tilt.spring.value;
+}
+
 /** Advances the foot motion to `nowMs` and writes both feet into `motion.feet`. */
 export function stepFeetMotion(motion: FeetMotion, frame: FeetFrame): [FootPose, FootPose] {
   // A clock that stalls or jumps back (tab switch, reset) steps nothing.

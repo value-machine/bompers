@@ -79,4 +79,6 @@ export interface PlayerState {
   landCount: number;
   /** Downward speed at the last landing, units / s (scales the landing squash). */
   lastLandingSpeed: number;
+  /** Slope under the feet while grounded, radians (+ = rising to the right); 0 in the air. */
+  groundAngle: number;
 }

@@ -14,6 +14,8 @@ import {
   stepHelmetWobble,
   createFeetMotion,
   stepFeetMotion,
+  createGroundTilt,
+  stepGroundTilt,
 } from "@/features/player/services/blobPose";
 import { createPlayer } from "@/features/player/services/playerController";
 import type { PlayerState } from "@/features/player/types/player.types";
@@ -320,5 +322,44 @@ describe("crouch face", () => {
       eyeLift: 0,
       eyesUnderHelmet: false,
     });
+  });
+});
+
+describe("stepGroundTilt", () => {
+  const tunables = DEFAULT_GAME_TUNABLES.feel.groundTilt;
+  const DEG = Math.PI / 180;
+  /** Lean after standing `seconds` on ground of `slope` radians (60 fps). */
+  const settle = (slope: number, grounded = true, seconds = 2): number => {
+    const tilt = createGroundTilt();
+    let lean = 0;
+    for (let ms = 0; ms <= seconds * 1000; ms += 1000 / 60) {
+      lean = stepGroundTilt(tilt, { groundAngle: slope, grounded, nowMs: ms, tunables });
+    }
+    return lean;
+  };
+
+  it("should lean into the hill by the share of the slope when standing on it", () => {
+    expect(settle(20 * DEG)).toBeCloseTo(-tunables.share * 20 * DEG, 3);
+    expect(settle(-20 * DEG)).toBeCloseTo(tunables.share * 20 * DEG, 3);
+  });
+
+  it("should cap the lean at the max angle when the slope is steep", () => {
+    expect(settle(70 * DEG)).toBeCloseTo(-tunables.maxAngle, 3);
+  });
+
+  it("should stay level when airborne", () => {
+    expect(settle(40 * DEG, false)).toBeCloseTo(0, 6);
+  });
+
+  it("should ease into a new slope instead of snapping when the ground angle changes", () => {
+    const tilt = createGroundTilt();
+    stepGroundTilt(tilt, { groundAngle: 0, grounded: true, nowMs: 0, tunables });
+    const first = stepGroundTilt(tilt, {
+      groundAngle: 30 * DEG,
+      grounded: true,
+      nowMs: 16,
+      tunables,
+    });
+    expect(Math.abs(first)).toBeLessThan(tunables.share * 30 * DEG * 0.5);
   });
 });
