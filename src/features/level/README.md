@@ -38,3 +38,6 @@ Seams for later work:
 - Unknown IDs resolve to a safe default plus a warning, never a crash (orchestrator).
 - Terrain has no role: the material alone decides breakability, the colour is looks only (material-system D1, D5).
 - `settings.cellSize` defaults to the catalog's 4: the arena turns it into the spacing of its distance-field samples (terrain-field D1).
+- `movers?: LevelMover[]` (`{ motion, pivot, terrainIndices }`, LEVEL_FORMAT § 11): moving parts keep their pieces in `terrain` at the rest pose and name them by index, so a static reader (the arena until moving-parts lap B) needs no change. Motion is geometry, not a catalog behaviour; `data-behavior` stays for catalog behaviours (moving-parts D1, D2, D10).
+- A mover's pose is a pure function of round time, `motionPose(motion, t)` in `src/shared/utils/levelMotion.ts`; no mover state is stored (moving-parts D7).
+- Lap B contract: each mover is a kinematic body with its own local distance field (never in the static field); riders are carried by the contact point's velocity; movers never break or burn; rockets explode on them without craters, homing ignores them, crates ride, the spawn picker skips covered spawns; same slab + one-rule outline. Crush rule open (moving-parts D11–D16, D13).

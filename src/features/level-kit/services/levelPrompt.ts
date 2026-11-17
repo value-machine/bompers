@@ -8,6 +8,7 @@ import { MIN_SPAWNS, RECOMMENDED_SPAWNS } from "@/features/level-file/api/levelF
 import { DEFAULT_GAME_TUNABLES, type GameTunables } from "@/shared/config/gameTunables";
 import { terrainSwatch, toCssColor } from "@/shared/config/gamePalette";
 import { blastPushAt, blastReach, craterReach } from "@/shared/utils/blastPower";
+import { MOTION_DEFAULTS, MOTION_LIMITS, MOTION_PIVOTS } from "@/shared/utils/levelMotion";
 
 /**
  * The copyable level-generation prompt (feedback round 2 § 2.1, level-gen-prompt D1): one text a
@@ -117,7 +118,7 @@ function renderCoordinates({ cell }: PromptContext): string {
     "- **Axes:** origin `(0, 0)` is **top-left**; `x` grows right, **`y` grows DOWN**.",
     `- **Grid:** snap rect \`x\`, \`y\`, \`width\`, \`height\` and polygon vertices to multiples of \`${cell}\` (the cell size).`,
     "- **Game shapes (`data-role`):** only `<rect>`, `<polygon>` (≥ 3 points) and `<circle>`.",
-    "- **Grouping & decoration:** `<g>` is fine for grouping. Elements without `data-role` are decoration; the game ignores them.",
+    "- **Grouping & decoration:** `<g>` is fine for grouping (with `data-motion` it makes a moving part, § 3). Elements without `data-role` are decoration; the game ignores them.",
     "- **Forbidden on game shapes and their ancestors:** `<path>`, `<ellipse>`, `<line>`, `<polyline>`, `<use>`, nested `<svg>`, any `transform`.",
     "- Give every shape a `fill` so the file looks right offline; the game ignores `fill` and paints terrain from `data-color`.",
   ].join("\n");
@@ -139,6 +140,48 @@ function renderRoles(ctx: PromptContext): string {
     `| \`collectible\` | \`<circle>\` | ≥ 0 | A pickup point (\`r="${POINT_RADIUS.collectible}"\`), \`data-item\` = one collectible item (§ 4). \`point-orb\`: point orbs fall from the sky onto it. \`dive-reset\`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns ${respawn} s after use) — hang them in the air between platforms and off edges for headbutt chains. \`fill="${PREVIEW_FILLS.collectible}"\`. |`,
     "",
     `Drop items: ${codeList(itemIds(catalog, "drop"))}. Collectible items: ${codeList(itemIds(catalog, "collectible"))}.`,
+  ].join("\n");
+}
+
+/** A worked moving-part snippet: a lift drawn at rest that rises 160 and back. */
+function movingPartExample({ catalog }: PromptContext): string {
+  const fill = materialFill(catalog, CATALOG_DEFAULTS.material);
+  return [
+    "```svg",
+    '<g data-motion="slide 0,-160">',
+    `  <rect data-role="terrain" x="640" y="560" width="160" height="32" fill="${fill}" />`,
+    "</g>",
+    '<g data-motion="swing 40 3s @0.5">',
+    `  <rect data-role="terrain" x="1000" y="240" width="16" height="200" fill="${fill}" />`,
+    `  <rect data-role="terrain" x="960" y="440" width="96" height="24" fill="${fill}" />`,
+    "</g>",
+    "```",
+  ].join("\n");
+}
+
+/** Moving parts (LEVEL_FORMAT § 11): grammar, defaults, alignment rules, one example. */
+function renderMovingParts(ctx: PromptContext): string {
+  const { periodS, pivot } = MOTION_DEFAULTS;
+  const lim = MOTION_LIMITS;
+  const pivots = Object.keys(MOTION_PIVOTS)
+    .map((p) => code(p))
+    .join(" ");
+  return [
+    "### Moving parts (optional)",
+    "",
+    'Wrap terrain shapes in `<g data-motion="…">` to move them as one part. Draw the shapes where the part **rests**, in normal absolute coordinates; the motion is relative to that place. Never use `transform`.',
+    "",
+    '`data-motion="<kind> <args> [Ns] [@phase] [pivot] [ccw]"` (any order after the kind):',
+    "",
+    "- `slide dx,dy` — back and forth between rest and rest + `dx,dy`, slowing at both ends. Lift: `slide 0,-160`.",
+    "- `path dx,dy dx,dy …` — loops rest → each offset → rest at constant speed.",
+    `- \`spin\` — one full turn per period about the pivot (default ${code(pivot.spin)}), clockwise; \`ccw\` reverses.`,
+    `- \`swing deg\` — pendulum ± \`deg\` (≤ ${lim.maxSwingDegrees}) about the pivot (default ${code(pivot.swing)}).`,
+    `- \`Ns\` = seconds per cycle, default \`${periodS}s\`, ${lim.minPeriodS}–${lim.maxPeriodS}. \`@f\` starts \`f\` of a cycle ahead (0–1): equal period and phase move in lockstep, \`@0.5\` moves opposite.`,
+    `- Pivot = a point of the part's bounding box: ${pivots}.`,
+    `- Rules: only terrain moves (spawns, drops and pickups inside stay still); moving parts never break; offsets on multiples of \`${ctx.cell}\`; over the whole cycle the part stays inside bounds, keeps an \`8\`-unit margin from other terrain (touching at rest is fine) and stays ≥ \`${lim.spawnClearance}\` from spawn centres; its fastest point moves ≤ \`${lim.rideSpeed}\` units/s (slide ≈ 3.14 × length ÷ period, spin ≈ 6.28 × radius ÷ period); at most ${lim.maxMovers} parts; no nested \`data-motion\`.`,
+    "",
+    movingPartExample(ctx),
   ].join("\n");
 }
 
@@ -246,6 +289,7 @@ function renderChecklist(ctx: PromptContext): string {
     "6. `collectible` circles (optional) inside bounds with a `data-item` from § 4.",
     `7. Only rect / polygon / circle carry \`data-role\`; no \`<path>\`, no \`transform\`, no units; terrain snapped to multiples of \`${ctx.cell}\`.`,
     "8. Every shape has a `fill`; every route in the map request is reachable with the metrics in § 5.",
+    "9. Each `<g data-motion>` holds only terrain and follows the moving-part rules in § 3.",
   ].join("\n");
 }
 
@@ -297,6 +341,7 @@ export function buildLevelPrompt(tunables: GameTunables = DEFAULT_GAME_TUNABLES)
     renderFileContract(ctx),
     renderCoordinates(ctx),
     renderRoles(ctx),
+    renderMovingParts(ctx),
     renderCatalog(ctx),
     renderPhysics(ctx),
     renderChecklist(ctx),

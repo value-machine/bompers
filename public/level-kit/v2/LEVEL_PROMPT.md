@@ -53,7 +53,7 @@ Root attributes:
 - **Axes:** origin `(0, 0)` is **top-left**; `x` grows right, **`y` grows DOWN**.
 - **Grid:** snap rect `x`, `y`, `width`, `height` and polygon vertices to multiples of `4` (the cell size).
 - **Game shapes (`data-role`):** only `<rect>`, `<polygon>` (≥ 3 points) and `<circle>`.
-- **Grouping & decoration:** `<g>` is fine for grouping. Elements without `data-role` are decoration; the game ignores them.
+- **Grouping & decoration:** `<g>` is fine for grouping (with `data-motion` it makes a moving part, § 3). Elements without `data-role` are decoration; the game ignores them.
 - **Forbidden on game shapes and their ancestors:** `<path>`, `<ellipse>`, `<line>`, `<polyline>`, `<use>`, nested `<svg>`, any `transform`.
 - Give every shape a `fill` so the file looks right offline; the game ignores `fill` and paints terrain from `data-color`.
 
@@ -68,6 +68,30 @@ Root attributes:
 | `collectible` | `<circle>` | ≥ 0 | A pickup point (`r="10"`), `data-item` = one collectible item (§ 4). `point-orb`: point orbs fall from the sky onto it. `dive-reset`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns 2.5 s after use) — hang them in the air between platforms and off edges for headbutt chains. `fill="#e0b62c"`. |
 
 Drop items: `rocket-launcher`, `homing-launcher`. Collectible items: `point-orb`, `dive-reset`.
+
+### Moving parts (optional)
+
+Wrap terrain shapes in `<g data-motion="…">` to move them as one part. Draw the shapes where the part **rests**, in normal absolute coordinates; the motion is relative to that place. Never use `transform`.
+
+`data-motion="<kind> <args> [Ns] [@phase] [pivot] [ccw]"` (any order after the kind):
+
+- `slide dx,dy` — back and forth between rest and rest + `dx,dy`, slowing at both ends. Lift: `slide 0,-160`.
+- `path dx,dy dx,dy …` — loops rest → each offset → rest at constant speed.
+- `spin` — one full turn per period about the pivot (default `center`), clockwise; `ccw` reverses.
+- `swing deg` — pendulum ± `deg` (≤ 180) about the pivot (default `top`).
+- `Ns` = seconds per cycle, default `4s`, 1–30. `@f` starts `f` of a cycle ahead (0–1): equal period and phase move in lockstep, `@0.5` moves opposite.
+- Pivot = a point of the part's bounding box: `center` `top` `bottom` `left` `right` `top-left` `top-right` `bottom-left` `bottom-right`.
+- Rules: only terrain moves (spawns, drops and pickups inside stay still); moving parts never break; offsets on multiples of `4`; over the whole cycle the part stays inside bounds, keeps an `8`-unit margin from other terrain (touching at rest is fine) and stays ≥ `14` from spawn centres; its fastest point moves ≤ `340` units/s (slide ≈ 3.14 × length ÷ period, spin ≈ 6.28 × radius ÷ period); at most 16 parts; no nested `data-motion`.
+
+```svg
+<g data-motion="slide 0,-160">
+  <rect data-role="terrain" x="640" y="560" width="160" height="32" fill="#5a3f7a" />
+</g>
+<g data-motion="swing 40 3s @0.5">
+  <rect data-role="terrain" x="1000" y="240" width="16" height="200" fill="#5a3f7a" />
+  <rect data-role="terrain" x="960" y="440" width="96" height="24" fill="#5a3f7a" />
+</g>
+```
 
 ## 4. Valid catalog IDs (v2)
 
@@ -110,6 +134,7 @@ With another gravity multiplier `k`, heights and jump gaps scale by about `1 / k
 6. `collectible` circles (optional) inside bounds with a `data-item` from § 4.
 7. Only rect / polygon / circle carry `data-role`; no `<path>`, no `transform`, no units; terrain snapped to multiples of `4`.
 8. Every shape has a `fill`; every route in the map request is reachable with the metrics in § 5.
+9. Each `<g data-motion>` holds only terrain and follows the moving-part rules in § 3.
 
 Smallest valid level (shape reference only; build the map from § 7):
 

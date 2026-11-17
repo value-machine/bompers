@@ -137,6 +137,23 @@ svg[data-level-format] [data-role='bounds'] {
   stroke-linejoin: round;
   pointer-events: none;
 }
+/* Moving parts: dashed ghosts at the far poses, a dashed circle for a spin's sweep. */
+.lk-ghost,
+.lk-ghost * {
+  opacity: 0.35;
+  stroke: #1d2433;
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  pointer-events: none;
+}
+.lk-sweep {
+  fill: none;
+  stroke: #1d2433;
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  opacity: 0.4;
+}
+
 .lk-drop-ray {
   stroke: var(--lk-drop);
   stroke-width: 2;
