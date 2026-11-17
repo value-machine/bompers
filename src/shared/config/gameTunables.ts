@@ -113,12 +113,13 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   },
   // Fire on the field (blast-power D6, owner starting values): 40 units / s, burn 1.5 s.
   // Burn-outs are applied in batches every 0.25 s (at most that late), one effect / sound per batch.
-  // A blob on fire burns 2 s, then loses 1 chunk (owner blast-power D7); 0.5 s grace after going out.
+  // A blob on fire burns 2 s: a chunk at 1 s and a second at 2 s unless crouching then (owner
+  // fire-burn D10); 0.5 s grace after going out.
   fire: {
     spreadSpeed: 40,
     burnSeconds: 1.5,
     burnOutInterval: 0.25,
-    blob: { burnSeconds: 2, graceSeconds: 0.5, momentSeconds: 0.6 },
+    blob: { firstTickSeconds: 1, burnSeconds: 2, graceSeconds: 0.5, momentSeconds: 0.6 },
   },
   combat: {
     maxHealth: 4,

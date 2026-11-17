@@ -288,7 +288,7 @@ describe("gameSim — headbutt reset", () => {
 });
 
 describe("gameSim — burning blobs (fire-burn b2)", () => {
-  it("should run a burning blob from the fire and take one chunk when it burns down", () => {
+  it("should run a burning blob from the fire and take only the first chunk when it crouches", () => {
     const state = stepGame(newGame(), keys(), dt);
     const player = state.players[0]!;
     const startX = player.x;
@@ -296,7 +296,8 @@ describe("gameSim — burning blobs (fire-burn b2)", () => {
     catchFire(state.fire, player, { now: state.timeSeconds, fromX: startX - 50, bySlot: 1 });
     stepFor(state, 0.3);
     expect(player.x).toBeGreaterThan(startX + 40);
-    // Crouching is the player's own input: the flee stops, and the burn still takes a full chunk.
+    // Crouching is the player's own input: the flee stops; the mid-burn chunk still lands (not
+    // halved), the end chunk is skipped (owner fire-burn D10).
     stepFor(state, DEFAULT_GAME_TUNABLES.fire.blob.burnSeconds - 0.25, keys("KeyS"));
     expect(state.fire.blobs.size).toBe(0);
     expect(state.fire.blobMoments.map((moment) => moment.kind)).toEqual(["smoke"]);

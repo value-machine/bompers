@@ -6,7 +6,7 @@ Task: Fire: spreading fire, flamethrower and burn reaction — lap b2 (owner rec
 Fire burns terrain (b1) but blobs ignore it: touching flames or the torch does nothing to a player.
 
 ## Success check
-A blob that touches burning terrain or the torch's flame catches fire. It burns 2 s, then loses one chunk and stops burning, unless it first touches ice or starts a dive (put out) or bumps a rival (the fire jumps to the rival). While burning it keeps full control. With no move input it runs away from the fire at full run speed (off ledges too). It shows the owner's picked panic look: drawn hops, pinprick pupils, flying sweat, helmet flames, and steam / blown-off / leap / smoke effects.
+A blob that touches burning terrain or the torch's flame catches fire. It burns 2 s: one chunk at 1 s, and a second as it goes out at 2 s unless it is crouching then (owner D10), unless it first touches ice or starts a dive (put out) or bumps a rival (the fire jumps to the rival). While burning it keeps full control. With no move input it runs away from the fire at full run speed (off ledges too). It shows the owner's picked panic look: drawn hops, pinprick pupils, flying sweat, helmet flames, and steam / blown-off / leap / smoke effects.
 
 ## In scope
 - Burn state per blob in the fire feature (start time, where the fire came from, who lit it).

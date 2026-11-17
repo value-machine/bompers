@@ -45,6 +45,8 @@ export interface BurningBlob {
   fromX: number;
   /** Who lit or passed the fire (credit for the chunk); null = terrain fire nobody lit. */
   bySlot: number | null;
+  /** Damage ticks dealt so far (the first comes mid-burn, owner fire-burn D10). */
+  ticks: number;
 }
 
 /**

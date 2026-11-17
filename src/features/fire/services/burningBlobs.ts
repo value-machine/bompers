@@ -8,8 +8,9 @@ import type { BlobFireMoment, FireState } from "@/features/fire/types/fire.types
 /**
  * Blobs on fire (fire-burn b2; owner blast-power D7, fire-burn D1–D6). A blob catches from a
  * burning terrain sample within its body radius plus one sample, or from a torch ray that reaches
- * it (`sprayTorch` calls `catchFire`). It burns `fire.blob.burnSeconds`, then loses one chunk
- * (the match applies it through combat's `applyHit`) and goes out. Before that, ice next to the
+ * it (`sprayTorch` calls `catchFire`). It loses a chunk `fire.blob.firstTickSeconds` in and, at
+ * `fire.blob.burnSeconds`, a second one unless it is crouching then, and goes out (owner D10; the
+ * match applies each through combat's `applyHit`). Before that, ice next to the
  * body puts it out (steam), starting a dive blows the flames off, and bumping a rival passes the
  * fire on: the rival starts its own full burn and the bumper goes out. A blob just put out can't
  * catch for `fire.blob.graceSeconds`, so a bump never passes the fire straight back.
@@ -40,6 +41,7 @@ export function catchFire(fire: FireState, player: PlayerState, args: CatchFireA
     since: args.now,
     fromX: args.fromX,
     bySlot: args.bySlot,
+    ticks: 0,
   });
   fire.caughtCounts[player.id] = (fire.caughtCounts[player.id] ?? 0) + 1;
   addMoment(fire, {
@@ -114,7 +116,7 @@ export interface StepBurningBlobsArgs {
   tunables: GameTunables;
 }
 
-/** A blob that burnt down this step: the match takes its chunk (`hitDamage.burn`). */
+/** A burn damage tick this step: the match takes one chunk (`hitDamage.burn`). */
 export interface BurnDown {
   player: PlayerState;
   bySlot: number | null;
@@ -167,14 +169,25 @@ function passOnBump(fire: FireState, args: StepBurningBlobsArgs): void {
   }
 }
 
-/** Blobs that have burnt `burnSeconds` go out and lose a chunk. */
+/**
+ * Burn damage over time (owner fire-burn D10): a first chunk `firstTickSeconds` into the burn,
+ * then at `burnSeconds` the blob goes out with a second chunk, skipped when it is crouching then.
+ */
 function burnDown(fire: FireState, args: StepBurningBlobsArgs): BurnDown[] {
   const { now, tunables } = args;
+  const { firstTickSeconds, burnSeconds } = tunables.fire.blob;
   const downs: BurnDown[] = [];
   for (const player of args.players) {
     const burning = fire.blobs.get(player.id);
-    if (!burning || now - burning.since < tunables.fire.blob.burnSeconds) continue;
-    downs.push({ player, bySlot: burning.bySlot, at: bodyCenter(player) });
+    if (!burning) continue;
+    const burnt = now - burning.since;
+    const chunk = { player, bySlot: burning.bySlot, at: bodyCenter(player) };
+    if (burning.ticks === 0 && burnt >= firstTickSeconds) {
+      burning.ticks = 1;
+      downs.push(chunk);
+    }
+    if (burnt < burnSeconds) continue;
+    if (!player.crouching) downs.push(chunk);
     putOut(fire, player, { kind: "smoke", now, tunables });
   }
   return downs;

@@ -126,14 +126,35 @@ describe("burning blobs — catching (fire-burn D6)", () => {
 });
 
 describe("burning blobs — ending (owner blast-power D7)", () => {
-  it("should burn down once with the lighter's credit when burnSeconds have passed", () => {
+  it("should take one chunk mid-burn and a second at the end with the lighter's credit when standing", () => {
     const w = world([], [blobAt(0, 200)]);
     catchFire(w.fire, w.players[0]!, lit);
+    expect(step(w, BLOB.firstTickSeconds - 0.01)).toEqual([]);
+    const first = step(w, BLOB.firstTickSeconds);
+    expect(first.map((down) => [down.player.slot, down.bySlot])).toEqual([[0, 1]]);
     expect(step(w, BLOB.burnSeconds - 0.01)).toEqual([]);
-    const downs = step(w, BLOB.burnSeconds);
-    expect(downs.map((down) => [down.player.slot, down.bySlot])).toEqual([[0, 1]]);
+    const second = step(w, BLOB.burnSeconds);
+    expect(second.map((down) => [down.player.slot, down.bySlot])).toEqual([[0, 1]]);
     expect(w.fire.blobs.size).toBe(0);
     expect(step(w, BLOB.burnSeconds + 0.01)).toEqual([]);
+  });
+
+  it("should skip the second chunk but still go out when the blob is crouching at the end", () => {
+    const w = world([], [blobAt(0, 200)]);
+    catchFire(w.fire, w.players[0]!, lit);
+    w.players[0]!.crouching = true;
+    expect(step(w, BLOB.firstTickSeconds)).toHaveLength(1);
+    expect(step(w, BLOB.burnSeconds)).toEqual([]);
+    expect(w.fire.blobs.size).toBe(0);
+    expect(w.fire.blobMoments.map((moment) => moment.kind)).toEqual(["smoke"]);
+  });
+
+  it("should deal no further chunk when ice puts the fire out after the first", () => {
+    const w = world([rect([160, FLOOR, 80, 8], "ice")], [blobAt(0, 200)]);
+    catchFire(w.fire, w.players[0]!, lit);
+    w.fire.blobs.get(w.players[0]!.id)!.ticks = 1;
+    expect(step(w, BLOB.burnSeconds)).toEqual([]);
+    expect(w.fire.blobs.size).toBe(0);
   });
 
   it("should go out with steam when the blob touches ice", () => {

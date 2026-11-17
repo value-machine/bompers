@@ -225,11 +225,17 @@ export interface GameTunables {
     /** Burnt-out samples are removed together every this many seconds (cost and juice batching). */
     burnOutInterval: number;
     /**
-     * Blobs on fire (fire-burn b2): a blob burns `burnSeconds`, then loses a chunk (`hitDamage.burn`)
-     * and goes out; one just put out can't catch again for `graceSeconds` (so a bump doesn't pass
+     * Blobs on fire (fire-burn b2): a blob loses a chunk (`hitDamage.burn`) `firstTickSeconds` into
+     * the burn, and at `burnSeconds` goes out with a second chunk unless it is crouching then
+     * (owner D10); one just put out can't catch again for `graceSeconds` (so a bump doesn't pass
      * the fire straight back). Effects show each moment for `momentSeconds`.
      */
-    blob: { burnSeconds: number; graceSeconds: number; momentSeconds: number };
+    blob: {
+      firstTickSeconds: number;
+      burnSeconds: number;
+      graceSeconds: number;
+      momentSeconds: number;
+    };
   };
   /** Health, hits, rocket launcher, explosions and weapon drops (GDD § 3). */
   combat: {

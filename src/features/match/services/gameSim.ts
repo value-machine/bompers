@@ -258,9 +258,9 @@ function stepFireOnTerrain(state: GameState): void {
 }
 
 /**
- * Steps 3c and 3d: the terrain fire, then blobs on fire catch, go out or pass it on; one that
- * burnt down loses a chunk through combat's `applyHit` (kind `burn`, credited to whoever lit it)
- * and gets the hit reaction with no push. Dive phases are the previous step's (the dive steps later).
+ * Steps 3c and 3d: the terrain fire, then blobs on fire catch, go out or pass it on; each burn
+ * tick takes a chunk through combat's `applyHit` (kind `burn`, credited to whoever lit it) and
+ * gives the hit reaction with no push. Dive phases are the previous step's (the dive steps later).
  */
 function stepBlobsOnFire(
   state: GameState,
