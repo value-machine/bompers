@@ -1,4 +1,5 @@
 import type { Rect, Shape2D, Vec2 } from "@/shared/types/gameGeometry.types";
+import type { LevelMotion } from "@/shared/types/levelMotion.types";
 
 /**
  * The engine's level model. Maps 1:1 onto the level file contract (HTML + inline SVG; importer:
@@ -52,6 +53,19 @@ export interface LevelCollectible {
   itemId: string;
 }
 
+/**
+ * A moving part (LEVEL_FORMAT § 11): terrain pieces that move together along one motion. The
+ * pieces stay in `LevelDefinition.terrain` at their rest pose; `terrainIndices` names them.
+ * Until the runtime lap (moving-parts lap B) the arena rasterises them as static terrain.
+ */
+export interface LevelMover {
+  motion: LevelMotion;
+  /** World point the part turns about (a named anchor of its pieces' bounding box). */
+  pivot: Vec2;
+  /** Indices into `LevelDefinition.terrain`, ascending. */
+  terrainIndices: readonly number[];
+}
+
 export interface LevelDefinition {
   formatVersion: number;
   meta: LevelMeta;
@@ -63,6 +77,8 @@ export interface LevelDefinition {
   spawns: readonly Vec2[];
   drops: readonly LevelDrop[];
   collectibles: readonly LevelCollectible[];
+  /** Moving parts; absent or empty = a static level. */
+  movers?: readonly LevelMover[];
   /** The in-bounds area; leaving it eliminates a player. */
   bounds: Rect;
 }

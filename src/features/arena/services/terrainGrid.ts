@@ -26,6 +26,8 @@ const EMPTY_SLOT: TerrainCellSlot = {
   toughness: null,
   friction: 1,
   surface: "plain",
+  burns: false,
+  douses: false,
 };
 
 /** True for a slot a blast can clear (it has a toughness); false for empty or unbreakable. */
@@ -275,15 +277,22 @@ function carveSample(pass: CraterPass, cx: number, cy: number): void {
 }
 
 /**
- * Unbreakable samples next to a fresh crater keep their old (seam) distance; bound it by the
- * nearest now-empty sample so their edge reads as an edge (terrain-field D4).
+ * Solid samples next to freshly emptied ones keep their old (interior or seam) distance; bound
+ * it by the nearest now-empty sample so their edge reads as an edge (terrain-field D4). A crater
+ * gives its breakable samples exact rim distances itself, so it bounds only `unbreakable` ones; a
+ * burn-out has no rim shape and bounds `all` (fire-spread b1).
  */
-function exposeUnbreakable(grid: TerrainGrid, box: SampleBox): void {
+function boundSolidsByNearestAir(
+  grid: TerrainGrid,
+  box: SampleBox,
+  which: "unbreakable" | "all"
+): void {
   const pad = FIELD_BAND_SAMPLES;
   for (let cy = box.minY - pad; cy <= box.maxY + pad; cy += 1) {
     for (let cx = box.minX - pad; cx <= box.maxX + pad; cx += 1) {
       const slot = getCellSlot(grid, cx, cy);
-      if (slot === EMPTY_CELL || isBreakableSlot(grid.slots[slot])) continue;
+      if (slot === EMPTY_CELL) continue;
+      if (which === "unbreakable" && isBreakableSlot(grid.slots[slot])) continue;
       const bound = Math.max(
         EDGE_EPSILON,
         nearestEmptyDistance(grid, cx, cy) - HALF_DIAGONAL * grid.cellSize
@@ -358,10 +367,52 @@ export function clearCrater(grid: TerrainGrid, crater: Crater): ClearedCells {
   const byLook = [...pass.bySlot.values()];
   const removed = byLook.reduce((sum, look) => sum + look.cells, 0);
   if (removed > 0) {
-    exposeUnbreakable(grid, pass.box);
+    boundSolidsByNearestAir(grid, pass.box, "unbreakable");
     remeasureAir(grid, pass.box);
   }
   return { removed, byLook, box: pass.box };
+}
+
+/**
+ * Removes burnt-out samples (fire-spread b1) through the one writer, then keeps the field true
+ * around them: neighbouring solids are bounded by the new air and the air is re-measured. Field
+ * upkeep runs per chunk the removed samples fall in, never on one box spanning two far fires.
+ * Samples already empty (a blast got there first) are skipped.
+ */
+interface BurnOutPass {
+  grid: TerrainGrid;
+  bySlot: Map<number, ClearedLook>;
+  /** Removed samples' box per chunk: field upkeep runs per chunk. */
+  byChunk: Map<number, SampleBox>;
+  box: SampleBox;
+}
+
+/** Empties one burnt-out sample (skipped when already empty) and records where it was. */
+function burnOutSample(pass: BurnOutPass, index: number): void {
+  const { grid } = pass;
+  const cx = index % grid.widthCells;
+  const cy = Math.floor(index / grid.widthCells);
+  const slot = getCellSlot(grid, cx, cy);
+  const info = grid.slots[slot];
+  if (slot === EMPTY_CELL || !info) return;
+  writeSample(grid, { cx, cy, slot: EMPTY_CELL, distance: -EDGE_EPSILON });
+  tallyLook(pass.bySlot, slot, info);
+  const chunk = chunkIndexOfCell(grid, cx, cy);
+  const chunkBox = pass.byChunk.get(chunk) ?? emptyBox();
+  growBox(chunkBox, cx, cy);
+  pass.byChunk.set(chunk, chunkBox);
+  growBox(pass.box, cx, cy);
+}
+
+export function burnOut(grid: TerrainGrid, samples: readonly number[]): ClearedCells {
+  const pass: BurnOutPass = { grid, bySlot: new Map(), byChunk: new Map(), box: emptyBox() };
+  for (const index of samples) burnOutSample(pass, index);
+  for (const chunkBox of pass.byChunk.values()) {
+    boundSolidsByNearestAir(grid, chunkBox, "all");
+    remeasureAir(grid, chunkBox);
+  }
+  const byLook = [...pass.bySlot.values()];
+  return { removed: byLook.reduce((sum, look) => sum + look.cells, 0), byLook, box: pass.box };
 }
 
 /**

@@ -26,6 +26,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
       friction: 1,
       bounce: 0,
       surface: "plain",
+      burns: false,
+      douses: false,
       defaultColor: "plum",
       effect: "none",
       sound: "thud",
@@ -38,6 +40,9 @@ export const CONTENT_CATALOG: ContentCatalog = {
       bounce: 0,
       // Looks like any slab; only colour and how it reacts tell it apart (terrain-curves D5).
       surface: "plain",
+      // Not fuel: fire scorches it and stops (blast-power D5).
+      burns: false,
+      douses: false,
       defaultColor: "clay",
       effect: "dust-burst",
       sound: "crumble",
@@ -51,6 +56,9 @@ export const CONTENT_CATALOG: ContentCatalog = {
       bounce: 0,
       // Looks like any slab; only colour and how it reacts tell it apart (terrain-curves D5).
       surface: "plain",
+      // The fuel: fire spreads through it and burns it away (blast-power D5, D6).
+      burns: true,
+      douses: false,
       defaultColor: "cardboard",
       effect: "dust-burst",
       sound: "thwap",
@@ -62,6 +70,9 @@ export const CONTENT_CATALOG: ContentCatalog = {
       friction: 0.12,
       bounce: 0,
       surface: "ice",
+      burns: false,
+      // Fuel touching ice never catches (blast-power D5).
+      douses: true,
       defaultColor: "frost",
       effect: "none",
       sound: "clink",
@@ -107,6 +118,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
   item: {
     "rocket-launcher": { id: "rocket-launcher", label: "Rocket launcher", use: "drop" },
     "homing-launcher": { id: "homing-launcher", label: "Homing launcher", use: "drop" },
+    // A short flame cone that lights cardboard (blast-power D8, fire-spread b1).
+    torch: { id: "torch", label: "Torch", use: "drop" },
     "point-orb": { id: "point-orb", label: "Point orb", use: "collectible" },
     // Placed, not dropped: gives a spent dive its charge back mid-flight (headbutt-reset D1).
     "dive-reset": { id: "dive-reset", label: "Headbutt reset", use: "collectible" },

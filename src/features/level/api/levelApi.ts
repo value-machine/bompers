@@ -4,6 +4,7 @@ export type {
   LevelDefinition,
   LevelDrop,
   LevelMeta,
+  LevelMover,
   LevelSettings,
   NormalizedLevel,
   TerrainPiece,

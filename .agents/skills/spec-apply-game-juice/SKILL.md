@@ -29,7 +29,7 @@ When this skill is done, every moment the lap adds or changes answers on sound a
 
 1. **List the moments** of the element (spawn, act, hit, break, vanish …): each is something a player must notice.
 2. **Pick a tier per moment** by consequence (GAME_JUICE.md § 2): own action `light`, being hit or bouncing `medium`, the big moments `heavy`. Reuse `JUICE_TIERS` values; scaling down by speed or size is fine, above the tier is not.
-3. **Fill the channels:** at least one sound and one visual per moment (§ 1). Sound: family, prompt template and pitch per § 5 and DESIGN_LANGUAGE § 8; cue it from sim events in the `sound` feature.
+3. **Fill the channels:** at least one sound and one visual per moment (§ 1); new looks and sounds are picked by the owner on an options page first ([`loop-refine`](../loop-refine/SKILL.md) step 6). Sound: family, prompt template and pitch per § 5 and DESIGN_LANGUAGE § 8; cue it from sim events in the `sound` feature.
 4. **Time it** inside `JUICE_WINDOWS` (§ 3) and keep squash poses inside `JUICE_SQUASH` (§ 4), checked with `isInJuiceWindow` / `isJuiceSquash`.
 5. **Record it:** the plan carries the juice table; the build adds the GAME_JUICE.md § 6 row in the same lap and extends `gameJuice.test.ts` when a new `feel` value is added, so the scale stays enforced.
 6. **Check (loop-check):** every changed moment has its ledger row, values read from the tiers, `gameJuice.test.ts` passes, reduced motion is honoured, effects draw under player outlines.

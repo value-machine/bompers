@@ -358,6 +358,9 @@ function syncTube(sprite: BlobSprite, weapon: BlobWeapon | undefined, zoom: numb
   sprite.muzzle.alpha = MUZZLE_MIN_ALPHA + (1 - MUZZLE_MIN_ALPHA) * ready;
 }
 
+/** World units a drawn hop raises the blob (render only; 0 without one). */
+const overlayLift = (overlay: BlobPoseOverlay | undefined): number => overlay?.lift ?? 0;
+
 interface PoseFrame {
   pose: BlobPose;
   overlay: BlobPoseOverlay | undefined;
@@ -374,8 +377,8 @@ interface PoseFrame {
 function placeBlob(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): void {
   const { pose, overlay } = frame;
   // With no overlay, roll or slope this is the plain feet-point placement.
-  const centerY = player.height / 2;
-  sprite.root.pivot.set(0, -centerY);
+  const centerY = player.height / 2 + overlayLift(overlay);
+  sprite.root.pivot.set(0, -player.height / 2);
   sprite.root.position.set(player.x, player.y - centerY);
   const slopeLean = stepGroundTilt(sprite.groundTilt, {
     groundAngle: player.groundAngle,
@@ -424,7 +427,12 @@ function placeFeet(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
  * Eyes sit under the helmet rim and look toward the aim. While crouching they rise a little and
  * slip under the dome, so the lowered rim covers about half of each eye (crouch D7).
  */
-function placeEyes(sprite: BlobSprite, player: PlayerState, face: CrouchFace): void {
+function placeEyes(
+  sprite: BlobSprite,
+  player: PlayerState,
+  look: { face: CrouchFace; pupilScale: number }
+): void {
+  const { face, pupilScale } = look;
   const { r, u } = sprite.metrics;
   const y = 0.12 * r + player.aimY * 2 * u - face.eyeLift * u;
   sprite.eyes.forEach((eye, i) => {
@@ -432,6 +440,7 @@ function placeEyes(sprite: BlobSprite, player: PlayerState, face: CrouchFace): v
     eye.position.set(side * 0.27 * r + player.aimX * 5 * u, y);
     eye.zIndex = face.eyesUnderHelmet ? EYES_UNDER_HELMET : EYES_OVER_HELMET;
     sprite.pupils[i]!.position.set(player.aimX * 1.6 * u, 1.5 * u + player.aimY * 1.2 * u);
+    sprite.pupils[i]!.scale.set(pupilScale);
   });
 }
 
@@ -453,7 +462,7 @@ function applyPose(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
   const { pose } = frame;
   placeBlob(sprite, player, frame);
   placeFeet(sprite, player, frame);
-  placeEyes(sprite, player, pose.face);
+  placeEyes(sprite, player, { face: pose.face, pupilScale: frame.overlay?.pupilScale ?? 1 });
   placeFace(sprite, player, frame.armed);
   const { shadow } = pose;
   sprite.shadow.visible = shadow !== null;

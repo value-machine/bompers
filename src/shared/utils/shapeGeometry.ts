@@ -1,4 +1,4 @@
-import type { Shape2D, Vec2 } from "@/shared/types/gameGeometry.types";
+import type { Rect, Shape2D, Vec2 } from "@/shared/types/gameGeometry.types";
 
 /**
  * Point-in-shape tests shared by the level importer (point checks) and the terrain raster
@@ -72,6 +72,53 @@ export function shapeSignedDistance(shape: Shape2D, p: Vec2, cornerRadius = 0): 
     nearest = Math.min(nearest, segmentDistance(points[j]!, points[i]!, p));
   }
   return polygonWinding(points, p) !== 0 ? nearest : -nearest;
+}
+
+/** Axis-aligned bounding box of a shape. */
+export function shapeBounds(shape: Shape2D): Rect {
+  if (shape.type === "rect") return { x: shape.x, y: shape.y, w: shape.w, h: shape.h };
+  if (shape.type === "circle") {
+    return { x: shape.cx - shape.r, y: shape.cy - shape.r, w: shape.r * 2, h: shape.r * 2 };
+  }
+  const xs = shape.points.map((p) => p.x);
+  const ys = shape.points.map((p) => p.y);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+}
+
+/** Points along a polyline loop, at most `step` apart, corners included. */
+function loopOutline(corners: readonly Vec2[], step: number): Vec2[] {
+  const out: Vec2[] = [];
+  for (let i = 0; i < corners.length; i += 1) {
+    const a = corners[i]!;
+    const b = corners[(i + 1) % corners.length]!;
+    const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / step));
+    for (let k = 0; k < n; k += 1) {
+      out.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n });
+    }
+  }
+  return out;
+}
+
+/** Points on the shape's edge, at most `step` world units apart (sweep and overlap checks). */
+export function shapeOutlinePoints(shape: Shape2D, step: number): Vec2[] {
+  if (shape.type === "polygon") return loopOutline(shape.points, step);
+  if (shape.type === "rect") {
+    const { x, y, w, h } = shape;
+    const corners = [
+      { x, y },
+      { x: x + w, y },
+      { x: x + w, y: y + h },
+      { x, y: y + h },
+    ];
+    return loopOutline(corners, step);
+  }
+  const n = Math.max(8, Math.ceil((Math.PI * 2 * shape.r) / step));
+  return Array.from({ length: n }, (_, k) => ({
+    x: shape.cx + shape.r * Math.cos((Math.PI * 2 * k) / n),
+    y: shape.cy + shape.r * Math.sin((Math.PI * 2 * k) / n),
+  }));
 }
 
 /** Flat [x, y, …] path of a star centred on 0,0 with its first point straight up. */

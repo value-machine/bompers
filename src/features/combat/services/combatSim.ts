@@ -3,7 +3,11 @@ import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Rect } from "@/shared/types/gameGeometry.types";
 import type { TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
-import { stepAttacks, type UnarmedAttackHook } from "@/features/combat/services/attacks";
+import {
+  stepAttacks,
+  type SprayAttackHook,
+  type UnarmedAttackHook,
+} from "@/features/combat/services/attacks";
 import {
   fighterFor,
   pruneCombatEvents,
@@ -31,6 +35,8 @@ export interface StepCombatArgs {
   dt: number;
   /** The unarmed attack on the fire button (dive lap). Omitted: unarmed fire does nothing. */
   unarmedAttack?: UnarmedAttackHook;
+  /** Held spray weapons (the fire feature's torch). Omitted: spraying only drains fuel. */
+  sprayAttack?: SprayAttackHook;
 }
 
 export function stepCombat(args: StepCombatArgs): void {
@@ -38,6 +44,10 @@ export function stepCombat(args: StepCombatArgs): void {
   const ctx: CombatContext = { combat, players, terrain, bounds, tunables, timeSeconds };
   pruneCombatEvents(combat, timeSeconds - tunables.combat.eventRetentionSeconds);
   for (const player of players) fighterFor(combat, player, tunables);
-  stepAttacks(ctx, inputs, { dt, unarmedAttack: args.unarmedAttack });
+  stepAttacks(ctx, inputs, {
+    dt,
+    unarmedAttack: args.unarmedAttack,
+    sprayAttack: args.sprayAttack,
+  });
   stepRockets(ctx, dt);
 }

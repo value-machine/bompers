@@ -9,6 +9,7 @@ import {
 } from "@/features/arena/api/arenaApi";
 import { LEVEL_FILE_MIGRATIONS } from "@/features/level-file/services/levelFileMigrations";
 import {
+  MOVERS_STATIC_NOTE,
   parseLevelFile,
   type LevelImportResult,
 } from "@/features/level-file/services/levelFileParser";
@@ -52,7 +53,15 @@ const errorsOf = (result: LevelImportResult): LevelIssue[] => (result.ok ? [] : 
 describe("parseLevelFile — kit files", () => {
   it("should import the kit example with every role and no warnings when the file is the shipped example", () => {
     const { level: def, warnings } = okLevel(parseLevelFile(EXAMPLE));
-    expect(warnings).toEqual([]);
+    // Only the lap-A note for its lift (moving parts stand still until they move in the game).
+    expect(warnings).toEqual([{ message: MOVERS_STATIC_NOTE }]);
+    expect(def.movers).toEqual([
+      {
+        motion: { kind: "slide", offset: { x: 0, y: -240 }, periodS: 6, phase: 0 },
+        pivot: { x: 232, y: 652 },
+        terrainIndices: [8],
+      },
+    ]);
     expect(def.meta).toEqual({
       levelId: "floating-garden",
       title: "Floating Garden",
@@ -63,7 +72,7 @@ describe("parseLevelFile — kit files", () => {
     expect(def.settings).toEqual({ cellSize: 4, gravity: 1, matchDurationS: 180 });
     expect(def.worldSize).toEqual({ w: 1600, h: 1000 });
     expect(def.bounds).toEqual({ x: 40, y: 20, w: 1520, h: 960 });
-    expect(def.terrain).toHaveLength(8);
+    expect(def.terrain).toHaveLength(9);
     expect(def.spawns).toEqual([
       { x: 480, y: 616 },
       { x: 1120, y: 616 },

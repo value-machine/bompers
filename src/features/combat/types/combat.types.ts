@@ -29,6 +29,8 @@ export interface FighterState {
   prevFire: boolean;
   /** Seconds until the next shot is allowed. */
   attackCooldown: number;
+  /** A spray weapon (the torch) sprayed on the previous step (start edge for its sound). */
+  spraying: boolean;
   /** Who hit this player last and when (sim seconds), for elimination credit. */
   lastHitBySlot: number | null;
   lastHitAt: number;
@@ -51,10 +53,10 @@ export interface RocketState {
 }
 
 /** What dealt a hit. The dive lap owns "dive"; new attacks add their source here. */
-export type HitSource = "rocket" | "dive";
+export type HitSource = "rocket" | "dive" | "fire";
 export type EliminationCause = HitSource | "out-of-bounds";
-/** Damage table row a hit uses (`combat.hitDamage`): body contact or explosion. */
-export type HitKind = "contact" | "blast";
+/** Damage table row a hit uses (`combat.hitDamage`): body contact, explosion or burning down. */
+export type HitKind = "contact" | "blast" | "burn";
 /** Where on the victim a hit lands, relative to the victim's facing. */
 export type HitZone = "front" | "back";
 
@@ -91,6 +93,13 @@ export type CombatEventBody =
       victimSlot: number;
       byPlayerSlot: number | null;
       cause: EliminationCause;
+    }
+  | {
+      /** A spray weapon started spraying (fire-spread b1): its start cue. */
+      type: "torchStarted";
+      slot: number;
+      x: number;
+      y: number;
     }
   | {
       type: "rocketFired";

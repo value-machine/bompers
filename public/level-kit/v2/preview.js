@@ -10,7 +10,7 @@
 
   var SVG_NS = 'http://www.w3.org/2000/svg';
   var FORMAT = 2;
-  var DEFAULT_CELL = 8;
+  var DEFAULT_CELL = 4;
   var ROLES = [
     { role: 'terrain', label: 'Terrain', point: false },
     { role: 'spawn', label: 'Spawn', point: true },
@@ -131,6 +131,184 @@
     return { issues: issues, counts: counts };
   }
 
+  // ---- Moving parts (LEVEL_FORMAT § 11) ----
+  // SECOND COPY of src/shared/utils/levelMotion.ts (grammar defaults, limits, pose maths) and the
+  // grammar in src/features/level-file/services/levelFileMotion.ts. Change them together.
+  var MOTION = {
+    kinds: ['slide', 'path', 'spin', 'swing'],
+    period: 4,
+    minPeriod: 1,
+    maxPeriod: 30,
+    maxSwing: 180,
+    pivots: {
+      center: [0.5, 0.5], top: [0.5, 0], bottom: [0.5, 1], left: [0, 0.5], right: [1, 0.5],
+      'top-left': [0, 0], 'top-right': [1, 0], 'bottom-left': [0, 1], 'bottom-right': [1, 1],
+    },
+  };
+  var NUM = '[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?';
+  var PAIR_RE = new RegExp('^' + NUM + ',' + NUM + '$');
+  var NUM_RE = new RegExp('^' + NUM + '$');
+
+  function argsFit(m) {
+    var p = m.pairs.length;
+    var n = m.nums.length;
+    if (m.kind === 'slide') return p === 1 && n === 0;
+    if (m.kind === 'path') return p > 0 && n === 0;
+    if (m.kind === 'spin') return p === 0 && n === 0;
+    return p === 0 && n === 1 && m.nums[0] > 0 && m.nums[0] <= MOTION.maxSwing;
+  }
+
+  /** A data-motion value → motion, or { error }. */
+  function parseMotion(raw) {
+    var tokens = (raw || '').trim().toLowerCase().split(/\s+/);
+    var m = { kind: tokens[0], pairs: [], nums: [], period: MOTION.period, phase: 0, dir: 1, pivot: null };
+    if (MOTION.kinds.indexOf(m.kind) < 0) return { error: '"' + m.kind + '" is not a motion; use slide, path, spin or swing' };
+    for (var i = 1; i < tokens.length; i++) {
+      var t = tokens[i];
+      if (/^(\d+(\.\d+)?|\.\d+)s$/.test(t)) m.period = parseFloat(t);
+      else if (t.charAt(0) === '@' && NUM_RE.test(t.slice(1))) m.phase = parseFloat(t.slice(1));
+      else if (Object.prototype.hasOwnProperty.call(MOTION.pivots, t)) m.pivot = t;
+      else if (t === 'cw' || t === 'ccw') m.dir = t === 'cw' ? 1 : -1;
+      else if (PAIR_RE.test(t)) m.pairs.push({ x: parseFloat(t.split(',')[0]), y: parseFloat(t.split(',')[1]) });
+      else if (NUM_RE.test(t)) m.nums.push(parseFloat(t));
+      else return { error: '"' + t + '" is not understood' };
+    }
+    if (!argsFit(m)) return { error: m.kind + ' has the wrong arguments (see LEVEL_FORMAT § 11)' };
+    m.period = Math.min(MOTION.maxPeriod, Math.max(MOTION.minPeriod, m.period));
+    m.phase = ((m.phase % 1) + 1) % 1;
+    m.pivot = m.pivot || (m.kind === 'swing' ? 'top' : 'center');
+    return m;
+  }
+
+  function pathAt(pairs, u) {
+    var pts = [{ x: 0, y: 0 }].concat(pairs, [{ x: 0, y: 0 }]);
+    var lens = [];
+    var total = 0;
+    for (var i = 1; i < pts.length; i++) {
+      lens.push(Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+      total += lens[i - 1];
+    }
+    var left = u * total;
+    for (var k = 0; k < lens.length; k++) {
+      if (left <= lens[k] && lens[k] > 0) {
+        var f = left / lens[k];
+        return { x: pts[k].x + (pts[k + 1].x - pts[k].x) * f, y: pts[k].y + (pts[k + 1].y - pts[k].y) * f };
+      }
+      left -= lens[k];
+    }
+    return { x: 0, y: 0 };
+  }
+
+  /** Pose at time t (s): shift dx, dy and turn deg (clockwise on screen) about the pivot. */
+  function poseAt(m, t) {
+    var u = (((t / m.period + m.phase) % 1) + 1) % 1;
+    var tau = Math.PI * 2;
+    if (m.kind === 'slide') {
+      var s = (1 - Math.cos(tau * u)) / 2;
+      return { dx: m.pairs[0].x * s, dy: m.pairs[0].y * s, deg: 0 };
+    }
+    if (m.kind === 'path') {
+      var p = pathAt(m.pairs, u);
+      return { dx: p.x, dy: p.y, deg: 0 };
+    }
+    if (m.kind === 'spin') return { dx: 0, dy: 0, deg: m.dir * 360 * u };
+    return { dx: 0, dy: 0, deg: m.dir * m.nums[0] * Math.sin(tau * u) };
+  }
+
+  /** Moves a node by a pose with a CSS transform (never the transform attribute: § 5). */
+  function applyPose(node, pose, pivot) {
+    node.style.transformOrigin = pivot.x + 'px ' + pivot.y + 'px';
+    node.style.transform = 'translate(' + pose.dx + 'px, ' + pose.dy + 'px) rotate(' + pose.deg + 'deg)';
+  }
+
+  function unionBox(nodes) {
+    var box = null;
+    nodes.forEach(function (n) {
+      if (!n.getBBox) return;
+      var b = n.getBBox();
+      if (!box) box = { x: b.x, y: b.y, r: b.x + b.width, b: b.y + b.height };
+      else {
+        box.x = Math.min(box.x, b.x); box.y = Math.min(box.y, b.y);
+        box.r = Math.max(box.r, b.x + b.width); box.b = Math.max(box.b, b.y + b.height);
+      }
+    });
+    return box;
+  }
+
+  /** A dashed copy of the part at one pose, without roles so nothing counts it. */
+  function addGhost(group, pose, pivot) {
+    var ghost = group.cloneNode(true);
+    [ghost].concat(Array.prototype.slice.call(ghost.querySelectorAll('*'))).forEach(function (n) {
+      ['id', 'data-role', 'data-motion', 'data-label'].forEach(function (a) { n.removeAttribute(a); });
+    });
+    ghost.setAttribute('class', 'lk-ghost');
+    ghost.setAttribute('aria-hidden', 'true');
+    applyPose(ghost, pose, pivot);
+    group.parentNode.insertBefore(ghost, group);
+  }
+
+  function addSweep(group, m, pivot, box) {
+    if (m.kind === 'slide') return addGhost(group, { dx: m.pairs[0].x, dy: m.pairs[0].y, deg: 0 }, pivot);
+    if (m.kind === 'path') {
+      return m.pairs.forEach(function (p) { addGhost(group, { dx: p.x, dy: p.y, deg: 0 }, pivot); });
+    }
+    if (m.kind === 'swing') {
+      addGhost(group, { dx: 0, dy: 0, deg: m.nums[0] }, pivot);
+      return addGhost(group, { dx: 0, dy: 0, deg: -m.nums[0] }, pivot);
+    }
+    var reach = Math.max(
+      Math.hypot(box.x - pivot.x, box.y - pivot.y), Math.hypot(box.r - pivot.x, box.y - pivot.y),
+      Math.hypot(box.x - pivot.x, box.b - pivot.y), Math.hypot(box.r - pivot.x, box.b - pivot.y));
+    group.parentNode.insertBefore(svgEl('circle', { cx: pivot.x, cy: pivot.y, r: reach, class: 'lk-sweep', 'aria-hidden': 'true' }), group);
+  }
+
+  function insideMover(group, root) {
+    for (var n = group.parentNode; n && n !== root; n = n.parentNode) {
+      if (n.getAttribute && n.getAttribute('data-motion') !== null && n.localName === 'g') return true;
+    }
+    return false;
+  }
+
+  /** Reads every outermost <g data-motion>, draws its sweep and returns the movers + issues. */
+  function setupMovers(root) {
+    var movers = [];
+    var issues = [];
+    Array.prototype.forEach.call(root.querySelectorAll('g[data-motion]'), function (group, i) {
+      var ref = group.id || group.getAttribute('data-label');
+      var name = 'moving part ' + (ref ? '"' + ref + '"' : '#' + (i + 1));
+      if (insideMover(group, root)) return issues.push(name + ' sits inside another moving part; its motion is ignored.');
+      if (movers.length >= 16) return issues.push(name + ': more than 16 moving parts; it stays still.');
+      var m = parseMotion(group.getAttribute('data-motion'));
+      if (m.error) return issues.push(name + ': data-motion ' + m.error + '; it stays still.');
+      var terrain = Array.prototype.filter.call(group.querySelectorAll('[data-role]'), function (n) {
+        if (TERRAIN[n.getAttribute('data-role')]) return true;
+        issues.push(n.getAttribute('data-role') + ' inside ' + name + ' stays still; only terrain moves.');
+        return false;
+      });
+      var box = unionBox(terrain);
+      if (!box) return issues.push(name + ' holds no terrain shape.');
+      var f = MOTION.pivots[m.pivot];
+      var pivot = { x: box.x + (box.r - box.x) * f[0], y: box.y + (box.b - box.y) * f[1] };
+      addSweep(group, m, pivot, box);
+      movers.push({ group: group, motion: m, pivot: pivot });
+    });
+    return { movers: movers, issues: issues };
+  }
+
+  /** Plays the movers on the shared clock; `playing()` false parks them at rest. */
+  function animateMovers(movers, playing) {
+    if (!movers.length || typeof requestAnimationFrame !== 'function') return;
+    var start = null;
+    function frame(now) {
+      if (start === null) start = now;
+      var t = playing() ? (now - start) / 1000 : 0;
+      if (!playing()) start = now;
+      movers.forEach(function (mv) { applyPose(mv.group, poseAt(mv.motion, t), mv.pivot); });
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
   function addGrid(root, w, h, cell) {
     var layer = svgEl('g', { class: 'lk-grid-layer', 'aria-hidden': 'true' });
     var step = cell;
@@ -204,11 +382,21 @@
     label.appendChild(box);
     label.appendChild(document.createTextNode('Terrain grid'));
     controls.appendChild(label);
+    var motion = null;
+    if (result.movers) {
+      legend.appendChild(el('li', null, 'Moving parts (' + result.movers + ')'));
+      var mlabel = el('label');
+      var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      motion = el('input', reduce ? { type: 'checkbox' } : { type: 'checkbox', checked: '' });
+      mlabel.appendChild(motion);
+      mlabel.appendChild(document.createTextNode('Motion'));
+      controls.appendChild(mlabel);
+    }
     panel.appendChild(controls);
 
     var issues = el('ul', { class: 'lk-issues', role: 'status' });
     panel.appendChild(issues);
-    return { panel: panel, grid: box, issues: issues };
+    return { panel: panel, grid: box, motion: motion, issues: issues };
   }
 
   function showIssues(list, issues) {
@@ -253,18 +441,23 @@
 
     var grid = addGrid(root, vb[2] || 0, vb[3] || 0, cell);
     addLabels(root, nodes);
+    var moving = setupMovers(root);
     var result = validate(root, nodes, null);
+    result.movers = moving.movers.length;
     var ui = buildPanel(root, result, cell);
     root.parentNode.insertBefore(ui.panel, root.nextSibling);
     ui.grid.addEventListener('change', function () {
       grid.toggleAttribute('hidden', !ui.grid.checked);
     });
-    showIssues(ui.issues, result.issues);
+    showIssues(ui.issues, result.issues.concat(moving.issues));
+    animateMovers(moving.movers, function () {
+      return !ui.motion || ui.motion.checked;
+    });
 
     loadCatalog(function (catalog) {
       if (!catalog) return;
       paintTerrain(nodes, catalog);
-      showIssues(ui.issues, validate(root, nodes, catalog).issues);
+      showIssues(ui.issues, validate(root, nodes, catalog).issues.concat(moving.issues));
     });
   }
 

@@ -5,10 +5,11 @@ import { emitCombatEvent, fighterFor, type HitWorld } from "@/features/combat/se
 import type { RocketKind } from "@/features/combat/types/combat.types";
 
 /**
- * Held weapons: which projectile each weapon fires, the numbers they share (ammo, cooldown,
- * recoil, flight speed, lifetime), and arming players from crate pickups. Every weapon fires a
- * rocket kind through the one flight path in `rockets.ts` (homing-missiles D1); a new weapon adds
- * a `KIND_OF` row and a tunables section.
+ * Held weapons: how each fires (a projectile per press, or a held spray), which projectile a
+ * projectile weapon fires, the numbers they share (ammo, cooldown, recoil, flight speed, lifetime),
+ * and arming players from crate pickups. Projectile weapons fire a rocket kind through the one
+ * flight path in `rockets.ts` (homing-missiles D1); a new weapon adds a `MODE_OF` row, a `KIND_OF`
+ * row if it fires rockets, and a tunables section.
  */
 export interface ProjectileWeaponTunables {
   speed: number;
@@ -22,12 +23,43 @@ export interface ProjectileWeaponTunables {
   craterShape: CraterShape;
 }
 
-const KIND_OF: Readonly<Record<WeaponItemId, RocketKind>> = {
+/**
+ * How a weapon fires (fire-spread b1): `projectile` = one rocket kind per press; `spray` = held,
+ * draining seconds of fuel through the `sprayAttack` hook (the torch). A new weapon is a compile
+ * error here until it has a mode.
+ */
+export type WeaponMode = "projectile" | "spray";
+
+const MODE_OF: Readonly<Record<WeaponItemId, WeaponMode>> = {
+  "rocket-launcher": "projectile",
+  "homing-launcher": "projectile",
+  torch: "spray",
+};
+
+export const weaponMode = (itemId: WeaponItemId): WeaponMode => MODE_OF[itemId];
+
+/** Weapons that fire a rocket kind. */
+export type ProjectileWeaponId = Exclude<WeaponItemId, "torch">;
+
+export const isProjectileWeapon = (itemId: WeaponItemId): itemId is ProjectileWeaponId =>
+  MODE_OF[itemId] === "projectile";
+
+const KIND_OF: Readonly<Record<ProjectileWeaponId, RocketKind>> = {
   "rocket-launcher": "rocket",
   "homing-launcher": "homing",
 };
 
-export const rocketKindOf = (itemId: WeaponItemId): RocketKind => KIND_OF[itemId];
+export const rocketKindOf = (itemId: ProjectileWeaponId): RocketKind => KIND_OF[itemId];
+
+/**
+ * What every held weapon has: `ammo` (shots, or seconds of fuel for a spray weapon), the
+ * cooldown after a shot, and the recoil per shot.
+ */
+export interface HeldWeaponTunables {
+  ammo: number;
+  fireCooldown: number;
+  recoil: number;
+}
 
 /** The tunables section of a rocket kind. */
 export const flightTunables = (
@@ -36,11 +68,11 @@ export const flightTunables = (
 ): ProjectileWeaponTunables =>
   kind === "homing" ? tunables.combat.homing : tunables.combat.rocket;
 
-/** The tunables section of a held weapon. */
-export const weaponTunables = (
-  tunables: GameTunables,
-  itemId: WeaponItemId
-): ProjectileWeaponTunables => flightTunables(tunables, rocketKindOf(itemId));
+/** The shared numbers of a held weapon (ammo, cooldown, recoil). */
+export const weaponTunables = (tunables: GameTunables, itemId: WeaponItemId): HeldWeaponTunables =>
+  isProjectileWeapon(itemId)
+    ? flightTunables(tunables, rocketKindOf(itemId))
+    : tunables.combat.torch;
 
 /** The strongest recoil of any weapon: one shot per launch, so the kill-zone margin counts this. */
 export const maxWeaponRecoil = (tunables: GameTunables): number =>

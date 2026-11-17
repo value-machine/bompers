@@ -20,6 +20,7 @@ The terrain runtime: turns a level's terrain shapes into a cell grid, answers co
 Seams for later work:
 
 - **Blasts:** `features/combat` calls `clearCrater` (reach from the blast's power) in sim step 3 and turns `byLook` into destroy effect / sound events (catalog material) with the colour for debris.
+- **Fire burn-out (fire-spread b1):** `burnOut(grid, samples)` empties burnt-out samples through `writeSample` (already-empty ones are skipped), then keeps the field true per chunk the samples fall in: `boundSolidsByNearestAir(grid, box, "all")` gives every neighbouring solid an edge distance and `remeasureAir` fixes the air (a crater bounds only `"unbreakable"` solids, since it writes exact rim distances itself). Returns `ClearedCells` like `clearCrater`. Cell slots carry the material's `burns` (fuel) and `douses` (fuel next to it never catches) for the fire feature.
 - **New maps:** not here; they are `LevelDefinition`s (see `level`).
 
 ## Dependencies

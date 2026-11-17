@@ -10,7 +10,9 @@ import {
 import {
   createPlayersView,
   syncPlayersView,
+  type BlobPoseOverlay,
   type BlobWeapon,
+  type PlayerState,
   type PlayersView,
 } from "@/features/player/api/playerApi";
 import {
@@ -50,6 +52,12 @@ import {
   syncDiveView,
   type DiveView,
 } from "@/features/dive/api/diveApi";
+import {
+  burningBlobPoses,
+  createFireView,
+  syncFireView,
+  type FireView,
+} from "@/features/fire/api/fireApi";
 import { playersInPlay, type GameState } from "@/features/match/services/gameSim";
 import { createHudView, syncHudView, type HudView } from "@/features/match/services/hudRenderer";
 
@@ -86,6 +94,7 @@ export interface GameRenderer {
   effects: EffectsView;
   collectibles: CollectiblesView;
   dive: DiveView;
+  fire: FireView;
   hud: HudView;
   camera: CameraView | null;
   feel: FeelState;
@@ -101,8 +110,10 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const effects = createEffectsView();
   const collectibles = createCollectiblesView();
   const dive = createDiveView();
+  const fire = createFireView();
   world.addChild(
     terrain.container,
+    fire.terrainLayer,
     collectibles.shadows.container,
     combat.shadows.container,
     players.shadows,
@@ -113,6 +124,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     combat.rockets,
     dive.effects,
     players.container,
+    fire.sprayLayer,
     combat.overlay
   );
 
@@ -127,6 +139,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     effects,
     collectibles,
     dive,
+    fire,
     hud,
     camera: null,
     feel: createFeelState(),
@@ -150,6 +163,13 @@ const blobWeapons = (state: GameState): Map<string, BlobWeapon> => {
   return weapons;
 };
 
+/** Ids of the players holding a torch: the fire layer draws the idle flame on their nozzle. */
+const torchHolderIds = (weapons: ReadonlyMap<string, BlobWeapon>): Set<string> => {
+  const ids = new Set<string>();
+  for (const [id, weapon] of weapons) if (weapon.itemId === "torch") ids.add(id);
+  return ids;
+};
+
 /** Ids of players whose spawn protection is still running. */
 const protectedIds = (state: GameState): Set<string> => {
   const ids = new Set<string>();
@@ -157,6 +177,16 @@ const protectedIds = (state: GameState): Set<string> => {
     if (fighter.invulnerableUntil > state.timeSeconds) ids.add(id);
   }
   return ids;
+};
+
+/** Pose overlays: a burning blob's panic hop, under the dive's pose when it dives (that puts it out). */
+const blobOverlays = (
+  state: GameState,
+  frame: { inPlay: readonly PlayerState[]; nowMs: number }
+): Map<string, BlobPoseOverlay> => {
+  const overlays = burningBlobPoses(state.fire, { players: frame.inPlay, nowMs: frame.nowMs });
+  for (const [id, pose] of diveBlobPoses(state.dive, state.tunables)) overlays.set(id, pose);
+  return overlays;
 };
 
 interface LayerFrame {
@@ -170,12 +200,25 @@ interface LayerFrame {
 /** Syncs every world-space layer to the state. */
 function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerFrame): void {
   const { inPlay, nowMs, zoom } = frame;
+  const weapons = blobWeapons(state);
   syncTerrainView(renderer.terrain, state.arena.terrain, zoom);
+  syncFireView(renderer.fire, {
+    fire: state.fire,
+    terrain: state.arena.terrain,
+    nowMs,
+    players: inPlay,
+    timeSeconds: state.timeSeconds,
+    momentSeconds: state.tunables.fire.blob.momentSeconds,
+    zoom,
+    torchHolderIds: torchHolderIds(weapons),
+    torchLength: state.tunables.combat.torch.length,
+    burnSeconds: state.tunables.fire.burnSeconds,
+  });
   syncPlayersView(renderer.players, inPlay, {
     nowMs,
     protectedIds: protectedIds(state),
-    overlays: diveBlobPoses(state.dive, state.tunables),
-    weapons: blobWeapons(state),
+    overlays: blobOverlays(state, { inPlay, nowMs }),
+    weapons,
     zoom,
     hits: frame.hits,
     helmet: state.tunables.feel.helmet,

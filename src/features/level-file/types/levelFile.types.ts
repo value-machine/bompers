@@ -14,7 +14,10 @@ export type LevelWarningCode =
   | "W8"
   | "W9"
   | "W10"
-  | "W11";
+  | "W11"
+  | "W12"
+  | "W13"
+  | "W14";
 
 export interface LevelIssue {
   /** Spec rule; absent for engine notes the spec has no number for. */
