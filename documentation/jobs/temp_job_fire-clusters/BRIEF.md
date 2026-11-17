@@ -28,6 +28,7 @@ A cluster of touching burning blocks yields one connected silhouette (body slabs
 |---|---|---|---|
 | `fire` | `syncFireView` → `drawFlames`: `flameBlocks` → char circles → one `terrainTongue` per block in ink, ember, amber, core | `services/flameShapes.ts` (pure cluster geometry + tests), `services/fireRenderer.ts` (`drawFlames`) | ride — same layer and passes, new shapes |
 | docs (`documentation/game`) | DESIGN_LANGUAGE § 1 fire row; GAME_JUICE fire rows | fire rows | ride |
+| level kit (`public/level-kit/v2`) + `level-file` test | kit ships `example-level.html`; `levelFileParser.test.ts` imports the kit files | new `fire-test-level.html` + one import test; LEVEL_FORMAT § 9 row | new — Change verdict (owner, 2026-11-17): "too little burning material to test the fires on the base map"; the base map stays as it is |
 
 Overrun rule (skill-loop D51): a diff that touches a feature area **not** in this table stops the lap.
 
