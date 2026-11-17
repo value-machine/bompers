@@ -84,6 +84,9 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Back hit taken | heavy | `hit` / `dive-impact` (gain by knockback) | — | 1.0 | 6 px | 50 ms | impact pop (not on dive hits) | kick |
 | Explosion | heavy | `explosion` (ducks music) | — | — | 6 px (by radius) | — | star burst | — |
 | Terrain destroyed | light | material's sound (`thud` / `crumble` / `thwap` / `clink`) | — | — | — | — | debris | — |
+| Torch spray (held) | light | `rocket-fire` on spray start (placeholder, fire-spread D8) | — | — | — | — | flame fan from the helmet while held | — |
+| Fire spreading | — | — (deliberately silent per sample: a big fire would be noise) | — | — | — | — | flickering flames on burning terrain; scorch on earth | — |
+| Fire burn-out (batch) | light | material's sound via `terrainDestroyed`, once per 0.25 s batch | — | — | — | — | debris | — |
 | Elimination | heavy | `elimination` | — | — | — | — | **gap:** droplets + confetti (DESIGN_LANGUAGE § 6) not built yet | — |
 | Health chunk lost (HUD) | — | — | pip pop | — | — | — | — | — |
 | Round start / end | — | `round-start` / `round-end` | — | — | — | — | banner | — |

@@ -69,6 +69,7 @@ Link the preview kit in `<head>` (works offline without it):
 | behavior | — | none yet; leave it out | |
 | item | `rocket-launcher` | Rocket launcher | use: drop, default for drop |
 | item | `homing-launcher` | Homing launcher | use: drop |
+| item | `torch` | Torch | use: drop |
 | item | `point-orb` | Point orb | use: collectible, default for collectible |
 | item | `dive-reset` | Headbutt reset | use: collectible |
 <!-- level-kit:catalog-ids:end -->

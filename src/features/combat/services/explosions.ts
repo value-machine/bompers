@@ -1,6 +1,6 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { CraterShape } from "@/shared/types/craterShape.types";
-import { clearCrater } from "@/features/arena/api/arenaApi";
+import { clearCrater, type ClearedCells } from "@/features/arena/api/arenaApi";
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import { playerBody, reactToHit, type PlayerState } from "@/features/player/api/playerApi";
 import { bodyCenter, distanceToRect, unitBetween } from "@/features/combat/services/combatGeometry";
@@ -11,6 +11,7 @@ import {
   fighterFor,
   type CombatContext,
 } from "@/features/combat/services/combatState";
+import type { CombatState } from "@/features/combat/types/combat.types";
 
 /**
  * Explosions (GDD § 2 Rocket Jumping, § 3): a `blast` hit (1 chunk by default, from any side)
@@ -74,14 +75,19 @@ function hitPlayers(ctx: CombatContext, blast: Blast): void {
   }
 }
 
-function blastTerrain(ctx: CombatContext, blast: Blast): void {
-  const { at } = blast;
-  const reach = craterReach(ctx.tunables, blast.power);
-  const cleared = clearCrater(ctx.terrain, { x: at.x, y: at.y, reach, shape: blast.craterShape });
-  for (const { materialId, colorId, cells } of cleared.byLook) {
+/**
+ * Logs terrain that went away (a crater, a fire burn-out) as one `terrainDestroyed` event per
+ * material + colour at `at`, with the material's catalog effect and sound.
+ */
+export function reportTerrainDestroyed(
+  combat: CombatState,
+  report: { cleared: ClearedCells; at: Vec2; timeSeconds: number }
+): void {
+  const { at } = report;
+  for (const { materialId, colorId, cells } of report.cleared.byLook) {
     const material = resolveCatalogEntry("material", materialId).entry;
     emitCombatEvent(
-      ctx.combat,
+      combat,
       {
         type: "terrainDestroyed",
         x: at.x,
@@ -92,9 +98,16 @@ function blastTerrain(ctx: CombatContext, blast: Blast): void {
         effectId: material?.effect ?? "none",
         soundId: material?.sound ?? "none",
       },
-      ctx.timeSeconds
+      report.timeSeconds
     );
   }
+}
+
+function blastTerrain(ctx: CombatContext, blast: Blast): void {
+  const { at } = blast;
+  const reach = craterReach(ctx.tunables, blast.power);
+  const cleared = clearCrater(ctx.terrain, { x: at.x, y: at.y, reach, shape: blast.craterShape });
+  reportTerrainDestroyed(ctx.combat, { cleared, at, timeSeconds: ctx.timeSeconds });
 }
 
 export function explode(ctx: CombatContext, blast: Blast): void {

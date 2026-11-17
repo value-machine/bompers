@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 import {
+  burnOut,
   clearCrater,
   createTerrainGrid,
   getCellInfo,
@@ -228,5 +229,27 @@ describe("terrain distance field", () => {
     const before = at(grid, 502, 106);
     expect(clearCrater(grid, { x: 500, y: 100, reach: 34, shape: "round" }).removed).toBe(0);
     expect(at(grid, 502, 106)).toBe(before);
+  });
+});
+
+describe("terrainGrid — burnOut (fire-spread b1)", () => {
+  it("should empty burnt-out samples and give their solid neighbours an edge when they burn out", () => {
+    const grid = buildTerrainFromLevel(level);
+    // Earth row cy 10 (y 100–110): burn out cx 10–12, leaving cx 13 as the new side.
+    const indices = [10, 11, 12].map((cx) => 10 * grid.widthCells + cx);
+    const cleared = burnOut(grid, indices);
+    expect(cleared.removed).toBe(3);
+    expect(cleared.byLook[0]?.materialId).toBe("earth");
+    for (const cx of [10, 11, 12]) expect(getCellInfo(grid, cx, 10)).toBeNull();
+    // The neighbour is still solid and now within one sample of the edge.
+    expect(sampleDistance(grid, 13, 10)).toBeGreaterThan(0);
+    expect(sampleDistance(grid, 13, 10)).toBeLessThanOrEqual(grid.cellSize);
+  });
+
+  it("should skip samples that are already empty when a blast got there first", () => {
+    const grid = buildTerrainFromLevel(level);
+    const index = 10 * grid.widthCells + 20;
+    expect(burnOut(grid, [index]).removed).toBe(1);
+    expect(burnOut(grid, [index]).removed).toBe(0);
   });
 });

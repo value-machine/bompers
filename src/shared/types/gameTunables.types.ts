@@ -215,6 +215,16 @@ export interface GameTunables {
     staggerSeconds: number;
     staggerSteerScale: number;
   };
+  /**
+   * Fire on the terrain field (blast-power D5, D6): it spreads through touching fuel at
+   * `spreadSpeed` (world units / s) the same every way; a lit sample burns `burnSeconds`, then is gone.
+   */
+  fire: {
+    spreadSpeed: number;
+    burnSeconds: number;
+    /** Burnt-out samples are removed together every this many seconds (cost and juice batching). */
+    burnOutInterval: number;
+  };
   /** Health, hits, rocket launcher, explosions and weapon drops (GDD § 3). */
   combat: {
     /** Health chunks per player; 0 eliminates. */
@@ -280,6 +290,24 @@ export interface GameTunables {
       /** Blast power of its explosion, 0–100. */
       power: number;
       craterShape: CraterShape;
+    };
+    /**
+     * Torch (blast-power D8, fire-spread b1): held fire sprays a short flame cone from the helmet
+     * along the aim; each of `rays` rays lights the first fuel it meets within `length`; blobs in
+     * the cone are pushed along the aim. `ammo` is seconds of fuel; spraying drains it.
+     */
+    torch: {
+      ammo: number;
+      fireCooldown: number;
+      recoil: number;
+      /** Cone length from the helmet, world units. */
+      length: number;
+      /** Cone half-angle from the aim, degrees. */
+      halfAngleDegrees: number;
+      /** Rays across the cone (odd keeps one on the aim). */
+      rays: number;
+      /** Acceleration on a blob inside the cone, along the aim, units / s². */
+      push: number;
     };
     /**
      * One blast power P (0–100, each weapon's `power`) drives everything an explosion does, in

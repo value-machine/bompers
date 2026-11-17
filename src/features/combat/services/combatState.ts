@@ -64,6 +64,7 @@ const createFighter = (player: PlayerState, tunables: GameTunables): FighterStat
   weapon: null,
   prevFire: false,
   attackCooldown: 0,
+  spraying: false,
   lastHitBySlot: null,
   lastHitAt: 0,
 });
