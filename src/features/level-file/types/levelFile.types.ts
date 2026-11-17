@@ -3,7 +3,18 @@
  * (documentation/game/LEVEL_FORMAT.md § 7): E* rejects the file, W* loads it with a fallback.
  */
 export type LevelErrorCode = "E1" | "E2" | "E3" | "E4" | "E5" | "E6" | "E7" | "E8";
-export type LevelWarningCode = "W1" | "W2" | "W3" | "W4" | "W5" | "W6" | "W7" | "W8" | "W9" | "W10";
+export type LevelWarningCode =
+  | "W1"
+  | "W2"
+  | "W3"
+  | "W4"
+  | "W5"
+  | "W6"
+  | "W7"
+  | "W8"
+  | "W9"
+  | "W10"
+  | "W11";
 
 export interface LevelIssue {
   /** Spec rule; absent for engine notes the spec has no number for. */
