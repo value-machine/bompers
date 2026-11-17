@@ -1,5 +1,10 @@
 [
   {
+    "title": "Fire and flamethrower visuals",
+    "description": "Owner 2026-11-17: 'Fire visuals looked shit on my last test. I didn't see examples yet of the flamethrower visuals. Need a full lap for those.' Redesign the look of terrain fire (flames on burning cardboard, spread front, burn-out, scorch, smoke), the torch/flamethrower spray and nozzle, and blobs on fire (#55 look kept unless the owner says otherwise). Options page first (loop-refine step 6), owner picks, then build. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; look: documentation/game/DESIGN_LANGUAGE.md; juice: documentation/game/GAME_JUICE.md. ",
+    "status": "to-do"
+  },
+  {
     "title": "Moving parts in levels",
     "description": "Owner request 2026-11-17 (full lap): level parts can rotate and move, and the level builder (format, importer, level kit preview, Copy AI prompt) supports them. Must be easy for an agent that only has the level-builder prompt to author correctly and align shapes without seeing them (e.g. anchors, pivots, relative/snap coordinates, named groups). Keep the prompt and format token-light. Cover second-order effects: players/crates/pickups riding and being pushed or crushed by moving parts, collision against moving geometry vs the static distance field, destructibility and fire on moving parts, camera bounds, spawn safety, homing/rockets, determinism, validation warnings, performance. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; level format: documentation/game/LEVEL_FORMAT.md. ",
     "status": "to-do"
