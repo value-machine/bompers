@@ -1,3 +1,5 @@
+import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import type { LevelMotion, MotionPose } from "@/shared/types/levelMotion.types";
 import type { MaterialSurface } from "@/shared/types/terrainSurface.types";
 
 /**
@@ -51,4 +53,34 @@ export interface TerrainGrid {
   chunksY: number;
   /** Chunk indices (row-major) changed since the renderer last drew them. */
   dirtyChunks: Set<number>;
+  /**
+   * Moving parts (LEVEL_FORMAT § 11): kinematic bodies with their own local field, never written
+   * into this grid's samples (moving-parts D11). The solid queries read them; craters, fire and
+   * the static outline do not. Empty for a static level and for a mover's own local field.
+   */
+  movers: MoverBody[];
+}
+
+/**
+ * One moving part at run time: a local distance field of its pieces in rest pose, moved by its
+ * pose (rotate about `pivot`, then shift). A world point is tested by mapping it back into the
+ * rest pose (`unposePoint`) and reading the local field there.
+ */
+export interface MoverBody {
+  motion: LevelMotion;
+  /** World point the part turns about (rest pose). */
+  pivot: Vec2;
+  /** World position of the local field's top-left corner in the rest pose. */
+  origin: Vec2;
+  /** The part's pieces rasterised on their own grid (same sample spacing as the arena). */
+  field: TerrainGrid;
+  /** Pose this step and last step (the carry moves riders by the difference). */
+  pose: MotionPose;
+  prevPose: MotionPose;
+  /** Farthest field point from the pivot plus the band: beyond it the part reads as air. */
+  reach: number;
+  /** Grip of the part's material (ice parts are slippery). */
+  friction: number;
+  /** Indices into the level's terrain pieces this part carries (the renderer draws them). */
+  terrainIndices: readonly number[];
 }

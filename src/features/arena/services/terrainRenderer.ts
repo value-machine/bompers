@@ -1,10 +1,10 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE, terrainSwatch } from "@/shared/config/gamePalette";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
-import type { LevelDefinition } from "@/features/level/api/levelApi";
-import type { TerrainGrid } from "@/features/arena/types/arena.types";
+import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelApi";
+import type { MoverBody, TerrainGrid } from "@/features/arena/types/arena.types";
 import { isBreakableSlot, takeDirtyChunks } from "@/features/arena/services/terrainGrid";
-import { pieceCellSlot } from "@/features/arena/services/terrainRaster";
+import { moverPieceIndices, pieceCellSlot } from "@/features/arena/services/terrainRaster";
 import {
   drawContour,
   drawSlabFill,
@@ -34,17 +34,52 @@ export interface TerrainView {
   inkStep: number | null;
   /** Outline width the ink was drawn at. */
   inkWidth: number;
+  /** One view per moving part, in `grid.movers` order, above the static terrain. */
+  movers: MoverView[];
 }
 
+const slabOf = (piece: TerrainPiece): SlabPiece => {
+  const slot = pieceCellSlot(piece);
+  return { shape: piece.shape, swatch: terrainSwatch(slot.colorId), surface: slot.surface };
+};
+
+/** Static slabs by breakability (moving parts are drawn by their own views). */
 function slabPieces(level: LevelDefinition): { solids: SlabPiece[]; breakables: SlabPiece[] } {
   const solids: SlabPiece[] = [];
   const breakables: SlabPiece[] = [];
-  for (const piece of level.terrain) {
-    const slot = pieceCellSlot(piece);
-    const slab = { shape: piece.shape, swatch: terrainSwatch(slot.colorId), surface: slot.surface };
-    (isBreakableSlot(slot) ? breakables : solids).push(slab);
-  }
+  const moving = moverPieceIndices(level);
+  level.terrain.forEach((piece, i) => {
+    if (moving.has(i)) return;
+    (isBreakableSlot(pieceCellSlot(piece)) ? breakables : solids).push(slabOf(piece));
+  });
   return { solids, breakables };
+}
+
+/**
+ * One moving part's view (moving-parts D16): its slabs in rest-pose world coordinates under an
+ * ink outline from its own local field (the same one-rule outline as static terrain), in a
+ * container turned about the pivot and shifted by the pose each frame. No motion cue (B1).
+ */
+interface MoverView {
+  container: Container;
+  ink: Graphics;
+}
+
+function createMoverView(level: LevelDefinition, mover: MoverBody): MoverView {
+  const container = new Container({ label: "moving-part" });
+  container.pivot.set(mover.pivot.x, mover.pivot.y);
+  const ink = new Graphics({ label: "moving-part-ink" });
+  ink.position.set(mover.origin.x, mover.origin.y);
+  const fill = new Graphics({ label: "moving-part-fill" });
+  drawSlabFill(fill, mover.terrainIndices.flatMap((i) => level.terrain[i] ?? []).map(slabOf));
+  container.addChild(ink, fill);
+  return { container, ink };
+}
+
+function placeMoverView(view: MoverView, mover: MoverBody): void {
+  const { pose, pivot } = mover;
+  view.container.position.set(pivot.x + pose.dx, pivot.y + pose.dy);
+  view.container.rotation = pose.angle;
 }
 
 export function createTerrainView(arena: {
@@ -61,7 +96,18 @@ export function createTerrainView(arena: {
   const { solids, breakables } = slabPieces(arena.level);
   drawSlabFill(solidFill, solids);
   drawSlabFill(breakableFill, breakables);
-  return { container, ink, solidFill, breakableFill, breakableMask, inkStep: null, inkWidth: 0 };
+  const movers = arena.terrain.movers.map((mover) => createMoverView(arena.level, mover));
+  for (const mover of movers) container.addChild(mover.container);
+  return {
+    container,
+    ink,
+    solidFill,
+    breakableFill,
+    breakableMask,
+    inkStep: null,
+    inkWidth: 0,
+    movers,
+  };
 }
 
 /** Redraws the ink and the breakable clip when terrain changed or the outline width stepped. */
@@ -75,6 +121,15 @@ export function syncTerrainView(view: TerrainView, grid: TerrainGrid, zoom: numb
     const outlineShape = terrainContour(grid, { grow: outline.width, breakableOnly: false });
     drawContour(view.ink, outlineShape, GAME_PALETTE.ink);
   }
+  view.movers.forEach((moverView, i) => {
+    const mover = grid.movers[i];
+    if (!mover) return;
+    if (stepChanged) {
+      const shape = terrainContour(mover.field, { grow: outline.width, breakableOnly: false });
+      drawContour(moverView.ink, shape, GAME_PALETTE.ink);
+    }
+    placeMoverView(moverView, mover);
+  });
   if (terrainChanged) {
     const standing = terrainContour(grid, { grow: 0, breakableOnly: true });
     view.breakableFill.visible = drawContour(view.breakableMask, standing, 0xffffff);
