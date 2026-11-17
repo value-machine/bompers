@@ -90,6 +90,11 @@ export interface GameTunables {
     /** Seconds after a wall-jump in which input steering is reduced (stops instant re-cling). */
     wallJumpControlLock: number;
     /**
+     * Highest riser a grounded blob walks up (and snaps down) without jumping, world units: the
+     * sample stairs of curved hills and crater rims. Taller terrain is a wall.
+     */
+    stepUp: number;
+    /**
      * Defensive crouch (grounded + crouch held): the blob stands still. Render-only numbers:
      * body scale (anchored at the feet point) and the seconds to sink in / stand up. The feet
      * keep their normal pose (owner, crouch D6).

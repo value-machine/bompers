@@ -279,12 +279,60 @@ function reportTerrainHit(
   player.terrainHitSpeedY = hit.y ? Math.abs(hit.speedY) : 0;
 }
 
+/** Lifts the body up to `lift` units, one at a time, until it is free; false (unchanged) if not. */
+function climbRiser(player: PlayerState, terrain: TerrainGrid, lift: number): boolean {
+  const startY = player.y;
+  for (let up = 1; up <= lift; up += 1) {
+    player.y = startY - up;
+    if (!rectHitsSolid(terrain, playerBody(player))) return true;
+  }
+  player.y = startY;
+  return false;
+}
+
+/**
+ * Horizontal move in sub-steps of at most half a sample. A grounded blob climbs risers up to
+ * `player.stepUp` (the sample stairs of a curved hill or crater rim); anything taller stops it like
+ * a wall. Returns true when terrain stopped it.
+ */
+function moveAcross(player: PlayerState, delta: number, args: StepPlayersArgs): boolean {
+  const { terrain } = args;
+  const lift = player.grounded ? args.tunables.player.stepUp : 0;
+  const steps = Math.ceil(Math.abs(delta) / (terrain.cellSize / 2));
+  const stepDelta = steps > 0 ? delta / steps : 0;
+  for (let i = 0; i < steps; i += 1) {
+    player.x += stepDelta;
+    if (!rectHitsSolid(terrain, playerBody(player))) continue;
+    if (lift > 0 && climbRiser(player, terrain, lift)) continue;
+    snapAfterHit(player, { axis: "x", direction: Math.sign(stepDelta) }, terrain.cellSize);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Keeps a blob that walks downhill on the ground: when it was grounded and is not rising, ground
+ * within `player.stepUp` below the feet pulls it down, so each sample step is not a fall and a
+ * landing.
+ */
+function snapToGround(player: PlayerState, args: StepPlayersArgs): void {
+  if (!player.grounded || player.vy < 0) return;
+  const body = playerBody(player);
+  for (let gap = 0; gap <= args.tunables.player.stepUp; gap += 1) {
+    if (rectHitsSolid(args.terrain, { x: body.x, y: player.y + gap, w: body.w, h: 1 })) {
+      player.y += gap;
+      return;
+    }
+  }
+}
+
 /** Axis-separated movement against the terrain; counts a landing on the step feet touch down. */
 function applyMotion(player: PlayerState, args: StepPlayersArgs): void {
   const { terrain, dt } = args;
   const speedX = player.vx;
-  const hitX = moveAxis(player, { axis: "x", delta: player.vx * dt }, terrain);
+  const hitX = moveAcross(player, player.vx * dt, args);
   if (hitX) player.vx = 0;
+  snapToGround(player, args);
   const wasGrounded = player.grounded;
   const impactSpeed = player.vy;
   const hitY = moveAxis(player, { axis: "y", delta: player.vy * dt }, terrain);

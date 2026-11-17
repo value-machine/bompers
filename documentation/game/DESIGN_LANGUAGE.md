@@ -42,9 +42,7 @@ Rules:
 | Clouds | `#ffffff` with `#bfe3f5` 4-unit edge | Far layer: soft edge colour instead of ink, so it reads as background. |
 | Far hills / near hills | `#bfe8d0` / `#9fd8b8` | No outline. Parallax 0.2 / 0.4. |
 | Terrain | one swatch per piece (§ Terrain swatches) | Every material uses the same slab look; the swatch is chosen per piece. |
-| Breakable seams / pips | the swatch's seam colour | 0.9-unit lines between intact 16-unit tiles, one centre pip per tile (50 % alpha). |
 | Ice gloss and rim | `#ffffff` | Two 45° streaks (60 % alpha) and an inner rim (75 % alpha). |
-| Crack (cells next to a crater) | `#2b1d3a` | 2-unit zig-zag. |
 | Helmet shell | `#fff4e2`; weapon tubes are the same cream, with an accent muzzle light (§ 9) | Same for every player. |
 | Eye white / pupil | `#ffffff` / `#2b1d3a` | |
 | Contact shadow | `#2b1d3a` at 28 % alpha max | See § 4. |
@@ -88,20 +86,20 @@ Named colours a level puts on any material (`data-color`; catalog kind `color`).
 - **Blob:** a soft egg, not a perfect circle.
   - Body: half-width R and height 1.94 R (the reference size; R = 30 world units in the style mockup). The widest point sits slightly below the middle, so the bottom is a little fuller and flatter than the top. Build it from four cubic curves (top, two sides, bottom), so squash and stretch deform one smooth shape.
   - Feet: two ellipses 0.4 R × 0.25 R, centred 0.45 R left and right of centre. The body overlaps the top half of each foot, so the feet look tucked under. Fill them with the body shade. Helmet: a dome over the top 45 % of the body, 4 units wider than the body, cream with a white gloss stroke and the emblem in the middle. Weapon tube: a silhouette per weapon on the helmet (§ 9), pivoting toward the aim direction; the rocket tube is a rounded rect (0.76 R × 0.47 R) with a cap. Eyes sit under the helmet rim and look toward the aim direction.
-- **Terrain:** every piece, whatever its material, is a big rounded slab (corner radius 14 units) with a lighter lip on top, in its colour swatch. A blast cuts stepped craters out of a breakable slab along the engine's destruction grid; a softer material (lower toughness, e.g. cardboard) opens a wider crater from the same blast.
+- **Terrain:** every piece, whatever its material, is a big rounded slab (corner radius 14 units) with a lighter lip on top, in its colour swatch. A blast cuts a smoothly curved crater out of a breakable slab (the terrain distance field's contour, terrain-curves D1); a slab no blast has touched keeps its drawn shape. A softer material (lower toughness, e.g. cardboard) opens a wider crater from the same blast.
 - **Props and pickups:** chunky and short; nothing thinner than 0.2 R.
 
-### Material behaviour: the rule (owner, material-system D1)
+### Material behaviour: the rule (owner, material-system D1; terrain-curves D5)
 
-Colour is free: any swatch on any material. Players read behaviour at a glance from the **surface pattern**, never from colour:
+Colour is free: any swatch on any material. Breakable terrain is drawn exactly like solid terrain: one solid colour slab with the same lip and outline, no block, tile or seam pattern (owner, 2026-11-16, superseding the seam-grid cue). Ice keeps its gloss.
 
 | | Solid (`stone`) | Breakable (`earth`, `cardboard`) | Slippery (`ice`) |
 |---|---|---|---|
-| Surface | smooth, one lip highlight | seam grid between 16-unit tiles, one pip per tile | two white gloss streaks and a white inner rim |
-| Silhouette | one continuous rounded slab | the same slab; craters cut stepped edges | the same slab |
-| When hit | nothing changes | cells disappear, neighbours crack, swatch-coloured debris flies | nothing changes |
+| Surface | smooth, one lip highlight | the same: smooth, one lip highlight | two white gloss streaks and a white inner rim |
+| Silhouette | one continuous rounded slab | the same slab; craters cut curved edges | the same slab |
+| When hit | nothing changes | a curved crater opens, swatch-coloured debris flies (an effect, not a lasting pattern) | nothing changes |
 
-Never draw seams on an unbreakable piece or gloss on a non-slippery one, even for decoration. A new behaviour gets its own pattern before it ships.
+Never draw gloss on a non-slippery piece, even for decoration. A new behaviour that needs a lasting look gets the owner's sign-off first.
 
 ---
 
@@ -113,7 +111,7 @@ Never draw seams on an unbreakable piece or gloss on a non-slippery one, even fo
   - Then draw the coloured parts on top with no stroke.
   - Only the outer half of the ink stroke stays visible, which is the silhouette line. That is two passes of the same shapes and no filters.
   - Cache the shape geometry per pose if needed.
-- **Width in world units (visible part):** characters 3.5, terrain slab 3.5 (every material), rockets and pickups 2, effect stars 3. A breakable slab keeps its outer line next to standing cells; crater edges are stepped cells with no ink line.
+- **Width in world units (visible part):** characters 3.5, terrain slab 3.5 (every material), rockets and pickups 2, effect stars 3. Terrain ink follows one rule: the terrain as it stands, grown by the outline width, filled in ink under the fills. Authored edges, crater rims and cut faces get the same line, and where terrain is gone no ink remains (owner, terrain-curves D7–D8).
 - **Zoom rule:** the on-screen line is `clamp(worldWidth × zoom, minPx, maxPx)`. Convert back to world width per frame (`screenWidth / zoom`) when drawing. When the camera zooms far out, the line stays readable instead of shrinking to a hairline; zoomed in, it doesn't turn into a thick border.
 
   | Line | world width | minPx | maxPx |
@@ -151,7 +149,7 @@ Back to front:
 
 1. Sky gradient, sun
 2. Far hills, clouds, near hills (parallax)
-3. Terrain: ink pass, slab fills (breakable slabs clipped to their standing cells), then seams, pips and cracks
+3. Terrain: ink (the standing terrain grown by the outline width), slab fills (breakable slabs clipped to the standing terrain, curved along crater rims)
 4. Contact shadows
 5. Pickups and collectibles
 6. **Effects:** smoke, rocket trails, explosions, debris

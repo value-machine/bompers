@@ -36,6 +36,7 @@ Seams for later work:
 
 ## Decisions
 
+- Curved slopes: a grounded blob climbs risers up to `player.stepUp` (8 units, two terrain samples) while walking and snaps down onto ground within that height while grounded and not rising, so crater rims and curved hills walk smoothly without stops or landing retriggers; taller terrain is a wall (terrain-curves D6). Smooth sub-sample heights and rolling come with collision on the distance field.
 - Fixed take-off speed: apex scales with gravity, so low-gravity maps jump higher (player-movement D1).
 - Tempo is set by gravity, height by speed² / gravity: default gravity is 1400 (was 2200) for more hang time, and every gravity-coupled vertical speed (jump, wall-jump Y, max fall, blast impulse, dive lift / pop) was scaled by √(1400 / 2200) so heights stayed. Retune those together (jumps-and-recoil D1).
 - Variable jump = one cut of the rise on release (player-movement D2); linear accel toward the input speed with a turn boost (D3).

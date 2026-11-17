@@ -24,7 +24,7 @@ Output **one self-contained `.html` file** containing **one inline `<svg>`** tha
       data-author="Level Designer"
       data-agent="your-ai-name"
       data-description="One or two sentences describing the layout and flow."
-      data-cell-size="8"
+      data-cell-size="4"
       data-gravity="1"
       data-match-duration="180"
       style="display: block; width: 100%; height: auto; background: #cfeaf7"
@@ -41,7 +41,7 @@ Root attributes:
 - `viewBox="0 0 W H"` — REQUIRED; starts at `0 0`, `W` and `H` > 0. Good arena sizes: `1600 1000` to `2400 1600`.
 - `data-title` — REQUIRED display name.
 - `data-level-id` — optional, lowercase kebab-case (`^[a-z][a-z0-9-]*$`).
-- `data-cell-size` — optional whole number, default `8` (world units per terrain grid cell).
+- `data-cell-size` — optional whole number, default `4` (world units per terrain grid cell).
 - `data-gravity` — optional number > 0, multiplier on the game's gravity; default `1`, `0.6` = floaty.
 - `data-match-duration` — optional whole seconds, default `180`.
 - `data-author`, `data-agent` (your name, e.g. `gemini`), `data-description` — optional metadata.
@@ -51,7 +51,7 @@ Root attributes:
 
 - **Units:** 1 SVG unit = 1 world unit (≈ 1 px at zoom 1). Raw numbers only — never `px`, `%` or `em` on geometry attributes.
 - **Axes:** origin `(0, 0)` is **top-left**; `x` grows right, **`y` grows DOWN**.
-- **Grid:** snap rect `x`, `y`, `width`, `height` and polygon vertices to multiples of `8` (the cell size).
+- **Grid:** snap rect `x`, `y`, `width`, `height` and polygon vertices to multiples of `4` (the cell size).
 - **Game shapes (`data-role`):** only `<rect>`, `<polygon>` (≥ 3 points) and `<circle>`.
 - **Grouping & decoration:** `<g>` is fine for grouping. Elements without `data-role` are decoration; the game ignores them.
 - **Forbidden on game shapes and their ancestors:** `<path>`, `<ellipse>`, `<line>`, `<polyline>`, `<use>`, nested `<svg>`, any `transform`.
@@ -73,7 +73,7 @@ Drop items: `rocket-launcher`, `homing-launcher`. Collectible items: `point-orb`
 
 Reference content **by ID only**; IDs are lowercase-kebab. Unknown IDs fall back to the default with a warning.
 
-- `data-material` (behaviour; players read it from the surface pattern the game draws):
+- `data-material` (behaviour; breakable terrain looks like any slab in the game, so pick colours that tell materials apart):
   - `stone`: never breaks, default; default colour `plum` (`fill="#5a3f7a"`).
   - `earth`: breakable, toughness 1 (a rocket clears ~34 units around the hit); default colour `clay` (`fill="#c4673f"`).
   - `cardboard`: breakable, toughness 0.7 (a rocket clears ~49 units around the hit); default colour `cardboard` (`fill="#c99a62"`).
@@ -89,11 +89,11 @@ Reference content **by ID only**; IDs are lowercase-kebab. Unknown IDs fall back
 
 With another gravity multiplier `k`, heights and jump gaps scale by about `1 / k`.
 
-- Player collider `28 × 28`; comfortable corridor height `80`+.
+- Player collider `28 × 28`; comfortable corridor height `84`+.
 - Gravity `1400` units/s², max fall speed `1120`. Run speed `340` units/s.
-- Jump: `jumpSpeed 840` → apex ~`252` units in 0.60 s. Easy step up `120`, hard step `208`. Running jump across a flat gap: ~`304` comfortable, ~`408` max.
-- Headbutt dive (once per air time, aimed in 16 directions): `900` units/s for `0.25` s (~`225` units) after a `0.1` s windup; jump + dive gap ~`440`–`536`. A head-on dive into a wall bonks (`0.25` s stun).
-- Wall slide `220` units/s; wall jump `vx 420`, `vy 720` (~`185` height per kick). Wall-jump chimney width `120`–`224`.
+- Jump: `jumpSpeed 840` → apex ~`252` units in 0.60 s. Easy step up `124`, hard step `212`. Running jump across a flat gap: ~`304` comfortable, ~`408` max.
+- Headbutt dive (once per air time, aimed in 16 directions): `900` units/s for `0.25` s (~`225` units) after a `0.1` s windup; jump + dive gap ~`440`–`540`. A head-on dive into a wall bonks (`0.25` s stun).
+- Wall slide `220` units/s; wall jump `vx 420`, `vy 720` (~`185` height per kick). Wall-jump chimney width `124`–`224`.
 - `rocket-launcher`: 6 shots, blast power `50` → reach `64`, push `1080` units/s at the centre, crater `34` at toughness 1 (crater = this ÷ toughness), recoil `200`.
 - `homing-launcher`: 3 shots, blast power `50` → reach `64`, push `1080` units/s at the centre, crater `34` at toughness 1 (crater = this ÷ toughness), recoil `120`.
 - Rocket jump (no self-damage): a point-blank blast under a standing player lifts ~`417` units, ~`585` with the shot's recoil.
@@ -108,7 +108,7 @@ With another gravity multiplier `k`, heights and jump gaps scale by about `1 / k
 4. ≥ 4 `spawn` circles inside bounds, not inside terrain, centre ~`24` above a surface.
 5. ≥ 1 `drop` circle inside bounds, high up, with `data-items` from § 4.
 6. `collectible` circles (optional) inside bounds with a `data-item` from § 4.
-7. Only rect / polygon / circle carry `data-role`; no `<path>`, no `transform`, no units; terrain snapped to multiples of `8`.
+7. Only rect / polygon / circle carry `data-role`; no `<path>`, no `transform`, no units; terrain snapped to multiples of `4`.
 8. Every shape has a `fill`; every route in the map request is reachable with the metrics in § 5.
 
 Smallest valid level (shape reference only; build the map from § 7):
