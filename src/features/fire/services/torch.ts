@@ -4,6 +4,7 @@ import { EMPTY_CELL, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import { helmetPoint } from "@/features/combat/api/combatApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import { ignite } from "@/features/fire/services/fireSim";
+import { catchFire } from "@/features/fire/services/burningBlobs";
 import type { FireState } from "@/features/fire/types/fire.types";
 
 /**
@@ -12,7 +13,8 @@ import type { FireState } from "@/features/fire/types/fire.types";
  * to `length`. A ray stops at the first terrain it meets and lights it when it is fuel, so the
  * torch lights what it touches and never through a wall (D5). A blob a ray reaches before
  * terrain is pushed along the aim (`push`, units / s² for this step), directly on its velocity
- * like recoil (D7): at most √(2 · push · length) ≈ 390 units / s per spray, under a blast's push.
+ * like recoil (D7): at most √(2 · push · length) ≈ 390 units / s per spray, under a blast's push,
+ * and catches fire (fire-burn b2, lit by the holder).
  */
 export interface TorchSprayArgs {
   terrain: TerrainGrid;
@@ -97,6 +99,8 @@ export function sprayTorch(fire: FireState, args: TorchSprayArgs): void {
     for (const blob of hit.blobs) pushed.add(blob);
   }
   pushBlobs(pushed, { aim, args });
+  const lit = { now: args.now, fromX: args.holder.x, bySlot: args.holder.slot };
+  for (const blob of pushed) catchFire(fire, blob, lit);
   fire.sprays = fire.sprays.filter((spray) => spray.slot !== args.holder.slot);
   fire.sprays.push({ slot: args.holder.slot, origin, ends, atSeconds: args.now });
 }

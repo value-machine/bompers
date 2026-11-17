@@ -77,6 +77,10 @@ const PLAYER_RULES: readonly [
   ["respawn", (p, n) => n.inPlay && !p.inPlay, () => 1],
   // A headbutt reset reuses the pickup sound, pitched by the collector (headbutt-reset D5).
   ["pickup", (p, n) => n.diveRefillCount > p.diveRefillCount, () => 1],
+  // Placeholders until fire takes exist (fire-burn D7): catching whooshes like the torch start,
+  // ice hisses as its own material clink.
+  ["rocket-fire", (p, n) => n.catchFireCount > p.catchFireCount, () => 1],
+  ["clink", (p, n) => n.iceDouseCount > p.iceDouseCount, () => 1],
 ];
 
 const bonked = (previous: SoundPlayerSnapshot, now: SoundPlayerSnapshot): boolean =>

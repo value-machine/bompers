@@ -3,6 +3,7 @@ import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { mapPlayerInputs } from "@/shared/utils/gameInputMapping";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { applyHit } from "@/features/combat/api/combatApi";
+import { catchFire } from "@/features/fire/api/fireApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
 
 const level: LevelDefinition = {
@@ -283,5 +284,25 @@ describe("gameSim — headbutt reset", () => {
     expect(refill.respawnTimer).toBeGreaterThan(0);
     expect(state.dive.motions[player.id]!.charged).toBe(true);
     expect(state.dive.refillCounts[player.id]).toBe(1);
+  });
+});
+
+describe("gameSim — burning blobs (fire-burn b2)", () => {
+  it("should run a burning blob from the fire and take one chunk when it burns down", () => {
+    const state = stepGame(newGame(), keys(), dt);
+    const player = state.players[0]!;
+    const startX = player.x;
+    // The fire came from the left (the floor ends 100 units left of the spawn: it would run off).
+    catchFire(state.fire, player, { now: state.timeSeconds, fromX: startX - 50, bySlot: 1 });
+    stepFor(state, 0.3);
+    expect(player.x).toBeGreaterThan(startX + 40);
+    // Crouching is the player's own input: the flee stops, and the burn still takes a full chunk.
+    stepFor(state, DEFAULT_GAME_TUNABLES.fire.blob.burnSeconds - 0.25, keys("KeyS"));
+    expect(state.fire.blobs.size).toBe(0);
+    expect(state.fire.blobMoments.map((moment) => moment.kind)).toEqual(["smoke"]);
+    expect(state.combat.fighters.get(player.id)?.health).toBe(
+      DEFAULT_GAME_TUNABLES.combat.maxHealth - 1
+    );
+    expect(state.combat.fighters.get(player.id)?.lastHitBySlot).toBe(1);
   });
 });

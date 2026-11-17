@@ -30,6 +30,11 @@ export function createFireState(grid: TerrainGrid): FireState {
     scorched: new Uint8Array(count),
     version: 0,
     sprays: [],
+    blobs: new Map(),
+    blobGraceUntil: new Map(),
+    blobMoments: [],
+    caughtCounts: {},
+    dousedCounts: {},
   };
 }
 

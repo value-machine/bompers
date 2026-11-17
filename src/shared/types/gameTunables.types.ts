@@ -224,6 +224,12 @@ export interface GameTunables {
     burnSeconds: number;
     /** Burnt-out samples are removed together every this many seconds (cost and juice batching). */
     burnOutInterval: number;
+    /**
+     * Blobs on fire (fire-burn b2): a blob burns `burnSeconds`, then loses a chunk (`hitDamage.burn`)
+     * and goes out; one just put out can't catch again for `graceSeconds` (so a bump doesn't pass
+     * the fire straight back). Effects show each moment for `momentSeconds`.
+     */
+    blob: { burnSeconds: number; graceSeconds: number; momentSeconds: number };
   };
   /** Health, hits, rocket launcher, explosions and weapon drops (GDD § 3). */
   combat: {
@@ -241,6 +247,8 @@ export interface GameTunables {
     hitDamage: {
       contact: { front: number; back: number };
       blast: { front: number; back: number };
+      /** Burning down (fire-burn D5); crouching does not reduce it. */
+      burn: { front: number; back: number };
     };
     /** Damage multiplier while the victim crouches, rounded down (0.5: 2 → 1, 1 → 0). */
     crouchDamageScale: number;

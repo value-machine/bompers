@@ -78,6 +78,7 @@ Named colours a level puts on any material (`data-color`; catalog kind `color`).
 | Timer warning (last 10 s) | `#ff8a1f` |
 | Weapon accents (§ 9) | rocket launcher sky `#8fd6ff`; homing launcher lilac `#b08cff`; torch ember `#ff8a1f` |
 | Fire on terrain (fire-spread b1) | flames ember `#ff6a1a` with an amber `#ffb21a` heart, flickering, one per 2 × 2 burning samples; torch core `#fff1a8`; scorch on earth `#3a2418` at 40 % alpha |
+| Burning blob (fire-burn b2) | three ember flames with pale-yellow cores on the helmet; sweat drops sky `#8fd6ff`; pinprick pupils (45 %); a drawn panic hop; steam off ice white `#ffffff`; burn-down smoke `#6e6378` |
 
 ---
 

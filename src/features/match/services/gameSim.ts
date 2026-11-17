@@ -8,13 +8,21 @@ import {
   type LevelSettings,
 } from "@/features/level/api/levelApi";
 import {
+  applyHit,
   createCombatState,
   reportTerrainDestroyed,
   stepCombat,
   takeWeaponPickups,
   type CombatState,
 } from "@/features/combat/api/combatApi";
-import { createFireState, sprayTorch, stepFire, type FireState } from "@/features/fire/api/fireApi";
+import {
+  createFireState,
+  panicInputs,
+  sprayTorch,
+  stepBurningBlobs,
+  stepFire,
+  type FireState,
+} from "@/features/fire/api/fireApi";
 import {
   createCollectiblesState,
   stepCollectibles,
@@ -24,8 +32,10 @@ import {
 } from "@/features/collectibles/api/collectiblesApi";
 import {
   createPlayer,
+  reactToHit,
   resolveBodyContacts,
   stepPlayers,
+  type BodyContact,
   type PlayerState,
 } from "@/features/player/api/playerApi";
 import {
@@ -59,6 +69,9 @@ import {
  *                        torch through its `sprayAttack` hook to the fire feature's `sprayTorch`
  *   3c. stepFire       — fire feature: the front spreads through fuel; burnt-out samples go
  *                        (batched), reported as combat `terrainDestroyed` events
+ *   3d. stepBurningBlobs — fire feature: blobs catch, go out (ice, dive), pass it on (bump) or
+ *                        burn down (a chunk through combat's `applyHit`). Before step 2 its
+ *                        `panicInputs` runs a burning blob with no move input away from the fire
  *   3a. stepWeaponCrates — collectibles feature: weapon crates drop, fall, land and get taken;
  *                        combat's `takeWeaponPickups` arms the collector
  *   3b. stepDives      — dive feature: the unarmed attack; its hits go through combat's `applyHit`
@@ -244,12 +257,49 @@ function stepFireOnTerrain(state: GameState): void {
   reportTerrainDestroyed(state.combat, { cleared, at, timeSeconds: state.timeSeconds });
 }
 
+/**
+ * Steps 3c and 3d: the terrain fire, then blobs on fire catch, go out or pass it on; one that
+ * burnt down loses a chunk through combat's `applyHit` (kind `burn`, credited to whoever lit it)
+ * and gets the hit reaction with no push. Dive phases are the previous step's (the dive steps later).
+ */
+function stepBlobsOnFire(
+  state: GameState,
+  step: { players: PlayerState[]; contacts: readonly BodyContact[] }
+): void {
+  stepFireOnTerrain(state);
+  const { tunables, timeSeconds } = state;
+  const downs = stepBurningBlobs(state.fire, {
+    terrain: state.arena.terrain,
+    players: step.players,
+    contacts: step.contacts,
+    isDiving: (player) => {
+      const phase = state.dive.motions[player.id]?.phase;
+      return phase === "windup" || phase === "travel";
+    },
+    now: timeSeconds,
+    tunables,
+  });
+  const world = { combat: state.combat, players: step.players, tunables, timeSeconds };
+  for (const down of downs) {
+    applyHit(world, {
+      victimSlot: down.player.slot,
+      attackerSlot: down.bySlot,
+      kind: "burn",
+      source: "fire",
+      contactPoint: down.at,
+      direction: { x: 0, y: 1 },
+    });
+    reactToHit(down.player, { impulse: { x: 0, y: 0 } }, tunables);
+  }
+}
+
 function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
   const { tunables, timeSeconds } = state;
   const { level, terrain } = state.arena;
   joinSlots(state, inputs);
   const players = playersInPlay(state);
-  stepPlayers({ players, inputs, terrain, tunables, dt });
+  // A burning blob with no move input runs from the fire (fire-burn D2); combat keeps the real inputs.
+  stepPlayers({ players, inputs: panicInputs(state.fire, players, inputs), terrain, tunables, dt });
   const contacts = resolveBodyContacts({ players, terrain, tunables });
   stepCombat({
     combat: state.combat,
@@ -271,7 +321,7 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
         dt,
       }),
   });
-  stepFireOnTerrain(state);
+  stepBlobsOnFire(state, { players, contacts });
   stepCratePickups(state, dt);
   // The same in-play list as the contacts: a blob eliminated by a rocket this step still
   // finishes its bounce, and `applyHit` refuses damage on it.
