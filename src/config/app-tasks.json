@@ -35,11 +35,6 @@
     "status": "to-do"
   },
   {
-    "title": "Level import warns on items in the wrong role",
-    "description": "Follow-up from the headbutt-reset lap: the level importer and the level kit preview warn when an item id is used on the wrong role (e.g. data-item=\"dive-reset\" on a drop, or a weapon id on a collectible), so hand-made and AI-generated levels fail loudly instead of silently. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Owner checks in Cursor",
     "description": "One-time owner verification of the Cursor hooks from #20 and #24: in Cursor Agent chat on a non-main branch, (1) `git push origin HEAD:main --dry-run` must be blocked; (2) `git status` runs as usual; (3) writing a .ts file with a lint error returns the ESLint errors to the agent. Report any step that behaves differently.",
     "status": "to-do"

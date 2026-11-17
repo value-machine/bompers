@@ -22,6 +22,14 @@ export {
 } from "@/features/arena/services/terrainGrid";
 export { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 export {
+  circleHitsSolid,
+  fieldDistanceAt,
+  fieldNormalAt,
+  settleCircle,
+  type CircleSettle,
+  type FieldCircle,
+} from "@/features/arena/services/terrainField";
+export {
   createTerrainView,
   syncTerrainView,
   type TerrainView,

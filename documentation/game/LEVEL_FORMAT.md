@@ -189,6 +189,7 @@ The importer produces **errors** (level rejected, readable message naming the el
 | W8 | Setting out of range (`data-cell-size` < 1, `data-gravity` ≤ 0, `data-match-duration` ≤ 0, non-numeric). | Default. |
 | W9 | Missing `data-title`. | "Untitled level". |
 | W10 | Unknown `data-*` attribute on a role element. | Ignored (forward compatibility). |
+| W11 | A known item ID on the wrong point role: a `collectible` item in a drop's `data-items`, or a `drop` item in a collectible's `data-item` (the item's `use` in the catalog). | As W4: left out of the drop (default drop items when none remain); default collectible. |
 
 The preview kit runs a subset of these checks in the browser and lists them under the legend.
 

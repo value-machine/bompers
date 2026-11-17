@@ -241,6 +241,36 @@ describe("parseLevelFile — element warnings load with fallbacks", () => {
     expect(result.level.drops[0]?.itemIds).toEqual(["rocket-launcher"]);
     expect(result.level.collectibles[0]?.itemId).toBe("point-orb");
   });
+
+  it("should fall back to the role default with W11 when a known item sits on the wrong role", () => {
+    const result = warn(
+      VALID_BODY +
+        '<circle data-role="drop" data-items="dive-reset homing-launcher" cx="400" cy="40" r="1" />' +
+        '<circle data-role="drop" data-items="point-orb" cx="300" cy="40" r="1" />' +
+        '<circle id="c" data-role="collectible" data-item="rocket-launcher" cx="400" cy="80" r="1" />'
+    );
+    expect(result.warnings).toEqual([
+      {
+        code: "W11",
+        message: 'drop #2: "dive-reset" is a collectible item, not a drop item; left out.',
+      },
+      {
+        code: "W11",
+        message: 'drop #3: "point-orb" is a collectible item, not a drop item; left out.',
+      },
+      { code: "W4", message: 'drop #3: no known item in data-items; using "rocket-launcher".' },
+      {
+        code: "W11",
+        message:
+          'collectible "c": "rocket-launcher" is a drop item, not a collectible item; using "point-orb".',
+      },
+    ]);
+    expect(result.level.drops.map((drop) => drop.itemIds).slice(-2)).toEqual([
+      ["homing-launcher"],
+      ["rocket-launcher"],
+    ]);
+    expect(result.level.collectibles.map((c) => c.itemId)).toEqual(["point-orb"]);
+  });
 });
 
 describe("parseLevelFile — placement, ids and settings warnings", () => {

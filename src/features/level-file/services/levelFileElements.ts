@@ -1,7 +1,9 @@
 import {
   CATALOG_DEFAULTS,
   hasCatalogEntry,
+  itemUseOf,
   type ContentKind,
+  type ItemUse,
 } from "@/features/content-catalog/api/contentCatalogApi";
 import type { TerrainPiece } from "@/features/level/api/levelApi";
 import { addWarning, type LevelIssueLog } from "@/features/level-file/services/levelFileIssues";
@@ -11,7 +13,7 @@ import type { LevelRole, RoleElement } from "@/features/level-file/types/levelFi
 /**
  * Role elements of a level root (LEVEL_FORMAT § 5–6): which elements count (W1 unknown role,
  * W2 wrong element, W3 transform, W7 duplicate id, W10 unknown data-*), and their catalog
- * references (W4 unknown or malformed ID → role default).
+ * references (W4 unknown or malformed ID, W11 item of the other point role → role default).
  */
 const TERRAIN_TAGS = ["rect", "polygon", "circle"] as const;
 
@@ -197,7 +199,25 @@ export function checkPointBehavior(item: RoleElement, log: LevelIssueLog): void 
   readRef(item, { attr: "data-behavior", kind: "behavior", instead: "left out" }, log);
 }
 
-/** `data-items` of a drop point: known IDs, else the default drop items. */
+/** An item ID the point's role can use, or undefined (W4 unknown, W11 item of the other role). */
+function checkItem(
+  item: RoleElement,
+  ref: { spec: RefSpec; raw: string | null; use: ItemUse },
+  log: LevelIssueLog
+): string | undefined {
+  const id = checkRef(item, ref, log);
+  if (id === undefined) return undefined;
+  const actual = itemUseOf(id);
+  if (actual === ref.use) return id;
+  addWarning(
+    log,
+    "W11",
+    `${item.name}: "${id}" is a ${actual} item, not a ${ref.use} item; ${ref.spec.instead}.`
+  );
+  return undefined;
+}
+
+/** `data-items` of a drop point: known drop items, else the default drop items. */
 export function readDropItems(item: RoleElement, log: LevelIssueLog): string[] {
   const raw = item.el.getAttribute("data-items");
   if (raw === null) return [...CATALOG_DEFAULTS.items.drop];
@@ -206,7 +226,7 @@ export function readDropItems(item: RoleElement, log: LevelIssueLog): string[] {
     .trim()
     .split(/\s+/)
     .filter(Boolean)
-    .map((id) => checkRef(item, { spec, raw: id }, log))
+    .map((id) => checkItem(item, { spec, raw: id, use: "drop" }, log))
     .filter((id): id is string => id !== undefined);
   if (known.length > 0) return known;
   const fallback = CATALOG_DEFAULTS.items.drop.join(" ");
@@ -214,11 +234,10 @@ export function readDropItems(item: RoleElement, log: LevelIssueLog): string[] {
   return [...CATALOG_DEFAULTS.items.drop];
 }
 
-/** `data-item` of a collectible spawn, else the default collectible. */
+/** `data-item` of a collectible spawn when it is a collectible item, else the default collectible. */
 export function readCollectibleItem(item: RoleElement, log: LevelIssueLog): string {
   const fallback = CATALOG_DEFAULTS.items.collectible;
-  return (
-    readRef(item, { attr: "data-item", kind: "item", instead: `using "${fallback}"` }, log) ??
-    fallback
-  );
+  const spec: RefSpec = { attr: "data-item", kind: "item", instead: `using "${fallback}"` };
+  const raw = item.el.getAttribute(spec.attr);
+  return checkItem(item, { spec, raw, use: "collectible" }, log) ?? fallback;
 }

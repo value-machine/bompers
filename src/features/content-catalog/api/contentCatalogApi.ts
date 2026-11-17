@@ -9,6 +9,7 @@ export type {
   EffectEntry,
   ExportedCatalog,
   ItemEntry,
+  ItemUse,
   MaterialEntry,
   MaterialSurface,
   ResolvedEntry,
@@ -21,5 +22,6 @@ export {
   LEVEL_FORMAT_VERSION,
   exportCatalog,
   hasCatalogEntry,
+  itemUseOf,
   resolveCatalogEntry,
 } from "@/features/content-catalog/services/contentCatalog";
