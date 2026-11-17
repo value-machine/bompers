@@ -53,10 +53,10 @@ export interface RocketState {
 }
 
 /** What dealt a hit. The dive lap owns "dive"; new attacks add their source here. */
-export type HitSource = "rocket" | "dive";
+export type HitSource = "rocket" | "dive" | "fire";
 export type EliminationCause = HitSource | "out-of-bounds";
-/** Damage table row a hit uses (`combat.hitDamage`): body contact or explosion. */
-export type HitKind = "contact" | "blast";
+/** Damage table row a hit uses (`combat.hitDamage`): body contact, explosion or burning down. */
+export type HitKind = "contact" | "blast" | "burn";
 /** Where on the victim a hit lands, relative to the victim's facing. */
 export type HitZone = "front" | "back";
 

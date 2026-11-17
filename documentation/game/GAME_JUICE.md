@@ -87,6 +87,13 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Torch spray (held) | light | `rocket-fire` on spray start (placeholder, fire-spread D8) | — | — | — | — | flame fan from the helmet while held | — |
 | Fire spreading | — | — (deliberately silent per sample: a big fire would be noise) | — | — | — | — | flickering flames on burning terrain; scorch on earth | — |
 | Fire burn-out (batch) | light | material's sound via `terrainDestroyed`, once per 0.25 s batch | — | — | — | — | debris | — |
+| Blob catches fire (fire-burn b2) | light | `rocket-fire` (placeholder, fire-burn D7) | — | — | — | — | amber flame pop (0.6 s linger); then helmet flames, sweat, pinprick pupils while burning | — |
+| Burning blob panic (held) | — | — (the catch cue only) | drawn hop every 0.4 s, sx · sy within the band (±0.08) | — | — | — | drawn 5-unit hop; body and shadow stay on the ground | — |
+| Fire put out by ice | light | `clink` (placeholder) | — | — | — | — | white steam puffs (0.6 s) | — |
+| Fire blown off by a dive | light | the dive's `dive-launch` | — | — | — | — | ember flames thrown up and out (0.6 s) | — |
+| Fire passed by a bump | light | the bump's own cue | — | — | — | — | flame ball arcing to the rival (0.3 s) | — |
+| Burn tick (−1 chunk at 1 s, and at 2 s unless crouching) | medium (a `playerHit`) | `hit` via `playerHit` | as a hit | as a hit | as a hit | — | as a hit | as a hit |
+| Burning blob goes out (2 s) | — | the second tick's `hit` (none when crouching) | — | — | — | — | grey smoke puffs (0.6 s) | — |
 | Elimination | heavy | `elimination` | — | — | — | — | **gap:** droplets + confetti (DESIGN_LANGUAGE § 6) not built yet | — |
 | Health chunk lost (HUD) | — | — | pip pop | — | — | — | — | — |
 | Round start / end | — | `round-start` / `round-end` | — | — | — | — | banner | — |

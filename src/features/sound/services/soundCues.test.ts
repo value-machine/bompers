@@ -24,6 +24,8 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   speed: 0,
   terrainHitSpeed: 0,
   diveRefillCount: 0,
+  catchFireCount: 0,
+  iceDouseCount: 0,
   ...patch,
 });
 
@@ -187,5 +189,17 @@ describe("readSoundCues — headbutt reset", () => {
   it("should play the pickup sound pitched by the collector when a player takes a headbutt reset", () => {
     const frame = snapshot({ players: [player(0), player(1, { diveRefillCount: 1 })] });
     expect(cuesAfter(frame)).toEqual([{ soundId: "pickup", slot: 1, gain: 1 }]);
+  });
+});
+
+describe("readSoundCues — blobs on fire", () => {
+  it("should play the fire placeholder for the blob when it catches fire", () => {
+    const frame = snapshot({ players: [player(0, { catchFireCount: 1 }), player(1)] });
+    expect(cuesAfter(frame)).toEqual([{ soundId: "rocket-fire", slot: 0, gain: 1 }]);
+  });
+
+  it("should play the ice clink for the blob when ice puts its fire out", () => {
+    const frame = snapshot({ players: [player(0), player(1, { iceDouseCount: 1 })] });
+    expect(cuesAfter(frame)).toEqual([{ soundId: "clink", slot: 1, gain: 1 }]);
   });
 });

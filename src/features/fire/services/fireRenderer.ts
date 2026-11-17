@@ -1,14 +1,17 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import { EMPTY_CELL, type TerrainGrid } from "@/features/arena/api/arenaApi";
+import type { PlayerState } from "@/features/player/api/playerApi";
 import { burningSamples } from "@/features/fire/services/fireSim";
+import { drawBlobFire } from "@/features/fire/services/blobFireRenderer";
 import type { FireState, TorchSpray } from "@/features/fire/types/fire.types";
 
 /**
  * Fire layers (fire-spread b1, DESIGN_LANGUAGE § 1 Effects): over the terrain, scorch marks on
  * earth fire stopped at (redrawn only when the fire changes) and flames on burning terrain, one
  * flickering flame per 2 × 2 samples so a big fire stays cheap; above the players, each torch
- * spray as a flame fan from the helmet to where its rays ended.
+ * spray as a flame fan from the helmet to where its rays ended, then the burning blobs
+ * (`blobFireRenderer`, fire-burn b2).
  */
 export interface FireView {
   /** Scorch and flames: add right above the terrain. */
@@ -18,6 +21,8 @@ export interface FireView {
   scorch: Graphics;
   flames: Graphics;
   sprays: Graphics;
+  /** Burning blobs' flames and sweat, and their moments (above the players). */
+  blobs: Graphics;
   /** Fire `version` the scorch was drawn at. */
   scorchVersion: number;
 }
@@ -27,6 +32,10 @@ export interface FireFrame {
   terrain: TerrainGrid;
   /** Render clock, ms (flicker only). */
   nowMs: number;
+  /** Players in play (burning-blob flames), sim time and moment length (fire-burn b2). */
+  players: readonly PlayerState[];
+  timeSeconds: number;
+  momentSeconds: number;
 }
 
 const COLORS = GAME_PALETTE.fire;
@@ -37,11 +46,12 @@ export function createFireView(): FireView {
   const scorch = new Graphics({ label: "fire-scorch" });
   const flames = new Graphics({ label: "fire-flames" });
   const sprays = new Graphics({ label: "torch-sprays" });
+  const blobs = new Graphics({ label: "burning-blobs" });
   const terrainLayer = new Container({ label: "fire" });
   terrainLayer.addChild(scorch, flames);
   const sprayLayer = new Container({ label: "torch" });
-  sprayLayer.addChild(sprays);
-  return { terrainLayer, sprayLayer, scorch, flames, sprays, scorchVersion: -1 };
+  sprayLayer.addChild(sprays, blobs);
+  return { terrainLayer, sprayLayer, scorch, flames, sprays, blobs, scorchVersion: -1 };
 }
 
 const isSolid = (grid: TerrainGrid, index: number): boolean =>
@@ -119,4 +129,5 @@ export function syncFireView(view: FireView, frame: FireFrame): void {
     const flicker = 0.9 + 0.1 * Math.sin(frame.nowMs * 0.03 + spray.slot);
     drawSpray(g, spray, flicker);
   }
+  drawBlobFire(view.blobs.clear(), frame);
 }
