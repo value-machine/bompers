@@ -21,14 +21,15 @@ Updated: 2026-11-17
 | D12 | Riding / pushing (lap B) | closed | a grounded player or crate on a mover moves with the mover's point velocity at the contact (carry, incl. rotation); a mover overlapping a body pushes it out along that velocity | loop-refine (industry default: kinematic platforms) | ride-speed limit in D9 keeps carry feel sane |
 | D14 | Breakable / fire on movers | closed | lap A/B: moving parts are unbreakable (a breakable material on a mover warns and acts unbreakable; looks keep its colour); not flammable | loop-refine | keeps one writer of the static field; later lap if wanted |
 | D15 | Rockets, homing, crates, camera (lap B) | closed | rockets explode on movers (no crater); homing ignores movers when steering; crates land and ride; camera unchanged (frames players/bounds); spawn picker skips a spawn a mover currently overlaps | loop-refine | |
+| D13 | Crush (lap B) | closed | A: squeezed between a mover and static terrain or another mover = eliminated (goo burst from #50 once merged), credit to the last hitter | owner via orchestrator | lap B also covers crates/rect bodies and the head box vs movers |
 | D16 | Look (lap B) | closed | a mover draws as the same slab + one-rule outline (#48) from its own local field, so it reads as a separate piece where it meets static terrain | loop-refine | |
 
 ## Open
 
 | id | topic | status | options briefly | blocked phase |
 |----|-------|--------|-----------------|---------------|
-| D13 | Crush (lap B) | open | A: pushed into static terrain or a second mover = eliminated (credit to last hitter) — proposed / B: never crush, mover passes through the trapped player / C: crush squeezes the player out sideways | lap B plan |
 
 ## Log
 
 - 2026-11-17 — D1–D12, D14–D16 closed via loop-refine (clear winner / proposed); D13 open for the owner via the orchestrator.
+- 2026-11-17 — D13 closed via owner (asked through the orchestrator): option A.
