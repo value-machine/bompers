@@ -1,4 +1,4 @@
-import { shapeContains, shapeSignedDistance } from "@/shared/utils/shapeGeometry";
+import { shapeSignedDistance } from "@/shared/utils/shapeGeometry";
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import type { LevelDefinition, TerrainPiece, TerrainShape } from "@/features/level/api/levelApi";
 import {
@@ -18,11 +18,13 @@ import {
   slotFor,
   writeSample,
 } from "@/features/arena/services/terrainGrid";
+import { SLAB_CORNER_RADIUS } from "@/features/arena/services/terrainSurfaces";
 
 /**
  * Builds the terrain grid from a level's terrain shapes (LEVEL_FORMAT.md § 4): a cell is filled
- * when its centre lies inside a shape; polygons use the non-zero rule; where shapes overlap a
- * an unbreakable material wins over a breakable one, and between equals the later piece wins.
+ * when its centre lies inside a shape (rect slabs with their drawn rounded corners); polygons use
+ * the non-zero rule; where shapes overlap an unbreakable material wins over a breakable one, and
+ * between equals the later piece wins.
  */
 function shapeBounds(shape: TerrainShape) {
   if (shape.type === "rect") return { x: shape.x, y: shape.y, w: shape.w, h: shape.h };
@@ -66,10 +68,40 @@ const slotOfPiece = (grid: TerrainGrid, piece: TerrainPiece): number =>
  * seed distance of every sample within the band to the piece's signed distance (union = max,
  * terrain-field D3).
  */
+interface PieceRaster {
+  grid: TerrainGrid;
+  shape: TerrainShape;
+  slot: number;
+  breakable: boolean;
+  seed: Float32Array;
+}
+
+/** One sample of a piece: raise its seed distance and fill it when its centre is inside. */
+function rasterizeSample(raster: PieceRaster, cx: number, cy: number): void {
+  const { grid, seed } = raster;
+  const size = grid.cellSize;
+  const centre = { x: (cx + 0.5) * size, y: (cy + 0.5) * size };
+  const index = cy * grid.widthCells + cx;
+  // The field follows the slab as drawn (rounded rect corners), and solidity follows the field,
+  // so collision, fill and outline share one shape (terrain-curves D8).
+  const distance = shapeSignedDistance(raster.shape, centre, SLAB_CORNER_RADIUS);
+  seed[index] = Math.max(seed[index] ?? -fieldBand(grid), distance);
+  if (distance <= 0) return;
+  // An unbreakable cell is never overwritten by a breakable piece (LEVEL_FORMAT § 4).
+  const below = getCellInfo(grid, cx, cy);
+  if (raster.breakable && below !== null && !isBreakableSlot(below)) return;
+  writeSample(grid, { cx, cy, slot: raster.slot });
+}
+
 function rasterizePiece(grid: TerrainGrid, piece: TerrainPiece, seed: Float32Array): void {
   const slot = slotOfPiece(grid, piece);
-  const breakable = isBreakableSlot(grid.slots[slot]);
-  const size = grid.cellSize;
+  const raster = {
+    grid,
+    shape: piece.shape,
+    slot,
+    breakable: isBreakableSlot(grid.slots[slot]),
+    seed,
+  };
   const band = fieldBand(grid);
   const bounds = shapeBounds(piece.shape);
   const range = cellRangeOf(grid, {
@@ -88,14 +120,7 @@ function rasterizePiece(grid: TerrainGrid, piece: TerrainPiece, seed: Float32Arr
       cx <= Math.min(grid.widthCells - 1, range.maxX);
       cx += 1
     ) {
-      const centre = { x: (cx + 0.5) * size, y: (cy + 0.5) * size };
-      const index = cy * grid.widthCells + cx;
-      seed[index] = Math.max(seed[index] ?? -band, shapeSignedDistance(piece.shape, centre));
-      if (!shapeContains(piece.shape, centre)) continue;
-      // An unbreakable cell is never overwritten by a breakable piece (LEVEL_FORMAT § 4).
-      const below = getCellInfo(grid, cx, cy);
-      if (breakable && below !== null && !isBreakableSlot(below)) continue;
-      writeSample(grid, { cx, cy, slot });
+      rasterizeSample(raster, cx, cy);
     }
   }
 }

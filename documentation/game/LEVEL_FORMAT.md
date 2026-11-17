@@ -59,7 +59,7 @@ Per-level settings are the GDD's "per map" settings (§ 7 of the GDD: match dura
 - **Units:** 1 SVG user unit = 1 world unit. No other unit (`px`, `%`, `em`) is allowed on geometry attributes.
 - **Origin and axes:** origin top-left, x to the right, **y down** (SVG and PixiJS native; no flip).
 - **World:** the `viewBox` rectangle. The terrain grid covers it with `ceil(W / cell)` × `ceil(H / cell)` cells; cell `(i, j)` spans `[i·cell, (i+1)·cell) × [j·cell, (j+1)·cell)`.
-- **Rasterising terrain:** a cell is solid when its **centre** `((i+0.5)·cell, (j+0.5)·cell)` lies inside a `terrain` shape. Polygons use the **non-zero** fill rule. Where shapes overlap, an unbreakable material wins over a breakable one (unbreakable stays unbreakable); otherwise the later shape in document order sets material and colour.
+- **Rasterising terrain:** a cell is solid when its **centre** `((i+0.5)·cell, (j+0.5)·cell)` lies inside a `terrain` shape (rect corners rounded by the slab radius ≈ 6.2 units, as drawn). Polygons use the **non-zero** fill rule. Where shapes overlap, an unbreakable material wins over a breakable one (unbreakable stays unbreakable); otherwise the later shape in document order sets material and colour.
 - **Points:** spawn, drop and collectible are circles; the **centre** is the point, `r` is visual only.
 - Coordinates may be fractional; the importer rounds nothing except through centre sampling.
 
@@ -120,8 +120,8 @@ At least one `terrain` shape is required.
 | Kind | ID | Label | Notes |
 |---|---|---|---|
 | material | `stone` | Stone | unbreakable, looks: smooth slab, effect `none`, sound `thud`, default for terrain |
-| material | `earth` | Earth | toughness 1, looks: seam grid, effect `dust-burst`, sound `crumble` |
-| material | `cardboard` | Cardboard | toughness 0.7, looks: seam grid, effect `dust-burst`, sound `thwap` |
+| material | `earth` | Earth | toughness 1, looks: smooth slab, effect `dust-burst`, sound `crumble` |
+| material | `cardboard` | Cardboard | toughness 0.7, looks: smooth slab, effect `dust-burst`, sound `thwap` |
 | material | `ice` | Ice | unbreakable, slippery, looks: gloss streaks + white rim, effect `none`, sound `clink` |
 | color | `plum` | Plum | default for stone |
 | color | `slate` | Slate |  |

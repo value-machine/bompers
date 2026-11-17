@@ -48,7 +48,6 @@ const roleDefaults = (kind: ContentKind, id: string): string[] => {
 
 const SURFACE_NOTES = {
   plain: "smooth slab",
-  breakable: "seam grid",
   ice: "gloss streaks + white rim",
 } as const;
 

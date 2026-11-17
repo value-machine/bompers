@@ -71,7 +71,8 @@ svg[data-level-format] {
 /* Roles: CSS wins over presentation attributes, so the kit restyles
    any agent's colours consistently. */
 /* Terrain: fill = the material's default colour until preview.js paints data-color from
-   catalog.json. The stroke shows behaviour, as in the game: dashed = breakable, white = ice. */
+   catalog.json. The stroke shows behaviour for authors (the game itself draws breakable terrain
+   as a plain slab): dashed = breakable, white = ice. */
 svg[data-level-format] [data-role='terrain'] {
   fill: var(--lk-terrain);
   stroke: var(--lk-terrain-edge);

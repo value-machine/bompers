@@ -86,7 +86,7 @@ describe("terrainRaster", () => {
       materialId: "earth",
       colorId: "clay",
       toughness: 1,
-      surface: "breakable",
+      surface: "plain",
     });
   });
 

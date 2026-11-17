@@ -338,3 +338,44 @@ describe("playerController — crouch", () => {
     expect(sim.player.vy).toBeLessThan(0);
   });
 });
+
+// A curved hill: a dome (circle r 160 centred under the floor) on a flat floor, 4-unit samples,
+// the way a crater rim or authored curve reads after the distance-field laps.
+const hill: LevelDefinition = {
+  ...level,
+  settings: { cellSize: 4, gravity: 1 },
+  terrain: [
+    stone({ x: 0, y: 320, w: 800, h: 32 }),
+    { shape: { type: "circle" as const, cx: 500, cy: 420, r: 160 }, materialId: "earth" },
+  ],
+};
+
+describe("playerController — curved slopes", () => {
+  it("should walk up and over a curved hill when the player holds a direction", () => {
+    const sim = createSim({ x: 300, y: FLOOR_Y - 40 }, DEFAULT_GAME_TUNABLES, hill);
+    sim.step({}, 60);
+    let peak = sim.player.y;
+    for (let i = 0; i < 360 && sim.player.x < 680; i += 1) {
+      sim.step({ moveX: 1 });
+      peak = Math.min(peak, sim.player.y);
+    }
+    expect(sim.player.x).toBeGreaterThan(680);
+    // Crossed the dome top (y 260) on foot, not around it.
+    expect(peak).toBeLessThanOrEqual(264);
+  });
+
+  it("should stay on the ground without new landings when the player walks down the far side", () => {
+    const sim = createSim({ x: 500, y: 240 }, DEFAULT_GAME_TUNABLES, hill);
+    sim.step({}, 60);
+    const landings = sim.player.landCount;
+    for (let i = 0; i < 120; i += 1) sim.step({ moveX: 1 });
+    expect(sim.player.x).toBeGreaterThan(600);
+    expect(sim.player.landCount).toBe(landings);
+  });
+
+  it("should still stop at a wall taller than the step-up when walking into it", () => {
+    const sim = grounded(400);
+    for (let i = 0; i < 120; i += 1) sim.step({ moveX: 1 });
+    expect(sim.player.x).toBeLessThan(480);
+  });
+});

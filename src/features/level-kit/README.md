@@ -25,6 +25,7 @@ Kit sync: `pnpm level-kit:sync` writes the generated files; `pnpm level-kit:chec
 
 ## Decisions
 
+- Material notes and the prompt say breakable terrain looks like any slab in the game (terrain-curves D5); the preview's dashed outline for breakable terrain stays as an authoring aid.
 - The copy button copies the full prompt with every game-dependent number filled in live; the player only writes the map wish at the end. Not a short settings block with a linked spec, not a fill-in form (owner, level-gen-prompt D1).
 - One builder: the app copies `buildLevelPrompt()` directly (no fetch), and the sync writes the same text to `/level-kit/v2/LEVEL_PROMPT.md` (level-gen-prompt D2).
 - Clipboard through the browser API, no package; the text is built on click (level-gen-prompt D3).
