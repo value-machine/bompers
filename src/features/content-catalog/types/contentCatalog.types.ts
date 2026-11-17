@@ -33,6 +33,10 @@ export interface MaterialEntry extends CatalogEntryBase {
   surface: MaterialSurface;
   /** Colour ID used when a shape names none. */
   defaultColor: string;
+  /** Fuel: fire spreads through it and burns it away (blast-power D5; cardboard). */
+  burns: boolean;
+  /** Fuel touching it never catches (blast-power D5; ice). */
+  douses: boolean;
   /** Default effect ID when cells are destroyed (a shape's data-effect overrides it). */
   effect: string;
   /** Default sound ID when cells are hit or destroyed (a shape's data-sound overrides it). */

@@ -30,6 +30,7 @@ What each cue comes from:
 | `hit`                                | `playerHit` (rocket)                                                 |
 | `elimination`                        | `playerEliminated`                                                   |
 | `rocket-fire`, `explosion`, `pickup` | `rocketFired`, `explosion`, `pickupCollected`                        |
+| `rocket-fire` (placeholder, fire-spread D8) | `torchStarted` (a torch starts spraying); fire burn-outs play the material sound through `terrainDestroyed` |
 | material sound (`thud` stone, `crumble` earth, `thwap` cardboard, `clink` ice) | `terrainDestroyed.soundId`; and a head-on dive bonk: `land` (pitched) plus the wall's material sound (`diveBonkSoundId`, unpitched), both at the bonk's intensity |
 | `respawn`                            | a player comes back into play                                        |
 | `pickup` (headbutt reset)            | `diveRefillCount` rises (no file of its own; headbutt-reset D5)      |

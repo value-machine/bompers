@@ -50,6 +50,7 @@ import {
   syncDiveView,
   type DiveView,
 } from "@/features/dive/api/diveApi";
+import { createFireView, syncFireView, type FireView } from "@/features/fire/api/fireApi";
 import { playersInPlay, type GameState } from "@/features/match/services/gameSim";
 import { createHudView, syncHudView, type HudView } from "@/features/match/services/hudRenderer";
 
@@ -86,6 +87,7 @@ export interface GameRenderer {
   effects: EffectsView;
   collectibles: CollectiblesView;
   dive: DiveView;
+  fire: FireView;
   hud: HudView;
   camera: CameraView | null;
   feel: FeelState;
@@ -101,8 +103,10 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const effects = createEffectsView();
   const collectibles = createCollectiblesView();
   const dive = createDiveView();
+  const fire = createFireView();
   world.addChild(
     terrain.container,
+    fire.terrainLayer,
     collectibles.shadows.container,
     combat.shadows.container,
     players.shadows,
@@ -113,6 +117,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     combat.rockets,
     dive.effects,
     players.container,
+    fire.sprayLayer,
     combat.overlay
   );
 
@@ -127,6 +132,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     effects,
     collectibles,
     dive,
+    fire,
     hud,
     camera: null,
     feel: createFeelState(),
@@ -171,6 +177,7 @@ interface LayerFrame {
 function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerFrame): void {
   const { inPlay, nowMs, zoom } = frame;
   syncTerrainView(renderer.terrain, state.arena.terrain, zoom);
+  syncFireView(renderer.fire, { fire: state.fire, terrain: state.arena.terrain, nowMs });
   syncPlayersView(renderer.players, inPlay, {
     nowMs,
     protectedIds: protectedIds(state),

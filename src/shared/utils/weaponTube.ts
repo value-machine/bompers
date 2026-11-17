@@ -5,7 +5,7 @@
  * `shared/services/weaponTubeRenderer.ts`. A new weapon adds its shape id and parts here and its
  * look (accent, shape id) in `gamePalette.weaponLooks`.
  */
-export type WeaponTubeShape = "capped" | "twin-pod";
+export type WeaponTubeShape = "capped" | "twin-pod" | "nozzle";
 
 export interface TubePart {
   x: number;
@@ -47,6 +47,15 @@ const SHAPES: Readonly<Record<WeaponTubeShape, ShapeSpec>> = {
       [18, -6],
       [18, 6],
     ],
+  },
+  // Torch: a fuel can behind a thin nozzle that flares at the tip (fire-spread b1).
+  nozzle: {
+    parts: [
+      [-3, -9, 12, 18, 6],
+      [7, -3.5, 14, 7, 3],
+      [19, -6, 6, 12, 3],
+    ],
+    muzzles: [[22, 0]],
   },
 };
 

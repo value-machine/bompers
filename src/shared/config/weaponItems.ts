@@ -4,6 +4,7 @@ import type { WeaponItemId } from "@/shared/types/weaponItems.types";
 const WEAPON_ITEMS: Readonly<Record<WeaponItemId, true>> = {
   "rocket-launcher": true,
   "homing-launcher": true,
+  torch: true,
 };
 
 /** True for catalog item ids that are weapons (a drop point may also list other items later). */

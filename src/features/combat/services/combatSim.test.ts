@@ -393,6 +393,72 @@ describe("combat — rockets", () => {
   });
 });
 
+describe("combat — spray weapons (torch, fire-spread b1)", () => {
+  const hold = (
+    world: World,
+    steps: number,
+    options: { onSpray?: () => void; fire?: boolean } = {}
+  ): void => {
+    for (let i = 0; i < steps; i += 1) {
+      const fire = options.fire ?? true;
+      stepAttacks(world.ctx(), [{ ...EMPTY_PLAYER_INPUT, connected: true, fire }], {
+        dt,
+        sprayAttack: options.onSpray,
+      });
+    }
+  };
+  const armTorch = (world: World): void => {
+    world.combat.fighters.get("p0")!.weapon = { itemId: "torch", ammo: C.torch.ammo };
+  };
+
+  it("should spray every held step and drop the torch when its fuel runs out", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    armTorch(world);
+    let sprays = 0;
+    const fuelSteps = Math.round(C.torch.ammo / dt);
+    hold(world, fuelSteps - 1, { onSpray: () => (sprays += 1) });
+    expect(world.combat.fighters.get("p0")!.weapon?.itemId).toBe("torch");
+    hold(world, 2, { onSpray: () => (sprays += 1) });
+    expect(world.combat.fighters.get("p0")!.weapon).toBeNull();
+    expect(sprays).toBe(fuelSteps);
+  });
+
+  it("should not drain fuel when the fire button is not held", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    armTorch(world);
+    hold(world, 120, { fire: false });
+    expect(world.combat.fighters.get("p0")!.weapon?.ammo).toBe(C.torch.ammo);
+  });
+
+  it("should not spray when the held weapon is a launcher", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    arm(world, 0, "rocket-launcher");
+    let sprays = 0;
+    hold(world, 10, { onSpray: () => (sprays += 1) });
+    expect(sprays).toBe(0);
+  });
+
+  it("should neither spray nor drain when the holder is eliminated", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    armTorch(world);
+    world.combat.fighters.get("p0")!.eliminated = true;
+    let sprays = 0;
+    hold(world, 30, { onSpray: () => (sprays += 1) });
+    expect(sprays).toBe(0);
+    expect(world.combat.fighters.get("p0")!.weapon?.ammo).toBe(C.torch.ammo);
+  });
+
+  it("should emit one start cue when spraying starts and another after a pause", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    armTorch(world);
+    hold(world, 10);
+    hold(world, 2, { fire: false });
+    hold(world, 10);
+    const starts = world.combat.events.filter((event) => event.type === "torchStarted");
+    expect(starts).toHaveLength(2);
+  });
+});
+
 describe("combat — unarmed fire", () => {
   it("should call the unarmed-attack hook once per press only while the player is unarmed", () => {
     const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });

@@ -76,7 +76,8 @@ Named colours a level puts on any material (`data-color`; catalog kind `color`).
 | Point collectible (falls from the roof) | `#ff8fc8` bubblegum star |
 | Headbutt reset (floats on its point) | `#5fe0ff` aqua diamond crystal, ink outline, white gloss facet, ink up-chevron; while gone, an ink ghost outline at 30 % alpha |
 | Timer warning (last 10 s) | `#ff8a1f` |
-| Weapon accents (§ 9) | rocket launcher sky `#8fd6ff`; homing launcher lilac `#b08cff`; planned: flamethrower ember `#ff8a1f` |
+| Weapon accents (§ 9) | rocket launcher sky `#8fd6ff`; homing launcher lilac `#b08cff`; torch ember `#ff8a1f` |
+| Fire on terrain (fire-spread b1) | flames ember `#ff6a1a` with an amber `#ffb21a` heart, flickering, one per 2 × 2 burning samples; torch core `#fff1a8`; scorch on earth `#3a2418` at 40 % alpha |
 
 ---
 
@@ -302,7 +303,7 @@ The owner picked this system on 2026-11-16 (lap weapon-visuals, direction A of t
 |---|---|---|---|
 | Rocket launcher | capped tube (§ 2) | sky `#8fd6ff` | cream body, ink nose, fins in the shooter colour (§ 1) |
 | Homing launcher | twin pod (a short mount and two stacked pods) | lilac `#b08cff` | lilac hull, cherry seeker light blinking 6 Hz, lilac trail, shooter-colour fins (§ 1; owner passed this look with #39) |
-| Flamethrower (planned) | flared nozzle with a pilot flame | ember `#ff8a1f` | short stream of ember and yellow puffs |
+| Torch (fire-spread b1) | nozzle: a fuel can behind a thin nozzle that flares at the tip | ember `#ff8a1f` | a flame fan from the helmet while fire is held (ember outer, amber middle, pale-yellow core; ±18°, 84 units); its HUD pills are seconds of fuel |
 
 Rules:
 

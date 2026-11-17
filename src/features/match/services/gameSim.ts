@@ -9,10 +9,12 @@ import {
 } from "@/features/level/api/levelApi";
 import {
   createCombatState,
+  reportTerrainDestroyed,
   stepCombat,
   takeWeaponPickups,
   type CombatState,
 } from "@/features/combat/api/combatApi";
+import { createFireState, sprayTorch, stepFire, type FireState } from "@/features/fire/api/fireApi";
 import {
   createCollectiblesState,
   stepCollectibles,
@@ -53,7 +55,10 @@ import {
  *   2. stepPlayers     — player feature: controller + terrain collision
  *   2b. bodyContacts   — player feature: blob-vs-blob bounce; the contacts feed step 3b
  *   3. stepCombat      — combat feature: rockets, blasts (damage, impulse, clearCrater);
- *                        unarmed fire goes through its `unarmedAttack` hook to the dive
+ *                        unarmed fire goes through its `unarmedAttack` hook to the dive, a held
+ *                        torch through its `sprayAttack` hook to the fire feature's `sprayTorch`
+ *   3c. stepFire       — fire feature: the front spreads through fuel; burnt-out samples go
+ *                        (batched), reported as combat `terrainDestroyed` events
  *   3a. stepWeaponCrates — collectibles feature: weapon crates drop, fall, land and get taken;
  *                        combat's `takeWeaponPickups` arms the collector
  *   3b. stepDives      — dive feature: the unarmed attack; its hits go through combat's `applyHit`
@@ -103,6 +108,8 @@ export interface GameState {
   combat: CombatState;
   /** Unarmed attack (dive headbutt) state; `dive.hits` holds the last step's hits. */
   dive: DiveState;
+  /** Fire on the terrain field and this step's torch sprays. */
+  fire: FireState;
   /** Sky drops: point orbs falling onto the collectible points, weapon crates from the drop points. */
   collectibles: CollectiblesState;
   /** Scores and the respawn queue. */
@@ -132,11 +139,13 @@ export function applyLevelSettings(tunables: GameTunables, settings: LevelSettin
 export function createGameState({ level, tunables }: CreateGameStateArgs): GameState {
   const normalized = normalizeLevelDefinition(level);
   const matchTunables = applyLevelSettings(tunables, normalized.level.settings);
+  const arena = createArenaState(normalized.level);
   return {
     tick: 0,
     timeSeconds: 0,
     tunables: matchTunables,
-    arena: createArenaState(normalized.level),
+    arena,
+    fire: createFireState(arena.terrain),
     killZone: killZoneOf(normalized.level.bounds, matchTunables),
     levelWarnings: normalized.warnings,
     players: [],
@@ -219,6 +228,22 @@ function stepHeadbuttResets(state: GameState, dt: number): void {
   }
 }
 
+/** Step 3c: fire spreads and burns out; a burnt batch is reported like a crater (one event per look). */
+function stepFireOnTerrain(state: GameState): void {
+  const { terrain } = state.arena;
+  const cleared = stepFire(state.fire, terrain, {
+    now: state.timeSeconds,
+    tunables: state.tunables,
+  });
+  if (!cleared) return;
+  const size = terrain.cellSize;
+  const at = {
+    x: ((cleared.box.minX + cleared.box.maxX + 1) / 2) * size,
+    y: ((cleared.box.minY + cleared.box.maxY + 1) / 2) * size,
+  };
+  reportTerrainDestroyed(state.combat, { cleared, at, timeSeconds: state.timeSeconds });
+}
+
 function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
   const { tunables, timeSeconds } = state;
   const { level, terrain } = state.arena;
@@ -236,7 +261,17 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
     timeSeconds,
     dt,
     unarmedAttack: ({ attacker }) => requestDive(state.dive, attacker, tunables),
+    sprayAttack: ({ attacker }) =>
+      sprayTorch(state.fire, {
+        terrain,
+        players,
+        holder: attacker,
+        tunables,
+        now: timeSeconds,
+        dt,
+      }),
   });
+  stepFireOnTerrain(state);
   stepCratePickups(state, dt);
   // The same in-play list as the contacts: a blob eliminated by a rocket this step still
   // finishes its bounce, and `applyHit` refuses damage on it.
