@@ -11,7 +11,16 @@ import {
   type LevelMover,
   type TerrainPiece,
 } from "@/features/level/api/levelApi";
-import { rideMovers, stepMoverPoses, type RiderBody } from "@/features/movers/services/moverRide";
+import { MOTION_LIMITS } from "@/shared/utils/levelMotion";
+import {
+  inheritOnLeave,
+  leaveVelocity,
+  rideMovers,
+  stepMoverPoses,
+  type MovingRider,
+  type RideResult,
+  type RiderBody,
+} from "@/features/movers/services/moverRide";
 
 // Ground truth: LEVEL_FORMAT § 11 runtime contract (moving-parts D7, D11, D12) and motionPose.
 const stone = (shape: TerrainPiece["shape"]): TerrainPiece => ({ shape, materialId: "stone" });
@@ -52,7 +61,7 @@ function run(terrain: ReturnType<typeof arenaWith>, bodies: RiderBody[], until: 
   const pinned = new Set<number>();
   for (let t = DT; t <= until + 1e-9; t += DT) {
     stepMoverPoses(terrain, t);
-    for (const i of rideMovers(terrain, bodies)) pinned.add(i);
+    for (const i of rideMovers(terrain, bodies).pinned) pinned.add(i);
   }
   return pinned;
 }
@@ -108,7 +117,49 @@ describe("rideMovers", () => {
   it("should leave bodies alone when the level has no moving parts", () => {
     const terrain = arenaWith([GROUND], []);
     const body: RiderBody = { x: 280, y: 560, width: 28, height: 28 };
-    expect(rideMovers(terrain, [body])).toEqual([]);
+    expect(rideMovers(terrain, [body])).toEqual({ pinned: [], carried: [null] });
     expect(body).toEqual({ x: 280, y: 560, width: 28, height: 28 });
+  });
+});
+
+describe("inheritOnLeave", () => {
+  const ride = (carried: RideResult["carried"]): RideResult => ({ pinned: [], carried });
+  const rider = (): MovingRider => ({ id: "p0", x: 0, y: 0, width: 28, height: 28, vx: 10, vy: 0 });
+
+  it("should remember the carry velocity while the body rides", () => {
+    const body = rider();
+    const memory = inheritOnLeave(new Map(), [body], { ride: ride([{ x: 0, y: -2 }]), dt: 0.5 });
+    expect(memory.get("p0")).toEqual({ x: 0, y: -4 });
+    expect(body.vx).toBe(10);
+  });
+
+  it("should add the part's velocity once when the body stops riding", () => {
+    const body = rider();
+    const memory = new Map([["p0", { x: 30, y: -120 }]]);
+    const next = inheritOnLeave(memory, [body], { ride: ride([null]), dt: 1 / 60 });
+    expect(body.vx).toBe(40);
+    expect(body.vy).toBe(-120);
+    expect(next.size).toBe(0);
+  });
+
+  it("should cap the kept velocity at the ride speed when a fast part flings the body", () => {
+    const kept = leaveVelocity({ x: 0, y: -2 * MOTION_LIMITS.rideSpeed });
+    expect(kept.x).toBeCloseTo(0);
+    expect(kept.y).toBeCloseTo(-MOTION_LIMITS.rideSpeed);
+  });
+
+  it("should launch a player higher off a rising lift than its own jump would", () => {
+    const terrain = arenaWith([GROUND, LIFT], [LIFT_MOVER]);
+    const body: MovingRider = { id: "p0", x: 280, y: 400, width: 28, height: 28, vx: 0, vy: 0 };
+    let memory: ReturnType<typeof inheritOnLeave> = new Map();
+    for (let t = DT; t <= 1 + 1e-9; t += DT) {
+      stepMoverPoses(terrain, t);
+      memory = inheritOnLeave(memory, [body], { ride: rideMovers(terrain, [body]), dt: DT });
+    }
+    body.y -= 20; // the jump lifts the feet off the part
+    stepMoverPoses(terrain, 1 + DT);
+    inheritOnLeave(memory, [body], { ride: rideMovers(terrain, [body]), dt: DT });
+    // Mid-rise the lift moves up at π·160/4 ≈ 126 units/s (slide: s = (1 − cos 2πu) / 2).
+    expect(body.vy).toBeCloseTo(-40 * Math.PI, 0);
   });
 });

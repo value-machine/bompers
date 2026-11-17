@@ -1,5 +1,5 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
-import { motionPose, posePoint, unposePoint } from "@/shared/utils/levelMotion";
+import { MOTION_LIMITS, motionPose, posePoint, unposePoint } from "@/shared/utils/levelMotion";
 import {
   fieldDistanceAt,
   moverDistanceAt,
@@ -63,15 +63,16 @@ function moverNormal(mover: MoverBody, p: Vec2): Vec2 {
   return length < 1e-9 ? { x: 0, y: -1 } : { x: -gx / length, y: -gy / length };
 }
 
-/** The part the body stood on last step, after carrying the body with it; null when none. */
-function carry(terrain: TerrainGrid, body: RiderBody): MoverBody | null {
+/** The part the body stood on last step and how far it carried the body; null when none. */
+function carry(terrain: TerrainGrid, body: RiderBody): { mover: MoverBody; by: Vec2 } | null {
   const feet = { x: body.x, y: body.y + 1 };
   const under = terrain.movers.find(
     (mover) => moverDistanceAt(mover, feet, mover.prevPose) > -CARRY_CONTACT
   );
   if (!under) return null;
-  shift(body, moverDisplacement(under, { x: body.x, y: body.y }));
-  return under;
+  const by = moverDisplacement(under, { x: body.x, y: body.y });
+  shift(body, by);
+  return { mover: under, by };
 }
 
 /** Moves the body with a part it overlaps, then out along the part's normal. */
@@ -88,19 +89,69 @@ function pushOut(mover: MoverBody, body: RiderBody): void {
   }
 }
 
-/**
- * Carries and pushes every body (call after `stepMoverPoses`, before the bodies' own step).
- * Returns the indices of bodies left overlapping terrain (pinned), for the crush rule.
- */
-export function rideMovers(terrain: TerrainGrid, bodies: readonly RiderBody[]): number[] {
-  if (terrain.movers.length === 0) return [];
-  const pinned: number[] = [];
+/** What one `rideMovers` call did, per body index. */
+export interface RideResult {
+  /** Bodies left overlapping terrain (pinned), for the crush rule. */
+  pinned: number[];
+  /** How far a part carried each body this step (null = not riding). */
+  carried: (Vec2 | null)[];
+}
+
+/** Carries and pushes every body (call after `stepMoverPoses`, before the bodies' own step). */
+export function rideMovers(terrain: TerrainGrid, bodies: readonly RiderBody[]): RideResult {
+  const result: RideResult = { pinned: [], carried: bodies.map(() => null) };
+  if (terrain.movers.length === 0) return result;
   bodies.forEach((body, index) => {
     const riding = carry(terrain, body);
-    for (const mover of terrain.movers) if (mover !== riding) pushOut(mover, body);
+    result.carried[index] = riding?.by ?? null;
+    for (const mover of terrain.movers) if (mover !== riding?.mover) pushOut(mover, body);
     if (fieldDistanceAt(terrain, centerOf(body)) > -body.width / 2 + PINNED_DEPTH) {
-      pinned.push(index);
+      result.pinned.push(index);
     }
   });
-  return pinned;
+  return result;
+}
+
+// ── Leaving a part (moving parts lap B-2, orchestrator via owner) ───────────
+
+/** A riding body that keeps its own velocity (units/s): players, crates. */
+export interface MovingRider extends RiderBody {
+  id: string;
+  vx: number;
+  vy: number;
+}
+
+/** Each body's carry velocity last step (units/s), by id. */
+export type CarryMemory = ReadonlyMap<string, Vec2>;
+
+/** The part's velocity a body keeps, capped at the ride speed so a spinner can't fling anyone. */
+export function leaveVelocity(v: Vec2): Vec2 {
+  const speed = Math.hypot(v.x, v.y);
+  const cap = MOTION_LIMITS.rideSpeed;
+  return speed <= cap ? v : { x: (v.x / speed) * cap, y: (v.y / speed) * cap };
+}
+
+/**
+ * A body that rode a part last step and no longer does (it jumped, dived or walked off) keeps
+ * the part's velocity once, capped (`leaveVelocity`). Returns this step's memory.
+ */
+export function inheritOnLeave(
+  memory: CarryMemory,
+  bodies: readonly MovingRider[],
+  step: { ride: RideResult; dt: number }
+): CarryMemory {
+  const next = new Map<string, Vec2>();
+  bodies.forEach((body, index) => {
+    const by = step.ride.carried[index];
+    if (by) {
+      next.set(body.id, { x: by.x / step.dt, y: by.y / step.dt });
+      return;
+    }
+    const last = memory.get(body.id);
+    if (!last) return;
+    const keep = leaveVelocity(last);
+    body.vx += keep.x;
+    body.vy += keep.y;
+  });
+  return next;
 }

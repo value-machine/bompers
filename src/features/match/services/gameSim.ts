@@ -2,7 +2,13 @@ import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
 import { createArenaState, moversDistanceAt, type ArenaState } from "@/features/arena/api/arenaApi";
-import { rideMovers, stepMoverPoses } from "@/features/movers/api/moversApi";
+import {
+  inheritOnLeave,
+  rideMovers,
+  stepMoverPoses,
+  type CarryMemory,
+  type MovingRider,
+} from "@/features/movers/api/moversApi";
 import {
   normalizeLevelDefinition,
   type LevelDefinition,
@@ -126,6 +132,8 @@ export interface GameState {
   dive: DiveState;
   /** Fire on the terrain field and this step's torch sprays. */
   fire: FireState;
+  /** Each rider's carry velocity last step: a body leaving a moving part keeps it once (movers). */
+  moverCarry: CarryMemory;
   /** Sky drops: point orbs falling onto the collectible points, weapon crates from the drop points. */
   collectibles: CollectiblesState;
   /** Scores and the respawn queue. */
@@ -162,6 +170,7 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
     tunables: matchTunables,
     arena,
     fire: createFireState(arena.terrain),
+    moverCarry: new Map(),
     killZone: killZoneOf(normalized.level.bounds, matchTunables),
     levelWarnings: normalized.warnings,
     players: [],
@@ -217,14 +226,26 @@ function stepMovingParts(state: GameState, players: PlayerState[], dt: number): 
   const { terrain } = state.arena;
   if (terrain.movers.length === 0) return;
   stepMoverPoses(terrain, state.timeSeconds + dt);
-  rideMovers(terrain, players);
   const size = state.tunables.combat.drops.size;
   const crates = state.collectibles.crates.list;
-  const bodies = crates.map((crate) => ({ x: crate.x, y: crate.y, width: size, height: size }));
-  rideMovers(terrain, bodies);
+  // Crates have no horizontal speed: what they keep on leaving a part is its vertical speed.
+  const crateBodies = crates.map((crate) => ({
+    id: `crate-${crate.id}`,
+    x: crate.x,
+    y: crate.y,
+    width: size,
+    height: size,
+    vx: 0,
+    vy: crate.vy,
+  }));
+  const bodies: MovingRider[] = [...players, ...crateBodies];
+  const ride = rideMovers(terrain, bodies);
+  state.moverCarry = inheritOnLeave(state.moverCarry, bodies, { ride, dt });
   crates.forEach((crate, i) => {
-    crate.x = bodies[i]!.x;
-    crate.y = bodies[i]!.y;
+    const body = crateBodies[i]!;
+    crate.x = body.x;
+    crate.y = body.y;
+    crate.vy = body.vy;
   });
 }
 
