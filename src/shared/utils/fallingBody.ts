@@ -32,7 +32,12 @@ export interface FallingContact {
 /** Points tested around the rim (plus the centre). */
 const RIM_SAMPLES = 8;
 
-/** True when the circle's centre or any of its rim samples lies in solid terrain. */
+/**
+ * True when the circle's centre or any of its rim samples lies in solid terrain.
+ * Second copy (code-style F2): `features/arena/services/terrainField.ts` `circleHitsSolid` answers
+ * the same question exactly from the terrain distance field. This one takes any point test, so it
+ * also works without a grid; a third use should merge the two behind one circle query.
+ */
 export function circleHitsSolid(
   solidAt: SolidAt,
   { x, y, radius }: { x: number; y: number; radius: number }
