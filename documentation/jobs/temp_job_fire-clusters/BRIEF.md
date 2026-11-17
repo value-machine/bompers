@@ -38,4 +38,19 @@ Cut into laps: none.
 
 ## Decisions
 
-DECISIONS.md D1 (open: owner's pick), D2–D4.
+DECISIONS.md D1 (owner's pick: "Big flames", taller in the middle, fixed size jitter), D2–D4.
+
+## Plan
+
+Conflict & compliance: render only (game-juice rule); colours from `GAME_PALETTE`; ink through `outlineWidth("effect", zoom)`; no new file (`fire/services` stays at 10 / 10) and no new dependency; the char tint of fire-visuals D1 goes (D3, stated on the options page); fire README updated with the change.
+
+Performance (architecture § Performance cost risk): per frame one pass over the burning blocks into a map (as before), then per top-edge block at most 8 + 6 + 8 map lookups; shapes = one body slab per row run + hot slabs + top-edge flames. On a 50 × 7 block fire: 7 body slabs + at most 50 flames, against 350 flames and 350 char circles before. Trade-off: body edges are rounded steps on the 8-unit block grid, not a smooth contour.
+
+Juice table (spec-apply-game-juice): the "Fire spreading" moment keeps its tier (none), silence and timings (catch 0.12 s); only its visual changes. Ledger row updated.
+
+Phases:
+
+1. Acceptance test `src/features/fire/services/flameShapes.test.ts` › fire clusters (fails: `clusterFlames` missing).
+2. `flameShapes.ts`: `FLAME_LOOK.cluster`, `FlameBlock`, `Slab`, `FireCluster`, `clusterFlames`; `terrainTongue` removed. Gate: `pnpm test:run src/features/fire`.
+3. `fireRenderer.ts`: `flameBlocks` returns the block map; `drawFlames` draws the cluster; `drawChar` removed. Gate: `pnpm type-check`, `pnpm lint`.
+4. Docs: fire README, DESIGN_LANGUAGE § 1, GAME_JUICE ledger. Gate: `pnpm validate:structure`, `pnpm arch:check`.

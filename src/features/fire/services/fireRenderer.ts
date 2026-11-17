@@ -9,12 +9,14 @@ import { burningSamples } from "@/features/fire/services/fireSim";
 import { drawBlobFire } from "@/features/fire/services/blobFireRenderer";
 import {
   FLAME_LOOK,
+  clusterFlames,
   pilotTongue,
   releasePuff,
   sprayFlame,
-  terrainTongue,
   tonguePoints,
   type Circle,
+  type FlameBlock,
+  type Slab,
   type SprayFlame,
   type Tongue,
 } from "@/features/fire/services/flameShapes";
@@ -24,9 +26,10 @@ import type { FireState } from "@/features/fire/types/fire.types";
  * Fire layers in the "Sticker flames" look (owner fire-visuals D1–D3, DESIGN_LANGUAGE § 1
  * Effects): every flame is drawn in ink first and in colour on top, so a fire of any size has
  * one ink line around it (line style E) and stays apart from cardboard and orange blobs.
- * - Over the terrain: scorch on earth (redrawn only when the fire changes); burning samples
- *   darkened, then one pointed tongue per 2 × 2 burning samples, tall at the front and small
- *   behind it, so a big fire stays cheap; a smoke puff where a batch burns out.
+ * - Over the terrain: scorch on earth (redrawn only when the fire changes); the burning samples
+ *   as one fire shape per cluster (fire-clusters D1–D2): a body slab per row run of 2 × 2
+ *   blocks and flames on its top edge only, so a big fire costs a few dozen shapes; a smoke
+ *   puff where a batch burns out.
  * - Above the players: each torch spray as a neck and a rolling head (`flameShapes`), the head's
  *   puff when a spray stops, the idle flame on a held torch, then the burning blobs
  *   (`blobFireRenderer`, fire-burn b2).
@@ -137,18 +140,8 @@ function drawScorch(view: FireView, frame: FireFrame): void {
   view.scorchVersion = fire.version;
 }
 
-interface FlameBlock {
-  x: number;
-  y: number;
-  /** Seconds since the block's first burning sample caught. */
-  age: number;
-  /** The sample above the block is air: the flame stands free. */
-  open: boolean;
-  key: number;
-}
-
-/** One flame per 2 × 2 block of burning samples. */
-function flameBlocks(frame: FireFrame): FlameBlock[] {
+/** The 2 × 2 blocks of burning samples, by `by * widthCells + bx`. */
+function flameBlocks(frame: FireFrame): Map<number, FlameBlock> {
   const { terrain, fire } = frame;
   const size = terrain.cellSize * 2;
   const blocks = new Map<number, FlameBlock>();
@@ -161,6 +154,8 @@ function flameBlocks(frame: FireFrame): FlameBlock[] {
     if (blocks.has(key)) continue;
     const above = (by * 2 - 1) * terrain.widthCells + cx;
     blocks.set(key, {
+      bx,
+      by,
       x: (bx + 0.5) * size,
       y: (by + 0.5) * size,
       age: Math.max(0, frame.timeSeconds - (fire.igniteAt[index] ?? frame.timeSeconds)),
@@ -168,7 +163,7 @@ function flameBlocks(frame: FireFrame): FlameBlock[] {
       key,
     });
   }
-  return [...blocks.values()];
+  return blocks;
 }
 
 /** A tongue shrunk toward its base: the amber and pale hearts inside the ember flame. */
@@ -191,34 +186,48 @@ function circles(g: Graphics, list: readonly Circle[], look: { grow?: number; sc
   return list.length > 0;
 }
 
-/** Burning cardboard darkens before it goes: lightly at first, strongly in its second half. */
-function drawChar(g: Graphics, blocks: readonly FlameBlock[], frame: FireFrame): void {
-  const radius = frame.terrain.cellSize * 2 * 0.62;
-  const half = frame.burnSeconds / 2;
-  for (const late of [false, true]) {
-    const band = blocks.filter((block) => block.age >= half === late);
-    for (const block of band) g.circle(block.x, block.y, radius);
-    if (band.length > 0) g.fill({ color: COLORS.scorch, alpha: late ? 0.6 : 0.3 });
+/** Adds each slab to the pending shapes as a rounded rect, grown by `grow` for the ink pass. */
+function slabs(g: Graphics, list: readonly Slab[], look: { radius: number; grow?: number }): void {
+  const grow = look.grow ?? 0;
+  for (const slab of list) {
+    g.roundRect(
+      slab.x - grow,
+      slab.y - grow,
+      slab.w + 2 * grow,
+      slab.h + 2 * grow,
+      look.radius + grow
+    );
   }
 }
 
+/**
+ * The terrain fire as one shape per cluster (owner fire-clusters D1–D2): body slabs and the
+ * top-edge flames in ink, then in ember, then the hot inside and the flames' hearts in amber.
+ */
 function drawFlames(view: FireView, frame: FireFrame, ink: number): void {
   const g = view.flames.clear();
   const blocks = flameBlocks(frame);
-  if (blocks.length === 0) return;
-  drawChar(g, blocks, frame);
-  const look = {
-    size: frame.terrain.cellSize * 2,
+  if (blocks.size === 0) return;
+  const size = frame.terrain.cellSize * 2;
+  const { body, hot, flames } = clusterFlames(blocks, {
+    size,
+    stride: frame.terrain.widthCells,
     timeSeconds: frame.nowMs / 1000,
     burnSeconds: frame.burnSeconds,
-  };
-  const all = blocks.map((block) => terrainTongue(block, look));
-  const fresh = all.filter((_, i) => blocks[i]!.age < 0.4);
-  if (tongues(g, all, ink)) g.fill(INK);
-  if (tongues(g, all)) g.fill(COLORS.outer);
-  const ambers = all.map((tongue) => heart(tongue, 0.6));
-  const cores = fresh.map((tongue) => heart(tongue, 0.3));
-  if (tongues(g, ambers)) g.fill(COLORS.mid);
+  });
+  const radius = FLAME_LOOK.cluster.bodyRadius * size;
+  for (const [grow, color] of [
+    [ink, INK],
+    [0, COLORS.outer],
+  ] as const) {
+    slabs(g, body, { radius, grow });
+    tongues(g, flames, grow);
+    g.fill(color);
+  }
+  slabs(g, hot, { radius: FLAME_LOOK.cluster.hotRadius * size });
+  const ambers = flames.map((tongue) => heart(tongue, 0.6));
+  if (tongues(g, ambers) || hot.length > 0) g.fill(COLORS.mid);
+  const cores = flames.filter((flame) => flame.age < 0.4).map((tongue) => heart(tongue, 0.3));
   if (tongues(g, cores)) g.fill(COLORS.core);
 }
 
