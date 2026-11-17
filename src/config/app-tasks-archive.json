@@ -288,5 +288,10 @@
     "title": "Level import warns on items in the wrong role",
     "description": "Follow-up from the headbutt-reset lap: the level importer and the level kit preview warn when an item id is used on the wrong role (e.g. data-item=\"dive-reset\" on a drop, or a weapon id on a collectible), so hand-made and AI-generated levels fail loudly instead of silently. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "done"
+  },
+  {
+    "title": "Elimination: ragdoll and fall apart",
+    "description": "Owner request 2026-11-16: when a blob is lethally hit it ragdolls, or falls apart into pieces that ragdoll; the pieces then blink until they disappear, and the player respawns. Design first: an artifact with live examples of the options before the owner picks. Fills the game-juice gap 'elimination has sound but no visual'. Relates to the Shared roll lap (ragdoll/tumble state) and the loose-parts idea (falling bodies). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md. ",
+    "status": "done"
   }
 ]
