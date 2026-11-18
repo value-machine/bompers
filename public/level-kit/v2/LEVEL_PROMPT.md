@@ -123,7 +123,6 @@ With another gravity multiplier `k`, heights and jump gaps scale by about `1 / k
 - Rocket jump (no self-damage): a point-blank blast under a standing player lifts ~`417` units, ~`585` with the shot's recoil.
 - Homing missiles fly `480` units/s and turn slowly: open spaces make them dodgeable, tight corridors make them deadly.
 - `torch`: `3` s of flame held on fire, a `84`-unit cone that lights cardboard and lightly pushes players; no blast, no crater. Fire spreads through touching cardboard at `13` units/s, each bit burns `7.5` s and is gone; it never crosses air, flows around stone, stops at earth, and cardboard touching ice never catches. Cardboard bridges and towers become timed hazards with a torch in the drop list.
-- `freeze-ray`: `3` s of a narrow `180`-unit beam held on fire. The ground it touches freezes, and the cold spreads through touching terrain of any material at `40` units/s for as long as the beam is held. Frozen ground behaves like ice for `8` s: slippery, blasts can't cut it, fire can't enter it. The torch thaws it. Breakable bridges can be saved from rockets, and any floor can become a slide.
 - Match: up to 4 players, 180 s by default; respawn after 1.2 s at a spawn.
 
 ## 6. Pre-output validation checklist
