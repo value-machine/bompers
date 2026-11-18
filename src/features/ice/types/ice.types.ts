@@ -20,6 +20,43 @@ export interface IceState {
   frozenHead: number;
   /** The freeze rays of the last step, for the renderer. */
   rays: FreezeRayBeam[];
+  /** Blobs gathering chill or frozen in a block, by player id (ice-frozen-blobs D1, D3). */
+  blobs: Map<string, IceBlob>;
+  /** Sim time until which a blob whose block just ended gathers no chill, by player id. */
+  blobGraceUntil: Map<string, number>;
+  /** Recent frozen-blob moments, for the renderer (pruned after `ice.blob.momentSeconds`). */
+  blobMoments: IceBlobMoment[];
+  /** Times frozen, cracks made and blocks broken per player id (monotonic; sound). */
+  frozeCounts: Record<string, number>;
+  crackCounts: Record<string, number>;
+  shatterCounts: Record<string, number>;
+}
+
+/** One blob's ice: chill building up in a freeze ray, or the block it is frozen in. */
+export interface IceBlob {
+  slot: number;
+  /** Seconds of beam gathered (crouching counts half); frozen at `ice.blob.freezeSeconds`. */
+  chill: number;
+  /** Sim time of the last step a ray reached it (chill runs back down otherwise). */
+  chilledAt: number;
+  /** Sim time it froze, or null while only chilled. */
+  frozenAt: number | null;
+  /** Jump presses made in the block so far, and when the last one was (the drawn hop). */
+  cracks: number;
+  crackedAt: number;
+  /** Jump was held last step (a press is a rising edge; held at the freeze is no press). */
+  jumpHeld: boolean;
+}
+
+/**
+ * A frozen-blob moment: it froze, a jump press cracked the block, the block broke (third press,
+ * a hit, time up) or fire melted it.
+ */
+export interface IceBlobMoment {
+  kind: "frozen" | "crack" | "shatter" | "melt";
+  slot: number;
+  at: Vec2;
+  atSeconds: number;
 }
 
 /**

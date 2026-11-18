@@ -7,6 +7,7 @@ export type {
 } from "@/features/fire/types/fire.types";
 export {
   catchFire,
+  douseBlob,
   isBurning,
   panicInputs,
   stepBurningBlobs,

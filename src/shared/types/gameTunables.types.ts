@@ -266,6 +266,22 @@ export interface GameTunables {
     freezeAreaPerSecond: number;
     frozenSeconds: number;
     torchThawRadius: number;
+    /**
+     * Frozen blobs (owner, ice-frozen-blobs D1): a blob gathers chill in a freeze ray (×
+     * `crouchChillScale` while crouching) and is frozen solid at `freezeSeconds` of it, for
+     * `frozenSeconds`. The block brakes at `slideGrip` of normal, breaks on jump press number
+     * `cracksToBreak`, and its blob gathers no chill for `graceSeconds` after it ends. Effects
+     * show each moment for `momentSeconds`.
+     */
+    blob: {
+      freezeSeconds: number;
+      crouchChillScale: number;
+      frozenSeconds: number;
+      cracksToBreak: number;
+      slideGrip: number;
+      graceSeconds: number;
+      momentSeconds: number;
+    };
   };
   /** Health, hits, rocket launcher, explosions and weapon drops (GDD § 3). */
   combat: {

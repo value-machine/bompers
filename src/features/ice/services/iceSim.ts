@@ -27,6 +27,12 @@ export function createIceState(grid: TerrainGrid): IceState {
     frozenDue: [],
     frozenHead: 0,
     rays: [],
+    blobs: new Map(),
+    blobGraceUntil: new Map(),
+    blobMoments: [],
+    frozeCounts: {},
+    crackCounts: {},
+    shatterCounts: {},
   };
 }
 

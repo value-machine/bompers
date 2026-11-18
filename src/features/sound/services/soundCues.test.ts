@@ -28,6 +28,9 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   diveRefillCount: 0,
   catchFireCount: 0,
   iceDouseCount: 0,
+  frozenCount: 0,
+  iceCrackCount: 0,
+  iceShatterCount: 0,
   ...patch,
 });
 
@@ -219,5 +222,14 @@ describe("readSoundCues — blobs on fire", () => {
   it("should play the ice clink for the blob when ice puts its fire out", () => {
     const frame = snapshot({ players: [player(0), player(1, { iceDouseCount: 1 })] });
     expect(cuesAfter(frame)).toEqual([{ soundId: "clink", slot: 1, gain: 1 }]);
+  });
+
+  it("should play the ice placeholder when a blob freezes, cracks its block or the block breaks", () => {
+    const froze = snapshot({ players: [player(0, { frozenCount: 1 }), player(1)] });
+    expect(cuesAfter(froze)).toEqual([{ soundId: "clink", slot: 0, gain: 1 }]);
+    const cracked = snapshot({ players: [player(0, { iceCrackCount: 1 }), player(1)] });
+    expect(cuesAfter(cracked)).toEqual([{ soundId: "clink", slot: 0, gain: SOUND_MIX.crouchGain }]);
+    const broke = snapshot({ players: [player(0), player(1, { iceShatterCount: 1 })] });
+    expect(cuesAfter(broke)).toEqual([{ soundId: "clink", slot: 1, gain: 1 }]);
   });
 });
