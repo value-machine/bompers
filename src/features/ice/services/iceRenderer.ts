@@ -19,6 +19,9 @@ import {
   type Disc,
   type GridBlock,
 } from "@/features/ice/services/iceShapes";
+import type { GameTunables } from "@/shared/types/gameTunables.types";
+import type { PlayerState } from "@/features/player/api/playerApi";
+import { drawBlobIce } from "@/features/ice/services/blobIceRenderer";
 import type { IceState } from "@/features/ice/types/ice.types";
 
 /**
@@ -41,6 +44,8 @@ export interface IceView {
   frostLip: Graphics;
   frostBody: Graphics;
   frost: Graphics;
+  /** Ice blocks around frozen blobs and their moments, under the rays. */
+  blocks: Graphics;
   beams: Graphics;
   /** Terrain `frozenVersion` and `shapeVersion` the frost was drawn at. */
   frostVersion: number;
@@ -59,6 +64,10 @@ interface BreathMemo {
 export interface IceFrame {
   ice: IceState;
   terrain: TerrainGrid;
+  /** Players in play (the ice blocks are drawn over them). */
+  players: readonly PlayerState[];
+  /** `ice.blob` tunables (how full the chill is, how long a moment shows). */
+  blob: GameTunables["ice"]["blob"];
   /** Render clock, ms (the breath's roll and specks only). */
   nowMs: number;
   /** Sim time, seconds (when a breath started and stopped). */
@@ -80,10 +89,12 @@ export function createIceView(): IceView {
   const terrainLayer = new Container({ label: "ice" });
   terrainLayer.addChild(frostLip, frostBody, frost);
   const beamLayer = new Container({ label: "freeze-ray" });
-  beamLayer.addChild(beams);
+  const blocks = new Graphics({ label: "ice-blocks" });
+  beamLayer.addChild(blocks, beams);
   return {
     terrainLayer,
     beamLayer,
+    blocks,
     frostLip,
     frostBody,
     frost,
@@ -223,6 +234,14 @@ export function syncIceView(view: IceView, frame: IceFrame): void {
     view.frostVersion !== terrain.frozenVersion || view.frostShapeVersion !== terrain.shapeVersion;
   if (stale) drawFrost(view, terrain);
   const ink = outlineWidth("effect", frame.zoom).width;
+  view.blocks.clear();
+  drawBlobIce(view.blocks, {
+    ice: frame.ice,
+    players: frame.players,
+    timeSeconds: frame.timeSeconds,
+    blob: frame.blob,
+    ink,
+  });
   view.beams.clear();
   const on = drawBreaths(view, frame, ink);
   drawReleases(view, frame, { ink, on });

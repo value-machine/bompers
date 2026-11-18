@@ -7,9 +7,6 @@
     "matchDuration": 180,
     "material": "stone",
     "items": {
-      "drop": [
-        "rocket-launcher"
-      ],
       "collectible": "point-orb"
     }
   },

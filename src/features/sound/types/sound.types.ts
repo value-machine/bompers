@@ -43,6 +43,10 @@ export interface SoundPlayerSnapshot {
   /** Times caught fire / put out by ice over the match (monotonic; fire-burn D7). */
   catchFireCount: number;
   iceDouseCount: number;
+  /** Times frozen in an ice block, cracks made in one, blocks broken (monotonic; ice-frozen-blobs D2). */
+  frozenCount: number;
+  iceCrackCount: number;
+  iceShatterCount: number;
 }
 
 /**

@@ -50,6 +50,13 @@ export function bonkedMaterialSound(terrain: TerrainGrid, player: PlayerState, d
   return "none";
 }
 
+/** A player's ice block counters (ice-frozen-blobs D2): frozen, cracks, blocks broken. */
+const iceBlockCounts = (state: GameState, id: string) => ({
+  frozenCount: state.ice.frozeCounts[id] ?? 0,
+  iceCrackCount: state.ice.crackCounts[id] ?? 0,
+  iceShatterCount: state.ice.shatterCounts[id] ?? 0,
+});
+
 /**
  * Fire and ice as sound hears them: who sprays what this step, how much burns, how much has
  * thawed by itself (the ice FIFO's head only moves forward) and the frozen-flag version.
@@ -96,6 +103,7 @@ export function soundSnapshotOf(state: GameState): SoundSnapshot {
         diveRefillCount: state.dive.refillCounts[player.id] ?? 0,
         catchFireCount: state.fire.caughtCounts[player.id] ?? 0,
         iceDouseCount: state.fire.dousedCounts[player.id] ?? 0,
+        ...iceBlockCounts(state, player.id),
       };
     }),
     events: state.combat.events,

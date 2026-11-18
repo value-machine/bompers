@@ -4,7 +4,7 @@ import {
   exportCatalog,
   type ExportedCatalog,
 } from "@/features/content-catalog/api/contentCatalogApi";
-import { MIN_SPAWNS, RECOMMENDED_SPAWNS } from "@/features/level-file/api/levelFileApi";
+import { RECOMMENDED_SPAWNS, spawnLift } from "@/features/level-file/api/levelFileApi";
 import { DEFAULT_GAME_TUNABLES, type GameTunables } from "@/shared/config/gameTunables";
 import { terrainSwatch, toCssColor } from "@/shared/config/gamePalette";
 import { blastPushAt, blastReach, craterReach } from "@/shared/utils/blastPower";
@@ -37,9 +37,6 @@ const round = (n: number): number => Math.round(n);
 const code = (s: string | number): string => `\`${s}\``;
 const codeList = (ids: readonly string[]): string => ids.map((id) => code(id)).join(", ");
 const snapDown = (n: number, cell: number): number => Math.floor(n / cell) * cell;
-
-/** Units a centred spawn sits above the surface: half a body plus a small gap. */
-const spawnLift = (t: GameTunables): number => t.player.height / 2 + 10;
 
 const materialFill = (catalog: ExportedCatalog, materialId: string): string => {
   const material = catalog.material.find((m) => m.id === materialId);
@@ -105,6 +102,7 @@ function renderFileContract({ catalog, cell }: PromptContext): string {
     `- \`data-cell-size\` — optional whole number, default \`${cell}\` (world units per terrain grid cell).`,
     `- \`data-gravity\` — optional number > 0, multiplier on the game's gravity; default \`${CATALOG_DEFAULTS.gravity}\`, \`0.6\` = floaty.`,
     `- \`data-match-duration\` — optional whole seconds, default \`${CATALOG_DEFAULTS.matchDuration}\`.`,
+    `- \`data-weapons\` — optional; leave it out so crates hold every weapon (the player's lobby choice). Only to limit a level: space-separated weapons (${codeList(itemIds(catalog, "drop"))}) or \`none\`.`,
     "- `data-author`, `data-agent` (your name, e.g. `gemini`), `data-description` — optional metadata.",
     `- The default terrain colour fills are in § 4; e.g. stone \`${materialFill(catalog, CATALOG_DEFAULTS.material)}\`.`,
   ].join("\n");
@@ -135,11 +133,11 @@ function renderRoles(ctx: PromptContext): string {
     "|---|---|---|---|",
     `| \`bounds\` | \`<rect>\` | exactly 1 | The play area, inside the viewBox. Falling below its **bottom** edge eliminates a player. The **side and top edges are open**: the kill lines there lie far beyond the bounds, so players can be launched out and fly back. Suggested \`fill="none" stroke="${PREVIEW_FILLS.bounds}"\`. |`,
     `| \`terrain\` | rect, polygon, circle | ≥ 1 | Ground. \`data-material\` = behaviour (default \`${CATALOG_DEFAULTS.material}\`), \`data-color\` = looks (optional, default = the material's colour). Optional \`data-effect\`, \`data-sound\`, \`data-label\`, \`id\`. Later shapes paint over earlier ones where they overlap. |`,
-    `| \`spawn\` | \`<circle>\` | ≥ ${RECOMMENDED_SPAWNS} (min ${MIN_SPAWNS}) | Player start (the centre counts, \`r="${POINT_RADIUS.spawn}"\`). Inside bounds, never inside terrain, centre ~\`${lift}\` above a solid surface, not over a pit. \`fill="${PREVIEW_FILLS.spawn}"\`. |`,
-    `| \`drop\` | \`<circle>\` | ≥ 1 | Weapon crates fall from here (\`r="${POINT_RADIUS.drop}"\`); place high up. \`data-items\` = space-separated drop items (§ 4). \`fill="${PREVIEW_FILLS.drop}"\`. |`,
+    `| \`spawn\` | \`<circle>\` | ≥ ${RECOMMENDED_SPAWNS} | Player start (the centre counts, \`r="${POINT_RADIUS.spawn}"\`). Inside bounds, never inside terrain, centre ~\`${lift}\` above a solid surface, not over a pit. \`fill="${PREVIEW_FILLS.spawn}"\`. |`,
+    `| \`drop\` | \`<circle>\` | ≥ 1 | Weapon crates fall from here (\`r="${POINT_RADIUS.drop}"\`); place high up. The game picks each crate's weapon. \`fill="${PREVIEW_FILLS.drop}"\`. |`,
     `| \`collectible\` | \`<circle>\` | ≥ 0 | A pickup point (\`r="${POINT_RADIUS.collectible}"\`), \`data-item\` = one collectible item (§ 4). \`point-orb\`: point orbs fall from the sky onto it. \`dive-reset\`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns ${respawn} s after use) — hang them in the air between platforms and off edges for headbutt chains. \`fill="${PREVIEW_FILLS.collectible}"\`. |`,
     "",
-    `Drop items: ${codeList(itemIds(catalog, "drop"))}. Collectible items: ${codeList(itemIds(catalog, "collectible"))}.`,
+    `Collectible items: ${codeList(itemIds(catalog, "collectible"))}.`,
   ].join("\n");
 }
 
@@ -220,7 +218,6 @@ function renderCatalog(ctx: PromptContext): string {
     `- \`data-color\` (looks; any colour on any material, names only, no hex) — use the hex as that shape's \`fill\`: ${colours.join(", ")}.`,
     `- \`data-effect\`: ${codeList(catalog.effect.map((e) => e.id))}.`,
     `- \`data-sound\`: ${codeList(catalog.sound.map((s) => s.id))}.`,
-    `- \`data-items\` (drop): ${codeList(itemIds(catalog, "drop"))}; default ${codeList(CATALOG_DEFAULTS.items.drop)}. List several to alternate crates.`,
     `- \`data-item\` (collectible): ${codeList(itemIds(catalog, "collectible"))}; default ${code(CATALOG_DEFAULTS.items.collectible)}.`,
     `- \`data-behavior\`: ${behaviors.length > 0 ? codeList(behaviors) : "none yet — leave it out"}.`,
   ].join("\n");
@@ -287,7 +284,7 @@ function renderChecklist(ctx: PromptContext): string {
     '2. Exactly one `<rect data-role="bounds">`, inside the viewBox, a bit larger than the terrain.',
     "3. At least one `terrain` shape; every terrain shape's `data-material` and `data-color` are IDs from § 4 (or left out).",
     `4. ≥ ${RECOMMENDED_SPAWNS} \`spawn\` circles inside bounds, not inside terrain, centre ~\`${spawnLift(ctx.tunables)}\` above a surface.`,
-    "5. ≥ 1 `drop` circle inside bounds, high up, with `data-items` from § 4.",
+    "5. ≥ 1 `drop` circle inside bounds, high up.",
     "6. `collectible` circles (optional) inside bounds with a `data-item` from § 4.",
     `7. Only rect / polygon / circle carry \`data-role\`; no \`<path>\`, no \`transform\`, no units; terrain snapped to multiples of \`${ctx.cell}\`.`,
     "8. Every shape has a `fill`; every route in the map request is reachable with the metrics in § 5.",
@@ -304,7 +301,6 @@ function renderMinimalLevel({ catalog, tunables }: PromptContext): string {
     (x) =>
       `      <circle data-role="spawn" cx="${x}" cy="${spawnY}" r="${POINT_RADIUS.spawn}" fill="${PREVIEW_FILLS.spawn}" />`
   );
-  const drops = itemIds(catalog, "drop").join(" ");
   return [
     "```html",
     "<!doctype html>",
@@ -315,7 +311,7 @@ function renderMinimalLevel({ catalog, tunables }: PromptContext): string {
     `      <rect data-role="bounds" x="0" y="0" width="1200" height="800" fill="none" stroke="${PREVIEW_FILLS.bounds}" />`,
     `      <rect data-role="terrain" data-material="${CATALOG_DEFAULTS.material}" x="240" y="${surface}" width="720" height="64" fill="${fill}" />`,
     ...spawns,
-    `      <circle data-role="drop" data-items="${drops}" cx="600" cy="80" r="${POINT_RADIUS.drop}" fill="${PREVIEW_FILLS.drop}" />`,
+    `      <circle data-role="drop" cx="600" cy="80" r="${POINT_RADIUS.drop}" fill="${PREVIEW_FILLS.drop}" />`,
     "    </svg>",
     "  </body>",
     "</html>",

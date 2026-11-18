@@ -169,6 +169,11 @@ const PLAYER_RULES: readonly [
   // A blob catching fire, and ice putting it out with steam (owner picks, element-sounds lap).
   ["catch-fire", (p, n) => n.catchFireCount > p.catchFireCount, () => 1],
   ["steam-hiss", (p, n) => n.iceDouseCount > p.iceDouseCount, () => 1],
+  // Placeholders until the ice block's own sounds exist (ice-frozen-blobs D2): a blob freezing,
+  // a jump press cracking its block (softer), the block breaking.
+  ["clink", (p, n) => n.frozenCount > p.frozenCount, () => 1],
+  ["clink", (p, n) => n.iceCrackCount > p.iceCrackCount, () => SOUND_MIX.crouchGain],
+  ["clink", (p, n) => n.iceShatterCount > p.iceShatterCount, () => 1],
 ];
 
 const bonked = (previous: SoundPlayerSnapshot, now: SoundPlayerSnapshot): boolean =>

@@ -1,6 +1,7 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
+import { isWeaponItemId } from "@/shared/config/weaponItems";
 import { cuePointsPassed, motionCuePoints } from "@/shared/utils/levelMotion";
 import { createArenaState, moversDistanceAt, type ArenaState } from "@/features/arena/api/arenaApi";
 import {
@@ -28,13 +29,26 @@ import {
 } from "@/features/combat/api/combatApi";
 import {
   createFireState,
+  douseBlob,
+  isBurning,
   panicInputs,
   sprayTorch,
   stepBurningBlobs,
   stepFire,
   type FireState,
 } from "@/features/fire/api/fireApi";
-import { createIceState, sprayFreezeRay, stepIce, type IceState } from "@/features/ice/api/iceApi";
+import {
+  createIceState,
+  frozenInputs,
+  holdFrozenBlobs,
+  isFrozen,
+  isIced,
+  releaseBlob,
+  sprayFreezeRay,
+  stepFrozenBlobs,
+  stepIce,
+  type IceState,
+} from "@/features/ice/api/iceApi";
 import {
   createCollectiblesState,
   stepCollectibles,
@@ -84,6 +98,10 @@ import {
  *                        a held freeze ray to the ice feature's `sprayFreezeRay`
  *   3e. stepIce        — ice feature: frozen samples whose time is over thaw (the ray itself
  *                        freezes inside step 3; this runs before 3c, so freezing puts fire out)
+ *   3f. frozen blobs   — ice feature: before step 2 `frozenInputs` empties a frozen blob's
+ *                        inputs (jump presses crack its block); `stepFrozenBlobs` after 3e runs
+ *                        chill down and ends blocks on time; after 3d fire and ice cancel on a
+ *                        blob; after 3b a hit shatters a block and `holdFrozenBlobs` sets the slide
  *   3c. stepFire      — fire feature: the front spreads through fuel; burnt-out samples go
  *                        (batched), reported as combat `terrainDestroyed` events
  *   3d. stepBurningBlobs — fire feature: blobs catch, go out (ice, dive), pass it on (bump) or
@@ -166,6 +184,8 @@ export function applyLevelSettings(tunables: GameTunables, settings: LevelSettin
     match: {
       ...tunables.match,
       durationSeconds: settings.matchDurationS ?? tunables.match.durationSeconds,
+      // A level's weapons win over the lobby's, like its duration (weapons-match-setting D1).
+      weaponIds: settings.weaponIds?.filter(isWeaponItemId) ?? tunables.match.weaponIds,
     },
   };
 }
@@ -407,10 +427,7 @@ function stepBlobsOnFire(
     terrain: state.arena.terrain,
     players: step.players,
     contacts: step.contacts,
-    isDiving: (player) => {
-      const phase = state.dive.motions[player.id]?.phase;
-      return phase === "windup" || phase === "travel";
-    },
+    isDiving: (player) => isDiving(state, player),
     now: timeSeconds,
     tunables,
   });
@@ -428,10 +445,97 @@ function stepBlobsOnFire(
   }
 }
 
-function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
+/** Winding up or travelling in a dive (the previous step's phase: the dive steps later). */
+const isDiving = (state: GameState, player: PlayerState): boolean => {
+  const phase = state.dive.motions[player.id]?.phase;
+  return phase === "windup" || phase === "travel";
+};
+
+/** A freeze ray chills a blob unless it is in a dive or under spawn protection (D1, D3). */
+const canChill = (state: GameState, player: PlayerState): boolean =>
+  !isDiving(state, player) &&
+  (state.combat.fighters.get(player.id)?.invulnerableUntil ?? 0) <= state.timeSeconds;
+
+/**
+ * Ice and fire cancel on a blob (ice-frozen-blobs D6): one that burns and carries ice in the
+ * same step is put out and loses the ice. So a freeze ray puts a burning blob out before any
+ * chill stays, and the torch or burning ground melts a block without lighting the blob for that
+ * touch (the fire's own grace).
+ */
+function cancelFireAndIce(state: GameState, players: readonly PlayerState[]): void {
+  const at = { now: state.timeSeconds, tunables: state.tunables };
+  for (const player of players) {
+    if (!isBurning(state.fire, player) || !isIced(state.ice, player)) continue;
+    douseBlob(state.fire, player, at);
+    releaseBlob(state.ice, player, { ...at, kind: "melt" });
+  }
+}
+
+/**
+ * End of the step for ice blocks (D4, D5): a hit that landed on one this step shatters it (the
+ * hit itself stays as it was), and the blocks that remain get their slide for the next step,
+ * after the dive has written the motion modifiers.
+ */
+function stepIceBlocks(state: GameState, players: readonly PlayerState[]): void {
+  if (state.ice.blobs.size === 0) return;
+  const at = { now: state.timeSeconds, tunables: state.tunables };
+  for (const event of state.combat.events) {
+    if (event.type !== "playerHit" || event.timeSeconds !== state.timeSeconds) continue;
+    const victim = players.find((player) => player.slot === event.victimSlot);
+    if (victim && isFrozen(state.ice, victim)) {
+      releaseBlob(state.ice, victim, { ...at, kind: "shatter" });
+    }
+  }
+  holdFrozenBlobs(state.ice, players, state.tunables);
+}
+
+interface ContactStep {
+  players: PlayerState[];
+  contacts: readonly BodyContact[];
+  dt: number;
+}
+
+/**
+ * Steps 3e, 3f, 3c, 3d: ice before fire, so a burning sample frozen this step is out before the
+ * fire spreads again; then the blobs' ice and fire, which cancel on a blob that has both.
+ */
+function stepElements(state: GameState, step: ContactStep): void {
+  const { tunables, timeSeconds } = state;
+  stepIce(state.ice, state.arena.terrain, { now: timeSeconds });
+  stepFrozenBlobs(state.ice, { players: step.players, now: timeSeconds, dt: step.dt, tunables });
+  stepBlobsOnFire(state, step);
+  cancelFireAndIce(state, step.players);
+}
+
+/**
+ * Step 3b, then the ice blocks' end of step. The dive gets the same in-play list as the
+ * contacts: a blob eliminated by a rocket this step still finishes its bounce, and `applyHit`
+ * refuses damage on it.
+ */
+function stepDivesAndBlocks(state: GameState, step: ContactStep & { inputs: PlayerInputs }): void {
+  stepDives({
+    dive: state.dive,
+    players: step.players,
+    combat: state.combat,
+    contacts: step.contacts,
+    inputs: step.inputs,
+    tunables: state.tunables,
+    timeSeconds: state.timeSeconds,
+    dt: step.dt,
+  });
+  stepIceBlocks(state, step.players);
+}
+
+function stepPlay(state: GameState, rawInputs: PlayerInputs, dt: number): void {
   const { tunables, timeSeconds } = state;
   const { level, terrain } = state.arena;
-  const players = joinAndRideParts(state, inputs, dt);
+  const players = joinAndRideParts(state, rawInputs, dt);
+  // A frozen blob has no control: its jump presses crack the block instead (ice-frozen-blobs D7).
+  const inputs = frozenInputs(state.ice, players, {
+    inputs: rawInputs,
+    now: timeSeconds,
+    tunables,
+  });
   // A burning blob with no move input runs from the fire (fire-burn D2); combat keeps the real inputs.
   stepPlayers({ players, inputs: panicInputs(state.fire, players, inputs), terrain, tunables, dt });
   const contacts = resolveBodyContacts({ players, terrain, tunables });
@@ -447,26 +551,13 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
     unarmedAttack: ({ attacker }) => requestDive(state.dive, attacker, tunables),
     sprayAttack: ({ attacker, itemId }) => {
       const spray = { terrain, players, holder: attacker, tunables, now: timeSeconds, dt };
-      if (itemId === "freeze-ray") sprayFreezeRay(state.ice, spray);
-      else sprayTorch(state.fire, spray);
+      if (itemId !== "freeze-ray") sprayTorch(state.fire, spray);
+      else sprayFreezeRay(state.ice, { ...spray, canChill: (blob) => canChill(state, blob) });
     },
   });
-  // Ice before fire: a burning sample frozen this step is out before the fire spreads again.
-  stepIce(state.ice, terrain, { now: timeSeconds });
-  stepBlobsOnFire(state, { players, contacts });
+  stepElements(state, { players, contacts, dt });
   stepCratePickups(state, dt);
-  // The same in-play list as the contacts: a blob eliminated by a rocket this step still
-  // finishes its bounce, and `applyHit` refuses damage on it.
-  stepDives({
-    dive: state.dive,
-    players,
-    combat: state.combat,
-    contacts,
-    inputs,
-    tunables,
-    timeSeconds,
-    dt,
-  });
+  stepDivesAndBlocks(state, { players, contacts, inputs, dt });
   stepHeadbuttResets(state, dt);
   const collected = stepCollectibles({
     collectibles: state.collectibles,

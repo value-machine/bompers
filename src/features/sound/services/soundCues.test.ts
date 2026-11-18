@@ -29,6 +29,9 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   diveRefillCount: 0,
   catchFireCount: 0,
   iceDouseCount: 0,
+  frozenCount: 0,
+  iceCrackCount: 0,
+  iceShatterCount: 0,
   ...patch,
 });
 
@@ -306,5 +309,14 @@ describe("readSoundLoops", () => {
     expect(gainAt({ burningSamples: 1 })).toBeCloseTo(JUICE_VOLUME.minGain, 2);
     expect(gainAt({ burningSamples: 1 })).toBeLessThan(gainAt({ burningBlobs: 1 }));
     expect(gainAt({ burningSamples: SOUND_MIX.fireFullSamples })).toBe(1);
+  });
+
+  it("should play the ice placeholder when a blob freezes, cracks its block or the block breaks", () => {
+    const froze = snapshot({ players: [player(0, { frozenCount: 1 }), player(1)] });
+    expect(cuesAfter(froze)).toEqual([{ soundId: "clink", slot: 0, gain: 1 }]);
+    const cracked = snapshot({ players: [player(0, { iceCrackCount: 1 }), player(1)] });
+    expect(cuesAfter(cracked)).toEqual([{ soundId: "clink", slot: 0, gain: SOUND_MIX.crouchGain }]);
+    const broke = snapshot({ players: [player(0), player(1, { iceShatterCount: 1 })] });
+    expect(cuesAfter(broke)).toEqual([{ soundId: "clink", slot: 1, gain: 1 }]);
   });
 });

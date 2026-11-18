@@ -144,7 +144,8 @@ export const CATALOG_DEFAULTS: CatalogDefaults = {
   gravity: 1,
   matchDuration: DEFAULT_GAME_TUNABLES.match.durationSeconds,
   material: "stone",
-  items: { drop: ["rocket-launcher"], collectible: "point-orb" },
+  // Drop points carry no items: crates hold the match's weapons setting (level-direction D6).
+  items: { collectible: "point-orb" },
 };
 
 /** What an unknown ID resolves to per kind, when no role default applies (null = none). */

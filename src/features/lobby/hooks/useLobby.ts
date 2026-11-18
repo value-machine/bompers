@@ -55,7 +55,14 @@ export function useLobby(levels: readonly LevelLibraryEntry[]): Lobby {
 
   const dispatch = useCallback(
     (action: LobbyAction): LobbyEffect => {
-      const result = reduceLobby(stateRef.current, action, contextRef.current);
+      // The weapons row locks while the chosen level sets its own weapons (weapons-match-setting D6).
+      const chosenId = selectedLevelId(stateRef.current, contextRef.current);
+      const chosen = levels.find((entry) => entry.id === chosenId)?.level;
+      const weaponsSetByLevel = chosen?.settings.weaponIds !== undefined;
+      const result = reduceLobby(stateRef.current, action, {
+        ...contextRef.current,
+        weaponsSetByLevel,
+      });
       stateRef.current = result.state;
       setState(result.state);
       const { effect } = result;
@@ -67,7 +74,7 @@ export function useLobby(levels: readonly LevelLibraryEntry[]): Lobby {
       }
       return effect;
     },
-    [engine]
+    [engine, levels]
   );
 
   const levelId = selectedLevelId(state, context);

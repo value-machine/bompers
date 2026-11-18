@@ -4,6 +4,10 @@ import { act, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHookWithProviders } from "tests/test-utils";
 import { useLevelLibrary } from "@/features/level-file/hooks/useLevelLibrary";
+import {
+  createMemoryLevelStore,
+  type LevelStore,
+} from "@/features/level-memory/api/levelMemoryApi";
 import { BUILT_IN_LEVEL_FILES } from "@/features/level-file/services/levelFileSource";
 
 const LEVELS_DIR = path.join(process.cwd(), "public/levels");
@@ -23,7 +27,16 @@ const serveLevels = (url: string): Promise<Response> => {
   );
 };
 
-const renderLibrary = () => renderHookWithProviders(() => useLevelLibrary(), { withRouter: false });
+const renderLibrary = (store: LevelStore = createMemoryLevelStore()) =>
+  renderHookWithProviders(() => useLevelLibrary({ store }), { withRouter: false });
+
+const MINE = START_ARENA.replace('data-title="Start Arena"', 'data-title="Mine"').replace(
+  /data-level-id="[^"]*"/,
+  'data-level-id="mine"'
+);
+const lastEntry = <T>(list: readonly T[]): T | undefined => list[list.length - 1];
+const withTitle = (title: string): string =>
+  MINE.replace('data-title="Mine"', `data-title="${title}"`);
 
 describe("useLevelLibrary", () => {
   beforeEach(() => {
@@ -49,18 +62,23 @@ describe("useLevelLibrary", () => {
       ["/levels/floating-garden.html", "Floating Garden", "Bompers team"],
     ]);
   });
+});
 
-  it("should add a new entry for every valid import (even the same file) when files are imported", async () => {
+describe("useLevelLibrary imports", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn(serveLevels));
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("should add an imported level and report it when a valid file is imported", async () => {
     const { result } = renderLibrary();
     await waitFor(() => expect(result.current.entries[0]?.level).not.toBeNull());
-    const renamed = START_ARENA.replace('data-title="Start Arena"', 'data-title="Mine"');
-    let firstId: string | null = null;
+    let id: string | null = null;
     await act(async () => {
-      firstId = await result.current.importFile(levelFile(renamed));
+      id = await result.current.importFile(levelFile(MINE));
     });
-    expect(firstId).toBe("import:1");
-    const added = result.current.entries.find((e) => e.id === firstId);
-    expect(added).toMatchObject({ origin: "imported", error: null });
+    const added = result.current.entries.find((e) => e.id === id);
+    expect(added).toMatchObject({ origin: "imported", error: null, memory: "copy" });
     expect(added?.level?.meta.title).toBe("Mine");
     expect(result.current.report).toEqual({
       fileName: "my-level.html",
@@ -68,8 +86,65 @@ describe("useLevelLibrary", () => {
       errors: [],
       warnings: [],
     });
-    await act(() => result.current.importFile(levelFile(renamed)));
-    expect(result.current.entries.map((e) => e.id).slice(-2)).toEqual(["import:1", "import:2"]);
+  });
+
+  it("should replace the entry in place when a file with the same level id is imported", async () => {
+    const { result } = renderLibrary();
+    await waitFor(() => expect(result.current.entries[0]?.level).not.toBeNull());
+    await act(() => result.current.importFile(levelFile(MINE)));
+    await act(() => result.current.importFile(levelFile(withTitle("Mine v2"))));
+    const imported = result.current.entries.filter((e) => e.origin === "imported");
+    expect(imported).toHaveLength(1);
+    expect(imported[0]?.level?.meta.title).toBe("Mine v2");
+  });
+
+  it("should keep an imported level when the library is created again with the same store", async () => {
+    const store = createMemoryLevelStore();
+    const first = renderLibrary(store);
+    await act(() => first.result.current.importFile(levelFile(MINE)));
+    first.unmount();
+    const { result } = renderLibrary(store);
+    await waitFor(() =>
+      expect(result.current.entries.find((e) => e.origin === "imported")?.level?.meta.title).toBe(
+        "Mine"
+      )
+    );
+  });
+
+  it("should drop the level from the library and the store when it is forgotten", async () => {
+    const store = createMemoryLevelStore();
+    const { result } = renderLibrary(store);
+    let id: string | null = null;
+    await act(async () => {
+      id = await result.current.importFile(levelFile(MINE));
+    });
+    await act(() => result.current.forget(id ?? ""));
+    expect(result.current.entries.some((e) => e.origin === "imported")).toBe(false);
+    expect(await store.list()).toEqual([]);
+  });
+
+  it("should re-read a linked level when the window regains focus after the file changed", async () => {
+    let current = { text: MINE, lastModified: 1 };
+    const handle = {
+      kind: "file",
+      name: "mine.html",
+      queryPermission: () => Promise.resolve("granted"),
+      getFile: () =>
+        Promise.resolve(
+          new File([current.text], "mine.html", { lastModified: current.lastModified })
+        ),
+    } as unknown as FileSystemFileHandle;
+    const { result } = renderLibrary();
+    await act(async () => {
+      await result.current.importFile(await handle.getFile(), handle);
+    });
+    expect(lastEntry(result.current.entries)?.memory).toBe("linked");
+    current = { text: withTitle("Edited on disk"), lastModified: 2 };
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(lastEntry(result.current.entries)?.memory).toBe("updated"));
+    expect(lastEntry(result.current.entries)?.level?.meta.title).toBe("Edited on disk");
   });
 
   it("should add nothing and report errors when the file is rejected", async () => {

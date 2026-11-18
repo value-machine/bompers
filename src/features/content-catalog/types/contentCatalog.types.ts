@@ -78,7 +78,7 @@ export interface CatalogDefaults {
   matchDuration: number;
   /** Material of a terrain shape without `data-material`. */
   material: string;
-  items: { drop: string[]; collectible: string };
+  items: { collectible: string };
 }
 
 /** Result of resolving an ID: `isFallback` is true when the ID was unknown. */

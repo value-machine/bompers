@@ -60,24 +60,36 @@ describe("levelDefinition", () => {
     expect(warnings).toHaveLength(3);
   });
 
-  it("should replace unknown items with the catalog defaults for drops and collectibles", () => {
+  it("should replace an unknown collectible item with the catalog default", () => {
     const { level } = normalizeLevelDefinition({
       ...base,
-      drops: [
-        { at: { x: 1, y: 1 }, itemIds: ["laser"] },
-        { at: { x: 2, y: 2 }, itemIds: ["rocket-launcher", "laser"] },
-      ],
       collectibles: [{ at: { x: 3, y: 3 }, itemId: "gem" }],
     });
-    expect(level.drops.map((d) => d.itemIds)).toEqual([["rocket-launcher"], ["rocket-launcher"]]);
     expect(level.collectibles[0]?.itemId).toBe("point-orb");
+  });
+
+  it("should keep only weapons in the weapons setting when it lists other IDs", () => {
+    const { level, warnings } = normalizeLevelDefinition({
+      ...base,
+      settings: { ...base.settings, weaponIds: ["torch", "point-orb"] },
+    });
+    expect(level.settings.weaponIds).toEqual(["torch"]);
+    expect(warnings).toEqual(['settings.weaponIds: "point-orb" is not a weapon, left out']);
+  });
+
+  it("should keep an empty weapons setting when the level wants no weapons", () => {
+    const { level } = normalizeLevelDefinition({
+      ...base,
+      settings: { ...base.settings, weaponIds: [] },
+    });
+    expect(level.settings.weaponIds).toEqual([]);
   });
 
   it("should ignore points outside the bounds and warn", () => {
     const { level, warnings } = normalizeLevelDefinition({
       ...base,
       spawns: [...base.spawns, { x: 500, y: 10 }],
-      drops: [{ at: { x: -5, y: 0 }, itemIds: ["rocket-launcher"] }],
+      drops: [{ at: { x: -5, y: 0 } }],
     });
     expect(level.spawns).toHaveLength(2);
     expect(level.drops).toEqual([]);
@@ -96,8 +108,13 @@ describe("levelDefinition", () => {
     expect(warnings).toHaveLength(3);
   });
 
-  it("should warn when fewer than two valid spawns remain", () => {
+  it("should warn when no valid spawn remains", () => {
+    const { warnings } = normalizeLevelDefinition({ ...base, spawns: [] });
+    expect(warnings).toEqual(["spawns: 0 valid, at least 1 expected"]);
+  });
+
+  it("should accept one shared spawn without a warning when the level names one", () => {
     const { warnings } = normalizeLevelDefinition({ ...base, spawns: [{ x: 0, y: 0 }] });
-    expect(warnings).toEqual(["spawns: 1 valid, at least 2 expected"]);
+    expect(warnings).toEqual([]);
   });
 });

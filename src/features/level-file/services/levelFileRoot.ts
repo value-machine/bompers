@@ -1,4 +1,5 @@
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
+import { isWeaponItemId } from "@/shared/config/weaponItems";
 import {
   DEFAULT_LEVEL_SETTINGS,
   LEVEL_FORMAT_VERSION,
@@ -21,18 +22,42 @@ export const UNTITLED_LEVEL = "Untitled level";
 export const CATALOG_ID_RE = /^[a-z][a-z0-9-]{0,63}$/;
 const ROOT_SELECTOR = "svg[data-level-format]";
 
-/** E1: exactly one root. */
+/** E1: no root rejects the file; W15: of several roots, the first is the level. */
 export function findLevelRoot(doc: Document, log: LevelIssueLog): Element | null {
   const roots = doc.querySelectorAll(ROOT_SELECTOR);
-  if (roots.length === 1) return roots[0] ?? null;
-  addError(
+  if (roots.length === 0) {
+    addError(
+      log,
+      "E1",
+      "No level found: the file needs one <svg> with a data-level-format attribute."
+    );
+    return null;
+  }
+  if (roots.length > 1) {
+    addWarning(
+      log,
+      "W15",
+      `Found ${roots.length} <svg data-level-format> elements; using the first, the others are ignored.`
+    );
+  }
+  return roots[0] ?? null;
+}
+
+/**
+ * The file's format version. W16: anything but a whole number ≥ 1 reads as the game's own
+ * version, unless it is a number above it (then it stays newer, E2: never guessed at, § 8).
+ */
+function readFormatVersion(raw: string, toVersion: number, log: LevelIssueLog): number {
+  const text = raw.trim();
+  if (/^\d+$/.test(text) && Number(text) >= 1) return Number(text);
+  const number = parsePlainNumber(text);
+  if (number !== null && number > toVersion) return Math.ceil(number);
+  addWarning(
     log,
-    "E1",
-    roots.length === 0
-      ? "No level found: the file needs one <svg> with a data-level-format attribute."
-      : `Found ${roots.length} <svg data-level-format> elements; a level file holds exactly one.`
+    "W16",
+    `data-level-format="${raw}" is not a format version (a whole number ≥ 1); reading it as v${toVersion}.`
   );
-  return null;
+  return toVersion;
 }
 
 /** E2 + migrations: true when the root now has the game's format version. */
@@ -43,11 +68,7 @@ export function upgradeFormatVersion(
 ): boolean {
   const raw = root.getAttribute("data-level-format") ?? "";
   const toVersion = options.toVersion ?? LEVEL_FORMAT_VERSION;
-  const version = /^\d+$/.test(raw.trim()) ? Number(raw.trim()) : NaN;
-  if (!Number.isInteger(version) || version < 1) {
-    addError(log, "E2", `data-level-format="${raw}" is not a format version (a whole number ≥ 1).`);
-    return false;
-  }
+  const version = readFormatVersion(raw, toVersion, log);
   if (version > toVersion) {
     addError(
       log,
@@ -66,21 +87,62 @@ export function upgradeFormatVersion(
   return false;
 }
 
-/** E3: `viewBox="0 0 W H"`, W and H > 0. */
-export function readWorldSize(root: Element, log: LevelIssueLog): { w: number; h: number } | null {
-  const raw = root.getAttribute("viewBox") ?? "";
+type WorldSize = { w: number; h: number };
+
+const positiveSize = (w: number | null, h: number | null): WorldSize | null =>
+  w !== null && h !== null && w > 0 && h > 0 ? { w, h } : null;
+
+const numberAttr = (el: Element | null, attr: string): number | null => {
+  const raw = el ? el.getAttribute(attr) : null;
+  return raw === null ? null : parsePlainNumber(raw);
+};
+
+/** A `viewBox` of 4 plain numbers, as its far corner: `x y W H` → world `x+W` × `y+H`. */
+function viewBoxCorner(raw: string): { size: WorldSize; atOrigin: boolean } | null {
   const parts = raw
     .trim()
     .split(/[\s,]+/)
     .map(parsePlainNumber);
-  const [x, y, w, h] = parts;
-  if (parts.length === 4 && x === 0 && y === 0 && w && h && w > 0 && h > 0) return { w, h };
+  if (parts.length !== 4 || parts.some((part) => part === null)) return null;
+  const [x = 0, y = 0, w = 0, h = 0] = parts as number[];
+  const size = Math.min(x, y) >= 0 ? positiveSize(w, h) : null;
+  return size && { size: { w: x + w, h: y + h }, atOrigin: x === 0 && y === 0 };
+}
+
+/** W17 fallbacks when the viewBox is unusable: the root's width/height, else the bounds' far corner. */
+function fallbackWorldSize(root: Element): { size: WorldSize; source: string } | null {
+  const attrs = positiveSize(numberAttr(root, "width"), numberAttr(root, "height"));
+  if (attrs) return { size: attrs, source: "the root's width and height" };
+  const bounds = root.querySelector('rect[data-role="bounds"]');
+  const corner = positiveSize(
+    (numberAttr(bounds, "x") ?? 0) + (numberAttr(bounds, "width") ?? NaN),
+    (numberAttr(bounds, "y") ?? 0) + (numberAttr(bounds, "height") ?? NaN)
+  );
+  return corner && { size: corner, source: "the bounds rect" };
+}
+
+/**
+ * The world size. `viewBox="0 0 W H"` is the rule; an offset viewBox, the root's width/height or
+ * the bounds rect stand in with W17. E3 only when none of them gives a size.
+ */
+export function readWorldSize(root: Element, log: LevelIssueLog): WorldSize | null {
+  const raw = root.getAttribute("viewBox") ?? "";
+  const viewBox = viewBoxCorner(raw);
+  if (viewBox?.atOrigin) return viewBox.size;
+  const problem =
+    raw === "" ? "The root <svg> has no viewBox" : `viewBox "${raw}" is not "0 0 <width> <height>"`;
+  const fallback = viewBox
+    ? { size: viewBox.size, source: "its far corner" }
+    : fallbackWorldSize(root);
+  if (fallback) {
+    const { w, h } = fallback.size;
+    addWarning(log, "W17", `${problem}; using ${fallback.source}: world 0 0 ${w} ${h}.`);
+    return fallback.size;
+  }
   addError(
     log,
     "E3",
-    raw === ""
-      ? 'The root <svg> has no viewBox; add viewBox="0 0 <width> <height>".'
-      : `viewBox "${raw}" must be "0 0 <width> <height>" with width and height above 0.`
+    `${problem}, and no width/height or bounds rect gives the size; add viewBox="0 0 <width> <height>".`
   );
   return null;
 }
@@ -163,7 +225,29 @@ const SETTING_SPECS = {
     fallback: `the match setting (${DEFAULT_GAME_TUNABLES.match.durationSeconds} s)`,
     valid: (v: number) => v > 0,
   },
-} satisfies Record<keyof LevelSettings, SettingSpec>;
+} satisfies Record<Exclude<keyof LevelSettings, "weaponIds">, SettingSpec>;
+
+const NO_WEAPONS = "none";
+const AUTO_WEAPONS = "auto";
+
+/**
+ * `data-weapons`: space-separated weapon IDs, or `none` (level-direction D6). Left out or `auto`
+ * = the lobby's choice. W4: a non-weapon ID is left out; when none is left, the lobby's choice.
+ */
+export function readWeaponsSetting(root: Element, log: LevelIssueLog): string[] | undefined {
+  const raw = root.getAttribute("data-weapons")?.trim();
+  if (raw === undefined || raw === "" || raw === AUTO_WEAPONS) return undefined;
+  if (raw === NO_WEAPONS) return [];
+  const ids = raw.split(/\s+/);
+  const weapons = ids.filter((id) => isWeaponItemId(id));
+  for (const id of ids) {
+    if (!isWeaponItemId(id))
+      addWarning(log, "W4", `data-weapons: "${id}" is not a weapon; left out.`);
+  }
+  if (weapons.length > 0) return weapons;
+  addWarning(log, "W4", "data-weapons names no weapon; using the lobby's weapons.");
+  return undefined;
+}
 
 /** W8: a setting out of range falls back to its default. */
 function readSetting(root: Element, spec: SettingSpec, log: LevelIssueLog): number | undefined {
@@ -181,9 +265,11 @@ export function readLevelSettings(root: Element, log: LevelIssueLog): LevelSetti
   const cellSize = readSetting(root, SETTING_SPECS.cellSize, log);
   const gravity = readSetting(root, SETTING_SPECS.gravity, log);
   const matchDurationS = readSetting(root, SETTING_SPECS.matchDurationS, log);
+  const weaponIds = readWeaponsSetting(root, log);
   return {
     cellSize: cellSize ?? DEFAULT_LEVEL_SETTINGS.cellSize,
     gravity: gravity ?? DEFAULT_LEVEL_SETTINGS.gravity,
     ...(matchDurationS !== undefined && { matchDurationS }),
+    ...(weaponIds !== undefined && { weaponIds }),
   };
 }

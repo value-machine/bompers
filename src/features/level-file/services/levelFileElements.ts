@@ -25,7 +25,7 @@ const ROLE_RULES: Readonly<
     attrs: ["data-material", "data-color", "data-effect", "data-sound", "data-behavior"],
   },
   spawn: { tags: ["circle"], attrs: ["data-behavior"] },
-  drop: { tags: ["circle"], attrs: ["data-items", "data-behavior"] },
+  drop: { tags: ["circle"], attrs: ["data-behavior"] },
   collectible: { tags: ["circle"], attrs: ["data-item", "data-behavior"] },
   bounds: { tags: ["rect"], attrs: [] },
 };
@@ -215,23 +215,6 @@ function checkItem(
     `${item.name}: "${id}" is a ${actual} item, not a ${ref.use} item; ${ref.spec.instead}.`
   );
   return undefined;
-}
-
-/** `data-items` of a drop point: known drop items, else the default drop items. */
-export function readDropItems(item: RoleElement, log: LevelIssueLog): string[] {
-  const raw = item.el.getAttribute("data-items");
-  if (raw === null) return [...CATALOG_DEFAULTS.items.drop];
-  const spec: RefSpec = { attr: "data-items", kind: "item", instead: "left out" };
-  const known = raw
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((id) => checkItem(item, { spec, raw: id, use: "drop" }, log))
-    .filter((id): id is string => id !== undefined);
-  if (known.length > 0) return known;
-  const fallback = CATALOG_DEFAULTS.items.drop.join(" ");
-  addWarning(log, "W4", `${item.name}: no known item in data-items; using "${fallback}".`);
-  return [...CATALOG_DEFAULTS.items.drop];
 }
 
 /** `data-item` of a collectible spawn when it is a collectible item, else the default collectible. */

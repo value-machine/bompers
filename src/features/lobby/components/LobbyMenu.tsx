@@ -6,17 +6,21 @@ import {
   LevelImportControl,
   type LevelFilePicker,
   type LevelLibrary,
-  type LevelLibraryEntry,
 } from "@/features/level-file/api/levelFileApi";
 import { CopyLevelPromptButton } from "@/features/level-kit/api/levelKitApi";
 import type { Lobby } from "@/features/lobby/hooks/useLobby";
-import type { LobbyAction, LobbyRow } from "@/features/lobby/types/lobby.types";
+import type { LobbyAction, LobbyRow, LobbyView } from "@/features/lobby/types/lobby.types";
+import { WeaponCrateIcon } from "@/features/lobby/components/WeaponCrateIcon";
+import { LevelStrip } from "@/features/lobby/components/LevelStrip";
+import { RememberedLevelActions } from "@/features/lobby/components/RememberedLevelActions";
 
 export interface LobbyMenuProps {
   lobby: Lobby;
   library: LevelLibrary;
   pickerRef: Ref<LevelFilePicker>;
-  onFile: (file: File) => void;
+  onFile: (file: File, handle?: FileSystemFileHandle) => void;
+  /** Opens the level file picker (the strip's "Load level" card). */
+  onLoad: () => void;
   onAction: (action: LobbyAction) => void;
 }
 
@@ -81,38 +85,83 @@ const Stepper = ({
   </>
 );
 
-/** Title, author and origin of the chosen level. */
-const LevelValue = ({ entry }: { entry: LevelLibraryEntry | null }) => {
-  const level = entry?.level;
-  if (!level) return <span className="text-muted-foreground">Loading levels…</span>;
-  return (
-    <span>
-      <span className="font-semibold" data-testid="lobby-level-title">
-        {level.meta.title}
+/**
+ * The weapons as their in-game crates, each a toggle (owner, weapons-match-setting D5): on is the
+ * crate as it falls, off is greyed and faded but still recognisable. The in-row cursor shows as a
+ * ring. While the level sets its weapons the crates show its choice and do not toggle.
+ */
+const WeaponToggles = ({
+  view,
+  onAction,
+}: {
+  view: LobbyView;
+  onAction: (action: LobbyAction) => void;
+}) => (
+  <>
+    {view.weapons.map((weapon) => (
+      <button
+        key={weapon.weaponId}
+        type="button"
+        aria-pressed={weapon.on}
+        aria-disabled={view.weaponsLocked || undefined}
+        aria-label={`${weapon.label}: ${weapon.on ? "on" : "off"}`}
+        title={weapon.label}
+        data-testid={`lobby-weapon-${weapon.weaponId}`}
+        onMouseDown={keepFocus}
+        onClick={() => onAction({ type: "toggleWeapon", weaponId: weapon.weaponId })}
+        className={cn(
+          "rounded-lg p-0.5 ring-offset-2 ring-offset-background transition-[filter,opacity] duration-(--duration-fast)",
+          !weapon.on && "opacity-40 grayscale",
+          weapon.focused && "ring-2 ring-ring",
+          view.weaponsLocked ? "cursor-default" : "cursor-pointer"
+        )}
+      >
+        <WeaponCrateIcon weaponId={weapon.weaponId} size={40} />
+      </button>
+    ))}
+    {view.weaponsNote && (
+      <span className="text-xs text-muted-foreground" data-testid="lobby-weapons-note">
+        {view.weaponsNote}
       </span>
-      {level.meta.author && <span className="text-muted-foreground"> by {level.meta.author}</span>}
-      {entry.origin === "imported" && <span className="text-muted-foreground"> · imported</span>}
-    </span>
-  );
-};
+    )}
+  </>
+);
 
 const startLabel = (players: number): string =>
   players === 1 ? "Start test round (1 player)" : `Start match (${players} players)`;
 
 /**
- * The shared menu: level, load a level file, match length, gravity, start, then the music and
+ * The shared menu: level, load a level file, match length, weapons, gravity, start, then the music and
  * sound volumes (player preferences, below start). Joined players
  * drive it with their own controls (the highlighted row is the cursor); every row also works
  * with the pointer.
  */
-export const LobbyMenu = ({ lobby, library, pickerRef, onFile, onAction }: LobbyMenuProps) => {
+export const LobbyMenu = ({
+  lobby,
+  library,
+  pickerRef,
+  onFile,
+  onLoad,
+  onAction,
+}: LobbyMenuProps) => {
   const { selectedLevel, view } = lobby;
   const { focusedRow, players, startable } = view;
 
   return (
     <div className="flex flex-col gap-1" data-testid="lobby-menu">
       <Row row="level" label="Level" focused={focusedRow === "level"}>
-        <Stepper row="level" onAction={onAction} value={<LevelValue entry={selectedLevel} />} />
+        {selectedLevel ? (
+          <LevelStrip
+            entries={library.entries}
+            selectedId={selectedLevel.id}
+            onSelect={(levelId) => onAction({ type: "selectLevel", levelId })}
+            onLoad={onLoad}
+          />
+        ) : (
+          <span className="text-muted-foreground" data-testid="lobby-value-level">
+            Loading levels…
+          </span>
+        )}
       </Row>
       <Row row="loadFile" label="Your level" focused={focusedRow === "loadFile"}>
         <LevelImportControl
@@ -121,7 +170,9 @@ export const LobbyMenu = ({ lobby, library, pickerRef, onFile, onAction }: Lobby
           onDismiss={library.dismissReport}
           pickerRef={pickerRef}
         />
-        <span className="text-xs text-muted-foreground">or drop a level file anywhere</span>
+        {selectedLevel?.memory && (
+          <RememberedLevelActions entry={selectedLevel} library={library} onFind={onLoad} />
+        )}
         <CopyLevelPromptButton />
       </Row>
       <Row row="duration" label="Match length" focused={focusedRow === "duration"}>
@@ -131,6 +182,9 @@ export const LobbyMenu = ({ lobby, library, pickerRef, onFile, onAction }: Lobby
             This level plays {view.levelDuration} (set by the level)
           </span>
         )}
+      </Row>
+      <Row row="weapons" label="Weapons" focused={focusedRow === "weapons"}>
+        <WeaponToggles view={view} onAction={onAction} />
       </Row>
       <Row row="gravity" label="Gravity" focused={focusedRow === "gravity"}>
         <Stepper row="gravity" onAction={onAction} value={view.gravity} />

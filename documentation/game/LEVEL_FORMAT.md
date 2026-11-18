@@ -10,7 +10,7 @@ A level is **one self-contained HTML file with one inline `<svg>`**. Any AI agen
 1. **Geometry, roles and IDs only.** The file says *where* things are and *what role* they play. Materials, colours, effects, sounds, behaviours and items are referenced by stable string ID; their content lives in the game's content catalog in code.
 2. **Material = behaviour, colour = looks.** A terrain shape's `data-material` sets what it does (breakable, slippery, sound, effect); its optional `data-color` only paints it. Any colour goes on any material. The game shows behaviour through a surface pattern that never depends on colour (DESIGN_LANGUAGE § 2).
 3. **Presentation is not data.** `fill`, `stroke`, `style`, `<title>`, comments and any element without `data-role` are for humans. The game ignores them.
-4. **Forgiving on IDs, strict on structure.** An unknown ID warns and falls back to a default; a broken structure (no root, no bounds, bad viewBox) is an import error with a readable message. Nothing crashes the game.
+4. **Forgiving: reject only what the game cannot run.** An unknown ID, a missing bounds or drop point, a bad viewBox with another size to go on, or a broken shape warns and falls back (§ 7); only a file with no root, a newer format, no size, no terrain or no place to spawn is an import error with a readable message (level-direction D3). Nothing crashes the game.
 5. **Viewable anywhere.** The file renders as a plain picture with no network. Linking the hosted kit (§ 9) adds a legend, labels and a grid.
 
 ## 2. File skeleton
@@ -51,8 +51,9 @@ The level root is the **first `<svg>` element with a `data-level-format` attribu
 | `data-cell-size` | no | integer ≥ 1 | World units between terrain samples (each sample stores its material and its distance to the nearest terrain edge, so craters and slopes stay curved between samples). Default: catalog `defaults.cellSize` (4). |
 | `data-gravity` | no | number > 0 | Multiplier of the engine's default gravity. Default `1`. |
 | `data-match-duration` | no | integer seconds > 0 | Overrides the match length for this level. Default: the match setting. |
+| `data-weapons` | no | space-separated weapon item IDs, or `none` | Limits the weapons the sky crates hold on this level, in turn; `none` = no weapon crates. Left out (or `auto`): the match setting, which defaults to every weapon the game has (level-direction D6). Non-weapon IDs are left out (W4). |
 
-Per-level settings are the GDD's "per map" settings (§ 7 of the GDD: match duration and gravity). Player-chosen match settings may override them; that precedence belongs to the settings module, not the file.
+Per-level settings are the GDD's "per map" settings (§ 7 of the GDD: match duration, gravity, weapons). They are optional defaults in the family of the match settings (level-direction D7); the precedence against the lobby's choice belongs to the settings module, not the file.
 
 ## 4. Geometry and the terrain grid
 
@@ -91,7 +92,7 @@ Every game-relevant shape carries `data-role`. Elements without it are decoratio
 |---|---|---|---|---|
 | `terrain` | rect, polygon, circle | ≥ 1 | Solid ground. Its material decides whether explosions clear its cells and how it plays (e.g. ice is slippery). | `data-material` (default `defaults.material`), `data-color` (default: the material's `defaultColor`), `data-effect`, `data-sound`, `data-behavior` |
 | `spawn` | circle | ≥ 2 (≥ 4 recommended) | Player spawn point. The game picks the one farthest from active opponents (GDD § 6). | `data-behavior` |
-| `drop` | circle | ≥ 1 | Where weapons and power-ups fall from (GDD § 3–4). | `data-items` (space-separated item IDs; default `defaults.items.drop`), `data-behavior` |
+| `drop` | circle | ≥ 1 | Where weapon crates fall from (GDD § 3–4). A spawn point only: which weapon falls is the match's weapons setting (root `data-weapons`, § 3). | `data-behavior` |
 | `collectible` | circle | ≥ 0 | A pickup point. `point-orb` (default): point orbs fall from the sky onto it (GDD § 5). `dive-reset`: a headbutt reset floats there from the start; a player whose dive is spent in the air takes it and gets the dive back, then it is gone 2.5 s (FEEDBACK_ROUND_2 § 2.3). Only items with `use: collectible`. | `data-item` (one item ID; default `defaults.items.collectible`), `data-behavior` |
 | `bounds` | rect | exactly 1 | The in-bounds area. A player whose centre falls below its bottom edge is out of bounds (eliminated; vision § How the GDD is read); the engine sets the side and top kill lines far beyond it. Must lie within the viewBox. | — |
 
@@ -108,7 +109,7 @@ At least one `terrain` shape is required.
 | `data-effect` | `effect` | Visual effect when cells of this shape are destroyed (overrides the material's). |
 | `data-sound` | `sound` | Sound when cells of this shape are hit or destroyed (overrides the material's). |
 | `data-behavior` | `behavior` | Extra behaviour (moving, bouncy, …). None exist in the catalog yet; reserved so files need no format change when they arrive. |
-| `data-items` / `data-item` | `item` | What a drop point or collectible spawn produces. |
+| `data-item` | `item` | What a collectible spawn produces. |
 
 **Materials and colours in short:** `stone` (solid, default), `earth` and `cardboard` (breakable), `ice` (solid, slippery); colours `plum`, `slate`, `cardboard`, `clay`, `moss`, `mint`, `frost`, `rose` on any of them. The generated table below is the authority.
 
@@ -161,7 +162,7 @@ At least one `terrain` shape is required.
 | sound | `freeze-loop` | Freeze ray (loop) |  |
 | sound | `thaw` | Thaw |  |
 | behavior | — | none yet; leave it out | |
-| item | `rocket-launcher` | Rocket launcher | use: drop, default for drop |
+| item | `rocket-launcher` | Rocket launcher | use: drop |
 | item | `homing-launcher` | Homing launcher | use: drop |
 | item | `torch` | Torch | use: drop |
 | item | `freeze-ray` | Freeze ray | use: drop |
@@ -171,20 +172,17 @@ At least one `terrain` shape is required.
 
 ## 7. Validation
 
-The importer produces **errors** (level rejected, readable message naming the element) and **warnings** (level loads, message shown).
+The importer produces **errors** (level rejected, readable message naming the element) and **warnings** (level loads, message shown). It is forgiving (level-direction D3): an odd but playable file loads as written with warnings; only a file the game cannot run is rejected. The lobby's import report has a **Copy report** button that copies every remaining error and warning as plain text for the author's AI.
 
-**Errors**
+**Errors** (E4, E7 and E8 are retired: now W18, W20 and W21; their numbers are not reused)
 
 | # | Rule |
 |---|---|
-| E1 | No root `<svg data-level-format>` found, or more than one. |
-| E2 | `data-level-format` is not an integer, or is newer than the game supports ("made for a newer version of the game"). |
-| E3 | `viewBox` missing or not `0 0 W H` with `W`, `H` > 0. |
-| E4 | Not exactly one valid `bounds` rect, or it lies outside the viewBox. |
-| E5 | Fewer than 2 valid `spawn` points. |
+| E1 | No root `<svg data-level-format>` found (more than one: W15). |
+| E2 | `data-level-format` is newer than the game supports ("made for a newer version of the game"), or older with no migration (§ 8). Not a number at all: W16. |
+| E3 | No world size: the `viewBox` is unusable (W17) and neither the root's `width`/`height` nor the `bounds` rect gives one. |
+| E5 | No valid `spawn` point and no room to place one above the terrain (W19). |
 | E6 | No valid terrain shape. |
-| E7 | No valid `drop` point. |
-| E8 | A geometry attribute required by its shape is missing, non-numeric or uses a unit (the element is named). |
 
 **Warnings** (the element is skipped or the default used)
 
@@ -193,18 +191,24 @@ The importer produces **errors** (level rejected, readable message naming the el
 | W1 | Unknown `data-role` value. | Element ignored. |
 | W2 | Role on a disallowed element, or a point role on a non-circle. | Element ignored. |
 | W3 | `transform` on a role element or its ancestors. | Element ignored. |
-| W4 | Unknown or malformed reference ID (material, color, effect, sound, behavior, item). | Catalog default (colour: the material's). |
+| W4 | Unknown or malformed reference ID (material, color, effect, sound, behavior, item), or a non-weapon ID in `data-weapons`. | Catalog default (colour: the material's); `data-weapons` leaves the ID out, and with none left uses the match setting. |
 | W5 | Point (spawn/drop/collectible) outside `bounds`, or a spawn inside solid terrain. | Point ignored. |
-| W6 | Fewer than 4 spawn points. | Spawns are shared. |
+| W6 | Fewer than 4 spawn points (even one). | Spawns are shared. |
 | W7 | Duplicate `id`. | Later duplicates lose their id. |
 | W8 | Setting out of range (`data-cell-size` < 1, `data-gravity` ≤ 0, `data-match-duration` ≤ 0, non-numeric). | Default. |
 | W9 | Missing `data-title`. | "Untitled level". |
 | W10 | Unknown `data-*` attribute on a role element. | Ignored (forward compatibility). |
-| W11 | A known item ID on the wrong point role: a `collectible` item in a drop's `data-items`, or a `drop` item in a collectible's `data-item` (the item's `use` in the catalog). | As W4: left out of the drop (default drop items when none remain); default collectible. |
-
+| W11 | A `drop` item (a weapon) in a collectible's `data-item` (the item's `use` in the catalog). | Default collectible. |
 | W12 | A `data-motion` that does not parse, a group without terrain, or more than 16 moving parts; also notes a clamped period or an offset off the cell grid (§ 11). | The group stays still (its shapes stay static terrain); clamped / off-grid values are used as noted. |
 | W13 | Inside a moving group: a non-terrain role, a nested `data-motion`, or a breakable material. | The point stays still; the inner motion is ignored; the material acts unbreakable. |
 | W14 | Over one cycle the part leaves `bounds`, runs into static terrain, comes within half a player of a spawn point, or moves faster than a player runs (sampled 48 times per cycle; the first time is named). | Level loads as written. |
+| W15 | More than one root `<svg data-level-format>` (was E1). | The first is the level; the others are ignored. |
+| W16 | `data-level-format` is not a whole number ≥ 1 (and not a number above the game's version). | Read as the game's version. |
+| W17 | `viewBox` missing or not `0 0 W H` with `W`, `H` > 0 (was E3). | An offset `x y W H` → world `0 0 x+W y+H`; else the root's `width`/`height`; else the `bounds` rect's far corner. |
+| W18 | Not exactly one valid `bounds` rect, or it lies outside the viewBox (was E4). | None: the whole world; several: the first; sticking out: clipped to the world. |
+| W19 | No valid `spawn` point (was E5; one spawn is W6). | Up to 4 spawns, a spawn-lift above the top centre of the widest terrain shapes, inside bounds and out of terrain. |
+| W20 | No valid `drop` point (was E7). | No weapon crates fall on this level. |
+| W21 | A geometry attribute required by its shape is missing, non-numeric, non-positive or uses a unit (was E8; the element is named). | Element ignored (it can still leave too little for E5 / E6). |
 
 The preview kit runs a subset of these checks in the browser and lists them under the legend.
 
@@ -232,6 +236,7 @@ Served from the game's own site under `/level-kit/v2/`:
 | `example-level.html` | A complete level using relative kit links (works served or opened from the repo). |
 | `fire-test-level.html` | A level for testing fire: two big cardboard slabs, thin cardboard platforms and small blocks on a stone floor, with a torch in every drop (owner, fire-clusters, 2026-11-17). Import it in the lobby. |
 | `crusher-test-level.html` | A level for testing moving parts: a block that slides into a wall and thuds at each end (stand in the gap to be crushed), a block that stops 20 short of a post (stand in the gap to be squeezed and survive), a spinning bar to ride, and a fast lift to jump off, each a short walk from a spawn (orchestrator, moving-parts lap B-2). Import it in the lobby. |
+| `forgiving-test-level.html` | A deliberately odd but playable level (forgiving-import): version `2.0`, no viewBox, no bounds, one spawn, no drops, a block in `px` and a two-point polygon. It loads with W16, W17, W21 ×2, W18, W6 and W20; the lobby's **Copy report** copies them. |
 
 Agent-written levels link the kit with absolute URLs on `https://bompers.tom-fab.workers.dev`, the game's production origin. Without network access the links fail silently and the file is still a correct picture.
 

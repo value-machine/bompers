@@ -44,6 +44,7 @@ Root attributes:
 - `data-cell-size` — optional whole number, default `4` (world units per terrain grid cell).
 - `data-gravity` — optional number > 0, multiplier on the game's gravity; default `1`, `0.6` = floaty.
 - `data-match-duration` — optional whole seconds, default `180`.
+- `data-weapons` — optional; leave it out so crates hold every weapon (the player's lobby choice). Only to limit a level: space-separated weapons (`rocket-launcher`, `homing-launcher`, `torch`, `freeze-ray`) or `none`.
 - `data-author`, `data-agent` (your name, e.g. `gemini`), `data-description` — optional metadata.
 - The default terrain colour fills are in § 4; e.g. stone `#5a3f7a`.
 
@@ -63,11 +64,11 @@ Root attributes:
 |---|---|---|---|
 | `bounds` | `<rect>` | exactly 1 | The play area, inside the viewBox. Falling below its **bottom** edge eliminates a player. The **side and top edges are open**: the kill lines there lie far beyond the bounds, so players can be launched out and fly back. Suggested `fill="none" stroke="#d24b3a"`. |
 | `terrain` | rect, polygon, circle | ≥ 1 | Ground. `data-material` = behaviour (default `stone`), `data-color` = looks (optional, default = the material's colour). Optional `data-effect`, `data-sound`, `data-label`, `id`. Later shapes paint over earlier ones where they overlap. |
-| `spawn` | `<circle>` | ≥ 4 (min 2) | Player start (the centre counts, `r="14"`). Inside bounds, never inside terrain, centre ~`24` above a solid surface, not over a pit. `fill="#3f8f5f"`. |
-| `drop` | `<circle>` | ≥ 1 | Weapon crates fall from here (`r="12"`); place high up. `data-items` = space-separated drop items (§ 4). `fill="#c94f7c"`. |
+| `spawn` | `<circle>` | ≥ 4 | Player start (the centre counts, `r="14"`). Inside bounds, never inside terrain, centre ~`24` above a solid surface, not over a pit. `fill="#3f8f5f"`. |
+| `drop` | `<circle>` | ≥ 1 | Weapon crates fall from here (`r="12"`); place high up. The game picks each crate's weapon. `fill="#c94f7c"`. |
 | `collectible` | `<circle>` | ≥ 0 | A pickup point (`r="10"`), `data-item` = one collectible item (§ 4). `point-orb`: point orbs fall from the sky onto it. `dive-reset`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns 2.5 s after use) — hang them in the air between platforms and off edges for headbutt chains. `fill="#e0b62c"`. |
 
-Drop items: `rocket-launcher`, `homing-launcher`, `torch`, `freeze-ray`. Collectible items: `point-orb`, `dive-reset`.
+Collectible items: `point-orb`, `dive-reset`.
 
 ### Moving parts (optional)
 
@@ -106,7 +107,6 @@ Reference content **by ID only**; IDs are lowercase-kebab. Unknown IDs fall back
 - `data-color` (looks; any colour on any material, names only, no hex) — use the hex as that shape's `fill`: `plum` `#5a3f7a`, `slate` `#4f6178`, `cardboard` `#c99a62`, `clay` `#c4673f`, `moss` `#5f8f3e`, `mint` `#3aa889`, `frost` `#a8cfe6`, `rose` `#c95a86`.
 - `data-effect`: `none`, `dust-burst`.
 - `data-sound`: `none`, `thud`, `crumble`, `thwap`, `clink`, `jump`, `land`, `tumble-bounce`, `dive-launch`, `dive-impact`, `hit`, `elimination`, `rocket-fire`, `explosion`, `pickup`, `respawn`, `round-start`, `round-end`, `torch-start`, `torch-loop`, `fire-crackle`, `burn-out`, `catch-fire`, `steam-hiss`, `freeze-start`, `freeze-loop`, `thaw`.
-- `data-items` (drop): `rocket-launcher`, `homing-launcher`, `torch`, `freeze-ray`; default `rocket-launcher`. List several to alternate crates.
 - `data-item` (collectible): `point-orb`, `dive-reset`; default `point-orb`.
 - `data-behavior`: none yet — leave it out.
 
@@ -132,7 +132,7 @@ With another gravity multiplier `k`, heights and jump gaps scale by about `1 / k
 2. Exactly one `<rect data-role="bounds">`, inside the viewBox, a bit larger than the terrain.
 3. At least one `terrain` shape; every terrain shape's `data-material` and `data-color` are IDs from § 4 (or left out).
 4. ≥ 4 `spawn` circles inside bounds, not inside terrain, centre ~`24` above a surface.
-5. ≥ 1 `drop` circle inside bounds, high up, with `data-items` from § 4.
+5. ≥ 1 `drop` circle inside bounds, high up.
 6. `collectible` circles (optional) inside bounds with a `data-item` from § 4.
 7. Only rect / polygon / circle carry `data-role`; no `<path>`, no `transform`, no units; terrain snapped to multiples of `4`.
 8. Every shape has a `fill`; every route in the map request is reachable with the metrics in § 5.
@@ -152,7 +152,7 @@ Smallest valid level (shape reference only; build the map from § 7):
       <circle data-role="spawn" cx="520" cy="536" r="14" fill="#3f8f5f" />
       <circle data-role="spawn" cx="680" cy="536" r="14" fill="#3f8f5f" />
       <circle data-role="spawn" cx="880" cy="536" r="14" fill="#3f8f5f" />
-      <circle data-role="drop" data-items="rocket-launcher homing-launcher torch freeze-ray" cx="600" cy="80" r="12" fill="#c94f7c" />
+      <circle data-role="drop" cx="600" cy="80" r="12" fill="#c94f7c" />
     </svg>
   </body>
 </html>

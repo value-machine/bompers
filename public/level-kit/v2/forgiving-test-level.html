@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forgiving Test — Bompers level</title>
+    <!-- Optional preview kit: legend, labels, grid. The level works without it. -->
+    <link rel="stylesheet" href="preview.css" />
+    <script src="preview.js" defer></script>
+  </head>
+  <body>
+    <!--
+      A deliberately odd level (forgiving-import): every slip below used to reject the file.
+      Now it loads and the lobby lists one warning per slip:
+      W16 version "2.0", W17 no viewBox (width/height used), W21 a block with "80px",
+      W21 a polygon with two points, W18 no bounds (the world is used), W6 one spawn, W20 no drop.
+    -->
+    <svg
+      id="level"
+      xmlns="http://www.w3.org/2000/svg"
+      width="1600"
+      height="1000"
+      data-level-format="2.0"
+      data-level-id="forgiving-test"
+      data-title="Forgiving Test"
+      data-author="Bompers team"
+      data-agent="claude"
+      data-description="An odd but playable level: no viewBox, no bounds, one spawn, no drops and two broken shapes. It loads with warnings."
+      style="display: block; width: 100%; height: auto; background: #dfe9f2"
+    >
+      <title>Forgiving Test</title>
+
+      <rect id="floor" data-role="terrain" data-material="stone" x="200" y="760" width="1200" height="80" />
+      <rect id="left-ledge" data-role="terrain" data-material="earth" x="320" y="560" width="320" height="40" />
+      <rect id="right-ledge" data-role="terrain" data-material="earth" x="960" y="560" width="320" height="40" />
+      <rect id="odd-block" data-role="terrain" data-material="cardboard" x="760" y="440" width="80px" height="80" />
+      <polygon id="odd-spike" data-role="terrain" data-material="stone" points="800,300 840,360" />
+
+      <circle data-role="spawn" cx="800" cy="736" r="14" />
+
+      <circle data-role="collectible" cx="480" cy="520" r="10" />
+      <circle data-role="collectible" cx="1120" cy="520" r="10" />
+    </svg>
+  </body>
+</html>

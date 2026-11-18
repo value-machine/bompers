@@ -6,6 +6,21 @@ History of the decisions jobs made: what was chosen, what was rejected, and why.
 - **Cite with the job key:** `(skill-loop D53)`. Ids restart at D1 in every job, so a bare `D53` is ambiguous.
 - **Who writes it:** `loop-ship` appends the lap's closed rows from its scratch `DECISIONS.md` in the ship commit ([`loop-ship`](../.agents/skills/loop-ship/SKILL.md)). Earlier job logs were deleted in #16; only the ones still cited are restored below from `a920c0d^`.
 
+## ice-frozen-blobs — claude/ice-frozen-blobs
+
+Ice lap 2: what the freeze ray does to a blob (the ice block), its ways out, and fire on a frozen blob.
+
+| id  | topic | status | choice | source | notes |
+| --- | ----- | ------ | ------ | ------ | ----- |
+| D1  | What the freeze ray does to a blob | closed | "Ice block": frozen solid 2.5 s, no control, a puck anyone can shove; 3 jump presses crack it open; a dive shatters it as a normal hit; a crouching blob takes twice as long to freeze; no damage. 0.5 s in the ray first; ice and fire cancel on a blob; frozen ground alone never freezes a blob | owner, 2026-11-18, via the orchestrator, options page https://claude.ai/artifact/JL35sUTupqc3HhsGZykgu9 | Not taken: "Cold feet" (recommended: control kept, no grip), "Brittle shell" (next hit +1 chunk). The pick takes control away, unlike the burning blob (fire-burn D3) |
+| D2  | Sounds | closed | Placeholders: freeze, crack (softer) and shatter play `clink`; a melt plays fire's douse cue; the moments are in GAME_JUICE | orchestrator, 2026-11-18 | The element-sounds thread adds the real sounds |
+| D3  | Chill | closed | Beam time adds up per blob (half speed crouching) and runs back down out of the beam; a diving or spawn-protected blob gathers none; 0.5 s grace after a block ends | loop-refine | Rejected: chill kept forever |
+| D4  | How the block slides | closed | The controller's existing `steerScale` (0.15) and `jumpLocked`, written after the dive step; the roll ends at the freeze | loop-plan | Rejected: a new `gripScale` field; the roll's ball physics. Limit: no sliding down a slope by itself |
+| D5  | What breaks the block | closed | Any `playerHit` on it that step, the third jump press, the timer, fire; a jump held at the freeze is no press | loop-refine | |
+| D6  | Fire and ice on a blob | closed | The match cancels them in the step a blob has both: fire's `douseBlob` and the ice off | loop-plan | Neither feature imports the other. Known: fire's catch pop and cue play for that step |
+| D7  | No control | closed | A frozen blob's inputs are emptied for the controller, combat and the dive; pause still works | loop-refine | |
+| D8  | Look and starting values | closed | The options page's block (glossy cube, pinprick pupils, cracks, shards, steam; forms while the chill builds); `ice.blob`: freeze 0.5 s, crouch × 0.5, frozen 2.5 s, 3 cracks, grip 0.15, grace 0.5 s, moments 0.5 s | owner pick (D1) + agent-pick for the numbers | |
+
 ## jumps-and-recoil — claude/jumps-and-recoil
 
 Slower jumps (more hang time at the same heights) and rocket recoil, from owner feedback round 2 § 3.
