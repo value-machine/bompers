@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Everything that drops from the sky (combat D2, match-rules D2). **Point orbs** (GDD § 5: "points that fall from the roof"): they appear above the level's `point-orb` collectible points on a fixed schedule, fall onto the authored point and hover there; the first player touching one takes it; match turns what was collected into score. **Weapon crates** (GDD § 3, § 4): the rocket launcher and the homing launcher drop from the level's drop points (a drop point's weapon items in turn, by one counter over all released crates, homing-missiles D4), falls and lands on terrain (falls again when the ground is blasted away), vanishes out of bounds (match passes its kill zone); the first player touching one takes it and match hands that to combat, which arms them.
+Everything that drops from the sky (combat D2, match-rules D2). **Point orbs** (GDD § 5: "points that fall from the roof"): they appear above the level's `point-orb` collectible points on a fixed schedule, fall onto the authored point and hover there; the first player touching one takes it; match turns what was collected into score. **Weapon crates** (GDD § 3, § 4): weapon crates drop from the level's drop points, holding the match's weapons setting (`tunables.match.weaponIds`: every weapon by default, narrowed by the lobby or a level's `data-weapons`) in turn, by one counter over all released crates (homing-missiles D4, level-direction D6); an empty setting drops none. A crate falls and lands on terrain (falls again when the ground is blasted away), vanishes out of bounds (match passes its kill zone); the first player touching one takes it and match hands that to combat, which arms them.
 
 ## Structure
 

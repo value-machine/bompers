@@ -1,5 +1,6 @@
 import { JUICE_SHAKE_CAP_PX, JUICE_TIERS } from "@/shared/config/gameJuice";
 import type { GameTunables } from "@/shared/types/gameTunables.types";
+import { ALL_WEAPON_ITEM_IDS } from "@/shared/config/weaponItems";
 
 export type { GameTunables };
 
@@ -8,7 +9,7 @@ export type { GameTunables };
  * "all tunables live in one settings/config module").
  *
  * Sectioned per bounded concept so parallel work edits only its own section. Units: world
- * units (px at zoom 1) and seconds. Match settings (gravity, duration) are what a lobby later
+ * units (px at zoom 1) and seconds. Match settings (gravity, duration, weapons) are what a lobby later
  * lets players override; pass a modified copy into `createGameState`, never mutate this object.
  */
 export const DEFAULT_GAME_TUNABLES: GameTunables = {
@@ -18,6 +19,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   world: { gravity: 1400, maxFallSpeed: 1120 },
   match: {
     durationSeconds: 180,
+    // "Auto": every weapon the game has; the lobby or a level narrows it.
+    weaponIds: ALL_WEAPON_ITEM_IDS,
     maxPlayers: 4,
     // Long enough to see the knockout's goo splat land (owner, elimination-goo lap: 1.2 → 2.0).
     respawnDelaySeconds: 2.0,

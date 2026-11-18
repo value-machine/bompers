@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
+import { ALL_WEAPON_ITEM_IDS } from "@/shared/config/weaponItems";
+import type { WeaponItemId } from "@/shared/types/weaponItems.types";
 import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import type { PlayerInput } from "@/shared/types/gameInput.types";
 import { buildTerrainFromLevel } from "@/features/arena/api/arenaApi";
@@ -56,8 +58,16 @@ interface World {
   seen: CombatEvent[];
 }
 
-function createWorld({ at, drops }: { at: { x: number; y: number }[]; drops: LevelDrop[] }): World {
-  const tunables = DEFAULT_GAME_TUNABLES;
+interface WorldArgs {
+  at: { x: number; y: number }[];
+  drops: LevelDrop[];
+  /** The match's weapons setting; default = the engine's (every weapon). */
+  weaponIds?: readonly WeaponItemId[];
+}
+
+function createWorld({ at, drops, weaponIds }: WorldArgs): World {
+  const base = DEFAULT_GAME_TUNABLES;
+  const tunables = weaponIds ? { ...base, match: { ...base.match, weaponIds } } : base;
   const terrain = buildTerrainFromLevel(level);
   const players = at.map((point, slot) => createPlayer(slot, point, tunables));
   const combat = createCombatState();
@@ -104,7 +114,7 @@ const shoot = (world: World, aim: InputPatch, after = 120): void => {
 };
 
 describe("collectibles — weapon crates", () => {
-  const drops: LevelDrop[] = [{ at: { x: 1000, y: -40 }, itemIds: ["rocket-launcher"] }];
+  const drops: LevelDrop[] = [{ at: { x: 1000, y: -40 } }];
 
   it("should drop a launcher that falls and lands on the terrain when the first drop is due", () => {
     const world = createWorld({ at: [{ x: 100, y: FLOOR_Y }], drops });
@@ -128,16 +138,27 @@ describe("collectibles — weapon crates", () => {
     expect(eventsOf(world, "rocketFired")).toHaveLength(C.rocket.ammo);
   });
 
-  it("should alternate the weapons a drop point lists when crates are released", () => {
-    const both: LevelDrop[] = [
-      { at: { x: 1000, y: -40 }, itemIds: ["rocket-launcher", "homing-launcher", "point-orb"] },
-    ];
-    const world = createWorld({ at: [{ x: 100, y: FLOOR_Y }], drops: both });
+  it("should cycle every weapon the game has when the weapons setting is auto", () => {
+    // The player stands under the drop point and takes every crate, so the schedule never stalls.
+    const world = createWorld({ at: [{ x: 1000, y: FLOOR_Y }], drops });
+    const crates = ALL_WEAPON_ITEM_IDS.length;
+    world.step([], Math.ceil((C.drops.firstDelaySeconds + C.drops.intervalSeconds * crates) / dt));
+    const spawned = eventsOf(world, "pickupSpawned").map((event) => event.itemId);
+    expect(spawned.slice(0, ALL_WEAPON_ITEM_IDS.length)).toEqual([...ALL_WEAPON_ITEM_IDS]);
+  });
+
+  it("should alternate only the chosen weapons when the weapons setting is narrowed", () => {
+    const weaponIds: WeaponItemId[] = ["torch", "freeze-ray"];
+    const world = createWorld({ at: [{ x: 100, y: FLOOR_Y }], drops, weaponIds });
     world.step([], Math.ceil((C.drops.firstDelaySeconds + C.drops.intervalSeconds * 5) / dt));
-    expect(world.crates.list.map((crate) => crate.itemId)).toEqual([
-      "rocket-launcher",
-      "homing-launcher",
-    ]);
+    expect(world.crates.list.map((crate) => crate.itemId)).toEqual(["torch", "freeze-ray"]);
+  });
+
+  it("should drop no crates when the weapons setting is none", () => {
+    const world = createWorld({ at: [{ x: 100, y: FLOOR_Y }], drops, weaponIds: [] });
+    world.step([], Math.ceil((C.drops.firstDelaySeconds + C.drops.intervalSeconds * 5) / dt));
+    expect(world.crates.list).toHaveLength(0);
+    expect(eventsOf(world, "pickupSpawned")).toHaveLength(0);
   });
 
   it("should not drop more than maxActive pickups when nobody collects them", () => {

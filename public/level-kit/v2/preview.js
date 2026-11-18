@@ -107,21 +107,29 @@
           issues.push(attr + '="' + v + '" is not in the catalog; the game falls back to the default.');
         }
       });
-      var itemAttr = role === 'drop' ? 'data-items' : role === 'collectible' ? 'data-item' : null;
-      var itemVal = itemAttr && n.getAttribute(itemAttr);
+      if (role === 'drop' && n.hasAttribute('data-items')) {
+        issues.push('drop: data-items is not read; set data-weapons on the root to limit the weapons.');
+      }
+      var itemVal = role === 'collectible' && n.getAttribute('data-item');
       if (itemVal && catalog) {
-        itemVal.trim().split(/\s+/).forEach(function (id) {
-          var entry = (catalog.item || []).filter(function (e) { return e.id === id; })[0];
-          if (!entry) {
-            issues.push(itemAttr + ' "' + id + '" is not in the catalog; the game falls back to the default.');
-          } else if (entry.use !== role) {
-            // Same check as the game's W11: an item belongs to one point role (catalog "use").
-            issues.push(role + ': "' + id + '" is a ' + entry.use + ' item, not a ' + role + ' item; the game ' +
-              (role === 'drop' ? 'leaves it out.' : 'uses the default collectible.'));
-          }
-        });
+        var entry = (catalog.item || []).filter(function (e) { return e.id === itemVal; })[0];
+        if (!entry) {
+          issues.push('data-item "' + itemVal + '" is not in the catalog; the game falls back to the default.');
+        } else if (entry.use !== role) {
+          // Same check as the game's W11: an item belongs to one point role (catalog "use").
+          issues.push('collectible: "' + itemVal + '" is a ' + entry.use + ' item; the game uses the default collectible.');
+        }
       }
     });
+
+    // Same rule as the game's data-weapons reader: weapon IDs (catalog use "drop"), "none" or "auto".
+    var weapons = (root.getAttribute('data-weapons') || '').trim();
+    if (weapons && weapons !== 'none' && weapons !== 'auto' && catalog) {
+      weapons.split(/\s+/).forEach(function (id) {
+        var isWeapon = (catalog.item || []).some(function (e) { return e.id === id && e.use === 'drop'; });
+        if (!isWeapon) issues.push('data-weapons: "' + id + '" is not a weapon; the game leaves it out.');
+      });
+    }
 
     if ((counts.bounds || 0) !== 1) issues.push('Exactly one bounds <rect> is required (found ' + (counts.bounds || 0) + ').');
     if ((counts.spawn || 0) < 2) issues.push('At least 2 spawn points are required (found ' + (counts.spawn || 0) + ').');
