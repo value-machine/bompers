@@ -368,5 +368,10 @@
     "title": "Ice lap 2: frozen blobs",
     "description": "Ice element follow-up (owner pick 2026-11-18: freeze ray on the fire system, PR #63): frozen blobs and counterplay with crouch, dive and jump. Touches the player feature through overlays and the shared roll; starts with an options page. Size M.",
     "status": "done"
+  },
+  {
+    "title": "Remember a level by file location",
+    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): owner idea: keep a level by its file location instead of a stored copy. Research first: a web page cannot store a path; needs the browser File System Access API (not in every browser). Size S.",
+    "status": "done"
   }
 ]

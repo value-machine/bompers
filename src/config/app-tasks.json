@@ -45,11 +45,6 @@
     "status": "to-do"
   },
   {
-    "title": "Remember a level by file location",
-    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): owner idea: keep a level by its file location instead of a stored copy. Research first: a web page cannot store a path; needs the browser File System Access API (not in every browser). Size S.",
-    "status": "to-do"
-  },
-  {
     "title": "Level gallery",
     "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): later, unshaped. No remix feature.",
     "status": "to-do"
