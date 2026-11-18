@@ -42,8 +42,7 @@ const UNKNOWN_MATERIAL = {
   toughness: null,
   friction: 1,
   surface: "plain",
-  burns: false,
-  douses: false,
+  reactions: { fire: "blocks", cold: "freezes" },
 } as const;
 
 /**
@@ -62,8 +61,7 @@ export function pieceCellSlot(piece: TerrainPiece): TerrainCellSlot {
     toughness: entry.toughness,
     friction: entry.friction,
     surface: entry.surface,
-    burns: entry.burns,
-    douses: entry.douses,
+    reactions: entry.reactions,
   };
 }
 

@@ -60,9 +60,13 @@ describe("contentCatalog", () => {
       "point-orb",
       "dive-reset",
     ]);
-    // Fire flags (fire-spread b1): only cardboard burns, only ice douses.
-    expect(exported.material.filter((m) => m.burns).map((m) => m.id)).toEqual(["cardboard"]);
-    expect(exported.material.filter((m) => m.douses).map((m) => m.id)).toEqual(["ice"]);
+    // The material × element table (mover-materials D1; rules from blast-power D5).
+    expect(Object.fromEntries(exported.material.map((m) => [m.id, m.reactions]))).toEqual({
+      stone: { fire: "blocks", cold: "freezes" },
+      earth: { fire: "scorches", cold: "freezes" },
+      cardboard: { fire: "burns", cold: "freezes" },
+      ice: { fire: "douses", cold: "blocks" },
+    });
     expect(exported.behavior).toEqual([]);
     exported.material[0]!.label = "changed";
     expect(CONTENT_CATALOG.material.stone?.label).toBe("Stone");

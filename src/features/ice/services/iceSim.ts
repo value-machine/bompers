@@ -55,7 +55,7 @@ const MAX_WALK_PER_STEP = 4000;
 /** Ground the cold can travel through: solid and not ice terrain. */
 const carriesCold = (grid: TerrainGrid, index: number): boolean => {
   const info = getCellInfo(grid, index % grid.widthCells, Math.floor(index / grid.widthCells));
-  return info !== null && !info.douses;
+  return info?.reactions.cold === "freezes";
 };
 
 /** Terrain the cold can freeze: ground it travels through that is not frozen yet. */

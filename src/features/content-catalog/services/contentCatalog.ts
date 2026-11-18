@@ -26,8 +26,7 @@ export const CONTENT_CATALOG: ContentCatalog = {
       friction: 1,
       bounce: 0,
       surface: "plain",
-      burns: false,
-      douses: false,
+      reactions: { fire: "blocks", cold: "freezes" },
       defaultColor: "plum",
       effect: "none",
       sound: "thud",
@@ -41,8 +40,7 @@ export const CONTENT_CATALOG: ContentCatalog = {
       // Looks like any slab; only colour and how it reacts tell it apart (terrain-curves D5).
       surface: "plain",
       // Not fuel: fire scorches it and stops (blast-power D5).
-      burns: false,
-      douses: false,
+      reactions: { fire: "scorches", cold: "freezes" },
       defaultColor: "clay",
       effect: "dust-burst",
       sound: "crumble",
@@ -57,8 +55,7 @@ export const CONTENT_CATALOG: ContentCatalog = {
       // Looks like any slab; only colour and how it reacts tell it apart (terrain-curves D5).
       surface: "plain",
       // The fuel: fire spreads through it and burns it away (blast-power D5, D6).
-      burns: true,
-      douses: false,
+      reactions: { fire: "burns", cold: "freezes" },
       defaultColor: "cardboard",
       effect: "dust-burst",
       sound: "thwap",
@@ -70,9 +67,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
       friction: 0.12,
       bounce: 0,
       surface: "ice",
-      burns: false,
-      // Fuel touching ice never catches (blast-power D5).
-      douses: true,
+      // Fuel touching ice never catches (blast-power D5); cold has nothing to freeze in it.
+      reactions: { fire: "douses", cold: "blocks" },
       defaultColor: "frost",
       effect: "none",
       sound: "clink",
