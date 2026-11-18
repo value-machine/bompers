@@ -7,11 +7,11 @@ Scope (orchestrator, 2026-11-18, the owner's question "can we make it browser ag
 - **Tier 1, every browser: saved copy.** Each accepted import is kept in IndexedDB, keyed by its `levelId`, so it survives a reload. Importing or dropping a file with the same `levelId` replaces that entry in place. The edit loop is "save, drop again".
 - **Tier 2, Chrome and Edge only: file link.** "Load level" uses `showOpenFilePicker`, and the `FileSystemFileHandle` is stored next to the copy. The file is re-read on window focus and at match start when `lastModified` changed. After a reload, one click relinks it (the permission prompt). Any failure falls back to the copy.
 
-UI: options page https://claude.ai/artifact/V4XSZVdpyh8Jd4ghpctD1A (A: a word after the title, recommended; B: an icon chip; C: a "Your levels" list). Phase 3 waits for the owner's pick.
+UI (owner, 2026-11-18): a thumbnail carousel instead of the round-1 options. Imported levels are shown as cards with a small render of the level's layout, each with its state and Forget / Relink. Options page round 2: https://claude.ai/artifact/V4XSZVdpyh8Jd4ghpctD1A (variant 1, recommended: a strip of every level with a "Load level" card at the end; variant 2: a spotlight with peeking neighbours). Phase 3 waits for the owner's pick.
 
 ## Conflict with a recorded decision
 
-`level-file` README and lobby D1: "every accepted import (even the same file again) is a new library entry". Tier 1 replaces that with "same `levelId` replaces in place; a new `levelId` adds an entry". The orchestrator's scope implies the owner accepts the change; it still needs the owner's confirmation. Phase 1 rewrites the README line, citing this lap.
+`level-file` README and lobby D1: "every accepted import (even the same file again) is a new library entry". Tier 1 replaces that with "same `levelId` replaces in place; a new `levelId` adds an entry". **Resolved (owner, 2026-11-18):** same level id replaces its entry. Phase 1 rewrites the README and lobby D1 line, citing the owner, 2026-11-18.
 
 ## Design
 
@@ -33,7 +33,7 @@ UI: options page https://claude.ai/artifact/V4XSZVdpyh8Jd4ghpctD1A (A: a word af
 
    Then `levelStore.ts`, the hook changes, and the README decision rewrite. Gate: targeted Vitest, type-check.
 2. **Tier 2 services:** `levelFileLink.ts` plus the ambient types, and the picker branch in `LevelImportControl` (falls back to `<input>` when `!canLinkFiles()`). Focus re-read in the hook. Unit tests for `readIfChanged` with a fake handle object. Gate: targeted Vitest, type-check, `pnpm validate:feature-size` (level-file gains about 3 files).
-3. **Lobby row (after the owner's options pick):** the state text, chip or list, plus Forget and Relink. Controller navigation for Forget follows the existing row actions. Gate: one headless smoke run that imports a file, reloads and reads the logged library state.
+3. **Lobby carousel (after the owner's variant pick):** a pure `LevelThumbnail` component that renders a `LevelDefinition`'s terrain (rect, polygon, circle) as SVG in the world palette: the sky gradient, swatch fill, ink outline, framed to the bounds. It is named by role and lives with the level model's consumers (placement checked against `projectStructure.config.cjs` at build). It updates when a linked file is re-read. The carousel replaces the level stepper's value and keeps the row's left / right cycle action. Down moves to the picked card's Relink / Forget. Open choice for the owner: whether built-ins share the carousel; the page assumes yes. Gate: one headless smoke run that imports a file, reloads and reads the logged library state.
 4. **Drop links (optional, owner):** `useFileDrop` `onHandle`. Can move to a follow-up if the lap runs long.
 
 ## Not verified / risks
