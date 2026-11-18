@@ -196,6 +196,42 @@
     {
       "id": "round-end",
       "label": "Round end"
+    },
+    {
+      "id": "torch-start",
+      "label": "Torch start"
+    },
+    {
+      "id": "torch-loop",
+      "label": "Torch spraying (loop)"
+    },
+    {
+      "id": "fire-crackle",
+      "label": "Fire crackle (loop)"
+    },
+    {
+      "id": "burn-out",
+      "label": "Burn-out"
+    },
+    {
+      "id": "catch-fire",
+      "label": "Catch fire"
+    },
+    {
+      "id": "steam-hiss",
+      "label": "Steam hiss"
+    },
+    {
+      "id": "freeze-start",
+      "label": "Freeze start"
+    },
+    {
+      "id": "freeze-loop",
+      "label": "Freeze ray (loop)"
+    },
+    {
+      "id": "thaw",
+      "label": "Thaw"
     }
   ],
   "behavior": [],

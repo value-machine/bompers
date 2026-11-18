@@ -3,10 +3,11 @@ import type { CombatEvent } from "@/features/combat/api/combatApi";
 import { JUICE_VOLUME } from "@/shared/config/gameJuice";
 import {
   readSoundCues,
+  readSoundLoops,
   WALL_BONK_SOUND,
   type SoundSnapshot,
 } from "@/features/sound/services/soundCues";
-import type { SoundPlayerSnapshot } from "@/features/sound/types/sound.types";
+import type { SoundPlayerSnapshot, SoundWorldSnapshot } from "@/features/sound/types/sound.types";
 import { SOUND_MIX } from "@/features/sound/services/soundBank";
 
 const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPlayerSnapshot => ({
@@ -34,10 +35,22 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   ...patch,
 });
 
+const world = (patch: Partial<SoundWorldSnapshot> = {}): SoundWorldSnapshot => ({
+  timeSeconds: 0,
+  torchSlots: [],
+  freezeSlots: [],
+  burningSamples: 0,
+  burningBlobs: 0,
+  thawedSamples: 0,
+  frozenVersion: 0,
+  ...patch,
+});
+
 const snapshot = (patch: Partial<SoundSnapshot> = {}): SoundSnapshot => ({
   players: [player(0), player(1)],
   events: [],
   roundPhase: "playing",
+  world: world(),
   ...patch,
 });
 
@@ -214,14 +227,88 @@ describe("readSoundCues — headbutt reset", () => {
 });
 
 describe("readSoundCues — blobs on fire", () => {
-  it("should play the fire placeholder for the blob when it catches fire", () => {
+  it("should play the catch-fire whoosh for the blob when it catches fire", () => {
     const frame = snapshot({ players: [player(0, { catchFireCount: 1 }), player(1)] });
-    expect(cuesAfter(frame)).toEqual([{ soundId: "rocket-fire", slot: 0, gain: 1 }]);
+    expect(cuesAfter(frame)).toEqual([{ soundId: "catch-fire", slot: 0, gain: 1 }]);
   });
 
-  it("should play the ice clink for the blob when ice puts its fire out", () => {
+  it("should play the steam hiss for the blob when ice puts its fire out", () => {
     const frame = snapshot({ players: [player(0), player(1, { iceDouseCount: 1 })] });
-    expect(cuesAfter(frame)).toEqual([{ soundId: "clink", slot: 1, gain: 1 }]);
+    expect(cuesAfter(frame)).toEqual([{ soundId: "steam-hiss", slot: 1, gain: 1 }]);
+  });
+
+  it("should play each spray's own start sound when a torch or freeze ray starts", () => {
+    const events = [
+      event({ type: "sprayStarted", itemId: "torch", slot: 0 }),
+      event({ type: "sprayStarted", itemId: "freeze-ray", slot: 1 }),
+    ];
+    expect(cuesAfter(snapshot({ events })).map((c) => [c.soundId, c.slot])).toEqual([
+      ["torch-start", 0],
+      ["freeze-start", 1],
+    ]);
+  });
+});
+
+describe("readSoundCues — thaw and steam", () => {
+  /** Reads frames in order and returns every cue after the first. */
+  const cuesOver = (...worlds: SoundWorldSnapshot[]) => {
+    let cursor = readSoundCues(null, snapshot({ world: worlds[0] })).cursor;
+    return worlds.slice(1).flatMap((next) => {
+      const heard = readSoundCues(cursor, snapshot({ world: next }));
+      cursor = heard.cursor;
+      return heard.cues;
+    });
+  };
+
+  it("should play a thaw at most once per element cue window when ground keeps thawing", () => {
+    const step = SOUND_MIX.elementCueSeconds / 5;
+    const frames = Array.from({ length: 11 }, (_, i) =>
+      world({ timeSeconds: i * step, thawedSamples: i * 2 })
+    );
+    expect(idsOf(cuesOver(...frames))).toEqual(["thaw", "thaw"]);
+  });
+
+  it("should scale the thaw's gain with the samples thawed since the last thaw when it plays", () => {
+    const [small] = cuesOver(world(), world({ timeSeconds: 1, thawedSamples: 1 }));
+    const [full] = cuesOver(
+      world(),
+      world({ timeSeconds: 1, thawedSamples: SOUND_MIX.thawFullSamples })
+    );
+    expect(small?.gain).toBeLessThan(full?.gain ?? 0);
+    expect(full?.gain).toBe(1);
+  });
+
+  it("should hiss steam when the torch melts frozen ground", () => {
+    const cues = cuesOver(world(), world({ timeSeconds: 1, torchSlots: [0], frozenVersion: 1 }));
+    expect(idsOf(cues)).toEqual(["steam-hiss"]);
+  });
+
+  it("should stay quiet when the freeze ray changes frozen ground", () => {
+    const cues = cuesOver(world(), world({ timeSeconds: 1, freezeSlots: [0], frozenVersion: 1 }));
+    expect(cues).toEqual([]);
+  });
+});
+
+describe("readSoundLoops", () => {
+  it("should hold no loops when nothing sprays or burns", () => {
+    expect(readSoundLoops(world())).toEqual([]);
+  });
+
+  it("should hold a pitched loop per spraying player when torches and freeze rays spray", () => {
+    const loops = readSoundLoops(world({ torchSlots: [0, 2], freezeSlots: [1] }));
+    expect(loops.map((loop) => [loop.key, loop.soundId, loop.slot])).toEqual([
+      ["torch-0", "torch-loop", 0],
+      ["torch-2", "torch-loop", 2],
+      ["freeze-1", "freeze-loop", 1],
+    ]);
+  });
+
+  it("should make the fire crackle louder when more burns", () => {
+    const gainAt = (patch: Partial<SoundWorldSnapshot>) =>
+      readSoundLoops(world(patch)).find((loop) => loop.key === "fire")?.gain ?? 0;
+    expect(gainAt({ burningSamples: 1 })).toBeCloseTo(JUICE_VOLUME.minGain, 2);
+    expect(gainAt({ burningSamples: 1 })).toBeLessThan(gainAt({ burningBlobs: 1 }));
+    expect(gainAt({ burningSamples: SOUND_MIX.fireFullSamples })).toBe(1);
   });
 
   it("should play the ice placeholder when a blob freezes, cracks its block or the block breaks", () => {
