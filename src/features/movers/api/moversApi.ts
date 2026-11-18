@@ -7,6 +7,7 @@ export {
   stepMoverPoses,
   type CarryMemory,
   type MovingRider,
+  type PinnedBody,
   type RideResult,
   type RiderBody,
 } from "@/features/movers/services/moverRide";

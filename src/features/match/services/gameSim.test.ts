@@ -306,7 +306,9 @@ describe("gameSim — burning blobs (fire-burn b2)", () => {
     );
     expect(state.combat.fighters.get(player.id)?.lastHitBySlot).toBe(1);
   });
+});
 
+describe("gameSim — moving parts (LEVEL_FORMAT § 11)", () => {
   it("should carry a standing player up with a rising lift when the level has a moving part", () => {
     // A lift under the slot-0 spawn rises 160 and back every 4 s (LEVEL_FORMAT § 11).
     const lift = {
@@ -332,5 +334,71 @@ describe("gameSim — burning blobs (fire-burn b2)", () => {
     expect(player.grounded).toBe(true);
     expect(player.x).toBeCloseTo(100, 0);
     expect(Math.abs(player.y - 128)).toBeLessThan(3);
+  });
+
+  it("should eliminate a player a moving part squeezes against a wall (crush)", () => {
+    // Slot 0 spawns at x 100 between a slider (x 0–60) and a wall (x 180–220); the slider runs
+    // right 160 in 2 s (LEVEL_FORMAT § 11, owner crush rule D13).
+    const wall = {
+      shape: { type: "rect", x: 180, y: 200, w: 40, h: 120 },
+      materialId: "stone",
+    } as const;
+    const slider = {
+      shape: { type: "rect", x: 0, y: 260, w: 60, h: 60 },
+      materialId: "stone",
+    } as const;
+    const state = createGameState({
+      level: {
+        ...level,
+        terrain: [...level.terrain, wall, slider],
+        movers: [
+          {
+            motion: { kind: "slide", offset: { x: 160, y: 0 }, periodS: 4, phase: 0 },
+            pivot: { x: 30, y: 290 },
+            terrainIndices: [2],
+          },
+        ],
+      },
+      tunables: DEFAULT_GAME_TUNABLES,
+    });
+    stepFor(state, 2);
+    const crush = state.combat.events.find(
+      (event) => event.type === "playerEliminated" && event.cause === "crush"
+    );
+    expect(crush).toMatchObject({ victimSlot: 0, squeeze: { mover: 0 } });
+  });
+
+  it("should play a part's declared end sound at each turning point and nothing for a silent part", () => {
+    const lift = {
+      shape: { type: "rect", x: 300, y: 200, w: 80, h: 24 },
+      materialId: "stone",
+    } as const;
+    const mover = {
+      motion: { kind: "slide", offset: { x: 0, y: -80 }, periodS: 2, phase: 0 },
+      pivot: { x: 340, y: 212 },
+      terrainIndices: [1],
+    } as const;
+    const withSounds = (sounds?: { end: string }) =>
+      createGameState({
+        level: {
+          ...level,
+          terrain: [...level.terrain, lift],
+          movers: [{ ...mover, ...(sounds && { sounds }) }],
+        },
+        tunables: DEFAULT_GAME_TUNABLES,
+      });
+    // The event log keeps only recent events, so collect them step by step.
+    const partSounds = (state: ReturnType<typeof newGame>, seconds: number) => {
+      const seen = new Set<number>();
+      for (let t = 0; t < seconds; t += dt) {
+        stepGame(state, keys(), dt);
+        for (const event of state.combat.events)
+          if (event.type === "partSound") seen.add(event.seq);
+      }
+      return seen.size;
+    };
+    // Ends at 1 s (top) and 2 s (rest) of a 2 s slide.
+    expect(partSounds(withSounds({ end: "thud" }), 2.05)).toBe(2);
+    expect(partSounds(withSounds(), 2.05)).toBe(0);
   });
 });

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { LevelMotion } from "@/shared/types/levelMotion.types";
 import {
+  cuePointsPassed,
+  motionCuePoints,
   motionPeakSpeed,
   motionPose,
   pathLength,
@@ -64,5 +66,45 @@ describe("motionPeakSpeed", () => {
     expect(motionPeakSpeed({ kind: "spin", direction: 1, ...timing }, 100)).toBeCloseTo(
       50 * Math.PI
     );
+  });
+});
+
+// Ground truth: LEVEL_FORMAT § 11 part sounds, (moving-parts B2): `end` at turning points, `move` at
+// the fastest point, from the same cycle as motionPose.
+describe("motionCuePoints / cuePointsPassed", () => {
+  it("should put a slide's ends at rest and at the offset and its woosh halfway", () => {
+    const slide: LevelMotion = { kind: "slide", offset: { x: 0, y: -160 }, ...timing };
+    expect(motionCuePoints(slide)).toEqual({ move: [0.25, 0.75], end: [0, 0.5] });
+  });
+
+  it("should put a swing's ends at its extremes and a spin's woosh once per turn", () => {
+    const swing: LevelMotion = { kind: "swing", degrees: 30, direction: 1, ...timing };
+    expect(motionCuePoints(swing).end).toEqual([0.25, 0.75]);
+    expect(motionCuePoints({ kind: "spin", direction: 1, ...timing })).toEqual({
+      move: [0],
+      end: [],
+    });
+  });
+
+  it("should put a path's ends at each waypoint by distance along the loop", () => {
+    const path: LevelMotion = {
+      kind: "path",
+      offsets: [
+        { x: 100, y: 0 },
+        { x: 100, y: -100 },
+      ],
+      ...timing,
+    };
+    const total = 200 + Math.hypot(100, 100);
+    expect(motionCuePoints(path).end).toEqual([0, 100 / total, 200 / total]);
+  });
+
+  it("should count each cue point the part passes in a step, phase included", () => {
+    const slide: LevelMotion = { kind: "slide", offset: { x: 0, y: -160 }, ...timing };
+    expect(cuePointsPassed(slide, [0.5], { t0: 1.9, t1: 2.1 })).toBe(1);
+    expect(cuePointsPassed(slide, [0.5], { t0: 2, t1: 2.1 })).toBe(0);
+    expect(cuePointsPassed(slide, [0, 0.5], { t0: 0, t1: 8 })).toBe(4);
+    const ahead: LevelMotion = { ...slide, phase: 0.5 };
+    expect(cuePointsPassed(ahead, [0], { t0: 1.9, t1: 2.1 })).toBe(1);
   });
 });

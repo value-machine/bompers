@@ -83,4 +83,6 @@ export interface MoverBody {
   friction: number;
   /** Indices into the level's terrain pieces this part carries (the renderer draws them). */
   terrainIndices: readonly number[];
+  /** Author-declared sound IDs (null = silent): at its fastest point, at each turning point. */
+  sounds: { move: string | null; end: string | null };
 }

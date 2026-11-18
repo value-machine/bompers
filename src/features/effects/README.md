@@ -30,3 +30,4 @@ Seams for later work:
 - Game-feel cues live here (game-feel D3): they are event-driven feedback like the other effects; the camera owns only the shake math, the player only how a flash and a wobble are drawn.
 - Debris is deterministic per event `seq` (no RNG in render), so the same event always looks the same.
 - Stroke widths are the zoom-clamped effect width at the moment the effect appears; effects live too briefly to rebuild on zoom.
+- A crush (`playerEliminated`, cause `crush`) kicks a heavy-tier shake, the back-hit size, since a crush has no hit of its own (moving-parts B3).

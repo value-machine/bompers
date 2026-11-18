@@ -76,25 +76,46 @@ function carry(terrain: TerrainGrid, body: RiderBody): { mover: MoverBody; by: V
 }
 
 /** Moves the body with a part it overlaps, then out along the part's normal. */
-function pushOut(mover: MoverBody, body: RiderBody): void {
+function pushOut(mover: MoverBody, body: RiderBody): boolean {
   const radius = body.width / 2;
-  if (moverDistanceAt(mover, centerOf(body)) <= -radius) return;
+  if (moverDistanceAt(mover, centerOf(body)) <= -radius) return false;
   shift(body, moverDisplacement(mover, centerOf(body)));
   for (let i = 0; i < PUSH_STEPS; i += 1) {
     const center = centerOf(body);
     const depth = moverDistanceAt(mover, center) + radius;
-    if (depth <= 0) return;
+    if (depth <= 0) return true;
     const normal = moverNormal(mover, center);
     shift(body, { x: normal.x * (depth + 0.01), y: normal.y * (depth + 0.01) });
   }
+  return true;
+}
+
+/** A body squeezed between a part and terrain: which part, and its normal toward the body. */
+export interface PinnedBody {
+  index: number;
+  mover: number;
+  nx: number;
+  ny: number;
 }
 
 /** What one `rideMovers` call did, per body index. */
 export interface RideResult {
   /** Bodies left overlapping terrain (pinned), for the crush rule. */
-  pinned: number[];
+  pinned: PinnedBody[];
   /** How far a part carried each body this step (null = not riding). */
   carried: (Vec2 | null)[];
+}
+
+/** The pin record of a body still overlapping terrain after the carry and pushes; null when free. */
+function pinOf(
+  terrain: TerrainGrid,
+  body: RiderBody,
+  at: { index: number; mover: MoverBody | null }
+): PinnedBody | null {
+  const center = centerOf(body);
+  if (!at.mover || fieldDistanceAt(terrain, center) <= -body.width / 2 + PINNED_DEPTH) return null;
+  const normal = moverNormal(at.mover, center);
+  return { index: at.index, mover: terrain.movers.indexOf(at.mover), nx: normal.x, ny: normal.y };
 }
 
 /** Carries and pushes every body (call after `stepMoverPoses`, before the bodies' own step). */
@@ -104,10 +125,12 @@ export function rideMovers(terrain: TerrainGrid, bodies: readonly RiderBody[]): 
   bodies.forEach((body, index) => {
     const riding = carry(terrain, body);
     result.carried[index] = riding?.by ?? null;
-    for (const mover of terrain.movers) if (mover !== riding?.mover) pushOut(mover, body);
-    if (fieldDistanceAt(terrain, centerOf(body)) > -body.width / 2 + PINNED_DEPTH) {
-      result.pinned.push(index);
+    let pusher: MoverBody | null = riding?.mover ?? null;
+    for (const mover of terrain.movers) {
+      if (mover !== riding?.mover && pushOut(mover, body)) pusher = mover;
     }
+    const pin = pinOf(terrain, body, { index, mover: pusher });
+    if (pin) result.pinned.push(pin);
   });
   return result;
 }

@@ -1,6 +1,7 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
+import { cuePointsPassed, motionCuePoints } from "@/shared/utils/levelMotion";
 import { createArenaState, moversDistanceAt, type ArenaState } from "@/features/arena/api/arenaApi";
 import {
   inheritOnLeave,
@@ -8,6 +9,7 @@ import {
   stepMoverPoses,
   type CarryMemory,
   type MovingRider,
+  type PinnedBody,
 } from "@/features/movers/api/moversApi";
 import {
   normalizeLevelDefinition,
@@ -16,6 +18,8 @@ import {
 } from "@/features/level/api/levelApi";
 import {
   applyHit,
+  eliminateFighter,
+  reportPartSound,
   createCombatState,
   reportTerrainDestroyed,
   stepCombat,
@@ -226,6 +230,7 @@ function stepMovingParts(state: GameState, players: PlayerState[], dt: number): 
   const { terrain } = state.arena;
   if (terrain.movers.length === 0) return;
   stepMoverPoses(terrain, state.timeSeconds + dt);
+  playPartSounds(state, dt);
   const size = state.tunables.combat.drops.size;
   const crates = state.collectibles.crates.list;
   // Crates have no horizontal speed: what they keep on leaving a part is its vertical speed.
@@ -241,12 +246,59 @@ function stepMovingParts(state: GameState, players: PlayerState[], dt: number): 
   const bodies: MovingRider[] = [...players, ...crateBodies];
   const ride = rideMovers(terrain, bodies);
   state.moverCarry = inheritOnLeave(state.moverCarry, bodies, { ride, dt });
+  crushPinnedPlayers(state, players, ride.pinned);
   crates.forEach((crate, i) => {
     const body = crateBodies[i]!;
     crate.x = body.x;
     crate.y = body.y;
     crate.vy = body.vy;
   });
+}
+
+/**
+ * Author-declared part sounds (owner B2; silent by default): `move` as a part passes its fastest
+ * point, `end` at each turning point, timed from the same cycle as its pose (`motionCuePoints`).
+ */
+function playPartSounds(state: GameState, dt: number): void {
+  const span = { t0: state.timeSeconds, t1: state.timeSeconds + dt };
+  for (const mover of state.arena.terrain.movers) {
+    const { move, end } = mover.sounds;
+    if (!move && !end) continue;
+    const points = motionCuePoints(mover.motion);
+    const at = { x: mover.pivot.x + mover.pose.dx, y: mover.pivot.y + mover.pose.dy };
+    const play = (soundId: string | null, cues: number[]) => {
+      if (soundId && cuePointsPassed(mover.motion, cues, span) > 0) {
+        reportPartSound(state.combat, { soundId, at, timeSeconds: state.timeSeconds });
+      }
+    };
+    play(move, points.move);
+    play(end, points.end);
+  }
+}
+
+/**
+ * The crush rule (owner, moving-parts D13): a player a moving part squeezes against terrain or
+ * another part is eliminated, credited to the last hitter like a fall out of bounds. A pinned
+ * crate just stays where it is.
+ */
+function crushPinnedPlayers(
+  state: GameState,
+  players: readonly PlayerState[],
+  pinned: readonly PinnedBody[]
+): void {
+  const { tunables } = state;
+  for (const pin of pinned) {
+    const player = players[pin.index];
+    if (!player) continue;
+    eliminateFighter({
+      combat: state.combat,
+      player,
+      cause: "crush",
+      squeeze: { nx: pin.nx, ny: pin.ny, mover: pin.mover },
+      tunables,
+      timeSeconds: state.timeSeconds,
+    });
+  }
 }
 
 /** Steps 1 and 1b: new players join, then moving parts carry and push the players in play. */

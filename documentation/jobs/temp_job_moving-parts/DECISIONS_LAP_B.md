@@ -21,3 +21,4 @@ Lap A ledger: `DECISIONS.md` (D1–D16; D11–D16 are the lap B runtime contract
 
 - 2026-11-17 — B1, B2 closed via the owner (options page round 1, relayed by the orchestrator). 1A was replaced by the owner's pancake → splats; round 2 demo published on the same page.
 - 2026-11-17 — B1 changed to 2B (owner). B3 closed: R2A (owner: no preference, recommended taken).
+- 2026-11-18 — Lap B-2 built: crush (B3 R2A) and author-declared part sounds (B2), plus velocity on leaving (B4); merged main after #50.

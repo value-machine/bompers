@@ -81,13 +81,14 @@ Wrap terrain shapes in `<g data-motion="…">` to move them as one part. Draw th
 - `swing deg` — pendulum ± `deg` (≤ 180) about the pivot (default `top`).
 - `Ns` = seconds per cycle, default `4s`, 1–30. `@f` starts `f` of a cycle ahead (0–1): equal period and phase move in lockstep, `@0.5` moves opposite.
 - Pivot = a point of the part's bounding box: `center` `top` `bottom` `left` `right` `top-left` `top-right` `bottom-left` `bottom-right`.
+- Sounds (optional; parts are silent by default): `data-move-sound="<sound id>"` plays as the part passes its fastest point (a woosh: halfway along a slide or path leg, through the bottom of a swing, once per spin); `data-end-sound="<sound id>"` plays at each turning point (both ends of a slide, each path waypoint, each swing extreme). IDs from `data-sound` in § 4; put both on the `<g>`.
 - Rules: only terrain moves (spawns, drops and pickups inside stay still); moving parts never break; offsets on multiples of `4`; over the whole cycle the part stays inside bounds, keeps an `8`-unit margin from other terrain (touching at rest is fine) and stays ≥ `14` from spawn centres; its fastest point moves ≤ `340` units/s (slide ≈ 3.14 × length ÷ period, spin ≈ 6.28 × radius ÷ period); at most 16 parts; no nested `data-motion`.
 
 ```svg
 <g data-motion="slide 0,-160">
   <rect data-role="terrain" x="640" y="560" width="160" height="32" fill="#5a3f7a" />
 </g>
-<g data-motion="swing 40 3s @0.5">
+<g data-motion="swing 40 3s @0.5" data-end-sound="thud">
   <rect data-role="terrain" x="1000" y="240" width="16" height="200" fill="#5a3f7a" />
   <rect data-role="terrain" x="960" y="440" width="96" height="24" fill="#5a3f7a" />
 </g>

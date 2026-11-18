@@ -20,6 +20,7 @@ import {
 import {
   createKnockoutView,
   createKnockoutWorld,
+  CRUSH_PANCAKE,
   knockoutBodies,
   noteKnockoutEvents,
   stepKnockouts,
@@ -244,6 +245,7 @@ function stepKnockoutLayer(renderer: GameRenderer, state: GameState, dt: number)
     gravity: tunables.world.gravity,
     solidAt: (x, y) => isSolidAt(terrain, x, y),
     roll: (body, h) => stepPlayers({ players: [body], inputs: [], terrain, tunables, dt: h }),
+    movers: terrain.movers,
     tunables: tunables.feel.knockout,
     respawnDelaySeconds: tunables.match.respawnDelaySeconds,
   });
@@ -285,6 +287,16 @@ function addKnockoutBlob(
   if (weapon) blobs.weapons.set(id, weapon);
   const hit = blobs.hits.get(victimId);
   if (hit) blobs.hits.set(id, hit);
+  if (body.pancake) {
+    // Crushed flat by a moving part (owner, moving-parts B3): thin across the squeeze.
+    blobs.overlays.set(id, {
+      rotation: Math.atan2(body.pancake.ny, body.pancake.nx),
+      sx: CRUSH_PANCAKE.across,
+      sy: CRUSH_PANCAKE.along,
+      pupilScale: CRUSH_PANCAKE.pupilScale,
+    });
+    return;
+  }
   if (body.squash <= 0) return;
   const k = body.squash;
   blobs.overlays.set(id, { rotation: 0, sx: 1 + (squash.sx - 1) * k, sy: 1 + (squash.sy - 1) * k });
@@ -314,6 +326,7 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     playerHeight: state.tunables.player.height,
     tunables: state.tunables.feel.knockout,
     respawnDelaySeconds: state.tunables.match.respawnDelaySeconds,
+    movers: state.arena.terrain.movers,
   });
   syncPlayersView(renderer.players, blobs.players, {
     nowMs,

@@ -61,7 +61,7 @@ function run(terrain: ReturnType<typeof arenaWith>, bodies: RiderBody[], until: 
   const pinned = new Set<number>();
   for (let t = DT; t <= until + 1e-9; t += DT) {
     stepMoverPoses(terrain, t);
-    for (const i of rideMovers(terrain, bodies).pinned) pinned.add(i);
+    for (const pin of rideMovers(terrain, bodies).pinned) pinned.add(pin.index);
   }
   return pinned;
 }
@@ -111,7 +111,15 @@ describe("rideMovers", () => {
     };
     const terrain = arenaWith([GROUND, WALL, slider], [mover]);
     const body: RiderBody = { x: 560, y: 560, width: 28, height: 28 };
-    expect(run(terrain, [body], 2)).toEqual(new Set([0]));
+    let first: ReturnType<typeof rideMovers>["pinned"][number] | undefined;
+    for (let t = DT; t <= 2 + 1e-9 && !first; t += DT) {
+      stepMoverPoses(terrain, t);
+      first = rideMovers(terrain, [body]).pinned[0];
+    }
+    // The squeeze points from the part toward the wall (+x) and names the part.
+    expect(first?.index).toBe(0);
+    expect(first?.mover).toBe(0);
+    expect(first?.nx).toBeGreaterThan(0.9);
   });
 
   it("should leave bodies alone when the level has no moving parts", () => {
