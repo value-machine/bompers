@@ -117,7 +117,7 @@ With another gravity multiplier `k`, heights and jump gaps scale by about `1 / k
 - Player collider `28 × 28`; comfortable corridor height `84`+.
 - Gravity `1400` units/s², max fall speed `1120`. Run speed `340` units/s.
 - Jump: `jumpSpeed 840` → apex ~`252` units in 0.60 s. Easy step up `124`, hard step `212`. Running jump across a flat gap: ~`304` comfortable, ~`408` max.
-- Headbutt dive (once per air time, aimed in 16 directions): `900` units/s for `0.25` s (~`225` units) after a `0.1` s windup; jump + dive across a flat gap: ~`620` diving at the top of the jump, ~`712` max with a late dive. A head-on dive into a wall bonks (`0.25` s stun).
+- Headbutt dive (once per air time, aimed in 16 directions): `900` units/s for `0.25` s (~`225` units) after a `0.1` s windup; jump + dive across a flat gap: ~`620` diving at the top of the jump, ~`712` max with a late dive, ~`904` jumping out of a fast roll (it keeps up to `600` units/s sideways). A gap between those two needs the roll. A head-on dive into a wall bonks (`0.25` s stun).
 - Wall slide `220` units/s; wall jump `vx 420`, `vy 720` (~`185` height per kick). Wall-jump chimney width `124`–`224`.
 - `rocket-launcher`: 6 shots, blast power `50` → reach `64`, push `1080` units/s at the centre, crater `34` at toughness 1 (crater = this ÷ toughness), recoil `200`.
 - `homing-launcher`: 3 shots, blast power `50` → reach `64`, push `1080` units/s at the centre, crater `34` at toughness 1 (crater = this ÷ toughness), recoil `120`.

@@ -770,3 +770,74 @@ describe("gameSim — roll carry into a dive (double-jump-bash D12, D13)", () =>
     expect(state.dive.motions.p0?.phase ?? "idle").toBe("idle");
   });
 });
+
+/**
+ * Routes a built-in level is designed around, run in the real sim. Bobsled Run's last gap must
+ * need the roll (owner, bobsled-run-roll): a running jump + late dive falls short, a roll down the
+ * ice chute and a jump + dive out of it lands on the crown.
+ */
+type RouteGame = ReturnType<typeof createGameState>;
+
+const loadLevel = (file: string): LevelDefinition => {
+  const result = parseLevelFile(readFileSync(`public/levels/${file}`, "utf8"));
+  if (!result.ok) throw new Error(`${file} does not import`);
+  return result.level;
+};
+
+const bobsled = loadLevel("bobsled-run.html");
+const RUNWAY_EDGE = 1290;
+const CROWN = { from: 2100, to: 2380, top: 760 };
+
+/** Player 1 on its spawn, player 2 parked on the far floor out of the way. */
+const newRun = (): RouteGame => {
+  const game = createGameState({ level: bobsled, tunables: DEFAULT_GAME_TUNABLES });
+  stepGame(game, keys(), dt);
+  Object.assign(game.players[1]!, { x: 2300, y: 1150, vx: 0, vy: 0 });
+  for (let i = 0; i < 60; i += 1) stepGame(game, keys(), dt);
+  return game;
+};
+
+const onCrown = (game: RouteGame): boolean => {
+  const p = game.players[0]!;
+  return p.grounded && Math.abs(p.y - CROWN.top) < 2 && p.x >= CROWN.from && p.x <= CROWN.to;
+};
+
+/**
+ * From the runway edge: jump (held to `releaseAt`), press jump again at `diveAt` for a level dive
+ * right, `extra` held throughout (fire keeps a roll going). True if it lands on the crown.
+ */
+function jumpAndDiveFromEdge(game: RouteGame, plan: { diveAt: number; extra: string[] }): boolean {
+  stepGame(game, keys("KeyD", "Space", ...plan.extra), dt);
+  for (let t = dt; t < 2.5; t += dt) {
+    const press = Math.abs(t - plan.diveAt) < dt / 2;
+    const holdJump = t < plan.diveAt - 0.03 && t < 0.6;
+    const jump = press || holdJump ? ["Space"] : [];
+    stepGame(game, keys("KeyD", ...jump, ...plan.extra), dt);
+    if (onCrown(game)) return true;
+  }
+  return false;
+}
+
+describe("level routes — Bobsled Run needs the roll", () => {
+  it("should miss the crown with a running jump and a dive at any moment when there is no roll", () => {
+    for (let diveAt = 0.5; diveAt <= 1.25; diveAt += 0.05) {
+      const game = newRun();
+      const p = game.players[0]!;
+      Object.assign(p, { x: 1200, y: 700 });
+      for (let i = 0; i < 400 && p.x < RUNWAY_EDGE - 6; i += 1) stepGame(game, keys("KeyD"), dt);
+      expect(jumpAndDiveFromEdge(game, { diveAt, extra: [] })).toBe(false);
+    }
+  });
+
+  it("should land on the crown after diving onto the chute, rolling down and jumping out of the roll", () => {
+    const game = newRun();
+    const p = game.players[0]!;
+    // Walk off the tower onto the chute, then dive down along it and hold fire: the dash roll.
+    for (let i = 0; i < 300 && p.x < 600; i += 1) stepGame(game, keys("KeyD"), dt);
+    stepGame(game, keys("KeyF", "KeyD", "KeyS"), dt);
+    for (let i = 0; i < 600 && p.x < RUNWAY_EDGE - 6; i += 1)
+      stepGame(game, keys("KeyF", "KeyD"), dt);
+    expect(p.rollSource).toBe("dash");
+    expect(jumpAndDiveFromEdge(game, { diveAt: 1.0, extra: ["KeyF"] })).toBe(true);
+  });
+});

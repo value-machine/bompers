@@ -18,7 +18,7 @@
       data-title="Bobsled Run"
       data-author="Bompers team"
       data-agent="claude-sonnet"
-      data-description="Jump off the start tower, dive steeply into the ice chute and hold the headbutt to roll down it onto the ice runway. From its end a jump and a late dive cross the gap to the crown. Miss and the far floor catches you; ride the lift back up."
+      data-description="Jump off the start tower, dive steeply into the ice chute and hold the headbutt to roll down it onto the ice runway. The gap to the crown needs the roll: jump out of it at speed, then dive late. Miss and the far floor catches you; ride the lift back up."
       data-cell-size="4"
       data-gravity="1"
       data-match-duration="180"
@@ -45,9 +45,10 @@
         <rect data-role="terrain" data-material="stone" x="44" y="300" width="44" height="920" fill="#5a3f7a" />
         <!-- Undercroft floor. -->
         <rect data-role="terrain" data-material="stone" data-label="Undercroft floor" x="240" y="1160" width="1240" height="60" fill="#5a3f7a" />
-        <!-- The chute: ice, 30 degrees down, then a flat ice runway to the edge. -->
-        <polygon data-role="terrain" data-material="ice" data-label="Chute" points="520,320 1180,700 1460,700 1460,800 520,800" fill="#a8cfe6" />
-        <rect data-role="terrain" data-material="stone" x="520" y="800" width="940" height="60" fill="#5a3f7a" />
+        <!-- The chute: ice, 30 degrees down, then a short flat ice runway to the edge. The gap to the pad
+             (810) is out of reach of a running jump and dive (740), and in reach out of a roll. -->
+        <polygon data-role="terrain" data-material="ice" data-label="Chute" points="520,320 1180,700 1290,700 1290,800 520,800" fill="#a8cfe6" />
+        <rect data-role="terrain" data-material="stone" x="520" y="800" width="770" height="60" fill="#5a3f7a" />
         <!-- Landing pad and crown island. -->
         <rect data-role="terrain" data-material="cardboard" data-label="Pad" x="2100" y="760" width="80" height="32" fill="#c99a62" />
         <rect data-role="terrain" data-material="stone" data-label="Crown" x="2180" y="760" width="200" height="80" fill="#5a3f7a" />
