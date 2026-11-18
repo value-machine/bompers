@@ -83,7 +83,7 @@ Wrap terrain shapes in `<g data-motion="…">` to move them as one part. Draw th
 - `Ns` = seconds per cycle, default `4s`, 1–30. `@f` starts `f` of a cycle ahead (0–1): equal period and phase move in lockstep, `@0.5` moves opposite.
 - Pivot = a point of the part's bounding box: `center` `top` `bottom` `left` `right` `top-left` `top-right` `bottom-left` `bottom-right`.
 - Sounds (optional; parts are silent by default): `data-move-sound="<sound id>"` plays as the part passes its fastest point (a woosh: halfway along a slide or path leg, through the bottom of a swing, once per spin); `data-end-sound="<sound id>"` plays at each turning point (both ends of a slide, each path waypoint, each swing extreme). IDs from `data-sound` in § 4; put both on the `<g>`.
-- Rules: only terrain moves (spawns, drops and pickups inside stay still); moving parts never break; offsets on multiples of `4`; over the whole cycle the part stays inside bounds, keeps an `8`-unit margin from other terrain (touching at rest is fine) and stays ≥ `14` from spawn centres; its fastest point moves ≤ `340` units/s (slide ≈ 3.14 × length ÷ period, spin ≈ 6.28 × radius ÷ period); at most 16 parts; no nested `data-motion`.
+- Rules: only terrain moves (spawns, drops and pickups inside stay still); moving parts never break; offsets on multiples of `4`; over the whole cycle the part stays inside bounds, never overlaps other terrain (touching is fine anywhere in the cycle: end a slide flush against a wall to make a crusher; a player caught in a gap under `5.6` units is knocked out, in a wider gap only squeezed) and stays ≥ `14` from spawn centres; its fastest point moves ≤ `340` units/s (slide ≈ 3.14 × length ÷ period, spin ≈ 6.28 × radius ÷ period); at most 16 parts; no nested `data-motion`.
 
 ```svg
 <g data-motion="slide 0,-160">
@@ -117,7 +117,7 @@ With another gravity multiplier `k`, heights and jump gaps scale by about `1 / k
 - Player collider `28 × 28`; comfortable corridor height `84`+.
 - Gravity `1400` units/s², max fall speed `1120`. Run speed `340` units/s.
 - Jump: `jumpSpeed 840` → apex ~`252` units in 0.60 s. Easy step up `124`, hard step `212`. Running jump across a flat gap: ~`304` comfortable, ~`408` max.
-- Headbutt dive (once per air time, aimed in 16 directions): `900` units/s for `0.25` s (~`225` units) after a `0.1` s windup; jump + dive gap ~`440`–`540`. A head-on dive into a wall bonks (`0.25` s stun).
+- Headbutt dive (once per air time, aimed in 16 directions): `900` units/s for `0.25` s (~`225` units) after a `0.1` s windup; jump + dive across a flat gap: ~`620` diving at the top of the jump, ~`712` max with a late dive. A head-on dive into a wall bonks (`0.25` s stun).
 - Wall slide `220` units/s; wall jump `vx 420`, `vy 720` (~`185` height per kick). Wall-jump chimney width `124`–`224`.
 - `rocket-launcher`: 6 shots, blast power `50` → reach `64`, push `1080` units/s at the centre, crater `34` at toughness 1 (crater = this ÷ toughness), recoil `200`.
 - `homing-launcher`: 3 shots, blast power `50` → reach `64`, push `1080` units/s at the centre, crater `34` at toughness 1 (crater = this ÷ toughness), recoil `120`.

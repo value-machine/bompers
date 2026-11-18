@@ -161,6 +161,9 @@ function movingPartExample({ catalog }: PromptContext): string {
 function renderMovingParts(ctx: PromptContext): string {
   const { periodS, pivot } = MOTION_DEFAULTS;
   const lim = MOTION_LIMITS;
+  const crushGap = Number(
+    (ctx.tunables.player.width * ctx.tunables.player.crushGapFraction).toFixed(1)
+  );
   const pivots = Object.keys(MOTION_PIVOTS)
     .map((p) => code(p))
     .join(" ");
@@ -178,7 +181,7 @@ function renderMovingParts(ctx: PromptContext): string {
     `- \`Ns\` = seconds per cycle, default \`${periodS}s\`, ${lim.minPeriodS}–${lim.maxPeriodS}. \`@f\` starts \`f\` of a cycle ahead (0–1): equal period and phase move in lockstep, \`@0.5\` moves opposite.`,
     `- Pivot = a point of the part's bounding box: ${pivots}.`,
     '- Sounds (optional; parts are silent by default): `data-move-sound="<sound id>"` plays as the part passes its fastest point (a woosh: halfway along a slide or path leg, through the bottom of a swing, once per spin); `data-end-sound="<sound id>"` plays at each turning point (both ends of a slide, each path waypoint, each swing extreme). IDs from `data-sound` in § 4; put both on the `<g>`.',
-    `- Rules: only terrain moves (spawns, drops and pickups inside stay still); moving parts never break; offsets on multiples of \`${ctx.cell}\`; over the whole cycle the part stays inside bounds, keeps an \`8\`-unit margin from other terrain (touching at rest is fine) and stays ≥ \`${lim.spawnClearance}\` from spawn centres; its fastest point moves ≤ \`${lim.rideSpeed}\` units/s (slide ≈ 3.14 × length ÷ period, spin ≈ 6.28 × radius ÷ period); at most ${lim.maxMovers} parts; no nested \`data-motion\`.`,
+    `- Rules: only terrain moves (spawns, drops and pickups inside stay still); moving parts never break; offsets on multiples of \`${ctx.cell}\`; over the whole cycle the part stays inside bounds, never overlaps other terrain (touching is fine anywhere in the cycle: end a slide flush against a wall to make a crusher; a player caught in a gap under \`${crushGap}\` units is knocked out, in a wider gap only squeezed) and stays ≥ \`${lim.spawnClearance}\` from spawn centres; its fastest point moves ≤ \`${lim.rideSpeed}\` units/s (slide ≈ 3.14 × length ÷ period, spin ≈ 6.28 × radius ÷ period); at most ${lim.maxMovers} parts; no nested \`data-motion\`.`,
     "",
     movingPartExample(ctx),
   ].join("\n");
@@ -223,6 +226,33 @@ function renderCatalog(ctx: PromptContext): string {
   ].join("\n");
 }
 
+/**
+ * Flat-gap reach of a running jump with a level dive started `diveAt` seconds after take-off:
+ * the run until the dive, the windup, the straight dive (no gravity), then the fall from the
+ * dive's height at its exit speed. Checked against the sim (ability-levels lap): a late dive onto
+ * a landing 60 lower reached 738, this model gives 744.
+ */
+function jumpDiveReach(t: GameTunables, diveAt: number): number {
+  const { player: p, dive } = t;
+  const g = t.world.gravity;
+  const height = Math.max(0, p.jumpSpeed * diveAt - (g * diveAt * diveAt) / 2);
+  const fall = Math.sqrt((2 * height) / g);
+  return (
+    p.runSpeed * diveAt +
+    p.runSpeed * dive.windupSpeedScale * dive.windupSeconds +
+    dive.launchSpeed * dive.travelSeconds +
+    dive.launchSpeed * dive.exitSpeedScale * fall
+  );
+}
+
+/** The longest flat-gap jump + dive: the best dive moment between take-off and landing. */
+function bestJumpDiveReach(t: GameTunables): number {
+  const airTime = (2 * t.player.jumpSpeed) / t.world.gravity;
+  let best = 0;
+  for (let i = 0; i <= 100; i += 1) best = Math.max(best, jumpDiveReach(t, (airTime * i) / 100));
+  return best;
+}
+
 /** Jump, dive and wall metrics at `data-gravity="1"`, derived from the tunables. */
 function movementLines({ tunables: t, cell }: PromptContext): string[] {
   const g = t.world.gravity;
@@ -231,11 +261,12 @@ function movementLines({ tunables: t, cell }: PromptContext): string[] {
   const runReach = p.runSpeed * ((2 * p.jumpSpeed) / g);
   const wallGain = (p.wallJumpSpeedY * p.wallJumpSpeedY) / (2 * g);
   const diveDistance = dive.launchSpeed * dive.travelSeconds;
+  const apexTime = p.jumpSpeed / g;
   return [
     `- Player collider \`${p.width} × ${p.height}\`; comfortable corridor height \`${snapDown(p.height * 3, cell)}\`+.`,
     `- Gravity \`${g}\` units/s², max fall speed \`${t.world.maxFallSpeed}\`. Run speed \`${p.runSpeed}\` units/s.`,
     `- Jump: \`jumpSpeed ${p.jumpSpeed}\` → apex ~\`${round(apex)}\` units in ${(p.jumpSpeed / g).toFixed(2)} s. Easy step up \`${snapDown(apex * 0.5, cell)}\`, hard step \`${snapDown(apex * 0.85, cell)}\`. Running jump across a flat gap: ~\`${snapDown(runReach * 0.75, cell)}\` comfortable, ~\`${round(runReach)}\` max.`,
-    `- Headbutt dive (once per air time, aimed in 16 directions): \`${dive.launchSpeed}\` units/s for \`${dive.travelSeconds}\` s (~\`${round(diveDistance)}\` units) after a \`${dive.windupSeconds}\` s windup; jump + dive gap ~\`${snapDown(runReach * 0.75 + diveDistance * 0.6, cell)}\`–\`${snapDown(runReach + diveDistance * 0.6, cell)}\`. A head-on dive into a wall bonks (\`${dive.bonkStunSeconds}\` s stun).`,
+    `- Headbutt dive (once per air time, aimed in 16 directions): \`${dive.launchSpeed}\` units/s for \`${dive.travelSeconds}\` s (~\`${round(diveDistance)}\` units) after a \`${dive.windupSeconds}\` s windup; jump + dive across a flat gap: ~\`${snapDown(jumpDiveReach(t, apexTime), cell)}\` diving at the top of the jump, ~\`${snapDown(bestJumpDiveReach(t), cell)}\` max with a late dive. A head-on dive into a wall bonks (\`${dive.bonkStunSeconds}\` s stun).`,
     `- Wall slide \`${p.wallSlideSpeed}\` units/s; wall jump \`vx ${p.wallJumpSpeedX}\`, \`vy ${p.wallJumpSpeedY}\` (~\`${round(wallGain)}\` height per kick). Wall-jump chimney width \`${snapDown(p.width * 4.5, cell)}\`–\`${snapDown(p.width * 8, cell)}\`.`,
   ];
 }
