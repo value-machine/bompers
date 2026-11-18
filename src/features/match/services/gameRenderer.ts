@@ -1,13 +1,15 @@
 import { Container, type Application } from "pixi.js";
 import {
-  createBackdropView,
   createTerrainView,
   isSolidAt,
-  syncBackdropView,
   syncTerrainView,
-  type BackdropView,
   type TerrainView,
 } from "@/features/arena/api/arenaApi";
+import {
+  createBackdropView,
+  syncBackdropView,
+  type BackdropView,
+} from "@/features/backdrop/api/backdropApi";
 import {
   createPlayersView,
   PANIC_PUPIL_SCALE,
@@ -93,7 +95,7 @@ const createElementViews = () => ({
 /**
  * Composes the render layers. Scene graph:
  *   stage
- *   ├─ backdrop (screen units: sky, sun, parallax hills and clouds — arena)
+ *   ├─ backdrop (screen units: sky, sun, parallax hills and clouds — backdrop)
  *   ├─ world   (camera transform; world units)
  *   │  ├─ terrain   (arena: solid slabs, breakable tiles)
  *   │  ├─ contact shadows: weapon crates (collectibles), rockets (combat), players (player)
