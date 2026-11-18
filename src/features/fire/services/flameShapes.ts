@@ -10,8 +10,11 @@ import type { TorchSpray } from "@/features/fire/types/fire.types";
  */
 export const FLAME_LOOK = {
   spray: {
-    /** Where the flame leaves the nozzle: units along the aim from the helmet point. */
-    nozzleReach: 15,
+    /**
+     * Where the flame leaves the torch's funnel: units along the aim from the helmet point, just
+     * inside the funnel's rim (`weaponTube` shape `funnel`, 44 mockup units at u ≈ 0.41).
+     */
+    nozzleReach: 18,
     /** Neck half-width as a share of the hit cone's half-width at the same distance. */
     neckWidth: 0.45,
     /** Head radius as a share of the hit cone's half-width at the spray's end. */

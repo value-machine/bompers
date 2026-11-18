@@ -53,4 +53,5 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 - Round end: every top scorer wins (a draw lists them); restart by a jump press after `restartLockSeconds`; that press is consumed, so nobody jumps on the first frame of the new round (match-rules D6). A back press after the lock returns to the lobby (lobby D5).
 - HUD drawn on the canvas with fixed canvas colours, never theme tokens (match-rules D7).
 - Test levels list terrain as `{ shape, materialId }` only: terrain has no role since level format 2 (material-system D5).
+- The renderer hands the players view the barrel's shot pop (`feel.barrelPop`) next to the helmet spring; the pop itself is the player feature's (weapon-visuals-embellish D5).
 - The player card shows the held weapon's ammo as a row of pills under the health chunks, in the weapon accent (the colour also names the weapon), hidden when unarmed; max ammo comes from one accessor (`maxAmmoFor`) so per-weapon ammo moves in one place (weapon-visuals D3).

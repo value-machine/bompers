@@ -226,6 +226,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       explosion: { px: JUICE_TIERS.heavy.shakePx, seconds: 0.12 },
       rollBounce: { px: JUICE_TIERS.medium.shakePx, seconds: 0.1, fullSpeed: 900 },
     },
+    // A shot pops the barrel short and fat, then it springs back (weapon-visuals-embellish D5).
+    barrelPop: { sx: 0.78, sy: 1.22, seconds: 0.2 },
     helmet: {
       stiffness: 420,
       damping: 11,

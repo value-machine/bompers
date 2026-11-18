@@ -26,8 +26,8 @@ export const GAME_PALETTE = {
   helmet: 0xfff4e2,
   /** Rocket-tube cap and helmet shading edge: shell mixed 28 % toward ink (mockup variant E). */
   helmetEdge: 0xc4b8b3,
-  /** Bottom of the helmet gradient: shell mixed 10 % toward ink (DESIGN_LANGUAGE § 3). */
-  helmetShade: 0xeadfd1,
+  /** A weapon mouth while its shot recharges; the accent fades in over it (DESIGN_LANGUAGE § 9). */
+  mouthPale: 0xe2d6c8,
   /** Eye whites (pupils are ink). */
   eyeWhite: 0xffffff,
   /** Gloss oval on bodies and the helmet gloss stroke. */
@@ -43,17 +43,18 @@ export const GAME_PALETTE = {
   rocket: { body: 0xfff4e2, nose: 0x2b1d3a, flame: 0xffb21a, tubeCap: 0xd9c7ae },
   /** Homing missile (weapon-visuals spec): lilac hull, cherry seeker light (not a player hue), lilac trail. */
   homing: { body: 0xc9a7ff, seeker: 0xe0103f, trail: 0xd9c4ff },
-  pickupCrate: 0xfff4e2,
+  /** Outline around the weapon mark on a crate (the crate itself is the weapon accent). */
+  crateMarkOutline: 0xffffff,
   /**
    * Per-weapon look, keyed by the held weapon's item id (DESIGN_LANGUAGE § Weapon identity):
-   * accent for the crate ring, HUD ammo pills and muzzle light; tube silhouette on helmet and crate.
+   * accent for the crate, HUD ammo pills and the barrel's mouth; mouth shape on helmet and crate.
    * Accents never reuse a player body colour. A new weapon id is a compile error here until listed.
    */
   weaponLooks: {
-    "rocket-launcher": { accent: 0x8fd6ff, tube: "capped" },
-    "homing-launcher": { accent: 0xb08cff, tube: "twin-pod" },
+    "rocket-launcher": { accent: 0x8fd6ff, tube: "lip" },
+    "homing-launcher": { accent: 0xb08cff, tube: "finned" },
     // Flame orange: no player body uses it (players are red, blue, yellow, mint).
-    torch: { accent: 0xff8a1f, tube: "nozzle" },
+    torch: { accent: 0xff8a1f, tube: "funnel" },
   } as Readonly<Record<WeaponItemId, WeaponLook>>,
   /** Fire on terrain and the torch spray (fire-spread b1): outer, mid, core flame colours; scorch. */
   /** Fire (DESIGN_LANGUAGE § 1 Effects); on a burning blob also sweat drops, ice steam, burnt smoke. */
@@ -106,7 +107,7 @@ export const GAME_PALETTE = {
   fallbackSwatch: { fill: 0x5a3f7a, lip: 0x7d5fa6, seam: 0x3e2a56 } as TerrainSwatch,
 } as const;
 
-/** The look of a weapon item (crate ring and mark, helmet tube, HUD ammo pills). */
+/** The look of a weapon item (crate colour and mark, barrel mouth, HUD ammo pills). */
 export const weaponLook = (itemId: WeaponItemId): WeaponLook => GAME_PALETTE.weaponLooks[itemId];
 
 /** A palette colour as CSS, for DOM next to the canvas (hints, lobby blobs). */

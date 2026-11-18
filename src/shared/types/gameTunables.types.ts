@@ -410,6 +410,8 @@ export interface GameTunables {
       /** Scaled by bounce speed / `fullSpeed` (capped at 1). */
       rollBounce: { px: number; seconds: number; fullSpeed: number };
     };
+    /** A shot's pop of the helmet barrel: its squash pose (inside the juice band) and recovery time. */
+    barrelPop: { sx: number; sy: number; seconds: number };
     /** Helmet (with its emblem) on a damped spring that lags behind the body. */
     helmet: {
       /** Spring stiffness (1/s²) and damping (1/s); underdamped so it wobbles. */
