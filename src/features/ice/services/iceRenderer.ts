@@ -1,24 +1,32 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
-import type { GridBlock } from "@/shared/utils/blockSlabs";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
-import { EMPTY_CELL, type TerrainGrid } from "@/features/arena/api/arenaApi";
+import {
+  EMPTY_CELL,
+  drawContour,
+  markedRegion,
+  terrainContour,
+  type SampleRegion,
+  type TerrainGrid,
+} from "@/features/arena/api/arenaApi";
 import {
   ICE_LOOK,
   breathRelease,
   breathShape,
-  frozenShapes,
+  frostGloss,
   type BreathShape,
   type Disc,
+  type GridBlock,
 } from "@/features/ice/services/iceShapes";
 import type { IceState } from "@/features/ice/types/ice.types";
 
 /**
  * Ice layers (owner, ice-element D4, D9; DESIGN_LANGUAGE § 1 Effects, § 2 slippery cue).
- * - Over the terrain: frozen ground in the ice colours, as body slabs with a lighter lip on top
- *   edges and a few gloss streaks. It sits inside the terrain's own ink line, so it needs none.
- *   Redrawn only when the terrain's frozen flags change.
+ * - Over the terrain: frozen ground in the ice colours, in the terrain's own shape
+ *   (element-overlay-shape D1): the terrain's contour limited to the frozen samples, lighter
+ *   along its top (the lip) and with a few gloss streaks. It sits inside the terrain's own ink
+ *   line, so it needs none. Redrawn only when the frozen flags or the terrain change.
  * - Above the players: each freeze ray as a cold breath ("Cold breath", owner D9), ink first and
  *   colour on top: a thin neck, a rolling head where it lands, snow specks; the head lets go as a
  *   few rising puffs when the ray stops.
@@ -29,10 +37,14 @@ export interface IceView {
   terrainLayer: Container;
   /** Freeze rays: add above the players. */
   beamLayer: Container;
+  /** Frozen ground: the whole shape in the lip colour, its body one sample lower, gloss on top. */
+  frostLip: Graphics;
+  frostBody: Graphics;
   frost: Graphics;
   beams: Graphics;
-  /** Terrain `frozenVersion` the frost was drawn at. */
+  /** Terrain `frozenVersion` and `shapeVersion` the frost was drawn at. */
   frostVersion: number;
+  frostShapeVersion: number;
   /** Per ray slot: when its breath started and where its head last was (grow-in, release puff). */
   breaths: Map<number, BreathMemo>;
 }
@@ -61,13 +73,25 @@ const INK = GAME_PALETTE.ink;
 const BREATH_GAP_SECONDS = 0.1;
 
 export function createIceView(): IceView {
-  const frost = new Graphics({ label: "ice-frost" });
+  const frostLip = new Graphics({ label: "ice-frost-lip" });
+  const frostBody = new Graphics({ label: "ice-frost-body" });
+  const frost = new Graphics({ label: "ice-frost-gloss" });
   const beams = new Graphics({ label: "freeze-rays" });
   const terrainLayer = new Container({ label: "ice" });
-  terrainLayer.addChild(frost);
+  terrainLayer.addChild(frostLip, frostBody, frost);
   const beamLayer = new Container({ label: "freeze-ray" });
   beamLayer.addChild(beams);
-  return { terrainLayer, beamLayer, frost, beams, frostVersion: -1, breaths: new Map() };
+  return {
+    terrainLayer,
+    beamLayer,
+    frostLip,
+    frostBody,
+    frost,
+    beams,
+    frostVersion: -1,
+    frostShapeVersion: -1,
+    breaths: new Map(),
+  };
 }
 
 /** The 2 × 2 blocks that hold a frozen sample, by `by * widthCells + bx`. */
@@ -83,18 +107,46 @@ function frozenBlocks(terrain: TerrainGrid): Map<number, GridBlock> {
   return blocks;
 }
 
+/**
+ * The part of a region whose sample above is inside the region's shape too: the shape without
+ * its top sample row. Drawn over the whole shape, it leaves the lip along every top edge.
+ */
+function underLip(terrain: TerrainGrid, region: SampleRegion): SampleRegion {
+  const inShape = (index: number): number =>
+    index < 0 ? -1 : Math.min(terrain.distance[index] ?? -1, region.value(index));
+  return {
+    box: region.box,
+    value: (index) => Math.min(region.value(index), inShape(index - terrain.widthCells)),
+  };
+}
+
+function frozenSamples(terrain: TerrainGrid): number[] {
+  const frozen: number[] = [];
+  terrain.frozen.forEach((flag, index) => {
+    if (flag === 1) frozen.push(index);
+  });
+  return frozen;
+}
+
 function drawFrost(view: IceView, terrain: TerrainGrid): void {
-  const g = view.frost.clear();
+  view.frost.clear();
   view.frostVersion = terrain.frozenVersion;
-  const blocks = frozenBlocks(terrain);
-  if (blocks.size === 0) return;
+  view.frostShapeVersion = terrain.shapeVersion;
+  const region = markedRegion(terrain, frozenSamples(terrain));
+  if (!region) {
+    view.frostLip.clear();
+    view.frostBody.clear();
+    return;
+  }
+  drawContour(view.frostLip, terrainContour(terrain, { grow: 0, region }), COLORS.lip);
+  const body = terrainContour(terrain, { grow: 0, region: underLip(terrain, region) });
+  drawContour(view.frostBody, body, COLORS.body);
+  drawGloss(view.frost, terrain);
+}
+
+function drawGloss(g: Graphics, terrain: TerrainGrid): void {
   const size = terrain.cellSize * 2;
-  const { body, lip, gloss } = frozenShapes(blocks, { size, stride: terrain.widthCells });
-  const radius = ICE_LOOK.bodyRadius * size;
-  for (const slab of body) g.roundRect(slab.x, slab.y, slab.w, slab.h, radius);
-  g.fill(COLORS.body);
-  for (const slab of lip) g.roundRect(slab.x, slab.y, slab.w, slab.h, radius);
-  if (lip.length > 0) g.fill(COLORS.lip);
+  const gloss = frostGloss(frozenBlocks(terrain), { size, stride: terrain.widthCells });
   for (const { a, b } of gloss) g.moveTo(a.x, a.y).lineTo(b.x, b.y);
   if (gloss.length > 0) {
     g.stroke({ width: size * 0.22, color: COLORS.gloss, alpha: 0.6, cap: "round" });
@@ -166,7 +218,10 @@ function drawReleases(view: IceView, frame: IceFrame, look: { ink: number; on: S
 }
 
 export function syncIceView(view: IceView, frame: IceFrame): void {
-  if (view.frostVersion !== frame.terrain.frozenVersion) drawFrost(view, frame.terrain);
+  const { terrain } = frame;
+  const stale =
+    view.frostVersion !== terrain.frozenVersion || view.frostShapeVersion !== terrain.shapeVersion;
+  if (stale) drawFrost(view, terrain);
   const ink = outlineWidth("effect", frame.zoom).width;
   view.beams.clear();
   const on = drawBreaths(view, frame, ink);

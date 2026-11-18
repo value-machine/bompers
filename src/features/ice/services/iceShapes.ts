@@ -1,23 +1,16 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
-import { rowRunSlabs, type BlockSlab, type GridBlock } from "@/shared/utils/blockSlabs";
 import type { FreezeRayBeam } from "@/features/ice/types/ice.types";
 
 /**
- * Ice geometry: pure shapes the ice renderer fills. Frozen ground is drawn the way a fire's body
- * is (owner, ice-element D4: "the same shape as a burning shape could also be a frozen shape"):
- * the frozen samples in 2 × 2 blocks, one slab per row run of blocks, so a frozen patch of any
- * size costs a slab per row run. On top of that: a lighter lip where the block above is not
- * frozen ground, and a few gloss streaks at fixed places, the slippery cue of DESIGN_LANGUAGE § 2.
+ * Ice geometry: pure shapes the ice renderer fills. Frozen ground itself is drawn by the renderer
+ * as the terrain's contour limited to the frozen samples, the way a fire's body is (owner,
+ * ice-element D4: "the same shape as a burning shape could also be a frozen shape";
+ * element-overlay-shape D1). Here: the gloss streaks on it, at fixed places, the slippery cue of
+ * DESIGN_LANGUAGE § 2.
  * The freeze ray is "Cold breath" (owner, ice-element D9): the torch's twin in ice colours, a
  * thin neck that billows into a rolling cloud where it lands, with snow specks drifting down.
  */
 export const ICE_LOOK = {
-  /** Corner radius of a body slab, in blocks. */
-  bodyRadius: 0.2,
-  /** How far a body slab overlaps its neighbours, in blocks (hides the seams between rows). */
-  bodyGrow: 0.04,
-  /** Height of the lip on a top edge, in blocks. */
-  lipHeight: 0.4,
   /** One block in this many carries a gloss streak. */
   glossEvery: 9,
   breath: {
@@ -50,29 +43,30 @@ export const ICE_LOOK = {
   },
 } as const;
 
-export interface FrozenShapes {
-  body: BlockSlab[];
-  lip: BlockSlab[];
-  /** Gloss streaks: a short 45° line each, from `a` to `b`. */
-  gloss: { a: Vec2; b: Vec2 }[];
+/** A 2 × 2 block of samples by block column and row. */
+export interface GridBlock {
+  bx: number;
+  by: number;
 }
 
-/** The frozen blocks (by `by * stride + bx`) as body slabs, top-edge lips and gloss streaks. */
-export function frozenShapes(
+/** A gloss streak: a short 45° line from `a` to `b`. */
+export interface GlossStreak {
+  a: Vec2;
+  b: Vec2;
+}
+
+/**
+ * Gloss streaks on the frozen blocks (by `by * stride + bx`): one block in `glossEvery`, and
+ * only blocks with frozen ground all round, so a streak never pokes out of the frozen shape.
+ */
+export function frostGloss(
   blocks: ReadonlyMap<number, GridBlock>,
   look: { size: number; stride: number }
-): FrozenShapes {
+): GlossStreak[] {
   const { size, stride } = look;
-  const all = [...blocks.values()];
   const has = (bx: number, by: number): boolean =>
     bx >= 0 && by >= 0 && blocks.has(by * stride + bx);
-  const tops = all.filter((block) => !has(block.bx, block.by - 1));
-  const lip = rowRunSlabs(tops, { size, grow: 0 }).map((slab) => ({
-    ...slab,
-    h: ICE_LOOK.lipHeight * size,
-  }));
-  // Only blocks inside the patch carry gloss, so a streak never pokes out of the frozen shape.
-  const glossy = all.filter(
+  const glossy = [...blocks.values()].filter(
     (block) =>
       (block.bx * 7 + block.by * 13) % ICE_LOOK.glossEvery === 0 &&
       has(block.bx - 1, block.by) &&
@@ -80,11 +74,10 @@ export function frozenShapes(
       has(block.bx, block.by - 1) &&
       has(block.bx, block.by + 1)
   );
-  const gloss = glossy.map((block) => ({
+  return glossy.map((block) => ({
     a: { x: (block.bx + 0.85) * size, y: (block.by + 0.1) * size },
     b: { x: (block.bx + 0.15) * size, y: (block.by + 0.9) * size },
   }));
-  return { body: rowRunSlabs(all, { size, grow: ICE_LOOK.bodyGrow * size }), lip, gloss };
 }
 
 export interface Disc {
