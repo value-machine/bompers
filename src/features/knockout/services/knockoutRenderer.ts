@@ -2,6 +2,7 @@ import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
+import { splatShape, type SplatShape } from "@/features/knockout/services/splatShape";
 import { drawLooseHelmet, drawLooseTube } from "@/features/player/api/playerApi";
 import {
   pieceAlpha,
@@ -41,8 +42,8 @@ export interface KnockoutFrame {
   respawnDelaySeconds: number;
 }
 
-/** A wall splat's streak runs down this far (× droplet radius) over `STREAK_SECONDS`. */
-const STREAK = { length: 4, seconds: 0.8 };
+/** A wall splat's streak runs down to its full length (`splatShape`) over this long. */
+const STREAK = { seconds: 0.8 };
 
 export function createKnockoutView(): KnockoutView {
   const splatLayer = new Container({ label: "goo-splats" });
@@ -79,31 +80,27 @@ function drawDroplet(droplet: GooDroplet, width: number): Container {
  * A splat flat on the surface it hit, no outline: a wide lens on a floor (with satellite dots),
  * a hanging drip under a ceiling, a tall smear with a streak running down on a wall.
  */
-function traceSplat(blob: Graphics, splat: GooSplat): Graphics {
-  const r = splat.radius;
-  if (splat.ny < 0) {
-    blob.ellipse(0, 0, 2.3 * r, 0.5 * r);
-    // Two satellite dots just past the ends of the lens.
-    for (const dx of [-2.9, 2.7]) blob.circle(dx * r, 0.1 * r, 0.22 * r);
-    return blob;
+/** Traces the splat's seeded shape (`splatShape`): its blobs and its hanging drips. */
+function traceSplat(g: Graphics, shape: SplatShape): Graphics {
+  for (const blob of shape.blobs) g.ellipse(blob.x, blob.y, blob.rx, blob.ry);
+  for (const drip of shape.drips) {
+    const { x, halfWidth: w, length } = drip;
+    g.moveTo(x - w, 0)
+      .quadraticCurveTo(x - w, 0.7 * length, x, length)
+      .quadraticCurveTo(x + w, 0.7 * length, x + w, 0);
   }
-  if (splat.ny > 0) {
-    return blob
-      .moveTo(-0.7 * r, 0)
-      .quadraticCurveTo(-0.7 * r, 1.4 * r, 0, 2 * r)
-      .quadraticCurveTo(0.7 * r, 1.4 * r, 0.7 * r, 0);
-  }
-  return blob.ellipse(0, 0, 0.55 * r, 1.6 * r);
+  return g;
 }
 
 function drawSplat(splat: GooSplat): Container {
   const r = splat.radius;
   const color = gooColor(splat.slot);
+  const shape = splatShape(splat);
   const root = new Container();
-  root.addChild(traceSplat(new Graphics(), splat).fill(color));
-  if (splat.nx !== 0) {
+  root.addChild(traceSplat(new Graphics(), shape).fill(color));
+  if (shape.streak > 0) {
     const streak = new Graphics()
-      .roundRect(-0.25 * r, 0, 0.5 * r, STREAK.length * r, 0.25 * r)
+      .roundRect(-0.25 * r, 0, 0.5 * r, shape.streak, 0.25 * r)
       .fill(color);
     streak.label = "streak";
     root.addChild(streak);

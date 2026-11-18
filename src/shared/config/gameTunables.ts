@@ -186,7 +186,15 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     // Chosen so power 50 (the rocket) keeps the pre-power blast: push 1080, reach 64, crater 34 on
     // toughness 1 (blast-power D3, D10). Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units;
     // with the recoil (1080 + 200) ≈ 585, well above a full jump (≈ 250).
-    blast: { pushPerPower: 21.6, reachPerPower: 1.28, craterPerPower: 0.68, minFalloff: 0.35 },
+    // hitPushScale: the push on hit players, lowered so a hit no longer flings a blob off the map
+    // (owner, elimination-goo Change round: 1 → 0.55); the shooter's rocket jump stays full.
+    blast: {
+      pushPerPower: 21.6,
+      reachPerPower: 1.28,
+      craterPerPower: 0.68,
+      minFalloff: 0.35,
+      hitPushScale: 0.55,
+    },
     drops: { firstDelaySeconds: 3, intervalSeconds: 7, maxActive: 2, size: 22 },
   },
   camera: {

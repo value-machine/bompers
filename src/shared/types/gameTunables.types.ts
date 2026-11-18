@@ -345,6 +345,11 @@ export interface GameTunables {
       reachPerPower: number;
       craterPerPower: number;
       minFalloff: number;
+      /**
+       * Share of the push that players other than the shooter get (the hit knockback). The
+       * shooter's own push (rocket jump) stays full (owner, elimination-goo Change round).
+       */
+      hitPushScale: number;
     };
     /** Weapon pickups dropping from the level's drop points. */
     drops: {
