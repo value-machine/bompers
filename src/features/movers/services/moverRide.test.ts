@@ -38,7 +38,7 @@ function arenaWith(pieces: TerrainPiece[], movers: LevelMover[]) {
       { x: 40, y: 560 },
       { x: 80, y: 560 },
     ],
-    drops: [{ at: { x: 400, y: 40 }, itemIds: ["rocket-launcher"] }],
+    drops: [{ at: { x: 400, y: 40 } }],
     collectibles: [],
     movers,
     bounds: { x: 0, y: 0, w: 800, h: 600 },

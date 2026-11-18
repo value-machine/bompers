@@ -1,4 +1,5 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import { isWeaponItemId } from "@/shared/config/weaponItems";
 import {
   CATALOG_DEFAULTS,
   LEVEL_FORMAT_VERSION,
@@ -8,7 +9,6 @@ import {
 } from "@/features/content-catalog/api/contentCatalogApi";
 import type {
   LevelDefinition,
-  LevelDrop,
   LevelSettings,
   NormalizedLevel,
   TerrainPiece,
@@ -78,7 +78,29 @@ function normalizeSettings(settings: Partial<LevelSettings>, warnings: Warnings)
     },
     warnings
   );
-  return { cellSize, gravity, ...(matchDurationS !== undefined && { matchDurationS }) };
+  const weaponIds = normalizeWeaponIds(settings.weaponIds, warnings);
+  return {
+    cellSize,
+    gravity,
+    ...(matchDurationS !== undefined && { matchDurationS }),
+    ...(weaponIds !== undefined && { weaponIds }),
+  };
+}
+
+/**
+ * W4: non-weapon IDs are removed. An empty list stays (no weapons); a list left empty only by
+ * removals is dropped, so the lobby's choice applies.
+ */
+function normalizeWeaponIds(
+  weaponIds: readonly string[] | undefined,
+  warnings: Warnings
+): readonly string[] | undefined {
+  if (weaponIds === undefined) return undefined;
+  const known = weaponIds.filter((id) => isWeaponItemId(id));
+  for (const id of weaponIds) {
+    if (!isWeaponItemId(id)) warnings.push(`settings.weaponIds: "${id}" is not a weapon, left out`);
+  }
+  return known.length > 0 || weaponIds.length === 0 ? known : undefined;
 }
 
 /** The material's default colour (stone's when the material has no entry). */
@@ -111,12 +133,6 @@ function normalizePiece(piece: TerrainPiece, where: string, warnings: Warnings):
     ...(soundId !== undefined && { soundId }),
     ...(behaviorId !== undefined && { behaviorId }),
   };
-}
-
-/** W4: unknown items are removed; a drop left with none gets the default drop items. */
-function normalizeDrop(drop: LevelDrop, where: string, warnings: Warnings): LevelDrop {
-  const known = drop.itemIds.filter((id) => knownRef({ kind: "item", id, where }, warnings));
-  return { at: drop.at, itemIds: known.length > 0 ? known : [...CATALOG_DEFAULTS.items.drop] };
 }
 
 const knownItemOrDefault = (itemId: string, where: string, warnings: Warnings): string =>
@@ -155,7 +171,7 @@ export function normalizeLevelDefinition(level: LevelDefinition): NormalizedLeve
     settings: normalizeSettings(level.settings, warnings),
     terrain: level.terrain.map((piece, i) => normalizePiece(piece, `terrain[${i}]`, warnings)),
     spawns,
-    drops: drops.map((drop, i) => normalizeDrop(drop, `drops[${i}]`, warnings)),
+    drops: drops.map((drop) => ({ at: drop.at })),
     collectibles: collectibles.map((c, i) => ({
       at: c.at,
       itemId: knownItemOrDefault(c.itemId, `collectibles[${i}]`, warnings),

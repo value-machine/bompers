@@ -35,6 +35,7 @@ What each cue comes from:
 | `respawn`                            | a player comes back into play                                        |
 | `pickup` (headbutt reset)            | `diveRefillCount` rises (no file of its own; headbutt-reset D5)      |
 | `rocket-fire`, `clink` (placeholders, fire-burn D7) | `catchFireCount` rises (a blob catches fire) / `iceDouseCount` rises (ice puts it out); a dive blowing it off has the dive's launch sound, burning down the `playerHit` hit sound |
+| `clink` (placeholders, ice-frozen-blobs D2) | `frozenCount` rises (a blob freezes into an ice block) / `iceCrackCount` rises (a jump press cracks it, at the crouch gain) / `iceShatterCount` rises (the block breaks); a block melted by fire has the douse `clink` above |
 | `round-start`, `round-end`           | a fresh round's first frame; round phase turns `ended`               |
 
 Music: the lobby screen plays `lobby`; a round plays `match`, then `final` from 0:30 left, and fades out when the round ends (the round-end SFX plays). Leaving a screen fades its music out.

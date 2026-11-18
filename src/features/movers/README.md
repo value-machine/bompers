@@ -19,6 +19,7 @@ Moving parts in the simulation (LEVEL_FORMAT § 11): each step the parts take th
 
 ## Decisions
 
+- Test levels place drops as bare spawn points (`{ at }`); crates take the match's weapons setting, so mover tests need no weapon list (level-direction D6).
 - Moving parts are kinematic bodies with their own local field, never written into the static field; the arena's solid queries (`fieldDistanceAt`, `rectHitsSolid`, `isSolidAt`, friction) see them, so every body (players, crates, rockets, droplets) collides with them without its own code (moving-parts D11).
 - Riding is a carry by the displacement of the point under the feet, applied before the bodies' own step, so a rider never lags a frame; while riding, a body keeps its own velocity (moving-parts D12).
 - A part pushes a body by its own motion at the body's centre, then out along its normal (at most 8 steps). A body still overlapping terrain after that is squeezed: the gap left is its width minus the overlap. A gap under `crushGapFraction` of the width pins it (crush, D13); a wider one centres it in the gap and reports a `Squeeze` (scale = (gap − 2) ÷ width, and the axis), so it shrinks to fit and can still move and jump. When the part lets go it steps back out of the terrain at full size (owner, change round on #64, B5).

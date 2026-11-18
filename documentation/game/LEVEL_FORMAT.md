@@ -51,8 +51,9 @@ The level root is the **first `<svg>` element with a `data-level-format` attribu
 | `data-cell-size` | no | integer ≥ 1 | World units between terrain samples (each sample stores its material and its distance to the nearest terrain edge, so craters and slopes stay curved between samples). Default: catalog `defaults.cellSize` (4). |
 | `data-gravity` | no | number > 0 | Multiplier of the engine's default gravity. Default `1`. |
 | `data-match-duration` | no | integer seconds > 0 | Overrides the match length for this level. Default: the match setting. |
+| `data-weapons` | no | space-separated weapon item IDs, or `none` | Limits the weapons the sky crates hold on this level, in turn; `none` = no weapon crates. Left out (or `auto`): the match setting, which defaults to every weapon the game has (level-direction D6). Non-weapon IDs are left out (W4). |
 
-Per-level settings are the GDD's "per map" settings (§ 7 of the GDD: match duration and gravity). Player-chosen match settings may override them; that precedence belongs to the settings module, not the file.
+Per-level settings are the GDD's "per map" settings (§ 7 of the GDD: match duration, gravity, weapons). They are optional defaults in the family of the match settings (level-direction D7); the precedence against the lobby's choice belongs to the settings module, not the file.
 
 ## 4. Geometry and the terrain grid
 
@@ -91,7 +92,7 @@ Every game-relevant shape carries `data-role`. Elements without it are decoratio
 |---|---|---|---|---|
 | `terrain` | rect, polygon, circle | ≥ 1 | Solid ground. Its material decides whether explosions clear its cells and how it plays (e.g. ice is slippery). | `data-material` (default `defaults.material`), `data-color` (default: the material's `defaultColor`), `data-effect`, `data-sound`, `data-behavior` |
 | `spawn` | circle | ≥ 2 (≥ 4 recommended) | Player spawn point. The game picks the one farthest from active opponents (GDD § 6). | `data-behavior` |
-| `drop` | circle | ≥ 1 | Where weapons and power-ups fall from (GDD § 3–4). | `data-items` (space-separated item IDs; default `defaults.items.drop`), `data-behavior` |
+| `drop` | circle | ≥ 1 | Where weapon crates fall from (GDD § 3–4). A spawn point only: which weapon falls is the match's weapons setting (root `data-weapons`, § 3). | `data-behavior` |
 | `collectible` | circle | ≥ 0 | A pickup point. `point-orb` (default): point orbs fall from the sky onto it (GDD § 5). `dive-reset`: a headbutt reset floats there from the start; a player whose dive is spent in the air takes it and gets the dive back, then it is gone 2.5 s (FEEDBACK_ROUND_2 § 2.3). Only items with `use: collectible`. | `data-item` (one item ID; default `defaults.items.collectible`), `data-behavior` |
 | `bounds` | rect | exactly 1 | The in-bounds area. A player whose centre falls below its bottom edge is out of bounds (eliminated; vision § How the GDD is read); the engine sets the side and top kill lines far beyond it. Must lie within the viewBox. | — |
 
@@ -108,7 +109,7 @@ At least one `terrain` shape is required.
 | `data-effect` | `effect` | Visual effect when cells of this shape are destroyed (overrides the material's). |
 | `data-sound` | `sound` | Sound when cells of this shape are hit or destroyed (overrides the material's). |
 | `data-behavior` | `behavior` | Extra behaviour (moving, bouncy, …). None exist in the catalog yet; reserved so files need no format change when they arrive. |
-| `data-items` / `data-item` | `item` | What a drop point or collectible spawn produces. |
+| `data-item` | `item` | What a collectible spawn produces. |
 
 **Materials and colours in short:** `stone` (solid, default), `earth` and `cardboard` (breakable), `ice` (solid, slippery); colours `plum`, `slate`, `cardboard`, `clay`, `moss`, `mint`, `frost`, `rose` on any of them. The generated table below is the authority.
 
@@ -152,7 +153,7 @@ At least one `terrain` shape is required.
 | sound | `round-start` | Round start |  |
 | sound | `round-end` | Round end |  |
 | behavior | — | none yet; leave it out | |
-| item | `rocket-launcher` | Rocket launcher | use: drop, default for drop |
+| item | `rocket-launcher` | Rocket launcher | use: drop |
 | item | `homing-launcher` | Homing launcher | use: drop |
 | item | `torch` | Torch | use: drop |
 | item | `freeze-ray` | Freeze ray | use: drop |
@@ -184,14 +185,14 @@ The importer produces **errors** (level rejected, readable message naming the el
 | W1 | Unknown `data-role` value. | Element ignored. |
 | W2 | Role on a disallowed element, or a point role on a non-circle. | Element ignored. |
 | W3 | `transform` on a role element or its ancestors. | Element ignored. |
-| W4 | Unknown or malformed reference ID (material, color, effect, sound, behavior, item). | Catalog default (colour: the material's). |
+| W4 | Unknown or malformed reference ID (material, color, effect, sound, behavior, item), or a non-weapon ID in `data-weapons`. | Catalog default (colour: the material's); `data-weapons` leaves the ID out, and with none left uses the match setting. |
 | W5 | Point (spawn/drop/collectible) outside `bounds`, or a spawn inside solid terrain. | Point ignored. |
 | W6 | Fewer than 4 spawn points. | Spawns are shared. |
 | W7 | Duplicate `id`. | Later duplicates lose their id. |
 | W8 | Setting out of range (`data-cell-size` < 1, `data-gravity` ≤ 0, `data-match-duration` ≤ 0, non-numeric). | Default. |
 | W9 | Missing `data-title`. | "Untitled level". |
 | W10 | Unknown `data-*` attribute on a role element. | Ignored (forward compatibility). |
-| W11 | A known item ID on the wrong point role: a `collectible` item in a drop's `data-items`, or a `drop` item in a collectible's `data-item` (the item's `use` in the catalog). | As W4: left out of the drop (default drop items when none remain); default collectible. |
+| W11 | A `drop` item (a weapon) in a collectible's `data-item` (the item's `use` in the catalog). | Default collectible. |
 
 | W12 | A `data-motion` that does not parse, a group without terrain, or more than 16 moving parts; also notes a clamped period or an offset off the cell grid (§ 11). | The group stays still (its shapes stay static terrain); clamped / off-grid values are used as noted. |
 | W13 | Inside a moving group: a non-terrain role, a nested `data-motion`, or a breakable material. | The point stays still; the inner motion is ignored; the material acts unbreakable. |

@@ -77,6 +77,22 @@ function putOut(fire: FireState, player: PlayerState, how: PutOut): void {
   addMoment(fire, moment);
 }
 
+/**
+ * Ice puts a burning blob out with steam: ice terrain next to it, or ice on the blob itself
+ * (the match calls this for a freeze ray's chill, ice-frozen-blobs D6). False when it wasn't
+ * burning.
+ */
+export function douseBlob(
+  fire: FireState,
+  player: PlayerState,
+  at: { now: number; tunables: GameTunables }
+): boolean {
+  if (!fire.blobs.has(player.id)) return false;
+  fire.dousedCounts[player.id] = (fire.dousedCounts[player.id] ?? 0) + 1;
+  putOut(fire, player, { kind: "steam", now: at.now, tunables: at.tunables });
+  return true;
+}
+
 /** Calls `visit` for every solid sample within `reach` of the body centre until it returns true. */
 function someSampleNear(
   grid: TerrainGrid,
@@ -135,8 +151,7 @@ function douseBurning(fire: FireState, args: StepBurningBlobsArgs): void {
       (index) => terrain.slots[terrain.cells[index] ?? EMPTY_CELL]?.douses === true
     );
     if (iced) {
-      fire.dousedCounts[player.id] = (fire.dousedCounts[player.id] ?? 0) + 1;
-      putOut(fire, player, { kind: "steam", now, tunables });
+      douseBlob(fire, player, { now, tunables });
     } else if (args.isDiving(player)) {
       putOut(fire, player, { kind: "blown", now, tunables });
     }

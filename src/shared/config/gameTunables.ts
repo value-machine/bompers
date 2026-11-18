@@ -1,5 +1,6 @@
 import { JUICE_SHAKE_CAP_PX, JUICE_TIERS } from "@/shared/config/gameJuice";
 import type { GameTunables } from "@/shared/types/gameTunables.types";
+import { ALL_WEAPON_ITEM_IDS } from "@/shared/config/weaponItems";
 
 export type { GameTunables };
 
@@ -8,7 +9,7 @@ export type { GameTunables };
  * "all tunables live in one settings/config module").
  *
  * Sectioned per bounded concept so parallel work edits only its own section. Units: world
- * units (px at zoom 1) and seconds. Match settings (gravity, duration) are what a lobby later
+ * units (px at zoom 1) and seconds. Match settings (gravity, duration, weapons) are what a lobby later
  * lets players override; pass a modified copy into `createGameState`, never mutate this object.
  */
 export const DEFAULT_GAME_TUNABLES: GameTunables = {
@@ -18,6 +19,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   world: { gravity: 1400, maxFallSpeed: 1120 },
   match: {
     durationSeconds: 180,
+    // "Auto": every weapon the game has; the lobby or a level narrows it.
+    weaponIds: ALL_WEAPON_ITEM_IDS,
     maxPlayers: 4,
     // Long enough to see the knockout's goo splat land (owner, elimination-goo lap: 1.2 → 2.0).
     respawnDelaySeconds: 2.0,
@@ -135,7 +138,22 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   // so a full 3 s charge makes 10 800 units²: a round patch about 59 units in radius inside a
   // big slab, or about 270 units along a 40-unit-thick platform. Frozen ground thaws by itself
   // after 8 s; the torch thaws a patch two samples round each ray's end.
-  ice: { freezeAreaPerSecond: 3600, frozenSeconds: 8, torchThawRadius: 8 },
+  ice: {
+    freezeAreaPerSecond: 3600,
+    frozenSeconds: 8,
+    torchThawRadius: 8,
+    // The ice block (ice-frozen-blobs D1, D8, starting values): half a second of beam freezes a
+    // blob (a full second while crouching) for 2.5 s; the block brakes at 15 % of normal.
+    blob: {
+      freezeSeconds: 0.5,
+      crouchChillScale: 0.5,
+      frozenSeconds: 2.5,
+      cracksToBreak: 3,
+      slideGrip: 0.15,
+      graceSeconds: 0.5,
+      momentSeconds: 0.5,
+    },
+  },
   combat: {
     maxHealth: 4,
     killCreditSeconds: 4,

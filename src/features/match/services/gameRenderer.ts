@@ -72,7 +72,12 @@ import {
   syncFireView,
   type FireView,
 } from "@/features/fire/api/fireApi";
-import { createIceView, syncIceView, type IceView } from "@/features/ice/api/iceApi";
+import {
+  createIceView,
+  frozenBlobPoses,
+  syncIceView,
+  type IceView,
+} from "@/features/ice/api/iceApi";
 import { playersInPlay, type GameState } from "@/features/match/services/gameSim";
 import { createHudView, syncHudView, type HudView } from "@/features/match/services/hudRenderer";
 
@@ -219,6 +224,12 @@ const blobOverlays = (
 ): Map<string, BlobPoseOverlay> => {
   const overlays = burningBlobPoses(state.fire, { players: frame.inPlay, nowMs: frame.nowMs });
   for (const [id, pose] of diveBlobPoses(state.dive, state.tunables)) overlays.set(id, pose);
+  // A frozen blob holds still in its block, whatever else it was doing.
+  const frozen = frozenBlobPoses(state.ice, {
+    players: frame.inPlay,
+    timeSeconds: state.timeSeconds,
+  });
+  for (const [id, pose] of frozen) overlays.set(id, pose);
   for (const player of frame.inPlay) {
     if (player.squeeze && !overlays.has(player.id))
       overlays.set(player.id, squeezePose(player.squeeze));
@@ -339,6 +350,8 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
   syncIceView(renderer.ice, {
     ice: state.ice,
     terrain: state.arena.terrain,
+    players: inPlay,
+    blob: state.tunables.ice.blob,
     nowMs,
     timeSeconds: state.timeSeconds,
     zoom,

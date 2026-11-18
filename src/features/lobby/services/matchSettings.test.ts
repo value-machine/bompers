@@ -8,14 +8,18 @@ import {
   effectiveSettings,
   formatDuration,
   formatGravity,
+  lobbyWeaponIds,
+  toggleWeapon,
 } from "@/features/lobby/services/matchSettings";
+import { ALL_WEAPON_ITEM_IDS } from "@/shared/config/weaponItems";
+import type { MatchSettings } from "@/features/lobby/types/lobby.types";
 
-const LOBBY = { durationSeconds: 90, gravityScale: 1.5 };
+const LOBBY: MatchSettings = { durationSeconds: 90, gravityScale: 1.5, weaponsOff: [] };
 
 describe("matchSettings", () => {
   it("should start from the engine defaults when the lobby opens", () => {
     const settings = defaultMatchSettings(DEFAULT_GAME_TUNABLES);
-    expect(settings).toEqual({ durationSeconds: 180, gravityScale: 1 });
+    expect(settings).toEqual({ durationSeconds: 180, gravityScale: 1, weaponsOff: [] });
     expect(DURATION_OPTIONS).toContain(settings.durationSeconds);
   });
 
@@ -36,7 +40,36 @@ describe("matchSettings", () => {
     expect(effectiveSettings(DEFAULT_GAME_TUNABLES, LOBBY, { cellSize: 8, gravity: 0.5 })).toEqual({
       durationSeconds: 90,
       durationSetByLevel: false,
+      weaponIds: ALL_WEAPON_ITEM_IDS,
+      weaponsSetByLevel: false,
       gravityScale: 0.75,
+    });
+  });
+
+  it("should hand the match every weapon except the ones switched off", () => {
+    const off = toggleWeapon(toggleWeapon(LOBBY, "torch"), "rocket-launcher");
+    expect(applyMatchSettings(DEFAULT_GAME_TUNABLES, off).match.weaponIds).toEqual([
+      "homing-launcher",
+      "freeze-ray",
+    ]);
+    expect(lobbyWeaponIds(toggleWeapon(off, "torch"))).toEqual([
+      "homing-launcher",
+      "torch",
+      "freeze-ray",
+    ]);
+  });
+
+  it("should hand the match no weapons when every weapon is switched off", () => {
+    const none = ALL_WEAPON_ITEM_IDS.reduce(toggleWeapon, LOBBY);
+    expect(applyMatchSettings(DEFAULT_GAME_TUNABLES, none).match.weaponIds).toEqual([]);
+  });
+
+  it("should let the level's weapons win over the lobby's when the level sets them", () => {
+    const off = toggleWeapon(LOBBY, "torch");
+    const settings = { cellSize: 8, gravity: 1, weaponIds: ["torch"] };
+    expect(effectiveSettings(DEFAULT_GAME_TUNABLES, off, settings)).toMatchObject({
+      weaponIds: ["torch"],
+      weaponsSetByLevel: true,
     });
   });
 

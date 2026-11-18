@@ -48,6 +48,13 @@ export function bonkedMaterialSound(terrain: TerrainGrid, player: PlayerState, d
   return "none";
 }
 
+/** A player's ice block counters (ice-frozen-blobs D2): frozen, cracks, blocks broken. */
+const iceBlockCounts = (state: GameState, id: string) => ({
+  frozenCount: state.ice.frozeCounts[id] ?? 0,
+  iceCrackCount: state.ice.crackCounts[id] ?? 0,
+  iceShatterCount: state.ice.shatterCounts[id] ?? 0,
+});
+
 /**
  * What the sound feature reads from one frame of the match. Only the match knows `GameState`,
  * so it hands sound a flat snapshot of the slices it needs (players, dive, combat events, round).
@@ -77,6 +84,7 @@ export function soundSnapshotOf(state: GameState): SoundSnapshot {
         diveRefillCount: state.dive.refillCounts[player.id] ?? 0,
         catchFireCount: state.fire.caughtCounts[player.id] ?? 0,
         iceDouseCount: state.fire.dousedCounts[player.id] ?? 0,
+        ...iceBlockCounts(state, player.id),
       };
     }),
     events: state.combat.events,
