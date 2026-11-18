@@ -33,7 +33,8 @@ With a moving part between a spraying blob and a rival, for the torch and for th
 | `arena` | `moverDistanceAt` maps a world point into a part's rest pose with a reach broadphase | `terrainBodies(grid)` → the static field and one entry per part, exported from `arenaApi` | ride |
 | `fire` (`torch.ts`) | lights or thaws `hit.sample` on the static grid | passes `terrainBodies`, skips hits with `body !== 0` | ride |
 | `ice` (`freezeRay.ts`) | feeds cold from `hit.sample` on the static grid | same | ride |
-| `documentation` | arena, fire, ice READMEs | one line each: rays stop on parts | ride |
+| `combat` (`attacks.ts`), `shared/utils/beamClash` | the beam clash (PR #75) casts its own fans against the static grid | passes `terrainBodies`, so beams do not clash through a part | ride (found when #75 landed; still S) |
+| `documentation` | arena, fire, ice, combat READMEs | one line each: rays stop on parts | ride |
 
 Overrun rule (skill-loop D51): a diff that touches a feature area **not** in this table stops the lap.
 
@@ -45,9 +46,9 @@ S.
 
 Conflict & compliance: `shared/utils` may not import a feature, so the fan cannot call the arena; the arena builds the list and the weapon passes it in (same direction as today's `field: terrain`). No new files outside existing folders; no new dependency; no state, so replays are unchanged. Naming (code-style F1): `RayField`, `terrainBodies` name roles, not the torch. Performance: a fan is at most 7 × 42 or 3 × 90 steps; each step adds one squared-distance reach check per part (16 at most) and a local lookup only inside a part's reach.
 
-Waits for: the orchestrator's "#75 merged" before step 2 (both laps edit `rayFan.ts`).
+Built after #75 merged (main 732c13b). #75 cuts a fan by its `length`, outside the march, so the two changes met without overlap; its clash rule casts its own fans, so it takes the same list (edge added above).
 
-1. **Acceptance test (red first).** In `src/features/fire/services/torch.test.ts` and `src/features/ice/services/freezeRay` coverage (`iceSim.test.ts` holds the ray's tests today): a level with one part between the holder and a rival; assert the success check. Add a `rayFan` unit test beside the util: a ray stops on a field given through a world-to-local map, and reports its `body`.
+1. **Acceptance test (red first).** In `src/features/fire/services/torch.test.ts` and `src/features/ice/services/freezeRay` coverage (`frozenBlobs.test.ts` holds the ray's blob tests): a level with one part between the holder and a rival; assert the success check. Add a `rayFan` unit test beside the util: a ray stops on a field given through a world-to-local map, and reports its `body`.
 2. **Ray fan.** Rebase on main with #75 in it. `RayFanCast.field` becomes `fields: readonly RayField[]` (`{ field: SampleField; toLocal?: (p: Vec2) => Vec2 | null }`, `null` = outside the body's reach); `solidAt` tries each in order; `RayHit` gains `body` (index into `fields`). Keep #75's cap as it lands.
 3. **Arena.** `terrainBodies(grid)`: `[{ field: grid }, ...grid.movers.map(...)]`, the part entry mapping through `unposePoint` and the part's `origin`, returning `null` beyond `reach`. Export from `arenaApi`.
 4. **Weapons.** `sprayTorch` and `sprayFreezeRay` pass `terrainBodies(terrain)`; samples are taken only from hits with `body === 0`.

@@ -27,5 +27,6 @@ None.
 
 ## Log
 
+- 2026-11-18 — Lap 1 built after #75 merged. The beam clash casts its own fans, so it takes the same field list (combat edge added to the brief). The type is `PosedField` in `shared/types`, not a ray-only name, since lap 2 reuses it. Pair table still keyed per beam; re-keying by element ID moves to lap 3 (orchestrator).
 - 2026-11-18 — D1 picked (approach 3), D2 confirmed, lap cut accepted; lap 1 planned in BRIEF.md § Plan. Build waits for "#75 merged".
 - 2026-11-18 — D1 asked on the options page (version 1), reported to the orchestrator. Page smoke-checked headless once at 400 px: no console errors, no sideways scroll, four diagrams built, the scene's sampled pixels change per depth (shelf burns at depth 3, a loose piece lands at depth 4, the lift freezes at depth 2). Not verified: the look, which is the owner's to judge.

@@ -1,6 +1,7 @@
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
 import type { CraterShape } from "@/shared/types/craterShape.types";
 import type { MotionPose } from "@/shared/types/levelMotion.types";
+import type { PosedField } from "@/shared/types/sampleFront.types";
 import { craterShapeDistance } from "@/shared/utils/craterShape";
 import { unposePoint } from "@/shared/utils/levelMotion";
 import {
@@ -225,6 +226,27 @@ export function moverDistanceAt(mover: MoverBody, p: Vec2, pose: MotionPose = mo
   if (dx * dx + dy * dy > mover.reach * mover.reach) return -fieldBand(mover.field);
   const rest = unposePoint(pose, mover.pivot, p);
   return gridDistanceAt(mover.field, { x: rest.x - mover.origin.x, y: rest.y - mover.origin.y });
+}
+
+/**
+ * The fields a ray can meet, each placed in the world (mover-materials D4): the static terrain
+ * first, then every moving part in its pose this step. A point beyond a part's reach is out of
+ * its field.
+ */
+export function terrainBodies(grid: TerrainGrid): PosedField[] {
+  const parts = grid.movers.map(
+    (mover): PosedField => ({
+      field: mover.field,
+      toLocal: (p) => {
+        const dx = p.x - mover.pivot.x - mover.pose.dx;
+        const dy = p.y - mover.pivot.y - mover.pose.dy;
+        if (dx * dx + dy * dy > mover.reach * mover.reach) return null;
+        const rest = unposePoint(mover.pose, mover.pivot, p);
+        return { x: rest.x - mover.origin.x, y: rest.y - mover.origin.y };
+      },
+    })
+  );
+  return [{ field: grid }, ...parts];
 }
 
 /** The moving part deepest at a world point and its distance; null when the grid has none. */

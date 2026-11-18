@@ -1,6 +1,11 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import { castRayFan, pushAlongAim } from "@/shared/utils/rayFan";
-import { isFrozenSample, thawAround, type TerrainGrid } from "@/features/arena/api/arenaApi";
+import {
+  isFrozenSample,
+  terrainBodies,
+  thawAround,
+  type TerrainGrid,
+} from "@/features/arena/api/arenaApi";
 import { helmetPoint } from "@/features/combat/api/combatApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import { ignite } from "@/features/fire/services/fireSim";
@@ -10,7 +15,7 @@ import type { FireState } from "@/features/fire/types/fire.types";
 /**
  * The torch (fire-spread b1; owner blast-power D8): while its holder sprays, the shared ray fan
  * (`castRayFan`) goes out from the helmet over ±`halfAngleDegrees` of the aim. A ray stops at the
- * first terrain it meets and lights it when it is fuel, so the torch lights what it touches and
+ * first terrain or moving part it meets and lights terrain when it is fuel, so the torch lights what it touches and
  * never through a wall (D5). Frozen terrain is thawed first (ice-element D6): the flame always
  * turns it back to normal, and the next step lights it only if it is fuel. A blob a ray reaches
  * before terrain is pushed along the aim (`push`, units / s² for this step), directly on its
@@ -35,14 +40,15 @@ export function sprayTorch(fire: FireState, args: TorchSprayArgs): void {
   const { terrain, tunables, holder } = args;
   const torch = tunables.combat.torch;
   const hits = castRayFan({
-    field: terrain,
+    fields: terrainBodies(terrain),
     bodies: args.players.filter((player) => player !== holder),
     origin: helmetPoint(holder),
     aim: { x: holder.aimX, y: holder.aimY },
     shape: { ...torch, length: args.reach ?? torch.length },
   });
-  for (const { sample } of hits.rays) {
-    if (sample === null) continue;
+  for (const { sample, body } of hits.rays) {
+    // A ray that ends on a moving part stops there; parts take no fire yet (mover-materials L1).
+    if (sample === null || body !== 0) continue;
     if (isFrozenSample(terrain, sample)) thawAround(terrain, sample, tunables.ice.torchThawRadius);
     else ignite(fire, terrain, { index: sample, time: args.now });
   }

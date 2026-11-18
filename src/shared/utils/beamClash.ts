@@ -1,6 +1,6 @@
 import type { BeamClash, BeamElement, BeamReaction } from "@/shared/types/beamClash.types";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
-import type { SampleField } from "@/shared/types/sampleFront.types";
+import type { PosedField } from "@/shared/types/sampleFront.types";
 import { castRayFan, rayDirections, type RayFanShape } from "@/shared/utils/rayFan";
 
 /**
@@ -50,9 +50,9 @@ interface Fan {
   free: number[];
 }
 
-function fanOf(field: SampleField, beam: ClashBeam): Fan {
+function fanOf(fields: readonly PosedField[], beam: ClashBeam): Fan {
   const hits = castRayFan({
-    field,
+    fields,
     bodies: [],
     origin: beam.origin,
     aim: beam.aim,
@@ -157,18 +157,18 @@ function meetingOf(a: Fan, b: Fan, look: { thickness: number; stride: number }) 
 /**
  * This step's beam clashes: for every pair of beams whose elements react and that touch, both
  * end at the distance where they first touch (a beam shorter than that keeps its length).
- * Terrain counts: a beam behind a wall does not reach the meeting.
+ * Terrain counts, moving parts too: a beam behind a wall or a part does not reach the meeting.
  */
 export function resolveBeamClashes(
-  field: SampleField,
+  fields: readonly PosedField[],
   beams: readonly ClashBeam[],
   look: BeamClashLook
 ): BeamClashes {
   const reach = beams.map((beam) => beam.shape.length);
   const clashes: BeamClash[] = [];
   if (beams.length < 2) return { reach, clashes };
-  const fans = beams.map((beam) => fanOf(field, beam));
-  const search = { thickness: look.thickness, stride: field.cellSize };
+  const fans = beams.map((beam) => fanOf(fields, beam));
+  const search = { thickness: look.thickness, stride: fields[0]?.field.cellSize ?? 1 };
   beams.forEach((beam, i) => {
     for (let j = i + 1; j < beams.length; j += 1) {
       const other = beams[j];
