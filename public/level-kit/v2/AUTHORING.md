@@ -77,6 +77,9 @@ Link the preview kit in `<head>` (works offline without it):
 | sound | `freeze-start` | Freeze start |  |
 | sound | `freeze-loop` | Freeze ray (loop) |  |
 | sound | `thaw` | Thaw |  |
+| sound | `freeze-solid` | Freeze solid |  |
+| sound | `ice-crack` | Ice crack |  |
+| sound | `ice-shatter` | Ice shatter |  |
 | behavior | — | none yet; leave it out | |
 | item | `rocket-launcher` | Rocket launcher | use: drop |
 | item | `homing-launcher` | Homing launcher | use: drop |

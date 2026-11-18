@@ -311,12 +311,14 @@ describe("readSoundLoops", () => {
     expect(gainAt({ burningSamples: SOUND_MIX.fireFullSamples })).toBe(1);
   });
 
-  it("should play the ice placeholder when a blob freezes, cracks its block or the block breaks", () => {
+  it("should play the ice block's own sounds when a blob freezes, cracks its block or the block breaks", () => {
     const froze = snapshot({ players: [player(0, { frozenCount: 1 }), player(1)] });
-    expect(cuesAfter(froze)).toEqual([{ soundId: "clink", slot: 0, gain: 1 }]);
+    expect(cuesAfter(froze)).toEqual([{ soundId: "freeze-solid", slot: 0, gain: 1 }]);
     const cracked = snapshot({ players: [player(0, { iceCrackCount: 1 }), player(1)] });
-    expect(cuesAfter(cracked)).toEqual([{ soundId: "clink", slot: 0, gain: SOUND_MIX.crouchGain }]);
+    expect(cuesAfter(cracked)).toEqual([
+      { soundId: "ice-crack", slot: 0, gain: SOUND_MIX.crouchGain },
+    ]);
     const broke = snapshot({ players: [player(0), player(1, { iceShatterCount: 1 })] });
-    expect(cuesAfter(broke)).toEqual([{ soundId: "clink", slot: 1, gain: 1 }]);
+    expect(cuesAfter(broke)).toEqual([{ soundId: "ice-shatter", slot: 1, gain: 1 }]);
   });
 });

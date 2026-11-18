@@ -275,6 +275,8 @@ Every SFX prompt is built from one template: **material + action + palette words
 
 **Fire and ice sounds** (owner, 2026-11-18, element-sounds lap; prompts in the lap's BRIEF, generated with `eleven_text_to_sound_v2`, shorts 0.5 s, loops with the generator's loop option): torch start take 4, torch loop take 3, fire crackle loop take 1, burn-out take 1 (over cardboard's thwap), catch fire take 2, steam hiss take 3, freeze start take 3, thaw take 2. The freeze-ray loop is re-take 2 after the owner's note: "a continuous mix of leaf blower and whistling wind".
 
+**Ice block sounds** (owner, 2026-11-18, ice-block-sounds lap; prompts in the lap's BRIEF, same template and model, 0.5 s): freeze solid take 1, ice crack take 2 (played at the crouch level), ice shatter take 1. A block melted by fire keeps the douse steam hiss.
+
 **Seamless loops** (owner, 2026-11-18: "the loops need transitions because they all have seams"): no fades to silence on a loop. Its last 0.25 s is crossfaded with equal power (quarter-sine curves) over its first 0.25 s and the file is cut to length − 0.25 s, so its last sample runs on into its first. One fixed gain to −16 LUFS; the limiter runs on three copies in a row (latency compensated) and the middle copy is kept sample-exact, because a look-ahead limiter otherwise shifts the audio and opens the seam again. Check: the jump from the last sample to the first is an ordinary step of the source at that point. In the game a loop plays as passes of the file that overlap by `SOUND_MIX.loopCrossfadeSeconds` (0.1 s, equal power), which also hides the mp3's silent edges; the game holds loops while their source lasts (GAME_JUICE § 6).
 
 ### Music (the music lap, 2026-11-16)
