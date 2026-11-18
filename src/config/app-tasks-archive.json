@@ -333,5 +333,10 @@
     "title": "Legs: one system for wall and slope",
     "description": "Owner request 2026-11-17: leg animation from wall walk and arced slope walk should transition nicely or be one system. Owner picked B, one surface frame (PR #59). Planted feet (C) parked in the player README.",
     "status": "done"
+  },
+  {
+    "title": "Moving parts in levels",
+    "description": "Owner request 2026-11-17 (full lap): level parts can rotate and move, and the level builder (format, importer, level kit preview, Copy AI prompt) supports them. Must be easy for an agent that only has the level-builder prompt to author correctly and align shapes without seeing them (e.g. anchors, pivots, relative/snap coordinates, named groups). Keep the prompt and format token-light. Cover second-order effects: players/crates/pickups riding and being pushed or crushed by moving parts, collision against moving geometry vs the static distance field, destructibility and fire on moving parts, camera bounds, spawn safety, homing/rockets, determinism, validation warnings, performance. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; level format: documentation/game/LEVEL_FORMAT.md. ",
+    "status": "done"
   }
 ]

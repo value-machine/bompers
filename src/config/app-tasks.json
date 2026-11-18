@@ -1,10 +1,5 @@
 [
   {
-    "title": "Moving parts in levels",
-    "description": "Owner request 2026-11-17 (full lap): level parts can rotate and move, and the level builder (format, importer, level kit preview, Copy AI prompt) supports them. Must be easy for an agent that only has the level-builder prompt to author correctly and align shapes without seeing them (e.g. anchors, pivots, relative/snap coordinates, named groups). Keep the prompt and format token-light. Cover second-order effects: players/crates/pickups riding and being pushed or crushed by moving parts, collision against moving geometry vs the static distance field, destructibility and fire on moving parts, camera bounds, spawn safety, homing/rockets, determinism, validation warnings, performance. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; level format: documentation/game/LEVEL_FORMAT.md. ",
-    "status": "to-do"
-  },
-  {
     "title": "Ice element",
     "description": "Owner request 2026-11-18: do for each element what was done for fire, one by one: a weapon/projectile, an effect on blobs, and an effect per map material (stone, earth, cardboard, ice), plus element interactions (ice puts out fire, fire melts ice). Ice is next; after it lands the owner decides whether another element follows. Starts with an ideation options page (loop-refine step 6). Shared spread/material mechanism named by role, not after fire (code-style F1/F2). Thread: Ice element (Fable).",
     "status": "to-do"
