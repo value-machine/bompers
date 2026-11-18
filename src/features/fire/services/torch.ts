@@ -26,6 +26,8 @@ export interface TorchSprayArgs {
   /** Sim time of this step, seconds. */
   now: number;
   dt: number;
+  /** How far the flame goes this step (shorter in a beam clash); the torch's length when left out. */
+  reach?: number;
 }
 
 /** One step of spraying: thaw or light what the cone touches, push the blobs in it, record it. */
@@ -37,7 +39,7 @@ export function sprayTorch(fire: FireState, args: TorchSprayArgs): void {
     bodies: args.players.filter((player) => player !== holder),
     origin: helmetPoint(holder),
     aim: { x: holder.aimX, y: holder.aimY },
-    shape: torch,
+    shape: { ...torch, length: args.reach ?? torch.length },
   });
   for (const { sample } of hits.rays) {
     if (sample === null) continue;

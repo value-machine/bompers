@@ -445,6 +445,45 @@ describe("gameSim — moving parts squeeze and crush (owner D13, change round on
   });
 });
 
+describe("gameSim — beam clash (beam-clash D1, the steam wall)", () => {
+  const C = DEFAULT_GAME_TUNABLES.combat;
+  /** Two blobs 90 units apart, facing each other and holding fire for a second. */
+  const sprayHeadOn = (left: "torch" | "freeze-ray", right: "torch" | "freeze-ray") => {
+    const state = stepFor(newGame(), 3);
+    const [a, b] = [state.players[0]!, state.players[1]!];
+    a.x = 300;
+    b.x = 390;
+    const ammoOf = (itemId: "torch" | "freeze-ray") =>
+      itemId === "torch" ? C.torch.ammo : C.freezeRay.ammo;
+    state.combat.fighters.get(a.id)!.weapon = { itemId: left, ammo: ammoOf(left) };
+    state.combat.fighters.get(b.id)!.weapon = { itemId: right, ammo: ammoOf(right) };
+    const inputs = keys().map((input, slot) =>
+      slot < 2 ? { ...input, fire: true, aimX: slot === 0 ? 1 : -1, aimY: 0 } : input
+    );
+    stepFor(state, 1, inputs);
+    return { state, a, b };
+  };
+
+  it("should stop both beams where they meet when a torch and a freeze ray spray head-on", () => {
+    const { state, a, b } = sprayHeadOn("torch", "freeze-ray");
+
+    expect(state.combat.beamClashes).toHaveLength(1);
+    // Neither beam got past: the ray holder does not burn, the torch holder gathers no chill,
+    // and neither was pushed.
+    expect(state.fire.blobs.size).toBe(0);
+    expect(isIced(state.ice, a)).toBe(false);
+    expect(a.x).toBeCloseTo(300, 0);
+    expect(b.x).toBeCloseTo(390, 0);
+  });
+
+  it("should still land a beam when the other blob holds the same element", () => {
+    const { state, b } = sprayHeadOn("torch", "torch");
+
+    expect(state.combat.beamClashes).toEqual([]);
+    expect(state.fire.caughtCounts[b.id] ?? 0).toBeGreaterThan(0);
+  });
+});
+
 describe("gameSim — ice blocks (ice-frozen-blobs D1–D7)", () => {
   const B = DEFAULT_GAME_TUNABLES.ice.blob;
   /** A game past spawn protection with player 0 frozen solid. */

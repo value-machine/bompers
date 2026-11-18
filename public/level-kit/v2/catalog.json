@@ -232,6 +232,18 @@
     {
       "id": "thaw",
       "label": "Thaw"
+    },
+    {
+      "id": "freeze-solid",
+      "label": "Freeze solid"
+    },
+    {
+      "id": "ice-crack",
+      "label": "Ice crack"
+    },
+    {
+      "id": "ice-shatter",
+      "label": "Ice shatter"
     }
   ],
   "behavior": [],
