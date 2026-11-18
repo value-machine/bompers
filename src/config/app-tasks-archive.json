@@ -328,5 +328,100 @@
     "title": "Elimination: ragdoll and fall apart",
     "description": "Owner request 2026-11-16: when a blob is lethally hit it ragdolls, or falls apart into pieces that ragdoll; the pieces then blink until they disappear, and the player respawns. Design first: an artifact with live examples of the options before the owner picks. Fills the game-juice gap 'elimination has sound but no visual'. Relates to the Shared roll lap (ragdoll/tumble state) and the loose-parts idea (falling bodies). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md; juice: documentation/game/GAME_JUICE.md. ",
     "status": "done"
+  },
+  {
+    "title": "Legs: one system for wall and slope",
+    "description": "Owner request 2026-11-17: leg animation from wall walk and arced slope walk should transition nicely or be one system. Owner picked B, one surface frame (PR #59). Planted feet (C) parked in the player README.",
+    "status": "done"
+  },
+  {
+    "title": "Moving parts in levels",
+    "description": "Owner request 2026-11-17 (full lap): level parts can rotate and move, and the level builder (format, importer, level kit preview, Copy AI prompt) supports them. Must be easy for an agent that only has the level-builder prompt to author correctly and align shapes without seeing them (e.g. anchors, pivots, relative/snap coordinates, named groups). Keep the prompt and format token-light. Cover second-order effects: players/crates/pickups riding and being pushed or crushed by moving parts, collision against moving geometry vs the static distance field, destructibility and fire on moving parts, camera bounds, spawn safety, homing/rockets, determinism, validation warnings, performance. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; level format: documentation/game/LEVEL_FORMAT.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Ice element",
+    "description": "Owner request 2026-11-18: do for each element what was done for fire, one by one: a weapon/projectile, an effect on blobs, and an effect per map material (stone, earth, cardboard, ice), plus element interactions (ice puts out fire, fire melts ice). Ice is next; after it lands the owner decides whether another element follows. Starts with an ideation options page (loop-refine step 6). Shared spread/material mechanism named by role, not after fire (code-style F1/F2). Thread: Ice element (Fable).",
+    "status": "done"
+  },
+  {
+    "title": "Weapon visuals: embellish",
+    "description": "Owner 2026-11-16 signed off the weapon and crate visual system (#38) as a work in progress: 'we will embellish further later on'. Polish pass on crates, helmet tubes, muzzle lights and HUD ammo once the owner names what to improve. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Fire and ice follow the terrain shape",
+    "description": "Owner 2026-11-18: burning and frozen areas lose the base shape (per-row rounded slabs). Owner picked C: draw states with the same contour rule as the terrain (terrainContour region option replacing breakableOnly, a sample-region field, surface points). Fire and ice renderers switch over after the freeze ray (#63) merges. Thread: Fire and ice overlays keep the terrain shape.",
+    "status": "done"
+  },
+  {
+    "title": "Stains as a terrain state",
+    "description": "Owner 2026-11-18: goo splats should stain the actual objects (the samples/texels of terrain and moving parts) instead of drawing a sprite on top. Use the same per-sample state system as fire and ice (a third state with a colour per stain and fading), drawn through the region/contour mechanism, including on moving parts. Starts with an options page. After the fire and ice overlay-shape lap.",
+    "status": "done"
+  },
+  {
+    "title": "Weapons as a match setting",
+    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): lobby setting like match duration; auto = every weapon the game has (old maps get new weapons); a level may state a default (e.g. only rockets, no weapons). Remove data-items from drops in format, importer, kit, prompt and built-in levels (format change; compatibility waived). Size S–M.",
+    "status": "done"
+  },
+  {
+    "title": "Ice lap 2: frozen blobs",
+    "description": "Ice element follow-up (owner pick 2026-11-18: freeze ray on the fire system, PR #63): frozen blobs and counterplay with crouch, dive and jump. Touches the player feature through overlays and the shared roll; starts with an options page. Size M.",
+    "status": "done"
+  },
+  {
+    "title": "Remember a level by file location",
+    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): owner idea: keep a level by its file location instead of a stored copy. Research first: a web page cannot store a path; needs the browser File System Access API (not in every browser). Size S.",
+    "status": "done"
+  },
+  {
+    "title": "Forgiving level import",
+    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): turn each rejection the game can survive into a warning with a fallback (pass over E1–E8 in LEVEL_FORMAT § 7); reject only what the game cannot run. Size S.",
+    "status": "done"
+  },
+  {
+    "title": "Copy import report",
+    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): lobby button copies the remaining import errors and warnings as plain text so an authoring agent can read them. Size S.",
+    "status": "done"
+  },
+  {
+    "title": "Controller focus highlight in menus",
+    "description": "Owner 2026-11-18 (for later): in the UI, a controller (gamepad) needs a visible highlight on the active UI element, but mouse/keyboard on PC does not. Show the focus highlight only while the last input came from a pad (input-modality detection, like :focus-visible), across lobby rows (incl. the weapons crate cursor from #68 and the level strip), pause menu and other menus. Visible UI change: options page first.",
+    "status": "done"
+  },
+  {
+    "title": "Fire and torch sounds",
+    "description": "Follow-up from fire b1 (#53): the torch start and burn-outs reuse placeholder sounds (rocket-fire, cardboard thwap). Generate real takes (torch whoosh/loop, crackle, burn-out) per DESIGN_LANGUAGE § 8 incl. 'Owner listens first' (artifact page, owner picks before wiring); credits need the owner's go. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md. ",
+    "status": "done"
+  },
+  {
+    "title": "Ice lap 3: ice sounds",
+    "description": "Ice element follow-up: freeze ray and frozen-ground sounds on a listening page before wiring in (DESIGN_LANGUAGE § 8). Size S.",
+    "status": "done"
+  },
+  {
+    "title": "Ice block sounds",
+    "description": "Follow-up from #69 and #73: the frozen-blob ice block freeze, crack and shatter moments still play clink placeholders (GAME_JUICE rows Blob freezes, Ice block cracks, Ice block breaks). Generate takes (ElevenLabs credits need owner go), listening page first, then wire in like #73.",
+    "status": "done"
+  },
+  {
+    "title": "Beam clash: torch meets freeze ray",
+    "description": "Owner 2026-11-18: beams of opposing elements react where they meet instead of overlapping. Owner picked A, steam wall (PR #75): both stop at the meeting point in steam. One beam-vs-beam rule with a pair table.",
+    "status": "done"
+  },
+  {
+    "title": "Bug: collision sound retriggers rapidly",
+    "description": "Owner 2026-11-18, found while playing: in some positions (against a moving platform, or other platforms) the player collision/land sound replays rapidly in bursts. Suspect the sim grounded/airborne flip (#59 found it) and resting/pushed contacts with movers. Fix at the source plus a per-body re-trigger guard.",
+    "status": "done"
+  },
+  {
+    "title": "Ability challenge levels",
+    "description": "Owner 2026-11-18: a creative thread designs levels that challenge every character ability (movement, headbutt, roll, crouch, moving parts) plus weapon abilities and combinations; concepts page first, then authored as kit levels via LEVEL_PROMPT with feedback on the prompt. Built as five built-in levels in PR #79.",
+    "status": "done"
+  },
+  {
+    "title": "Level prompt: crusher wording",
+    "description": "LEVEL_PROMPT section 3 says moving parts keep an 8-unit margin; the importer accepts flush contact and crush needs a gap under 5.6 (crusher-test-level contradicts the prompt). Fix the wording. Size XS. Owner OK 2026-11-18; also add movement numbers at base settings (jump height, running jump, dive length, wall-jump, jump+dive reach) instead of a route checker. Done in PR #79.",
+    "status": "done"
   }
 ]
