@@ -218,3 +218,82 @@ describe("roll exits", () => {
     expect(isRolling(sim.player)).toBe(false);
   });
 });
+
+// Owner bug reports on the ability levels (roll-spin-bounce, 2026-11-18). The ice bowl stands in
+// for the chutes of Bobsled Run and Slush Bowl, which are not on main yet.
+const bowlPoints = Array.from({ length: 33 }, (_, a) => {
+  const t = (Math.PI * a) / 32;
+  return { x: 500 - 380 * Math.cos(t), y: 100 + 280 * Math.sin(t) };
+});
+const iceBowl: LevelDefinition = {
+  ...hill,
+  terrain: [
+    {
+      shape: {
+        type: "polygon",
+        points: [
+          { x: 0, y: 100 },
+          ...bowlPoints,
+          { x: 1000, y: 100 },
+          { x: 1000, y: 500 },
+          { x: 0, y: 500 },
+        ],
+      },
+      materialId: "ice",
+    },
+  ],
+};
+const angleStep = (from: number, to: number): number => {
+  const turn = Math.PI * 2;
+  return to - from - turn * Math.round((to - from) / turn);
+};
+
+/** Heights of the hops a roll makes after it first touches the floor (fire held). */
+const hopsAfterLanding = (sim: ReturnType<typeof createSim>, steps: number): number[] => {
+  const hops: number[] = [];
+  let landed = false;
+  let top = FLOOR_Y;
+  for (let i = 0; i < steps; i += 1) {
+    sim.step({ fire: true });
+    const p = sim.player;
+    if (!landed) landed = p.grounded || p.rollBounceCount > 0;
+    else if (!p.grounded) top = Math.min(top, p.y);
+    else if (top < FLOOR_Y - 0.5) {
+      hops.push(FLOOR_Y - top);
+      top = FLOOR_Y;
+    }
+  }
+  return hops;
+};
+
+describe("roll look and bounce (owner bug reports)", () => {
+  it("should spin with its speed every step when a dash roll starts in the air and runs through an ice bowl", () => {
+    const sim = createSim({ x: 160, y: 50 }, iceBowl);
+    startRoll(sim.player, { source: "dash" }, T);
+    sim.player.vx = 360;
+    const radius = sim.player.width / 2;
+    for (let i = 0; i < 240; i += 1) {
+      const before = sim.player.rollAngle;
+      sim.step({ fire: true });
+      const turned = Math.abs(angleStep(before, sim.player.rollAngle));
+      if (!sim.player.grounded) {
+        // In the air it keeps the rate it had (never 0, also when the roll began in the air).
+        expect(turned).toBeGreaterThan(0.5 * dt * Math.abs(sim.player.rollSpin));
+        expect(Math.abs(sim.player.rollSpin)).toBeGreaterThan(0);
+        continue;
+      }
+      const speed = Math.hypot(sim.player.vx, sim.player.vy);
+      // On the ice it turns with the ground speed, like a ball (at least half the rate).
+      if (speed > 60) expect(turned).toBeGreaterThan((0.5 * speed * dt) / radius);
+    }
+  });
+
+  it("should hop at most once, lower than its own height, when a roll lands from a high fall", () => {
+    const sim = createSim({ x: 300, y: FLOOR_Y - 250 });
+    startRoll(sim.player, { source: "dash" }, T);
+    sim.player.vx = 300;
+    const hops = hopsAfterLanding(sim, 400);
+    expect(hops.length).toBeLessThanOrEqual(1);
+    for (const hop of hops) expect(hop).toBeLessThan(T.player.height);
+  });
+});

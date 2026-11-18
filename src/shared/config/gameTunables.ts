@@ -83,14 +83,16 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   bodyCollision: { restitution: 0.9, restingSpeed: 140, maxImpulse: 1100 },
   // A full-speed dive hit gives about 1000 units / s: 0.8 s out of control. A 200 shove: 0.16 s.
   // Rolling friction 200 + 1.5 × speed: a 1000 roll on the flat stops in ≈ 1.4 s (≈ 480 units);
-  // on 20° it rolls down at ≈ 190 units / s.
+  // on 20° it rolls down at ≈ 190 units / s. Bounces: restitution 0.3 above 300 units / s, so a
+  // 250-unit fall hops once ≈ 22 units and a roll hugs slopes (was 0.6 / 160: an 89-unit hop and
+  // four more; owner bug report, roll-spin-bounce, 2026-11-18).
   roll: {
     lockPerImpulse: 0.0008,
     maxLockSeconds: 1.2,
     hardLockSeconds: 0.5,
-    restitution: 0.6,
+    restitution: 0.3,
     surfaceSpeedKeep: 0.85,
-    minBounceSpeed: 160,
+    minBounceSpeed: 300,
     rollingDecel: 200,
     rollingDrag: 1.5,
     steerAccel: 500,
