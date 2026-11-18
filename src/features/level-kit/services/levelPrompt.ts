@@ -232,24 +232,42 @@ function renderCatalog(ctx: PromptContext): string {
  * dive's height at its exit speed. Checked against the sim (ability-levels lap): a late dive onto
  * a landing 60 lower reached 738, this model gives 744.
  */
-function jumpDiveReach(t: GameTunables, diveAt: number): number {
+function jumpDiveReach(t: GameTunables, diveAt: number, rolled = false): number {
   const { player: p, dive } = t;
   const g = t.world.gravity;
   const height = Math.max(0, p.jumpSpeed * diveAt - (g * diveAt * diveAt) / 2);
   const fall = Math.sqrt((2 * height) / g);
+  const run = rolled ? carriedRun(t, diveAt) : { distance: p.runSpeed * diveAt, speed: p.runSpeed };
   return (
-    p.runSpeed * diveAt +
-    p.runSpeed * dive.windupSpeedScale * dive.windupSeconds +
+    run.distance +
+    run.speed * dive.windupSpeedScale * dive.windupSeconds +
     dive.launchSpeed * dive.travelSeconds +
     dive.launchSpeed * dive.exitSpeedScale * fall
   );
 }
 
+/**
+ * Sideways flight of a jump out of a roll at the carry cap (roll carry, double-jump-bash D11): the
+ * carried speed bleeds at `roll.airCarryDecel` while the stick holds, never below run speed.
+ * In the sim (bobsled-run-roll) a roll at 600 + late dive reached 906 onto a landing 60 lower;
+ * this model gives 904 for a flat gap.
+ */
+function carriedRun(t: GameTunables, seconds: number): { distance: number; speed: number } {
+  const { jumpCarryMax: v0, airCarryDecel: decel } = t.roll;
+  const run = t.player.runSpeed;
+  const bleedTime = Math.min(seconds, (v0 - run) / decel);
+  const distance =
+    v0 * bleedTime - (decel * bleedTime * bleedTime) / 2 + run * (seconds - bleedTime);
+  return { distance, speed: v0 - decel * bleedTime };
+}
+
 /** The longest flat-gap jump + dive: the best dive moment between take-off and landing. */
-function bestJumpDiveReach(t: GameTunables): number {
+function bestJumpDiveReach(t: GameTunables, rolled = false): number {
   const airTime = (2 * t.player.jumpSpeed) / t.world.gravity;
   let best = 0;
-  for (let i = 0; i <= 100; i += 1) best = Math.max(best, jumpDiveReach(t, (airTime * i) / 100));
+  for (let i = 0; i <= 100; i += 1) {
+    best = Math.max(best, jumpDiveReach(t, (airTime * i) / 100, rolled));
+  }
   return best;
 }
 
@@ -266,7 +284,7 @@ function movementLines({ tunables: t, cell }: PromptContext): string[] {
     `- Player collider \`${p.width} × ${p.height}\`; comfortable corridor height \`${snapDown(p.height * 3, cell)}\`+.`,
     `- Gravity \`${g}\` units/s², max fall speed \`${t.world.maxFallSpeed}\`. Run speed \`${p.runSpeed}\` units/s.`,
     `- Jump: \`jumpSpeed ${p.jumpSpeed}\` → apex ~\`${round(apex)}\` units in ${(p.jumpSpeed / g).toFixed(2)} s. Easy step up \`${snapDown(apex * 0.5, cell)}\`, hard step \`${snapDown(apex * 0.85, cell)}\`. Running jump across a flat gap: ~\`${snapDown(runReach * 0.75, cell)}\` comfortable, ~\`${round(runReach)}\` max.`,
-    `- Headbutt dive (once per air time, aimed in 16 directions): \`${dive.launchSpeed}\` units/s for \`${dive.travelSeconds}\` s (~\`${round(diveDistance)}\` units) after a \`${dive.windupSeconds}\` s windup; jump + dive across a flat gap: ~\`${snapDown(jumpDiveReach(t, apexTime), cell)}\` diving at the top of the jump, ~\`${snapDown(bestJumpDiveReach(t), cell)}\` max with a late dive. A head-on dive into a wall bonks (\`${dive.bonkStunSeconds}\` s stun).`,
+    `- Headbutt dive (once per air time, aimed in 16 directions): \`${dive.launchSpeed}\` units/s for \`${dive.travelSeconds}\` s (~\`${round(diveDistance)}\` units) after a \`${dive.windupSeconds}\` s windup; jump + dive across a flat gap: ~\`${snapDown(jumpDiveReach(t, apexTime), cell)}\` diving at the top of the jump, ~\`${snapDown(bestJumpDiveReach(t), cell)}\` max with a late dive, ~\`${snapDown(bestJumpDiveReach(t, true), cell)}\` jumping out of a fast roll (it keeps up to \`${t.roll.jumpCarryMax}\` units/s sideways). A gap between those two needs the roll. A head-on dive into a wall bonks (\`${dive.bonkStunSeconds}\` s stun).`,
     `- Wall slide \`${p.wallSlideSpeed}\` units/s; wall jump \`vx ${p.wallJumpSpeedX}\`, \`vy ${p.wallJumpSpeedY}\` (~\`${round(wallGain)}\` height per kick). Wall-jump chimney width \`${snapDown(p.width * 4.5, cell)}\`–\`${snapDown(p.width * 8, cell)}\`.`,
   ];
 }
