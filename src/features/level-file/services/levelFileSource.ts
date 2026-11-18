@@ -11,7 +11,15 @@ import type { LevelIssue } from "@/features/level-file/types/levelFile.types";
  * the default (the GDD § 4 start map). A drift test checks it against the folder, so a new
  * level file is one file plus one line here.
  */
-export const BUILT_IN_LEVEL_FILES = ["start-arena.html", "floating-garden.html"] as const;
+export const BUILT_IN_LEVEL_FILES = [
+  "start-arena.html",
+  "floating-garden.html",
+  "bobsled-run.html",
+  "piston-works.html",
+  "bonfire-bridge.html",
+  "crystal-gap.html",
+  "slush-bowl.html",
+] as const;
 
 /** Served URL of a built-in level file. */
 export const builtInLevelUrl = (fileName: string): string => `/levels/${fileName}`;
