@@ -33,5 +33,35 @@
     "title": "Weekend: token-spend pass over skills",
     "description": "Weekend only (agent-behavior rule § Token budget); the owner starts it. Measure which skills and loop stages spend the most tokens per lap (loop-check: one subagent per rule, plan-compliance subagent, component lens, size-M parallel lenses; loop-plan review fan-out; browser checks; full-suite runs; large generations) using real session usage where available, then propose cuts with meta-audit-harness (context-cost lens extended to runtime spend). Proposals only; protected-file changes need the owner's yes.",
     "status": "to-do"
+  },
+  {
+    "title": "Weapons as a match setting",
+    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): lobby setting like match duration; auto = every weapon the game has (old maps get new weapons); a level may state a default (e.g. only rockets, no weapons). Remove data-items from drops in format, importer, kit, prompt and built-in levels (format change; compatibility waived). Size S–M.",
+    "status": "to-do"
+  },
+  {
+    "title": "Forgiving level import",
+    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): turn each rejection the game can survive into a warning with a fallback (pass over E1–E8 in LEVEL_FORMAT § 7); reject only what the game cannot run. Size S.",
+    "status": "to-do"
+  },
+  {
+    "title": "Copy import report",
+    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): lobby button copies the remaining import errors and warnings as plain text so an authoring agent can read them. Size S.",
+    "status": "to-do"
+  },
+  {
+    "title": "Objects in levels",
+    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): when the first object is wanted: object role as a plain box with a catalog ID (the box is the size, the game draws the real thing); sizes at 1.0 in catalog and prompt; fit-to-box drawing; warnings; vision line becomes \"shows the layout\"; revisit the prompt structure here. Size M.",
+    "status": "to-do"
+  },
+  {
+    "title": "Remember a level by file location",
+    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): owner idea: keep a level by its file location instead of a stored copy. Research first: a web page cannot store a path; needs the browser File System Access API (not in every browser). Size S.",
+    "status": "to-do"
+  },
+  {
+    "title": "Level gallery",
+    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): later, unshaped. No remix feature.",
+    "status": "to-do"
   }
 ]
