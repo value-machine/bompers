@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createGameInputReader } from "@/shared/services/gameInputService";
+import { getMenuFocusModality } from "@/shared/services/menuFocusModality";
 import type { MenuInput } from "@/shared/types/gameInput.types";
 import { EMPTY_MENU_INPUT, INPUT_DEVICES } from "@/shared/utils/gameInputMapping";
 import type { LobbyAction, LobbyButton } from "@/features/lobby/types/lobby.types";
@@ -53,7 +54,11 @@ export function useLobbyInput(onPress: (action: LobbyAction) => void): DeviceAct
     let frame = 0;
     const onFrame = (): void => {
       const menus = reader.sampleMenus();
-      pressesOf(menus, previous).forEach((action) => onPressRef.current(action));
+      pressesOf(menus, previous).forEach((action) => {
+        // Key and pad presses show the menu focus mark; pointer use hides it (controller-focus D2).
+        getMenuFocusModality().noteMenuPress();
+        onPressRef.current(action);
+      });
       previous = menus;
       const next = menus.map((menu) => ({ present: menu.present, active: isActive(menu) }));
       const key = activityKey(next);

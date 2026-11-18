@@ -8,6 +8,7 @@ import {
   type AudioEngine,
   type SoundSettings,
 } from "@/features/sound/api/soundApi";
+import { getMenuFocusModality } from "@/shared/services/menuFocusModality";
 import {
   CLOSED_PAUSE_MENU,
   PAUSE_ROWS,
@@ -56,6 +57,8 @@ export function usePauseMenu(onMainMenu: () => void): PauseMenuControl {
 
   const dispatch = useCallback(
     (action: PauseAction): void => {
+      // Key and pad presses show the focus mark; pointer use hides it (controller-focus D2).
+      if (action.type === "press") getMenuFocusModality().noteMenuPress();
       const { state, effect } = reducePauseMenu(stateRef.current, action);
       stateRef.current = state;
       setMenu(state);

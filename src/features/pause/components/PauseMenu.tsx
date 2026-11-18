@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
+import { useMenuFocusVisible } from "@/shared/hooks/useMenuFocusVisible";
 import { Button } from "@/components/common/Button";
 import { VOLUME_STEPS, type SoundSettings } from "@/features/sound/api/soundApi";
 import type { PauseAction, PauseMenuState, PauseRow } from "@/features/pause/types/pause.types";
@@ -32,8 +33,9 @@ const Row = ({
     data-testid={`pause-row-${row}`}
     aria-current={focused ? "true" : undefined}
     className={cn(
-      "flex min-h-12 items-center gap-3 rounded-xl border-2 border-transparent px-3 py-1",
-      focused && "border-ring bg-accent"
+      "flex min-h-12 items-center gap-3 rounded-xl px-3 py-1",
+      // The mark shows only after key / pad input (data-menu-focus on the menu root).
+      focused && "group-data-[menu-focus=on]/menu:menu-focus-row"
     )}
   >
     <span className="w-28 shrink-0 font-semibold">{label}</span>
@@ -84,6 +86,7 @@ const volumeLabel = (volume: number): string => String(Math.round(volume * VOLUM
  * player preferences — match settings stay in the lobby.
  */
 export const PauseMenu = ({ menu, focusedRow: focused, sound, onAction }: PauseMenuProps) => {
+  const focusVisible = useMenuFocusVisible();
   if (!menu.open) return null;
   const activate = (row: PauseRow) => () => onAction({ type: "activate", row });
   const action = (row: PauseRow, label: string, variant: "default" | "outline" = "outline") => (
@@ -94,7 +97,8 @@ export const PauseMenu = ({ menu, focusedRow: focused, sound, onAction }: PauseM
 
   return (
     <div
-      className="absolute inset-0 flex items-center justify-center bg-background/70"
+      className="group/menu absolute inset-0 flex items-center justify-center bg-background/70"
+      data-menu-focus={focusVisible ? "on" : "off"}
       data-testid="pause-menu"
       role="dialog"
       aria-modal="true"

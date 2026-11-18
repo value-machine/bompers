@@ -1,6 +1,7 @@
 import type { ReactNode, Ref } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
+import { useMenuFocusVisible } from "@/shared/hooks/useMenuFocusVisible";
 import { Button } from "@/components/common/Button";
 import {
   LevelImportControl,
@@ -42,8 +43,9 @@ const Row = ({
     data-testid={`lobby-row-${row}`}
     aria-current={focused ? "true" : undefined}
     className={cn(
-      "flex min-h-14 flex-wrap items-center gap-3 rounded-xl border-2 border-transparent px-3 py-2",
-      focused && "border-ring bg-accent"
+      "flex min-h-14 flex-wrap items-center gap-3 rounded-xl px-3 py-2",
+      // The mark shows only after key / pad input (data-menu-focus on the menu root).
+      focused && "group-data-[menu-focus=on]/menu:menu-focus-row"
     )}
   >
     <span className="w-28 shrink-0 font-semibold">{label}</span>
@@ -110,9 +112,9 @@ const WeaponToggles = ({
         onMouseDown={keepFocus}
         onClick={() => onAction({ type: "toggleWeapon", weaponId: weapon.weaponId })}
         className={cn(
-          "rounded-lg p-0.5 ring-offset-2 ring-offset-background transition-[filter,opacity] duration-(--duration-fast)",
+          "rounded-lg p-0.5 transition-[filter,opacity] duration-(--duration-fast)",
           !weapon.on && "opacity-40 grayscale",
-          weapon.focused && "ring-2 ring-ring",
+          weapon.focused && "group-data-[menu-focus=on]/menu:menu-focus",
           view.weaponsLocked ? "cursor-default" : "cursor-pointer"
         )}
       >
@@ -146,9 +148,14 @@ export const LobbyMenu = ({
 }: LobbyMenuProps) => {
   const { selectedLevel, view } = lobby;
   const { focusedRow, players, startable } = view;
+  const focusVisible = useMenuFocusVisible();
 
   return (
-    <div className="flex flex-col gap-1" data-testid="lobby-menu">
+    <div
+      className="group/menu flex flex-col gap-1"
+      data-testid="lobby-menu"
+      data-menu-focus={focusVisible ? "on" : "off"}
+    >
       <Row row="level" label="Level" focused={focusedRow === "level"}>
         {selectedLevel ? (
           <LevelStrip
