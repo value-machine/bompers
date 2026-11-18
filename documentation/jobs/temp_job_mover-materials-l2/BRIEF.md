@@ -8,7 +8,7 @@ A cardboard moving part acts like stone: the torch's flame ends on it (lap 1) an
 
 ## Success check
 
-The torch held on a cardboard part lights the sample it touches; the fire spreads through the part at the same speed as through cardboard ground and never leaves the part; a blob touching the burning part catches fire; a stone part never lights. After the burn time the burnt samples are gone from the part's field, so a body no longer collides with them (D1 of this lap, pending the owner). Fire on static terrain behaves exactly as before (its tests pass unchanged in meaning).
+The torch held on a cardboard part lights the sample it touches; the fire spreads through the part at the same speed as through cardboard ground and never leaves the part; a blob touching the burning part catches fire; a stone part never lights. After the burn time the burnt samples are gone from the part's field, so a body no longer collides with them (D1 of this lap, owner). Fire on static terrain behaves exactly as before (its tests pass unchanged in meaning).
 
 ## In scope
 
@@ -46,4 +46,4 @@ M (fire sim, renderer and tests change shape; one arena drawing change; text cha
 
 ## Decisions
 
-DECISIONS.md: D1 open with the owner (what a burnt-out part leaves; built as option 1 until answered), D2–D4 closed.
+DECISIONS.md: D1–D4 closed (D1 by the owner: a burnt part is gone for the round).
