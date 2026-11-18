@@ -7,7 +7,6 @@ import {
 } from "@/features/arena/api/arenaApi";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelApi";
 import { createPlayer } from "@/features/player/api/playerApi";
-import { isBurning } from "@/features/fire/services/burningBlobs";
 import { createFireState } from "@/features/fire/services/fireSim";
 import { sprayTorch } from "@/features/fire/services/torch";
 
@@ -58,9 +57,9 @@ describe("torch (blast-power D8)", () => {
       dt: 1 / 120,
     });
     const helmetY = FLOOR - holder.height * 0.78;
-    expect(fire.igniteAt[sampleAt(terrain, 241, helmetY)]).toBe(0);
+    expect(fire.grounds[0]!.igniteAt[sampleAt(terrain, 241, helmetY)]).toBe(0);
     // Behind the first sample nothing is lit by the spray itself.
-    expect(fire.igniteAt[sampleAt(terrain, 260, helmetY)]).toBe(Infinity);
+    expect(fire.grounds[0]!.igniteAt[sampleAt(terrain, 260, helmetY)]).toBe(Infinity);
   });
 
   it("should not light fuel behind stone when stone stands in the cone", () => {
@@ -78,7 +77,7 @@ describe("torch (blast-power D8)", () => {
       dt: 1 / 120,
     });
     const helmetY = FLOOR - holder.height * 0.78;
-    expect(fire.igniteAt[sampleAt(terrain, 241, helmetY)]).toBe(Infinity);
+    expect(fire.grounds[0]!.igniteAt[sampleAt(terrain, 241, helmetY)]).toBe(Infinity);
   });
 
   it("should push a blob in the cone along the aim and not one behind a wall", () => {
@@ -126,7 +125,7 @@ describe("torch on frozen terrain (ice-element D6)", () => {
     const helmetY = FLOOR - holder.height * 0.78;
     const touched = sampleAt(terrain, 241, helmetY);
     setSampleFrozen(terrain, touched, true);
-    const spray = (now: number): void =>
+    const spray = (now: number): void => {
       sprayTorch(fire, {
         terrain,
         players: [holder],
@@ -135,11 +134,12 @@ describe("torch on frozen terrain (ice-element D6)", () => {
         now,
         dt: 1 / 120,
       });
+    };
     spray(0);
     expect(isFrozenSample(terrain, touched)).toBe(false);
-    expect(fire.igniteAt[touched]).toBe(Infinity);
+    expect(fire.grounds[0]!.igniteAt[touched]).toBe(Infinity);
     spray(1 / 120);
-    expect(fire.igniteAt[touched]).toBeLessThan(Infinity);
+    expect(fire.grounds[0]!.igniteAt[touched]).toBeLessThan(Infinity);
   });
 
   it("should thaw frozen stone and never light it", () => {
@@ -159,7 +159,7 @@ describe("torch on frozen terrain (ice-element D6)", () => {
       });
     }
     expect(isFrozenSample(terrain, touched)).toBe(false);
-    expect(fire.igniteAt[touched]).toBe(Infinity);
+    expect(fire.grounds[0]!.igniteAt[touched]).toBe(Infinity);
   });
 });
 
@@ -186,20 +186,20 @@ describe("torch on moving parts (mover-materials lap 1)", () => {
 
   it("should end every ray on the part and leave the blob behind it alone when a part is in the cone", () => {
     const { part, fire, rival, spray } = scene();
-    spray();
+    const reached = spray();
     for (const end of fire.sprays[0]!.ends) expect(end.x).toBeLessThanOrEqual(240 + CELL);
     expect(rival.vx).toBe(0);
-    expect(isBurning(fire, rival)).toBe(false);
-    // Parts take no fire yet: nothing lit on the static grid, nothing changed on the part.
-    expect(fire.igniteAt.every((time) => time === Infinity)).toBe(true);
+    expect(reached).toEqual([]);
+    // The flame acts on the part it touches (fireSim.test.ts › fire on moving parts), never on the ground behind it.
+    expect(fire.grounds[0]!.igniteAt.every((time) => time === Infinity)).toBe(true);
     expect(part.field.frozen.some((flag) => flag !== 0)).toBe(false);
   });
 
   it("should reach the blob when the part has moved out of the cone", () => {
-    const { part, fire, rival, spray } = scene();
+    const { part, rival, spray } = scene();
     part.pose = { dx: 0, dy: -120, angle: 0 };
-    spray();
+    // The reached blobs are returned; the match sets them alight (blob-fire feature).
+    expect(spray()).toEqual([rival]);
     expect(rival.vx).toBeGreaterThan(0);
-    expect(isBurning(fire, rival)).toBe(true);
   });
 });

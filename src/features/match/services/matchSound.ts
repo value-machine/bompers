@@ -10,6 +10,7 @@ import {
 } from "@/features/sound/api/soundApi";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { getCellInfo, type TerrainGrid } from "@/features/arena/api/arenaApi";
+import { burningCount } from "@/features/fire/api/fireApi";
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import { isInPlay } from "@/features/match/services/matchRules";
@@ -67,8 +68,8 @@ export function soundWorldOf(state: GameState): SoundWorldSnapshot {
     timeSeconds: state.timeSeconds,
     torchSlots: fire.sprays.map((spray) => spray.slot),
     freezeSlots: ice.rays.map((ray) => ray.slot),
-    burningSamples: fire.lit.length - fire.litHead,
-    burningBlobs: fire.blobs.size,
+    burningSamples: burningCount(fire),
+    burningBlobs: state.blobFire.blobs.size,
     thawedSamples: ice.frozenHead,
     frozenVersion: state.arena.terrain.frozenVersion,
     beamClashes: state.combat.beamClashes.length,
@@ -102,8 +103,8 @@ export function soundSnapshotOf(state: GameState): SoundSnapshot {
         speed: Math.hypot(player.vx, player.vy),
         terrainHitSpeed: Math.max(player.terrainHitSpeedX, player.terrainHitSpeedY),
         diveRefillCount: state.dive.refillCounts[player.id] ?? 0,
-        catchFireCount: state.fire.caughtCounts[player.id] ?? 0,
-        iceDouseCount: state.fire.dousedCounts[player.id] ?? 0,
+        catchFireCount: state.blobFire.caughtCounts[player.id] ?? 0,
+        iceDouseCount: state.blobFire.dousedCounts[player.id] ?? 0,
         ...iceBlockCounts(state, player.id),
       };
     }),

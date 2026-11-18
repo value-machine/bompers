@@ -1,9 +1,16 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
-import { EMPTY_CELL, type TerrainGrid } from "@/features/arena/api/arenaApi";
+import {
+  EMPTY_CELL,
+  bodyGrids,
+  bodyWorldPoint,
+  terrainBodies,
+  type TerrainGrid,
+} from "@/features/arena/api/arenaApi";
 import type { BodyContact, PlayerState } from "@/features/player/api/playerApi";
-import type { BlobFireMoment, FireState } from "@/features/fire/types/fire.types";
+import type { FireState } from "@/features/fire/api/fireApi";
+import type { BlobFireMoment, BlobFireState } from "@/features/blob-fire/types/blobFire.types";
 
 /**
  * Blobs on fire (fire-burn b2; owner blast-power D7, fire-burn D1–D6). A blob catches from a
@@ -22,8 +29,17 @@ const bodyCenter = (player: PlayerState): Vec2 => ({
   y: player.y - player.height / 2,
 });
 
-export const isBurning = (fire: FireState, player: PlayerState): boolean =>
-  fire.blobs.has(player.id);
+/** Fresh state: nothing burns. */
+export const createBlobFireState = (): BlobFireState => ({
+  blobs: new Map(),
+  blobGraceUntil: new Map(),
+  blobMoments: [],
+  caughtCounts: {},
+  dousedCounts: {},
+});
+
+export const isBurning = (blobFire: BlobFireState, player: PlayerState): boolean =>
+  blobFire.blobs.has(player.id);
 
 export interface CatchFireArgs {
   now: number;
@@ -33,18 +49,22 @@ export interface CatchFireArgs {
 }
 
 /** Sets a blob on fire; false when it is already burning or was just put out. */
-export function catchFire(fire: FireState, player: PlayerState, args: CatchFireArgs): boolean {
-  if (fire.blobs.has(player.id)) return false;
-  if (args.now < (fire.blobGraceUntil.get(player.id) ?? -Infinity)) return false;
-  fire.blobs.set(player.id, {
+export function catchFire(
+  blobFire: BlobFireState,
+  player: PlayerState,
+  args: CatchFireArgs
+): boolean {
+  if (blobFire.blobs.has(player.id)) return false;
+  if (args.now < (blobFire.blobGraceUntil.get(player.id) ?? -Infinity)) return false;
+  blobFire.blobs.set(player.id, {
     slot: player.slot,
     since: args.now,
     fromX: args.fromX,
     bySlot: args.bySlot,
     ticks: 0,
   });
-  fire.caughtCounts[player.id] = (fire.caughtCounts[player.id] ?? 0) + 1;
-  addMoment(fire, {
+  blobFire.caughtCounts[player.id] = (blobFire.caughtCounts[player.id] ?? 0) + 1;
+  addMoment(blobFire, {
     kind: "caught",
     slot: player.slot,
     at: bodyCenter(player),
@@ -53,8 +73,8 @@ export function catchFire(fire: FireState, player: PlayerState, args: CatchFireA
   return true;
 }
 
-function addMoment(fire: FireState, moment: BlobFireMoment): void {
-  fire.blobMoments.push(moment);
+function addMoment(blobFire: BlobFireState, moment: BlobFireMoment): void {
+  blobFire.blobMoments.push(moment);
 }
 
 interface PutOut {
@@ -64,9 +84,9 @@ interface PutOut {
   to?: Vec2;
 }
 
-function putOut(fire: FireState, player: PlayerState, how: PutOut): void {
-  fire.blobs.delete(player.id);
-  fire.blobGraceUntil.set(player.id, how.now + how.tunables.fire.blob.graceSeconds);
+function putOut(blobFire: BlobFireState, player: PlayerState, how: PutOut): void {
+  blobFire.blobs.delete(player.id);
+  blobFire.blobGraceUntil.set(player.id, how.now + how.tunables.fire.blob.graceSeconds);
   const moment: BlobFireMoment = {
     kind: how.kind,
     slot: player.slot,
@@ -74,7 +94,7 @@ function putOut(fire: FireState, player: PlayerState, how: PutOut): void {
     atSeconds: how.now,
   };
   if (how.to) moment.to = how.to;
-  addMoment(fire, moment);
+  addMoment(blobFire, moment);
 }
 
 /**
@@ -83,23 +103,26 @@ function putOut(fire: FireState, player: PlayerState, how: PutOut): void {
  * burning.
  */
 export function douseBlob(
-  fire: FireState,
+  blobFire: BlobFireState,
   player: PlayerState,
   at: { now: number; tunables: GameTunables }
 ): boolean {
-  if (!fire.blobs.has(player.id)) return false;
-  fire.dousedCounts[player.id] = (fire.dousedCounts[player.id] ?? 0) + 1;
-  putOut(fire, player, { kind: "steam", now: at.now, tunables: at.tunables });
+  if (!blobFire.blobs.has(player.id)) return false;
+  blobFire.dousedCounts[player.id] = (blobFire.dousedCounts[player.id] ?? 0) + 1;
+  putOut(blobFire, player, { kind: "steam", now: at.now, tunables: at.tunables });
   return true;
 }
 
-/** Calls `visit` for every solid sample within `reach` of the body centre until it returns true. */
+/**
+ * Calls `visit` for every solid sample of `grid` within `reach` of `center` (a point in the
+ * grid's own coordinates) until it returns true.
+ */
 function someSampleNear(
   grid: TerrainGrid,
-  near: { player: PlayerState; reach: number },
+  near: { center: Vec2; reach: number },
   visit: (index: number, center: Vec2) => boolean
 ): boolean {
-  const c = bodyCenter(near.player);
+  const c = near.center;
   const size = grid.cellSize;
   const minX = Math.max(0, Math.floor((c.x - near.reach) / size));
   const maxX = Math.min(grid.widthCells - 1, Math.floor((c.x + near.reach) / size));
@@ -121,6 +144,8 @@ const reachOf = (grid: TerrainGrid, player: PlayerState): number =>
   player.width / 2 + grid.cellSize;
 
 export interface StepBurningBlobsArgs {
+  /** The fire on the arena's bodies: a blob touching a burning sample catches. */
+  fire: FireState;
   terrain: TerrainGrid;
   /** Players in play; a burning blob that left play (eliminated, waiting) just goes out. */
   players: readonly PlayerState[];
@@ -140,47 +165,59 @@ export interface BurnDown {
 }
 
 /** Ice next to the body or a dive puts a burning blob out. */
-function douseBurning(fire: FireState, args: StepBurningBlobsArgs): void {
+function douseBurning(blobFire: BlobFireState, args: StepBurningBlobsArgs): void {
   const { terrain, now, tunables } = args;
   for (const player of args.players) {
-    if (!fire.blobs.has(player.id)) continue;
-    const near = { player, reach: reachOf(terrain, player) };
+    if (!blobFire.blobs.has(player.id)) continue;
+    const near = { center: bodyCenter(player), reach: reachOf(terrain, player) };
     const iced = someSampleNear(
       terrain,
       near,
       (index) => terrain.slots[terrain.cells[index] ?? EMPTY_CELL]?.douses === true
     );
     if (iced) {
-      douseBlob(fire, player, { now, tunables });
+      douseBlob(blobFire, player, { now, tunables });
     } else if (args.isDiving(player)) {
-      putOut(fire, player, { kind: "blown", now, tunables });
+      putOut(blobFire, player, { kind: "blown", now, tunables });
     }
   }
 }
 
-/** A blob touching a burning terrain sample catches; the fire came from that sample. */
-function catchFromTerrain(fire: FireState, args: StepBurningBlobsArgs): void {
+/**
+ * A blob touching a burning sample of any body (the ground or a moving part) catches; the fire
+ * came from that sample. A part is searched in its own frame, around the blob's centre there.
+ */
+function catchFromTerrain(blobFire: BlobFireState, args: StepBurningBlobsArgs): void {
   const { terrain, now } = args;
+  const bodies = terrainBodies(terrain);
+  const grids = bodyGrids(terrain);
   for (const player of args.players) {
-    if (fire.blobs.has(player.id)) continue;
-    const near = { player, reach: reachOf(terrain, player) };
-    someSampleNear(terrain, near, (index, center) => {
-      if ((fire.igniteAt[index] ?? Infinity) > now) return false;
-      return catchFire(fire, player, { now, fromX: center.x, bySlot: null });
+    const world = bodyCenter(player);
+    const reach = reachOf(terrain, player);
+    bodies.some(({ toLocal }, body) => {
+      const ground = args.fire.grounds[body];
+      const grid = grids[body];
+      const center = toLocal ? toLocal(world) : world;
+      if (!ground || !grid || !center || blobFire.blobs.has(player.id)) return false;
+      return someSampleNear(grid, { center, reach }, (index, at) => {
+        if ((ground.igniteAt[index] ?? Infinity) > now) return false;
+        const fromX = bodyWorldPoint(terrain, body, at).x;
+        return catchFire(blobFire, player, { now, fromX, bySlot: null });
+      });
     });
   }
 }
 
 /** A bump between a burning blob and one that isn't passes the fire across. */
-function passOnBump(fire: FireState, args: StepBurningBlobsArgs): void {
+function passOnBump(blobFire: BlobFireState, args: StepBurningBlobsArgs): void {
   const { now, tunables } = args;
   for (const contact of args.contacts) {
-    const aBurns = fire.blobs.has(contact.a.id);
-    if (aBurns === fire.blobs.has(contact.b.id)) continue;
+    const aBurns = blobFire.blobs.has(contact.a.id);
+    if (aBurns === blobFire.blobs.has(contact.b.id)) continue;
     const [from, to] = aBurns ? [contact.a, contact.b] : [contact.b, contact.a];
     // Passing it on makes the passer the one who lit the rival (credit for the chunk, D5).
-    if (!catchFire(fire, to, { now, fromX: from.x, bySlot: from.slot })) continue;
-    putOut(fire, from, { kind: "leap", now, tunables, to: bodyCenter(to) });
+    if (!catchFire(blobFire, to, { now, fromX: from.x, bySlot: from.slot })) continue;
+    putOut(blobFire, from, { kind: "leap", now, tunables, to: bodyCenter(to) });
   }
 }
 
@@ -188,12 +225,12 @@ function passOnBump(fire: FireState, args: StepBurningBlobsArgs): void {
  * Burn damage over time (owner fire-burn D10): a first chunk `firstTickSeconds` into the burn,
  * then at `burnSeconds` the blob goes out with a second chunk, skipped when it is crouching then.
  */
-function burnDown(fire: FireState, args: StepBurningBlobsArgs): BurnDown[] {
+function burnDown(blobFire: BlobFireState, args: StepBurningBlobsArgs): BurnDown[] {
   const { now, tunables } = args;
   const { firstTickSeconds, burnSeconds } = tunables.fire.blob;
   const downs: BurnDown[] = [];
   for (const player of args.players) {
-    const burning = fire.blobs.get(player.id);
+    const burning = blobFire.blobs.get(player.id);
     if (!burning) continue;
     const burnt = now - burning.since;
     const chunk = { player, bySlot: burning.bySlot, at: bodyCenter(player) };
@@ -203,7 +240,7 @@ function burnDown(fire: FireState, args: StepBurningBlobsArgs): BurnDown[] {
     }
     if (burnt < burnSeconds) continue;
     if (!player.crouching) downs.push(chunk);
-    putOut(fire, player, { kind: "smoke", now, tunables });
+    putOut(blobFire, player, { kind: "smoke", now, tunables });
   }
   return downs;
 }
@@ -212,15 +249,15 @@ function burnDown(fire: FireState, args: StepBurningBlobsArgs): BurnDown[] {
  * One step of burning blobs, after the terrain fire and the torch: put out, catch from terrain,
  * pass on bumps, burn down. Returns the blobs that burnt down this step.
  */
-export function stepBurningBlobs(fire: FireState, args: StepBurningBlobsArgs): BurnDown[] {
+export function stepBurningBlobs(blobFire: BlobFireState, args: StepBurningBlobsArgs): BurnDown[] {
   const inPlay = new Set(args.players.map((player) => player.id));
-  for (const id of [...fire.blobs.keys()]) if (!inPlay.has(id)) fire.blobs.delete(id);
+  for (const id of [...blobFire.blobs.keys()]) if (!inPlay.has(id)) blobFire.blobs.delete(id);
   const keepFrom = args.now - args.tunables.fire.blob.momentSeconds;
-  fire.blobMoments = fire.blobMoments.filter((moment) => moment.atSeconds >= keepFrom);
-  douseBurning(fire, args);
-  catchFromTerrain(fire, args);
-  passOnBump(fire, args);
-  return burnDown(fire, args);
+  blobFire.blobMoments = blobFire.blobMoments.filter((moment) => moment.atSeconds >= keepFrom);
+  douseBurning(blobFire, args);
+  catchFromTerrain(blobFire, args);
+  passOnBump(blobFire, args);
+  return burnDown(blobFire, args);
 }
 
 /**
@@ -229,17 +266,17 @@ export function stepBurningBlobs(fire: FireState, args: StepBurningBlobsArgs): B
  * move or crouch input keeps full control (D3).
  */
 export function panicInputs(
-  fire: FireState,
+  blobFire: BlobFireState,
   players: readonly PlayerState[],
   inputs: PlayerInputs
 ): PlayerInputs {
-  if (fire.blobs.size === 0) return inputs;
+  if (blobFire.blobs.size === 0) return inputs;
   return inputs.map((input, slot) => {
     if (input.moveX !== 0 || input.crouch) return input;
     const player = players.find((candidate) => candidate.slot === slot);
-    const burning = player ? fire.blobs.get(player.id) : undefined;
-    if (!player || !burning) return input;
-    const away = player.x === burning.fromX ? -player.facing : Math.sign(player.x - burning.fromX);
+    const blob = player ? blobFire.blobs.get(player.id) : undefined;
+    if (!player || !blob) return input;
+    const away = player.x === blob.fromX ? -player.facing : Math.sign(player.x - blob.fromX);
     return { ...input, moveX: away };
   });
 }

@@ -2,11 +2,11 @@ import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { SampleFront } from "@/shared/types/sampleFront.types";
 
 /**
- * Fire on the terrain field (fire-spread b1; blast-power D5, D6, D18): every terrain sample has
- * the sim time it catches fire (its arrival time); lit samples burn for a while and are then
- * removed. Sample indices are the arena grid's (`cy * widthCells + cx`).
+ * Fire on one body's field (fire-spread b1; blast-power D5, D6, D18; mover-materials-l2 D3):
+ * every sample has the sim time it catches fire (its arrival time); lit samples burn for a while
+ * and are then removed. Sample indices are that body's grid's (`cy * widthCells + cx`).
  */
-export interface FireState {
+export interface GroundFire {
   /** The fire front: arrival times and pending ignitions (the arena's shared sample front). */
   front: SampleFront;
   /**
@@ -22,50 +22,26 @@ export interface FireState {
   litHead: number;
   /** Burnt-out samples waiting for the next batch removal. */
   dueOut: number[];
-  /** Sim time of the next batch removal. */
-  nextBurnOutAt: number;
   /** 1 where fire stopped at a breakable non-fuel sample (earth): drawn scorched. */
   scorched: Uint8Array;
   /** Bumps whenever lit, burnt or scorched samples change (the renderer redraws on change). */
   version: number;
-  /** The torch sprays of the last step, for the renderer. */
-  sprays: TorchSpray[];
-  /** Blobs on fire, by player id (fire-burn b2). */
-  blobs: Map<string, BurningBlob>;
-  /** Sim time until which a blob just put out can't catch again, by player id. */
-  blobGraceUntil: Map<string, number>;
-  /** Recent burning-blob moments, for the effects (pruned after `fire.blob.momentSeconds`). */
-  blobMoments: BlobFireMoment[];
-  /** Times each player caught fire / was put out by ice (monotonic, for sound cues). */
-  caughtCounts: Record<string, number>;
-  dousedCounts: Record<string, number>;
-}
-
-/** A blob on fire (fire-burn b2): when it caught, where the fire came from, who lit it. */
-export interface BurningBlob {
-  slot: number;
-  /** Sim time it caught; it burns `fire.blob.burnSeconds` from here. */
-  since: number;
-  /** World x the fire came from: with no move input the blob runs the other way (D2). */
-  fromX: number;
-  /** Who lit or passed the fire (credit for the chunk); null = terrain fire nobody lit. */
-  bySlot: number | null;
-  /** Damage ticks dealt so far (the first comes mid-burn, owner fire-burn D10). */
-  ticks: number;
 }
 
 /**
- * A moment of a burning blob, kept briefly for the effects: caught, put out by ice (`steam`),
- * flames blown off by a dive (`blown`), passed to a rival by a bump (`leap`, to `to`), or burnt
- * down to the chunk loss (`smoke`).
+ * The fire slice of the game state: the fire on every body of the arena and the torch's sprays.
+ * Blobs on fire are their own feature (`blob-fire`).
  */
-export interface BlobFireMoment {
-  kind: "caught" | "steam" | "blown" | "leap" | "smoke";
-  slot: number;
-  at: Vec2;
-  /** Where the fire leapt to (`leap` only). */
-  to?: Vec2;
-  atSeconds: number;
+export interface FireState {
+  /**
+   * One ground fire per body, in the arena's body order (`bodyGrids`): 0 = the static terrain,
+   * then each moving part's own field (mover-materials-l2 D3).
+   */
+  grounds: GroundFire[];
+  /** Sim time of the next batch removal (one beat for all bodies). */
+  nextBurnOutAt: number;
+  /** The torch sprays of the last step, for the renderer. */
+  sprays: TorchSpray[];
 }
 
 /** One torch spray this step: the helmet it comes from and where each cone ray ended. */

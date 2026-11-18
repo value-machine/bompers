@@ -1,18 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import {
+  bodyGrids,
   buildTerrainFromLevel,
   clearCrater,
   getCellInfo,
+  isSolidAt,
+  terrainBodies,
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelApi";
+import { createPlayer } from "@/features/player/api/playerApi";
+import {
+  createFireView,
+  syncFireView,
+  type FireFrame,
+} from "@/features/fire/services/fireRenderer";
 import {
   burningSamples,
   createFireState,
   ignite,
   stepFire,
 } from "@/features/fire/services/fireSim";
+import { sprayTorch } from "@/features/fire/services/torch";
 import type { FireState } from "@/features/fire/types/fire.types";
 
 const F = DEFAULT_GAME_TUNABLES.fire;
@@ -64,7 +74,7 @@ const burn = (terrain: TerrainPiece[]): Burn => {
       }
     },
     light: (x, y) => {
-      ignite(fire, grid, { index: state.at(x, y), time: state.time });
+      ignite(fire, grid, { body: 0, index: state.at(x, y), time: state.time });
     },
   };
   return state;
@@ -79,7 +89,7 @@ describe("fireSim — spread (blast-power D5, D6)", () => {
     b.light(202, 202);
     b.run(spreadFor(40));
     for (const d of [8, 20, 36]) {
-      const arrival = b.fire.igniteAt[b.at(202 + d, 202)]!;
+      const arrival = b.fire.grounds[0]!.igniteAt[b.at(202 + d, 202)]!;
       expect(arrival).toBeCloseTo(d / F.spreadSpeed, 4);
     }
   });
@@ -93,7 +103,7 @@ describe("fireSim — spread (blast-power D5, D6)", () => {
       const x = centre(202 + Math.cos(a) * 40);
       const y = centre(202 + Math.sin(a) * 40);
       const distance = Math.hypot(x - 202, y - 202);
-      const arrival = b.fire.igniteAt[b.at(x, y)]!;
+      const arrival = b.fire.grounds[0]!.igniteAt[b.at(x, y)]!;
       expect(Math.abs(arrival * F.spreadSpeed - distance) / distance, `${deg}°`).toBeLessThan(0.08);
     }
   });
@@ -102,14 +112,14 @@ describe("fireSim — spread (blast-power D5, D6)", () => {
     const b = burn([rect([100, 100, 40, 40], "cardboard"), rect([144, 100, 40, 40], "cardboard")]);
     b.light(110, 110);
     b.run(spreadFor(120));
-    expect(b.fire.igniteAt[b.at(150, 110)]).toBe(Infinity);
+    expect(b.fire.grounds[0]!.igniteAt[b.at(150, 110)]).toBe(Infinity);
   });
 
   it("should not pass through a corner of air when fuel touches only diagonally", () => {
     const b = burn([rect([100, 100, 8, 8], "cardboard"), rect([108, 108, 8, 8], "cardboard")]);
     b.light(102, 102);
     b.run(spreadFor(80));
-    expect(b.fire.igniteAt[b.at(110, 110)]).toBe(Infinity);
+    expect(b.fire.grounds[0]!.igniteAt[b.at(110, 110)]).toBe(Infinity);
   });
 
   it("should flow around stone when stone sits in the fuel", () => {
@@ -117,18 +127,18 @@ describe("fireSim — spread (blast-power D5, D6)", () => {
     b.light(110, 110);
     b.run(spreadFor(200));
     const far = b.at(190, 110);
-    expect(b.fire.igniteAt[far]).toBeLessThan(Infinity);
+    expect(b.fire.grounds[0]!.igniteAt[far]).toBeLessThan(Infinity);
     // The way round the stone is longer than the straight line.
-    expect(b.fire.igniteAt[far]! * F.spreadSpeed).toBeGreaterThan(80 + 1);
-    expect(b.fire.igniteAt[b.at(158, 110)]).toBe(Infinity);
+    expect(b.fire.grounds[0]!.igniteAt[far]! * F.spreadSpeed).toBeGreaterThan(80 + 1);
+    expect(b.fire.grounds[0]!.igniteAt[b.at(158, 110)]).toBe(Infinity);
   });
 
   it("should scorch earth and stop at it when fire reaches earth", () => {
     const b = burn([rect([100, 100, 40, 40], "cardboard"), rect([140, 100, 40, 40], "earth")]);
     b.light(110, 110);
     b.run(spreadFor(80));
-    expect(b.fire.igniteAt[b.at(142, 110)]).toBe(Infinity);
-    expect(b.fire.scorched[b.at(142, 110)]).toBe(1);
+    expect(b.fire.grounds[0]!.igniteAt[b.at(142, 110)]).toBe(Infinity);
+    expect(b.fire.grounds[0]!.scorched[b.at(142, 110)]).toBe(1);
     expect(getCellInfo(b.grid, 35, 27)?.materialId).toBe("earth");
   });
 
@@ -136,16 +146,16 @@ describe("fireSim — spread (blast-power D5, D6)", () => {
     const b = burn([rect([100, 100, 40, 40], "cardboard"), rect([140, 100, 20, 40], "ice")]);
     b.light(110, 110);
     b.run(spreadFor(80));
-    expect(b.fire.igniteAt[b.at(138, 110)]).toBe(Infinity);
-    expect(b.fire.igniteAt[b.at(130, 110)]).toBeLessThan(Infinity);
+    expect(b.fire.grounds[0]!.igniteAt[b.at(138, 110)]).toBe(Infinity);
+    expect(b.fire.grounds[0]!.igniteAt[b.at(130, 110)]).toBeLessThan(Infinity);
   });
 
   it("should light samples that catch at the same moment in index order when two are lit together", () => {
     const b = burn([rect([100, 100, 40, 40], "cardboard")]);
-    ignite(b.fire, b.grid, { index: b.at(130, 110), time: 0 });
-    ignite(b.fire, b.grid, { index: b.at(110, 110), time: 0 });
+    ignite(b.fire, b.grid, { body: 0, index: b.at(130, 110), time: 0 });
+    ignite(b.fire, b.grid, { body: 0, index: b.at(110, 110), time: 0 });
     b.run(dt);
-    expect(b.fire.lit.slice(0, 2)).toEqual([b.at(110, 110), b.at(130, 110)]);
+    expect(b.fire.grounds[0]!.lit.slice(0, 2)).toEqual([b.at(110, 110), b.at(130, 110)]);
   });
 });
 
@@ -158,7 +168,7 @@ describe("fireSim — burn-out (blast-power D6)", () => {
     expect(getCellInfo(b.grid, 27, 27)).not.toBeNull();
     b.run(0.05 + F.burnOutInterval + dt);
     expect(getCellInfo(b.grid, 27, 27)).toBeNull();
-    expect(burningSamples(b.fire)).not.toContain(index);
+    expect(burningSamples(b.fire.grounds[0]!)).not.toContain(index);
   });
 
   it("should report the burnt cardboard once per batch when samples burn out", () => {
@@ -221,13 +231,189 @@ describe("fireSim — burn-out (blast-power D6)", () => {
       clearCrater(b.grid, { x: 112, y: 112, reach: 12, shape: "round" });
       b.run(spreadFor(120));
     }).not.toThrow();
-    expect(b.fire.igniteAt[b.at(200, 150)]).toBeLessThan(Infinity);
+    expect(b.fire.grounds[0]!.igniteAt[b.at(200, 150)]).toBeLessThan(Infinity);
   });
 
   it("should leave fire unlit when a rocket blast cuts cardboard", () => {
     const b = burn([rect([100, 100, 120, 60], "cardboard")]);
     clearCrater(b.grid, { x: 150, y: 100, reach: 34, shape: "round" });
     b.run(1);
-    expect(burningSamples(b.fire)).toEqual([]);
+    expect(burningSamples(b.fire.grounds[0]!)).toEqual([]);
+  });
+});
+
+const PART_TUNABLES = DEFAULT_GAME_TUNABLES;
+const PF = PART_TUNABLES.fire;
+const PART_CELL = 4;
+const PART_FLOOR = 200;
+const partDt = 1 / 60;
+
+/** A stone floor and one moving part (piece 1): a 120 × 40 slab at x 240–360, y 100–140. */
+function partScene(materialId: string) {
+  const part: TerrainPiece = { shape: { type: "rect", x: 240, y: 100, w: 120, h: 40 }, materialId };
+  const level: LevelDefinition = {
+    formatVersion: 2,
+    meta: { levelId: "p", title: "P" },
+    settings: { cellSize: PART_CELL, gravity: 1 },
+    worldSize: { w: 600, h: 300 },
+    terrain: [
+      { shape: { type: "rect", x: 0, y: PART_FLOOR, w: 600, h: 40 }, materialId: "stone" },
+      part,
+    ],
+    spawns: [],
+    drops: [],
+    collectibles: [],
+    bounds: { x: 0, y: 0, w: 600, h: 300 },
+    movers: [
+      {
+        motion: { kind: "slide", offset: { x: 0, y: -60 }, periodS: 4, phase: 0 },
+        pivot: { x: 300, y: 120 },
+        terrainIndices: [1],
+      },
+    ],
+  };
+  const terrain = buildTerrainFromLevel(level);
+  const fire = createFireState(terrain);
+  const field = bodyGrids(terrain)[1]!;
+  /** The part's sample at a world point (in the part's pose now). */
+  const at = (x: number, y: number): number => {
+    const local = terrainBodies(terrain)[1]!.toLocal!({ x, y })!;
+    return Math.floor(local.y / PART_CELL) * field.widthCells + Math.floor(local.x / PART_CELL);
+  };
+  const world = { time: 0 };
+  const run = (seconds: number) => {
+    let last: ReturnType<typeof stepFire> = null;
+    for (let i = 0; i < Math.round(seconds / partDt); i += 1) {
+      world.time += partDt;
+      last = stepFire(fire, terrain, { now: world.time, tunables: PART_TUNABLES }) ?? last;
+    }
+    return last;
+  };
+  return { terrain, fire, field, part: terrain.movers[0]!, at, run, world };
+}
+
+describe("fire on moving parts (mover-materials-l2)", () => {
+  it("should spread through a cardboard part at the fire's speed when one of its samples is lit", () => {
+    const s = partScene("cardboard");
+    expect(ignite(s.fire, s.terrain, { body: 1, index: s.at(250, 120), time: 0 })).toBe(true);
+    s.run(60 / PF.spreadSpeed + 0.5);
+    const ground = s.fire.grounds[1]!;
+    // 60 units along the part: distance ÷ speed, within one sample's step.
+    expect(ground.igniteAt[s.at(310, 120)]).toBeCloseTo(60 / PF.spreadSpeed, 0);
+    expect(burningSamples(ground).length).toBeGreaterThan(0);
+    // The fire stays on the part: nothing lit on the static terrain.
+    expect(burningSamples(s.fire.grounds[0]!)).toEqual([]);
+  });
+
+  it("should not light a part when its material does not burn", () => {
+    const s = partScene("stone");
+    expect(ignite(s.fire, s.terrain, { body: 1, index: s.at(250, 120), time: 0 })).toBe(false);
+  });
+
+  it("should light the part's sample the torch touches when the torch is held on a cardboard part", () => {
+    const s = partScene("cardboard");
+    const holder = createPlayer(0, { x: 200, y: 134 }, PART_TUNABLES);
+    holder.aimX = 1;
+    holder.aimY = 0;
+    sprayTorch(s.fire, {
+      terrain: s.terrain,
+      players: [holder],
+      holder,
+      tunables: PART_TUNABLES,
+      now: 0,
+      dt: partDt,
+    });
+    s.run(0.2);
+    expect(burningSamples(s.fire.grounds[1]!).length).toBeGreaterThan(0);
+    expect(burningSamples(s.fire.grounds[0]!)).toEqual([]);
+  });
+
+  it("should cut burnt samples out of the part's field, where the part is, when they burn out", () => {
+    const s = partScene("cardboard");
+    // The part has moved up 60: its fire and its burn-out follow it.
+    s.part.pose = { dx: 0, dy: -60, angle: 0 };
+    const index = s.at(250, 60);
+    ignite(s.fire, s.terrain, { body: 1, index, time: 0 });
+    expect(isSolidAt(s.terrain, 250, 60)).toBe(true);
+    const batch = s.run(PF.burnSeconds + PF.burnOutInterval + 2 * partDt);
+    expect(s.field.cells[index]).toBe(0);
+    expect(isSolidAt(s.terrain, 250, 60)).toBe(false);
+    expect(batch?.byLook.map((look) => look.materialId)).toEqual(["cardboard"]);
+    // The debris flies from the part in the world, not from its rest pose.
+    for (const spot of batch?.spots ?? []) {
+      expect(spot.y).toBeGreaterThan(40);
+      expect(spot.y).toBeLessThan(80);
+    }
+  });
+});
+
+const VIEW_TUNABLES = DEFAULT_GAME_TUNABLES;
+
+// A stone floor and one cardboard part (piece 1) that slides up 60.
+const partLevel: LevelDefinition = {
+  formatVersion: 2,
+  meta: { levelId: "r", title: "R" },
+  settings: { cellSize: 4, gravity: 1 },
+  worldSize: { w: 600, h: 300 },
+  terrain: [
+    { shape: { type: "rect", x: 0, y: 200, w: 600, h: 40 }, materialId: "stone" },
+    { shape: { type: "rect", x: 240, y: 100, w: 120, h: 40 }, materialId: "cardboard" },
+  ],
+  movers: [
+    {
+      motion: { kind: "slide", offset: { x: 0, y: -60 }, periodS: 4, phase: 0 },
+      pivot: { x: 300, y: 120 },
+      terrainIndices: [1],
+    },
+  ],
+  spawns: [],
+  drops: [],
+  collectibles: [],
+  bounds: { x: 0, y: 0, w: 600, h: 300 },
+};
+
+/** The part burning from its middle for a second, and the frame the renderer gets. */
+function burningPart() {
+  const terrain = buildTerrainFromLevel(partLevel);
+  const fire = createFireState(terrain);
+  const field = bodyGrids(terrain)[1]!;
+  const middle =
+    Math.floor(field.heightCells / 2) * field.widthCells + Math.floor(field.widthCells / 2);
+  ignite(fire, terrain, { body: 1, index: middle, time: 0 });
+  for (let t = 1 / 60; t <= 1; t += 1 / 60)
+    stepFire(fire, terrain, { now: t, tunables: VIEW_TUNABLES });
+  const frame: FireFrame = {
+    fire,
+    terrain,
+    nowMs: 1000,
+    players: [],
+    timeSeconds: 1,
+    zoom: 1,
+    torchHolderIds: new Set(),
+    torchLength: VIEW_TUNABLES.combat.torch.length,
+    burnSeconds: VIEW_TUNABLES.fire.burnSeconds,
+  };
+  return { terrain, frame };
+}
+
+describe("fire layers per body (mover-materials-l2 D3, D4)", () => {
+  it("should draw a burning part's fire in the part's own layer and none on the terrain's", () => {
+    const { frame } = burningPart();
+    const view = createFireView();
+    syncFireView(view, frame);
+    expect(view.grounds).toHaveLength(2);
+    expect(view.grounds[1]!.bodyFill.getLocalBounds().width).toBeGreaterThan(0);
+    expect(view.grounds[0]!.bodyFill.getLocalBounds().width).toBe(0);
+  });
+
+  it("should move the part's fire layer with the part when the part's pose changes", () => {
+    const { terrain, frame } = burningPart();
+    const view = createFireView();
+    syncFireView(view, frame);
+    const layer = view.grounds[1]!.layer;
+    expect(layer.position.y - layer.pivot.y).toBeCloseTo(0, 6);
+    terrain.movers[0]!.pose = { dx: 0, dy: -60, angle: 0 };
+    syncFireView(view, frame);
+    expect(layer.position.y - layer.pivot.y).toBeCloseTo(-60, 6);
   });
 });

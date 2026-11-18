@@ -67,12 +67,13 @@ import {
   syncDiveView,
   type DiveView,
 } from "@/features/dive/api/diveApi";
+import { createFireView, syncFireView, type FireView } from "@/features/fire/api/fireApi";
 import {
   burningBlobPoses,
-  createFireView,
-  syncFireView,
-  type FireView,
-} from "@/features/fire/api/fireApi";
+  createBlobFireView,
+  syncBlobFireView,
+  type BlobFireView,
+} from "@/features/blob-fire/api/blobFireApi";
 import {
   createIceView,
   frozenBlobPoses,
@@ -81,6 +82,13 @@ import {
 } from "@/features/ice/api/iceApi";
 import { playersInPlay, type GameState } from "@/features/match/services/gameSim";
 import { createHudView, syncHudView, type HudView } from "@/features/match/services/hudRenderer";
+
+/** The element layers: fire on the ground, blobs on fire, frozen ground and its ray. */
+const createElementViews = () => ({
+  fire: createFireView(),
+  blobFire: createBlobFireView(),
+  ice: createIceView(),
+});
 
 /**
  * Composes the render layers. Scene graph:
@@ -122,6 +130,7 @@ export interface GameRenderer {
   collectibles: CollectiblesView;
   dive: DiveView;
   fire: FireView;
+  blobFire: BlobFireView;
   ice: IceView;
   hud: HudView;
   camera: CameraView | null;
@@ -139,8 +148,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const knockouts = createKnockoutView();
   const collectibles = createCollectiblesView();
   const dive = createDiveView();
-  const fire = createFireView();
-  const ice = createIceView();
+  const { fire, blobFire, ice } = createElementViews();
   world.addChild(
     terrain.container,
     // Goo stains colour the terrain itself; frozen ground and fire are drawn over them.
@@ -160,6 +168,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     dive.effects,
     players.container,
     fire.sprayLayer,
+    blobFire.layer,
     ice.beamLayer,
     combat.overlay
   );
@@ -178,6 +187,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     collectibles,
     dive,
     fire,
+    blobFire,
     ice,
     hud,
     camera: null,
@@ -223,7 +233,7 @@ const blobOverlays = (
   state: GameState,
   frame: { inPlay: readonly PlayerState[]; nowMs: number }
 ): Map<string, BlobPoseOverlay> => {
-  const overlays = burningBlobPoses(state.fire, { players: frame.inPlay, nowMs: frame.nowMs });
+  const overlays = burningBlobPoses(state.blobFire, { players: frame.inPlay, nowMs: frame.nowMs });
   for (const [id, pose] of diveBlobPoses(state.dive, state.tunables)) overlays.set(id, pose);
   // A frozen blob holds still in its block, whatever else it was doing.
   const frozen = frozenBlobPoses(state.ice, {
@@ -364,11 +374,17 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     nowMs,
     players: inPlay,
     timeSeconds: state.timeSeconds,
-    momentSeconds: state.tunables.fire.blob.momentSeconds,
     zoom,
     torchHolderIds: torchHolderIds(blobs.weapons),
     torchLength: state.tunables.combat.torch.length,
     burnSeconds: state.tunables.fire.burnSeconds,
+  });
+  syncBlobFireView(renderer.blobFire, {
+    blobFire: state.blobFire,
+    players: inPlay,
+    nowMs,
+    timeSeconds: state.timeSeconds,
+    momentSeconds: state.tunables.fire.blob.momentSeconds,
   });
   syncKnockoutView(renderer.knockouts, {
     world: renderer.knockout,

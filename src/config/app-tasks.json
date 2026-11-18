@@ -1,27 +1,12 @@
 [
   {
-    "title": "Squish keeps the eyes",
-    "description": "Owner 2026-11-18: when a blob is squished everything squashes except the eyes, which keep their size; the eyes switch to the burning-blob panic emotion while squeezed/crushed.",
-    "status": "to-do"
-  },
-  {
-    "title": "Double jump bash",
-    "description": "Owner 2026-11-18: a double jump (mid-air jump) performs the bash, so armed players can bash too. Rule variants on an options page first; controller edits wait for the collision-sound fix.",
-    "status": "to-do"
-  },
-  {
-    "title": "Moving parts: materials, fire, ice and beams",
-    "description": "Owner 2026-11-18: spray beams (torch, freeze ray) must be stopped by moving parts, and moving parts can be any material, so they catch fire or freeze when their material takes it. Owner wants approaches, each deeper than the last, for a very extensible system; design page first. L1 (beams stop on parts) merged in #77.",
-    "status": "to-do"
-  },
-  {
-    "title": "World of bodies L2a: fire on moving parts",
-    "description": "Body list as state; fire per body; torch lights parts; burn-out cuts the part (outline, collision, drawing follow); blobs catch from a burning part; W13 + LEVEL_FORMAT 11 + prompt line. Owner 2026-11-18: a fully burnt part leaves nothing for the rest of the round (same rule as terrain). Size M.",
-    "status": "to-do"
-  },
-  {
     "title": "World of bodies L2b: cold on moving parts",
     "description": "Freeze ray freezes parts, grip per sample on a part, frozen overlay on parts, thaw, torch thaws parts. Size S-M.",
+    "status": "to-do"
+  },
+  {
+    "title": "Split blob fire out of the fire feature",
+    "description": "Found in world-of-bodies L2a: the fire and arena features are at their 10-files-per-layer budget. Move burning blobs (burningBlobs + blobFireRenderer) into their own feature before L3 adds to fire. Behaviour-neutral refactor. Size S.",
     "status": "to-do"
   },
   {
@@ -67,11 +52,6 @@
   {
     "title": "Level gallery",
     "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): later, unshaped. No remix feature.",
-    "status": "to-do"
-  },
-  {
-    "title": "Roll speed carries into jump and dive",
-    "description": "Owner go 2026-11-18: a jump or dive out of a roll keeps the roll speed. Built in the Double jump bash lap.",
     "status": "to-do"
   },
   {

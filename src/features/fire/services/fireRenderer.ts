@@ -5,16 +5,20 @@ import { inkColor } from "@/shared/utils/debugInk";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import {
   EMPTY_CELL,
+  bodyGrids,
+  bodyWorldPoint,
+  createPoseLayer,
   drawContour,
   edgeAbove,
   markedRegion,
+  placePoseLayer,
   terrainContour,
+  type MoverBody,
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
 import { helmetPoint } from "@/features/combat/api/combatApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import { burningSamples } from "@/features/fire/services/fireSim";
-import { drawBlobFire } from "@/features/fire/services/blobFireRenderer";
 import {
   FLAME_LOOK,
   clusterFlames,
@@ -27,7 +31,7 @@ import {
   type SprayFlame,
   type Tongue,
 } from "@/features/fire/services/flameShapes";
-import type { FireState } from "@/features/fire/types/fire.types";
+import type { FireState, GroundFire } from "@/features/fire/types/fire.types";
 
 /**
  * Fire layers in the "Sticker flames" look (owner fire-visuals D1–D3, DESIGN_LANGUAGE § 1
@@ -39,8 +43,11 @@ import type { FireState } from "@/features/fire/types/fire.types";
  *   edge inside it (redrawn when the fire or the terrain changes, not per frame), with flames
  *   on its top edge only, rooted on the terrain's edge; a smoke puff where a batch burns out.
  * - Above the players: each torch spray as a neck and a rolling head (`flameShapes`), the head's
- *   puff when a spray stops, the idle flame on a held torch, then the burning blobs
- *   (`blobFireRenderer`, fire-burn b2).
+ *   puff when a spray stops and the idle flame on a held torch (burning blobs are drawn by the
+ *   blob-fire feature, on its own layer above this one).
+ * Every body of the arena has its own set of terrain layers (mover-materials-l2 D3, D4): the
+ * static terrain's in world coordinates, a moving part's in the part's own frame, following its
+ * pose, so a part's fire rides and turns with it. Smoke is in world coordinates for all.
  * All render only: nothing here feeds back into the sim.
  */
 export interface FireView {
@@ -48,6 +55,19 @@ export interface FireView {
   terrainLayer: Container;
   /** Torch sprays: add above the players. */
   sprayLayer: Container;
+  /** One set of terrain layers per body, in the arena's body order; made when first drawn. */
+  grounds: GroundFireView[];
+  smoke: Graphics;
+  sprays: Graphics;
+  /** Per torch slot: when its spray started and where its head last was (grow-in, release puff). */
+  torches: Map<number, TorchMemo>;
+  puffs: SmokePuff[];
+}
+
+/** The fire layers of one body: scorch, the burning body and its flames. */
+interface GroundFireView {
+  /** Holds the layers; a moving part's is turned about its pivot and shifted by its pose. */
+  layer: Container;
   scorch: Graphics;
   /** The burning terrain: ink, then (above the flames' ink) ember and the hot inside. */
   bodyInk: Graphics;
@@ -57,18 +77,19 @@ export interface FireView {
   bodyKey: string;
   flameInk: Graphics;
   flames: Graphics;
-  smoke: Graphics;
-  sprays: Graphics;
-  /** Burning blobs' flames and sweat, and their moments (above the players). */
-  blobs: Graphics;
   /** Fire `version` the scorch was drawn at. */
   scorchVersion: number;
-  /** Per torch slot: when its spray started and where its head last was (grow-in, release puff). */
-  torches: Map<number, TorchMemo>;
-  puffs: SmokePuff[];
   /** Samples waiting to burn out last frame: their count and a few of them (smoke positions). */
   dueCount: number;
   dueSample: number[];
+}
+
+/** What one body's fire is drawn from: its view, its ground fire and its own grid. */
+interface GroundDraw {
+  view: GroundFireView;
+  fire: GroundFire;
+  terrain: TerrainGrid;
+  frame: FireFrame;
 }
 
 interface TorchMemo {
@@ -89,10 +110,9 @@ export interface FireFrame {
   terrain: TerrainGrid;
   /** Render clock, ms (flicker only). */
   nowMs: number;
-  /** Players in play (burning-blob flames, idle torch flames), sim time and moment length. */
+  /** Players in play (idle torch flames) and sim time. */
   players: readonly PlayerState[];
   timeSeconds: number;
-  momentSeconds: number;
   /** Camera zoom this frame (outline width clamp). */
   zoom: number;
   /** Ids of the players holding a torch (idle flame on the nozzle). */
@@ -113,24 +133,24 @@ const MAX_PUFFS = 24;
 /** A spray missing for longer than this has stopped (its next start grows in again). */
 const SPRAY_GAP_SECONDS = 0.1;
 
-export function createFireView(): FireView {
+/** One body's layers; a moving part's sit in its rest pose inside a layer that follows its pose. */
+function createGroundView(mover: MoverBody | undefined): GroundFireView {
   const scorch = new Graphics({ label: "fire-scorch" });
   const bodyInk = new Graphics({ label: "fire-body-ink" });
   const flameInk = new Graphics({ label: "fire-flame-ink" });
   const bodyFill = new Graphics({ label: "fire-body" });
   const bodyHot = new Graphics({ label: "fire-body-hot" });
   const flames = new Graphics({ label: "fire-flames" });
-  const smoke = new Graphics({ label: "fire-smoke" });
-  const sprays = new Graphics({ label: "torch-sprays" });
-  const blobs = new Graphics({ label: "burning-blobs" });
-  const terrainLayer = new Container({ label: "fire" });
+  const layer = mover
+    ? createPoseLayer(mover, "fire-on-part")
+    : new Container({ label: "fire-on-terrain" });
   // Both inks under both fills: the body and its flames share one outline.
-  terrainLayer.addChild(scorch, bodyInk, flameInk, bodyFill, bodyHot, flames, smoke);
-  const sprayLayer = new Container({ label: "torch" });
-  sprayLayer.addChild(sprays, blobs);
+  const parts = [scorch, bodyInk, flameInk, bodyFill, bodyHot, flames];
+  // A part's field starts at its origin in the rest pose.
+  if (mover) for (const g of parts) g.position.set(mover.origin.x, mover.origin.y);
+  layer.addChild(...parts);
   return {
-    terrainLayer,
-    sprayLayer,
+    layer,
     scorch,
     bodyInk,
     bodyFill,
@@ -138,15 +158,38 @@ export function createFireView(): FireView {
     bodyKey: "",
     flameInk,
     flames,
-    smoke,
-    sprays,
-    blobs,
     scorchVersion: -1,
-    torches: new Map(),
-    puffs: [],
     dueCount: 0,
     dueSample: [],
   };
+}
+
+export function createFireView(): FireView {
+  const smoke = new Graphics({ label: "fire-smoke" });
+  const sprays = new Graphics({ label: "torch-sprays" });
+  const terrainLayer = new Container({ label: "fire" });
+  terrainLayer.addChild(smoke);
+  const sprayLayer = new Container({ label: "torch" });
+  sprayLayer.addChild(sprays);
+  return {
+    terrainLayer,
+    sprayLayer,
+    grounds: [],
+    smoke,
+    sprays,
+    torches: new Map(),
+    puffs: [],
+  };
+}
+
+/** The view of body `body`, made (under the smoke) the first time that body is drawn. */
+function groundView(view: FireView, terrain: TerrainGrid, body: number): GroundFireView {
+  const known = view.grounds[body];
+  if (known) return known;
+  const made = createGroundView(terrain.movers[body - 1]);
+  view.grounds[body] = made;
+  view.terrainLayer.addChildAt(made.layer, view.terrainLayer.getChildIndex(view.smoke));
+  return made;
 }
 
 const isSolid = (grid: TerrainGrid, index: number): boolean =>
@@ -157,8 +200,7 @@ const sampleCentre = (grid: TerrainGrid, index: number): Vec2 => ({
   y: (Math.floor(index / grid.widthCells) + 0.5) * grid.cellSize,
 });
 
-function drawScorch(view: FireView, frame: FireFrame): void {
-  const { fire, terrain } = frame;
+function drawScorch({ view, fire, terrain }: GroundDraw): void {
   view.scorch.clear();
   fire.scorched.forEach((mark, index) => {
     if (mark !== 1 || !isSolid(terrain, index)) return;
@@ -183,8 +225,7 @@ function flameRootY(terrain: TerrainGrid, block: { cx: number; by: number }): nu
 }
 
 /** The 2 × 2 blocks of burning samples, by `by * widthCells + bx`. */
-function flameBlocks(frame: FireFrame): Map<number, FlameBlock> {
-  const { terrain, fire } = frame;
+function flameBlocks({ terrain, fire, frame }: GroundDraw): Map<number, FlameBlock> {
   const size = terrain.cellSize * 2;
   const blocks = new Map<number, FlameBlock>();
   for (const index of burningSamples(fire)) {
@@ -237,8 +278,8 @@ const HOT_STEP_SECONDS = 0.25;
  * amber. Redrawn only when the fire, the terrain or the outline width changes, and a few times a
  * second for the hot inside.
  */
-function drawBody(view: FireView, frame: FireFrame, ink: number): void {
-  const { fire, terrain } = frame;
+function drawBody(draw: GroundDraw, ink: number): void {
+  const { view, fire, terrain, frame } = draw;
   const hotStep = Math.floor(frame.timeSeconds / HOT_STEP_SECONDS);
   const key = `${fire.version}:${terrain.shapeVersion}:${ink}:${hotStep}`;
   if (key === view.bodyKey) return;
@@ -251,12 +292,11 @@ function drawBody(view: FireView, frame: FireFrame, ink: number): void {
   }
   drawContour(view.bodyInk, terrainContour(terrain, { grow: ink, region }), BODY_INK);
   drawContour(view.bodyFill, terrainContour(terrain, { grow: 0, region }), COLORS.outer);
-  drawHot(view, frame, burning);
+  drawHot(draw, burning);
 }
 
 /** The amber inside of the samples that caught not long ago, in from the body's edge. */
-function drawHot(view: FireView, frame: FireFrame, burning: readonly number[]): void {
-  const { fire, terrain } = frame;
+function drawHot({ view, fire, terrain, frame }: GroundDraw, burning: readonly number[]): void {
   const { hotUntil, hotInset } = FLAME_LOOK.cluster;
   const freshFor = hotUntil * frame.burnSeconds;
   const region = markedRegion(
@@ -275,14 +315,15 @@ function drawHot(view: FireView, frame: FireFrame, burning: readonly number[]): 
  * The flames on the fire's top edge (owner fire-clusters D1–D2): in ink under the body's fill,
  * then in ember with their amber and pale hearts on top of it.
  */
-function drawFlames(view: FireView, frame: FireFrame, ink: number): void {
+function drawFlames(draw: GroundDraw, ink: number): void {
+  const { view, terrain, frame } = draw;
   const g = view.flames.clear();
   view.flameInk.clear();
-  const blocks = flameBlocks(frame);
+  const blocks = flameBlocks(draw);
   if (blocks.size === 0) return;
   const flames = clusterFlames(blocks, {
-    size: frame.terrain.cellSize * 2,
-    stride: frame.terrain.widthCells,
+    size: terrain.cellSize * 2,
+    stride: terrain.widthCells,
     timeSeconds: frame.nowMs / 1000,
     burnSeconds: frame.burnSeconds,
   });
@@ -295,12 +336,15 @@ function drawFlames(view: FireView, frame: FireFrame, ink: number): void {
 }
 
 /** Remembers a few of the samples about to burn out; when the batch goes, they puff smoke. */
-function trackBurnOuts(view: FireView, frame: FireFrame): void {
-  const due = frame.fire.dueOut;
+function trackBurnOuts(puffs: SmokePuff[], draw: GroundDraw, body: number): void {
+  const { view, fire, terrain, frame } = draw;
+  const due = fire.dueOut;
   if (due.length < view.dueCount) {
     for (const index of view.dueSample) {
-      if (view.puffs.length >= MAX_PUFFS) break;
-      view.puffs.push({ ...sampleCentre(frame.terrain, index), bornAt: frame.timeSeconds });
+      if (puffs.length >= MAX_PUFFS) break;
+      // Smoke is in world coordinates: a part's puff starts where the part was and rises.
+      const at = bodyWorldPoint(frame.terrain, body, sampleCentre(terrain, index));
+      puffs.push({ ...at, bornAt: frame.timeSeconds });
     }
   }
   view.dueCount = due.length;
@@ -418,15 +462,21 @@ function drawPilots(view: FireView, frame: FireFrame, look: { ink: number; on: S
 }
 
 export function syncFireView(view: FireView, frame: FireFrame): void {
-  if (view.scorchVersion !== frame.fire.version) drawScorch(view, frame);
   const ink = outlineWidth("effect", frame.zoom).width;
-  drawBody(view, frame, ink);
-  drawFlames(view, frame, ink);
-  trackBurnOuts(view, frame);
+  bodyGrids(frame.terrain).forEach((terrain, body) => {
+    const fire = frame.fire.grounds[body];
+    if (!fire) return;
+    const draw = { view: groundView(view, frame.terrain, body), fire, terrain, frame };
+    const mover = frame.terrain.movers[body - 1];
+    if (mover) placePoseLayer(draw.view.layer, mover);
+    if (draw.view.scorchVersion !== fire.version) drawScorch(draw);
+    drawBody(draw, ink);
+    drawFlames(draw, ink);
+    trackBurnOuts(view.puffs, draw, body);
+  });
   drawSmoke(view, frame);
   view.sprays.clear();
   const on = drawSprays(view, frame, ink);
   drawReleases(view, frame, { ink, on });
   drawPilots(view, frame, { ink, on });
-  drawBlobFire(view.blobs.clear(), frame);
 }
