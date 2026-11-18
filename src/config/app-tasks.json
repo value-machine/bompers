@@ -1,5 +1,20 @@
 [
   {
+    "title": "Moving parts: materials, fire, ice and beams",
+    "description": "Owner 2026-11-18: spray beams (torch, freeze ray) must be stopped by moving parts, and moving parts can be any material, so they catch fire or freeze when their material takes it. Owner wants approaches, each deeper than the last, for a very extensible system; design page first.",
+    "status": "to-do"
+  },
+  {
+    "title": "Bug: collision sound retriggers rapidly",
+    "description": "Owner 2026-11-18, found while playing: in some positions (against a moving platform, or other platforms) the player collision/land sound replays rapidly in bursts. Suspect the sim grounded/airborne flip (#59 found it) and resting/pushed contacts with movers. Fix at the source plus a per-body re-trigger guard.",
+    "status": "to-do"
+  },
+  {
+    "title": "Beam clash: torch meets freeze ray",
+    "description": "Owner 2026-11-18: beams of opposing elements react where they meet instead of overlapping. Owner picked A, steam wall (PR #75): both stop at the meeting point in steam. One beam-vs-beam rule with a pair table.",
+    "status": "to-do"
+  },
+  {
     "title": "Ice lap 4: look polish",
     "description": "Ice element follow-up, optional: polish the frozen ground look after the owner has played it. The ray look was settled in #63 (owner pick D9, cold breath). Size S.",
     "status": "to-do"
