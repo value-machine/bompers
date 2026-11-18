@@ -1,0 +1,16 @@
+# Decisions — double-jump-bash
+
+| # | Decision | Alternatives named | Source | Status |
+|---|---|---|---|---|
+| D1 | Rule variant: A "Jump dive" (stick aim 16-way, neutral stick = straight up, shared charge), B "Bash jump" (a real double jump whose rise headbutts, own charge beside the dive), C "Up bash" (straight up only, shared charge). Recommended A. | A / B / C (options page) | owner pick pending | Open |
+| D2 | Which air presses bash: only a press the controller does not use. Priority: ground jump, coyote jump, wall jump (incl. wall coyote), landing buffer, then bash. A press counts as a landing buffer when ground is within the buffer's reach (`groundBelowY` − feet ≤ max(vy, 0) × `jumpBufferTime` + a few units); otherwise it bashes at once. | always bash in the air (eats wall-jumps and early landing presses); wait out the buffer before bashing (0.12 s of input lag) | derived: wall-jumps are a recorded movement pillar (vision, player README); input lag breaks the dive's committed feel | Clear winner |
+| D3 | The controller reports the unused press as a monotonic counter `airJumpPressCount` on `PlayerState`; the dive reads it. No dive-specific branch in the controller. | dive reads raw jump input and re-derives coyote / wall state (parallel path, workaround shape) | player README D2 "ability systems steer only through generic modifiers"; player-movement D4 (counters, not flags) | Clear winner |
+| D4 | Fire-dive for unarmed players stays as is; jump-dive is a second way into the same dive (A, C) | remove fire-dive (unarmed fire would do nothing) | derived: out of scope, recorded dive-headbutt D8 | Clear winner |
+| D5 | Dash-hold roll stays on fire only: a jump-started dive ends in a plain recovery, even if jump is held | roll while jump is held | derived: holding jump is normal play (variable jump height), so a hold-to-roll on jump would fire by accident | Clear winner |
+| D6 | Ice block: no change. `frozenInputs` empties jump before the controller, and crack presses are counted from raw input, so a frozen blob never bashes | — | ice README D5, D7 | Clear winner |
+| D7 | Rocket jumps, moving parts: no special rule. A rocket-jumping armed player can now bash once per airtime; leaving a part by a jump-dive inherits its velocity like any dive | cap jump-dives after a rocket jump | derived: one charge per airtime already bounds it | Clear winner |
+| D8 | Out-of-bounds margins: variant A/C add no height beyond a dive up, which the margin already outlasts; variant B adds a real second jump and needs `maxLaunchSpeed` re-checked | — | match README (open-map-edges D1a) | Check in plan if B |
+
+## Layer check (spec-check-layer)
+
+Assumption in the request: "the bash" is a move that could hang off the jump button directly. Real system: the dive is started only by combat's `unarmedAttack` hook, and an air jump press today only opens the landing buffer, which the controller resolves later (landing, coyote, wall). Workaround shape avoided: having the dive read raw `input.jump` would duplicate the controller's jump priority (parallel path) and bash on every wall-jump. Structural path (D3): the controller says when an air press went unused; the dive treats it as a request. No owner stop needed: the structural path is the default and costs the same size.
