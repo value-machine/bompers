@@ -16,6 +16,7 @@ export {
   type ClearedCells,
   type ClearedLook,
   type Crater,
+  gridDistanceAt,
   groundFrictionBelow,
   isSolidAt,
   moverAt,
