@@ -1,0 +1,6 @@
+# Decisions: element-sounds
+
+- **D1** Moment list and prompts as in BRIEF.md § Moments: 9 new sounds (6 short, 3 loops), the rest reuse existing cues or fade a loop. Frozen-blob moments (freeze solid, crack, shatter: the ice-frozen-blobs lap's option B "Ice block") are a later round.
+- **D2** Generation (owner, 2026-11-18, option A): all 33 takes, `eleven_text_to_sound_v2`, `prompt_influence` 0.6, loops with the generator's `loop` option. ElevenLabs' estimate said 330 credits; the actual charge was 1.67 per 0.5 s take and 6.67 / 10 per 2 s / 3 s loop, **93 credits in total**. Flow "Bompers element sounds" (`lzVoMnamaJSTwfQVSwLa`) holds the originals.
+- **D3** Processing as in the game (DESIGN_LANGUAGE § 8): shorts trimmed of leading silence, cut to 0.5 s with a 60 ms fade-out; loops kept whole with 10 ms edge fades; one fixed gain to −16 LUFS, limiter, mono 96 kbps mp3. The fire-crackle takes needed +18 to +24 dB.
+- **D4** Listening page: https://claude.ai/artifact/BgTiAf9r1hezZHzAgTCKKx. Starting picks mark the take that needed the least gain (a proxy, not a listening judgement): torch-start 4, torch-loop 3, fire-crackle 1, burn-out 2, catch-fire 2, steam-hiss 4, freeze-start 3, freeze-loop 1, thaw 3. Owner picks: pending.
