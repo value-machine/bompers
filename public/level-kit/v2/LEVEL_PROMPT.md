@@ -122,7 +122,7 @@ With another gravity multiplier `k`, heights and jump gaps scale by about `1 / k
 - `homing-launcher`: 3 shots, blast power `50` → reach `64`, push `1080` units/s at the centre, crater `34` at toughness 1 (crater = this ÷ toughness), recoil `120`.
 - Rocket jump (no self-damage): a point-blank blast under a standing player lifts ~`417` units, ~`585` with the shot's recoil.
 - Homing missiles fly `480` units/s and turn slowly: open spaces make them dodgeable, tight corridors make them deadly.
-- `torch`: `3` s of flame held on fire, a `84`-unit cone that lights cardboard and lightly pushes players; no blast, no crater. Fire spreads through touching cardboard at `40` units/s, each bit burns `1.5` s and is gone; it never crosses air, flows around stone, stops at earth, and cardboard touching ice never catches. Cardboard bridges and towers become timed hazards with a torch in the drop list.
+- `torch`: `3` s of flame held on fire, a `84`-unit cone that lights cardboard and lightly pushes players; no blast, no crater. Fire spreads through touching cardboard at `13` units/s, each bit burns `7.5` s and is gone; it never crosses air, flows around stone, stops at earth, and cardboard touching ice never catches. Cardboard bridges and towers become timed hazards with a torch in the drop list.
 - Match: up to 4 players, 180 s by default; respawn after 2 s at a spawn.
 
 ## 6. Pre-output validation checklist

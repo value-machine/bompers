@@ -18,6 +18,8 @@ import type { FireState } from "@/features/fire/types/fire.types";
 const F = DEFAULT_GAME_TUNABLES.fire;
 const CELL = 4;
 const dt = 1 / 120;
+/** Seconds the fire needs to spread `units` world units. */
+const spreadFor = (units: number): number => units / F.spreadSpeed;
 
 const rect = (
   [x, y, w, h]: readonly [number, number, number, number],
@@ -75,7 +77,7 @@ describe("fireSim — spread (blast-power D5, D6)", () => {
   it("should reach fuel along an axis exactly at distance over spread speed when lit", () => {
     const b = burn([rect([0, 100, 400, 200], "cardboard")]);
     b.light(202, 202);
-    b.run(1);
+    b.run(spreadFor(40));
     for (const d of [8, 20, 36]) {
       const arrival = b.fire.igniteAt[b.at(202 + d, 202)]!;
       expect(arrival).toBeCloseTo(d / F.spreadSpeed, 4);
@@ -85,7 +87,7 @@ describe("fireSim — spread (blast-power D5, D6)", () => {
   it("should spread the same in every direction within 8 % when lit in solid fuel", () => {
     const b = burn([rect([0, 100, 400, 200], "cardboard")]);
     b.light(202, 202);
-    b.run(1.2);
+    b.run(spreadFor(48));
     for (let deg = 0; deg <= 90; deg += 15) {
       const a = (deg * Math.PI) / 180;
       const x = centre(202 + Math.cos(a) * 40);
@@ -99,21 +101,21 @@ describe("fireSim — spread (blast-power D5, D6)", () => {
   it("should never cross a gap of air when two fuel pieces are apart", () => {
     const b = burn([rect([100, 100, 40, 40], "cardboard"), rect([144, 100, 40, 40], "cardboard")]);
     b.light(110, 110);
-    b.run(3);
+    b.run(spreadFor(120));
     expect(b.fire.igniteAt[b.at(150, 110)]).toBe(Infinity);
   });
 
   it("should not pass through a corner of air when fuel touches only diagonally", () => {
     const b = burn([rect([100, 100, 8, 8], "cardboard"), rect([108, 108, 8, 8], "cardboard")]);
     b.light(102, 102);
-    b.run(2);
+    b.run(spreadFor(80));
     expect(b.fire.igniteAt[b.at(110, 110)]).toBe(Infinity);
   });
 
   it("should flow around stone when stone sits in the fuel", () => {
     const b = burn([rect([100, 100, 120, 60], "cardboard"), rect([150, 100, 20, 40], "stone")]);
     b.light(110, 110);
-    b.run(5);
+    b.run(spreadFor(200));
     const far = b.at(190, 110);
     expect(b.fire.igniteAt[far]).toBeLessThan(Infinity);
     // The way round the stone is longer than the straight line.
@@ -124,7 +126,7 @@ describe("fireSim — spread (blast-power D5, D6)", () => {
   it("should scorch earth and stop at it when fire reaches earth", () => {
     const b = burn([rect([100, 100, 40, 40], "cardboard"), rect([140, 100, 40, 40], "earth")]);
     b.light(110, 110);
-    b.run(2);
+    b.run(spreadFor(80));
     expect(b.fire.igniteAt[b.at(142, 110)]).toBe(Infinity);
     expect(b.fire.scorched[b.at(142, 110)]).toBe(1);
     expect(getCellInfo(b.grid, 35, 27)?.materialId).toBe("earth");
@@ -133,7 +135,7 @@ describe("fireSim — spread (blast-power D5, D6)", () => {
   it("should never light cardboard touching ice when the fire comes near", () => {
     const b = burn([rect([100, 100, 40, 40], "cardboard"), rect([140, 100, 20, 40], "ice")]);
     b.light(110, 110);
-    b.run(2);
+    b.run(spreadFor(80));
     expect(b.fire.igniteAt[b.at(138, 110)]).toBe(Infinity);
     expect(b.fire.igniteAt[b.at(130, 110)]).toBeLessThan(Infinity);
   });
@@ -162,23 +164,62 @@ describe("fireSim — burn-out (blast-power D6)", () => {
   it("should report the burnt cardboard once per batch when samples burn out", () => {
     const b = burn([rect([100, 100, 40, 40], "cardboard")]);
     b.light(110, 110);
+    // Long enough for the whole 40 × 40 piece to catch and for several batches to burn out.
+    const window = F.burnSeconds + spreadFor(60);
     const reports: number[] = [];
-    for (let t = 0; t < 3; t += dt) {
+    for (let t = 0; t < window; t += dt) {
       b.time += dt;
       const cleared = stepFire(b.fire, b.grid, { now: b.time, tunables: DEFAULT_GAME_TUNABLES });
       if (cleared) reports.push(cleared.byLook[0]?.cells ?? 0);
     }
     expect(reports.length).toBeGreaterThan(1);
-    expect(reports.length).toBeLessThanOrEqual(Math.ceil(3 / F.burnOutInterval) + 1);
+    expect(reports.length).toBeLessThanOrEqual(Math.ceil(window / F.burnOutInterval) + 1);
+  });
+
+  it("should place a batch's debris spots on burnt samples when two separate pieces burn out together", () => {
+    // Two pieces 120 apart, lit at the same moment: the middle of the batch's box is open air.
+    const pieces = [
+      [40, 100, 40, 40],
+      [200, 100, 40, 40],
+    ] as const;
+    const b = burn(pieces.map((piece) => rect(piece, "cardboard")));
+    b.light(60, 120);
+    b.light(220, 120);
+    const spots: { x: number; y: number }[] = [];
+    for (let t = 0; t < F.burnSeconds + spreadFor(60); t += dt) {
+      b.time += dt;
+      const batch = stepFire(b.fire, b.grid, { now: b.time, tunables: DEFAULT_GAME_TUNABLES });
+      if (batch) spots.push(...batch.spots);
+    }
+    expect(spots.length).toBeGreaterThan(0);
+    const inPiece = (spot: { x: number; y: number }) =>
+      pieces.some(([x, y, w, h]) => spot.x > x && spot.x < x + w && spot.y > y && spot.y < y + h);
+    expect(spots.every(inPiece)).toBe(true);
+    expect(spots.some((spot) => spot.x < 80)).toBe(true);
+    expect(spots.some((spot) => spot.x > 200)).toBe(true);
+  });
+
+  it("should give a batch at most three debris spots and a small one just one when samples burn out", () => {
+    const b = burn([rect([100, 100, 120, 60], "cardboard")]);
+    b.light(110, 110);
+    const counts: number[] = [];
+    for (let t = 0; t < F.burnSeconds + spreadFor(40); t += dt) {
+      b.time += dt;
+      const batch = stepFire(b.fire, b.grid, { now: b.time, tunables: DEFAULT_GAME_TUNABLES });
+      if (batch) counts.push(batch.spots.length);
+    }
+    expect(counts[0]).toBe(1);
+    expect(Math.max(...counts)).toBeLessThanOrEqual(3);
+    expect(Math.min(...counts)).toBeGreaterThanOrEqual(1);
   });
 
   it("should keep burning around a crater when a blast removes burning samples", () => {
     const b = burn([rect([100, 100, 120, 60], "cardboard")]);
     b.light(110, 110);
-    b.run(0.5);
+    b.run(spreadFor(20));
     expect(() => {
       clearCrater(b.grid, { x: 112, y: 112, reach: 12, shape: "round" });
-      b.run(3);
+      b.run(spreadFor(120));
     }).not.toThrow();
     expect(b.fire.igniteAt[b.at(200, 150)]).toBeLessThan(Infinity);
   });

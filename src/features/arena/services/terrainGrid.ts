@@ -1,8 +1,11 @@
-import type { Rect } from "@/shared/types/gameGeometry.types";
+import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
 import type { CraterShape } from "@/shared/types/craterShape.types";
+import type { MotionPose } from "@/shared/types/levelMotion.types";
 import { craterShapeDistance } from "@/shared/utils/craterShape";
+import { unposePoint } from "@/shared/utils/levelMotion";
 import {
   EMPTY_CELL,
+  type MoverBody,
   type TerrainCellSlot,
   type TerrainGrid,
 } from "@/features/arena/types/arena.types";
@@ -72,6 +75,7 @@ export function createTerrainGrid(size: TerrainGridSize): TerrainGrid {
     chunksX,
     chunksY,
     dirtyChunks,
+    movers: [],
   };
 }
 
@@ -148,10 +152,70 @@ export function nearestEmptyDistance(grid: TerrainGrid, cx: number, cy: number):
   return Number.isFinite(best) ? best * grid.cellSize : (reach + 1) * grid.cellSize;
 }
 
-/** True when the world point lies in a non-empty cell. */
+/**
+ * Signed distance of this grid's own samples at a world point (positive inside), bilinear between
+ * sample centres. Static terrain only; `fieldDistanceAt` adds the moving parts.
+ */
+export function gridDistanceAt(grid: TerrainGrid, p: Vec2): number {
+  const u = p.x / grid.cellSize - 0.5;
+  const v = p.y / grid.cellSize - 0.5;
+  const cx = Math.floor(u);
+  const cy = Math.floor(v);
+  const fx = u - cx;
+  const fy = v - cy;
+  const top = sampleDistance(grid, cx, cy) * (1 - fx) + sampleDistance(grid, cx + 1, cy) * fx;
+  const bottom =
+    sampleDistance(grid, cx, cy + 1) * (1 - fx) + sampleDistance(grid, cx + 1, cy + 1) * fx;
+  return top * (1 - fy) + bottom * fy;
+}
+
+// ── Moving parts (moving-parts D11) ─────────────────────────────────────────
+
+/** Signed distance of one moving part at a world point, in a pose (default: its current one). */
+export function moverDistanceAt(mover: MoverBody, p: Vec2, pose: MotionPose = mover.pose): number {
+  const dx = p.x - mover.pivot.x - pose.dx;
+  const dy = p.y - mover.pivot.y - pose.dy;
+  if (dx * dx + dy * dy > mover.reach * mover.reach) return -fieldBand(mover.field);
+  const rest = unposePoint(pose, mover.pivot, p);
+  return gridDistanceAt(mover.field, { x: rest.x - mover.origin.x, y: rest.y - mover.origin.y });
+}
+
+/** The moving part deepest at a world point and its distance; null when the grid has none. */
+export function moverAt(grid: TerrainGrid, p: Vec2): { mover: MoverBody; distance: number } | null {
+  let best: { mover: MoverBody; distance: number } | null = null;
+  for (const mover of grid.movers) {
+    const distance = moverDistanceAt(mover, p);
+    if (!best || distance > best.distance) best = { mover, distance };
+  }
+  return best;
+}
+
+/** Largest moving-part distance at a world point (−∞ without moving parts). */
+export const moversDistanceAt = (grid: TerrainGrid, p: Vec2): number =>
+  moverAt(grid, p)?.distance ?? -Infinity;
+
+/** True when a moving part covers any point of the rect, edges excluded (samples ≤ half a cell apart). */
+function rectHitsMovers(grid: TerrainGrid, rect: Rect): boolean {
+  if (grid.movers.length === 0 || rect.w <= 0 || rect.h <= 0) return false;
+  const step = grid.cellSize / 2;
+  const nx = Math.max(1, Math.ceil(rect.w / step));
+  const ny = Math.max(1, Math.ceil(rect.h / step));
+  const inset = EDGE_EPSILON;
+  for (let j = 0; j <= ny; j += 1) {
+    const y = rect.y + inset + ((rect.h - inset * 2) * j) / ny;
+    for (let i = 0; i <= nx; i += 1) {
+      const x = rect.x + inset + ((rect.w - inset * 2) * i) / nx;
+      if (moversDistanceAt(grid, { x, y }) > 0) return true;
+    }
+  }
+  return false;
+}
+
+/** True when the world point lies in a non-empty cell or inside a moving part. */
 export function isSolidAt(grid: TerrainGrid, x: number, y: number): boolean {
   const size = grid.cellSize;
-  return getCellSlot(grid, Math.floor(x / size), Math.floor(y / size)) !== EMPTY_CELL;
+  if (getCellSlot(grid, Math.floor(x / size), Math.floor(y / size)) !== EMPTY_CELL) return true;
+  return moversDistanceAt(grid, { x, y }) > 0;
 }
 
 /** Cell range a world rect overlaps (edges touching a cell boundary do not count). */
@@ -165,7 +229,7 @@ export function cellRangeOf(grid: TerrainGrid, rect: Rect) {
   };
 }
 
-/** True when any cell the rect overlaps is non-empty. The collision query for bodies. */
+/** True when any cell the rect overlaps is non-empty, or a moving part covers it. The collision query for bodies. */
 export function rectHitsSolid(grid: TerrainGrid, rect: Rect): boolean {
   const range = cellRangeOf(grid, rect);
   for (let cy = range.minY; cy <= range.maxY; cy += 1) {
@@ -173,7 +237,7 @@ export function rectHitsSolid(grid: TerrainGrid, rect: Rect): boolean {
       if (getCellSlot(grid, cx, cy) !== EMPTY_CELL) return true;
     }
   }
-  return false;
+  return rectHitsMovers(grid, rect);
 }
 
 /**
@@ -432,7 +496,9 @@ export function groundFrictionBelow(
     sum += info.friction;
     count += 1;
   }
-  return count === 0 ? 1 : sum / count;
+  if (count > 0) return sum / count;
+  const under = moverAt(grid, { x: span.x + span.w / 2, y: span.y + grid.cellSize / 2 });
+  return under && under.distance > 0 ? under.mover.friction : 1;
 }
 
 /** Returns the dirty chunk indices and clears the set (called by the renderer). */

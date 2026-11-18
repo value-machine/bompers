@@ -1,6 +1,6 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { TerrainGrid } from "@/features/arena/types/arena.types";
-import { sampleDistance } from "@/features/arena/services/terrainGrid";
+import { gridDistanceAt, moversDistanceAt } from "@/features/arena/services/terrainGrid";
 
 /**
  * Terrain field queries for round bodies (slope-walking D2, D7): the signed distance field read
@@ -10,18 +10,12 @@ import { sampleDistance } from "@/features/arena/services/terrainGrid";
  * Exact within the field band (`FIELD_BAND_SAMPLES` samples); farther out it reads as the band.
  */
 
-/** Signed distance at a world point (positive inside terrain), bilinear between sample centres. */
+/**
+ * Signed distance at a world point (positive inside terrain), bilinear between sample centres:
+ * the static terrain and every moving part in its current pose (union = max, moving-parts D11).
+ */
 export function fieldDistanceAt(grid: TerrainGrid, p: Vec2): number {
-  const u = p.x / grid.cellSize - 0.5;
-  const v = p.y / grid.cellSize - 0.5;
-  const cx = Math.floor(u);
-  const cy = Math.floor(v);
-  const fx = u - cx;
-  const fy = v - cy;
-  const top = sampleDistance(grid, cx, cy) * (1 - fx) + sampleDistance(grid, cx + 1, cy) * fx;
-  const bottom =
-    sampleDistance(grid, cx, cy + 1) * (1 - fx) + sampleDistance(grid, cx + 1, cy + 1) * fx;
-  return top * (1 - fy) + bottom * fy;
+  return Math.max(gridDistanceAt(grid, p), moversDistanceAt(grid, p));
 }
 
 /** Unit normal pointing out of terrain at a world point (straight up where the field is flat). */

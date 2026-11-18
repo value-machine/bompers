@@ -1,7 +1,8 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
-import { createArenaState, type ArenaState } from "@/features/arena/api/arenaApi";
+import { createArenaState, moversDistanceAt, type ArenaState } from "@/features/arena/api/arenaApi";
+import { rideMovers, stepMoverPoses } from "@/features/movers/api/moversApi";
 import {
   normalizeLevelDefinition,
   type LevelDefinition,
@@ -62,6 +63,8 @@ import {
  *
  * Systems order (each later concept slots into its numbered place):
  *   1. joinSlots       — a connected input slot without a player gets one
+ *   1b. stepMovingParts — movers feature: moving parts take their pose for this step, then carry
+ *                        and push the players in play and the weapon crates
  *   2. stepPlayers     — player feature: controller + terrain collision
  *   2b. bodyContacts   — player feature: blob-vs-blob bounce; the contacts feed step 3b
  *   3. stepCombat      — combat feature: rockets, blasts (damage, impulse, clearCrater);
@@ -206,6 +209,47 @@ function roundTimer(state: GameState, dt: number): void {
   round.winners = roundWinners(state.rules.scores, slots);
 }
 
+/**
+ * Step 1b: moving parts take their pose for the end of this step, then carry and push the players
+ * in play and the weapon crates (movers feature), before anyone moves on their own.
+ */
+function stepMovingParts(state: GameState, players: PlayerState[], dt: number): void {
+  const { terrain } = state.arena;
+  if (terrain.movers.length === 0) return;
+  stepMoverPoses(terrain, state.timeSeconds + dt);
+  rideMovers(terrain, players);
+  const size = state.tunables.combat.drops.size;
+  const crates = state.collectibles.crates.list;
+  const bodies = crates.map((crate) => ({ x: crate.x, y: crate.y, width: size, height: size }));
+  rideMovers(terrain, bodies);
+  crates.forEach((crate, i) => {
+    crate.x = bodies[i]!.x;
+    crate.y = bodies[i]!.y;
+  });
+}
+
+/** Steps 1 and 1b: new players join, then moving parts carry and push the players in play. */
+function joinAndRideParts(state: GameState, inputs: PlayerInputs, dt: number): PlayerState[] {
+  joinSlots(state, inputs);
+  const players = playersInPlay(state);
+  stepMovingParts(state, players, dt);
+  return players;
+}
+
+/**
+ * Spawns no moving part covers right now (moving-parts D15): a body there would be pushed or
+ * pinned at once. All spawns when every one is covered (the choice must not fail).
+ */
+function openSpawns(state: GameState): readonly Vec2[] {
+  const { level, terrain } = state.arena;
+  if (terrain.movers.length === 0) return level.spawns;
+  const { width, height } = state.tunables.player;
+  const open = level.spawns.filter(
+    (spawn) => moversDistanceAt(terrain, { x: spawn.x, y: spawn.y - height / 2 }) <= -width / 2
+  );
+  return open.length > 0 ? open : level.spawns;
+}
+
 /** Step 3a: right after combat, so a player eliminated by a rocket this step cannot collect. */
 function stepCratePickups(state: GameState, dt: number): void {
   const { tunables, timeSeconds } = state;
@@ -241,20 +285,25 @@ function stepHeadbuttResets(state: GameState, dt: number): void {
   }
 }
 
-/** Step 3c: fire spreads and burns out; a burnt batch is reported like a crater (one event per look). */
+/**
+ * Step 3c: fire spreads and burns out. A burnt batch throws debris from a few places in the
+ * batch itself (a fire burns out along a front, so one centre would sit where nothing burns),
+ * and sounds once however many places it shows.
+ */
 function stepFireOnTerrain(state: GameState): void {
-  const { terrain } = state.arena;
-  const cleared = stepFire(state.fire, terrain, {
+  const batch = stepFire(state.fire, state.arena.terrain, {
     now: state.timeSeconds,
     tunables: state.tunables,
   });
-  if (!cleared) return;
-  const size = terrain.cellSize;
-  const at = {
-    x: ((cleared.box.minX + cleared.box.maxX + 1) / 2) * size,
-    y: ((cleared.box.minY + cleared.box.maxY + 1) / 2) * size,
-  };
-  reportTerrainDestroyed(state.combat, { cleared, at, timeSeconds: state.timeSeconds });
+  if (!batch) return;
+  batch.spots.forEach((at, i) => {
+    reportTerrainDestroyed(state.combat, {
+      cleared: batch,
+      at,
+      timeSeconds: state.timeSeconds,
+      silent: i > 0,
+    });
+  });
 }
 
 /**
@@ -296,8 +345,7 @@ function stepBlobsOnFire(
 function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
   const { tunables, timeSeconds } = state;
   const { level, terrain } = state.arena;
-  joinSlots(state, inputs);
-  const players = playersInPlay(state);
+  const players = joinAndRideParts(state, inputs, dt);
   // A burning blob with no move input runs from the fire (fire-burn D2); combat keeps the real inputs.
   stepPlayers({ players, inputs: panicInputs(state.fire, players, inputs), terrain, tunables, dt });
   const contacts = resolveBodyContacts({ players, terrain, tunables });
@@ -350,7 +398,7 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
     combat: state.combat,
     dive: state.dive,
     players: state.players,
-    spawns: level.spawns,
+    spawns: openSpawns(state),
     bounds: level.bounds,
     killZone: state.killZone,
     tunables,
