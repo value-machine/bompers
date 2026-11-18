@@ -53,6 +53,8 @@ export interface TerrainGrid {
   chunksY: number;
   /** Chunk indices (row-major) changed since the renderer last drew them. */
   dirtyChunks: Set<number>;
+  /** Bumps whenever a sample's slot or distance changes (layers drawn in the terrain's shape). */
+  shapeVersion: number;
   /**
    * Moving parts (LEVEL_FORMAT § 11): kinematic bodies with their own local field, never written
    * into this grid's samples (moving-parts D11). The solid queries read them; craters, fire and

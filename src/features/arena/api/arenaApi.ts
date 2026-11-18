@@ -34,6 +34,14 @@ export {
   type FieldCircle,
 } from "@/features/arena/services/terrainField";
 export {
+  drawContour,
+  edgeAbove,
+  markedRegion,
+  terrainContour,
+  type MaskShapes,
+  type SampleRegion,
+} from "@/features/arena/services/terrainSurfaces";
+export {
   createTerrainView,
   syncTerrainView,
   type TerrainView,
