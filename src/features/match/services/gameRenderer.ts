@@ -369,6 +369,7 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     zoom,
     hits: blobs.hits,
     helmet: state.tunables.feel.helmet,
+    barrelPop: state.tunables.feel.barrelPop,
     feet: state.tunables.feel.feet,
     groundTilt: state.tunables.feel.groundTilt,
     crouch: state.tunables.player.crouch,

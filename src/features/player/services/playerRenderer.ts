@@ -33,6 +33,8 @@ import {
   type HelmetTunables,
   type HelmetWobble,
   type SquashTunables,
+  barrelPopScale,
+  type BarrelPopTunables,
 } from "@/features/player/services/blobPose";
 import {
   blobMetrics,
@@ -47,9 +49,10 @@ import {
   drawHelmetDetails,
   drawHelmetFill,
   drawHelmetInk,
-  drawMuzzleLight,
+  drawMouthLight,
   drawTubeFill,
   drawTubeInk,
+  helmetCentreY,
   type BlobMetrics,
 } from "@/features/player/services/blobShapes";
 import type { PlayerState } from "@/features/player/types/player.types";
@@ -97,12 +100,17 @@ interface BlobSprite {
   body: PartPair;
   feet: [PartPair, PartPair];
   tube: PartPair;
-  /** Helmet parts on one spring: ink, dome fill (under the eyes), gloss + emblem (over them). */
+  /**
+   * Helmet parts on one spring: ink (with the barrel's ink), dome fill (under the eyes), the
+   * barrel (over the eyes), gloss + emblem (over everything).
+   */
   helmet: Container[];
+  /** The barrel's shot pop: readiness last frame, and when the last shot was seen. */
+  pop: { lastReady: number; startMs: number };
   /** White egg over the body fill; alpha = hit flash. */
   flash: Graphics;
   inks: { body: Graphics; helmet: Graphics; feet: [Graphics, Graphics]; tube: Graphics };
-  /** Tube fill and its muzzle light, redrawn when the weapon or outline step changes. */
+  /** Barrel fill and its mouth light, redrawn when the weapon or outline step changes. */
   tubeFill: Graphics;
   muzzle: Graphics;
   /** `itemId:step` the tube was drawn at (null before the first armed frame). */
@@ -150,6 +158,8 @@ export interface SyncPlayersOptions {
   groundTilt?: GroundTiltTunables;
   /** Crouch pose settings. Defaults to the shared tunables. */
   crouch?: CrouchTunables;
+  /** The barrel's shot pop. Defaults to the shared tunables. */
+  barrelPop?: BarrelPopTunables;
 }
 
 /** What the renderer needs of a hit (the effects feature's `PlayerHitFeel` fits). */
@@ -198,20 +208,29 @@ function applyProtection(sprite: BlobSprite, isProtected: boolean, nowMs: number
   sprite.fills.alpha = isProtected && low ? BLINK.lowAlpha : 1;
 }
 
-/** The helmet's three layers, each a container that the spring moves together. */
-function buildHelmet(slot: number, m: BlobMetrics, ink: Graphics): Container[] {
-  const layers = [new Container(), new Container(), new Container()];
-  layers[0]!.addChild(ink);
+/**
+ * The helmet's four layers, each a container that the spring moves together. The weapon barrel
+ * is part of the helmet (weapon-visuals-embellish D1, D2): its ink joins the helmet's ink and its
+ * fill has a layer of its own, which the torso ranks over the eyes (D4).
+ */
+function buildHelmet(
+  slot: number,
+  m: BlobMetrics,
+  parts: { ink: Graphics; tube: PartPair }
+): Container[] {
+  const layers = [new Container(), new Container(), new Container(), new Container()];
+  layers[0]!.addChild(parts.tube.ink, parts.ink);
   layers[1]!.addChild(drawHelmetFill(m));
-  layers[2]!.addChild(...drawHelmetDetails(slot, m));
+  layers[2]!.addChild(parts.tube.fill);
+  layers[3]!.addChild(...drawHelmetDetails(slot, m));
   // Rock around the middle of the rim.
   for (const layer of layers) layer.pivot.set(0, m.helmet.rim);
   return layers;
 }
 
 /**
- * Torso (body centre origin) in both trees: tube under the body; then body, flash, helmet dome,
- * gloss, eyes, and the helmet's gloss + emblem on top.
+ * Torso (body centre origin) in both trees: body, flash, helmet dome, gloss, eyes, the weapon
+ * barrel, and the helmet's gloss + emblem on top.
  */
 function buildEyes(u: number) {
   const left = drawEye(u);
@@ -234,6 +253,8 @@ function buildTube(sprite: Pick<BlobSprite, "tube" | "inks">) {
 /** Draw rank in the torso fill: eyes over the helmet dome (4), or under it while crouching. */
 const EYES_OVER_HELMET = 6;
 const EYES_UNDER_HELMET = 3;
+/** The barrel covers the eyes where they overlap (weapon-visuals-embellish D4). */
+const BARREL_OVER_EYES = 7;
 
 /**
  * Adds children with a fixed draw rank (zIndex). The crouch re-ranks the eyes under the helmet
@@ -255,20 +276,25 @@ function buildTorso(
   const torso = pair();
   eachSide(torso, (c) => c.position.set(0, -m.bodyLift));
   const { tubeFill, muzzle } = buildTube(sprite);
-  const helmet = buildHelmet(slot, m, sprite.inks.helmet);
-  const [helmetInk, helmetDome, helmetDetails] = helmet as [Container, Container, Container];
-  torso.ink.addChild(sprite.tube.ink, sprite.inks.body, helmetInk);
+  const helmet = buildHelmet(slot, m, { ink: sprite.inks.helmet, tube: sprite.tube });
+  const [helmetInk, helmetDome, helmetBarrel, helmetDetails] = helmet as [
+    Container,
+    Container,
+    Container,
+    Container,
+  ];
+  torso.ink.addChild(sprite.inks.body, helmetInk);
   const { eyes, pupils } = buildEyes(m.u);
   const flash = drawBodyFlash(m);
   flash.visible = false;
   addRanked(torso.fill, [
-    [sprite.tube.fill, 0],
     [drawBodyFill(slot, m), 1],
     [flash, 2],
     [helmetDome, 4],
     [drawBodyGloss(m), 5],
     ...eyes.map((eye): [Container, number] => [eye, EYES_OVER_HELMET]),
-    [helmetDetails, 7],
+    [helmetBarrel, BARREL_OVER_EYES],
+    [helmetDetails, 8],
   ]);
   sprite.body.ink.addChild(torso.ink);
   sprite.body.fill.addChild(torso.fill);
@@ -317,6 +343,7 @@ function createBlobSprite(player: PlayerState): BlobSprite {
     tubeFill,
     muzzle,
     tubeKey: null,
+    pop: { lastReady: 1, startMs: Number.NEGATIVE_INFINITY },
     eyes,
     pupils,
     shadow: new Graphics().ellipse(0, 0, 1, 1).fill(GAME_PALETTE.ink),
@@ -341,28 +368,49 @@ function syncInk(sprite: BlobSprite, zoom: number): void {
   sprite.inkStep = outline.step;
 }
 
-/** Muzzle light alpha while a shot recharges (faded, never fully gone) … ready (full). */
+/** Mouth light alpha while a shot recharges (faded, never fully gone) … ready (full). */
 const MUZZLE_MIN_ALPHA = 0.15;
+/** Readiness falling this much in one frame is a shot (a recharge only ever rises). */
+const SHOT_READY_DROP = 0.5;
+
+/** Draws the barrel of `itemId` in both passes when the weapon or the outline step changed. */
+function redrawTube(sprite: BlobSprite, itemId: WeaponItemId, zoom: number): void {
+  const outline = outlineWidth("character", zoom);
+  const key = `${itemId}:${outline.step}`;
+  if (sprite.tubeKey === key) return;
+  const look = weaponLook(itemId);
+  const tube = weaponTubeParts(look.tube, sprite.metrics.u);
+  drawTubeInk(sprite.inks.tube, tube, outline.width);
+  drawTubeFill(sprite.tubeFill, tube);
+  drawMouthLight(sprite.muzzle, tube, look.accent);
+  sprite.tubeKey = key;
+}
+
+interface TubeFrame {
+  weapon: BlobWeapon | undefined;
+  zoom: number;
+  nowMs: number;
+  pop: BarrelPopTunables;
+}
 
 /**
- * The held weapon's tube (DESIGN_LANGUAGE § 9): its silhouette in both passes, redrawn only when
- * the weapon or the outline step changes; the muzzle light's alpha follows readiness each frame.
+ * The held weapon's barrel (DESIGN_LANGUAGE § 9): its silhouette in both passes, redrawn only when
+ * the weapon or the outline step changes. Each frame the mouth light's alpha follows readiness,
+ * and a shot (readiness dropping) pops the barrel short and fat for a moment.
  */
-function syncTube(sprite: BlobSprite, weapon: BlobWeapon | undefined, zoom: number): void {
-  if (!weapon) return;
-  const outline = outlineWidth("character", zoom);
-  const key = `${weapon.itemId}:${outline.step}`;
-  if (sprite.tubeKey !== key) {
-    const { u } = sprite.metrics;
-    const look = weaponLook(weapon.itemId);
-    const tube = weaponTubeParts(look.tube, u);
-    drawTubeInk(sprite.inks.tube, tube, outline.width);
-    drawTubeFill(sprite.tubeFill, tube);
-    drawMuzzleLight(sprite.muzzle, tube, { accent: look.accent, u });
-    sprite.tubeKey = key;
+function syncTube(sprite: BlobSprite, frame: TubeFrame): void {
+  const { weapon, zoom, nowMs } = frame;
+  if (!weapon) {
+    sprite.pop.lastReady = 1;
+    return;
   }
+  redrawTube(sprite, weapon.itemId, zoom);
   const ready = Math.max(0, Math.min(1, weapon.ready));
   sprite.muzzle.alpha = MUZZLE_MIN_ALPHA + (1 - MUZZLE_MIN_ALPHA) * ready;
+  if (ready < sprite.pop.lastReady - SHOT_READY_DROP) sprite.pop.startMs = nowMs;
+  sprite.pop.lastReady = ready;
+  const { sx, sy } = barrelPopScale(nowMs - sprite.pop.startMs, frame.pop);
+  eachSide(sprite.tube, (c) => c.scale.set(sx, sy));
 }
 
 /** World units a drawn hop raises the blob (render only; 0 without one). */
@@ -457,16 +505,13 @@ function placeEyes(
   });
 }
 
-/** The tube pivots toward the aim. */
+/** The barrel pivots on the helmet centre toward the aim (weapon-visuals-embellish D1). */
 function placeFace(sprite: BlobSprite, player: PlayerState, armed: boolean): void {
-  const { r, u, helmet } = sprite.metrics;
+  const pivotY = helmetCentreY(sprite.metrics);
   const angle = Math.atan2(player.aimY, player.aimX);
   eachSide(sprite.tube, (c) => {
     c.visible = armed;
-    c.position.set(
-      Math.cos(angle) * r * 0.5,
-      (helmet.top + helmet.rim) / 2 - 2 * u + Math.sin(angle) * 4 * u
-    );
+    c.position.set(0, pivotY);
     c.rotation = angle;
   });
 }
@@ -576,7 +621,12 @@ export function syncPlayersView(
       contact: stepContactHold(sprite.contactHold, { player, nowMs, seconds: holdSeconds }),
     });
     syncInk(sprite, zoom);
-    syncTube(sprite, options.weapons?.get(player.id), zoom);
+    syncTube(sprite, {
+      weapon: options.weapons?.get(player.id),
+      zoom,
+      nowMs,
+      pop: options.barrelPop ?? DEFAULT_GAME_TUNABLES.feel.barrelPop,
+    });
     applyPose(sprite, player, {
       pose,
       overlay: options.overlays?.get(player.id),

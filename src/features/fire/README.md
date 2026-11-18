@@ -48,4 +48,5 @@ Tests: `services/fireSim.test.ts` (axis arrival = distance / speed, roundness wi
 - Fire sounds are placeholders until fire takes exist (fire-spread D8): the torch start plays `rocket-fire`, burn-outs cardboard's `thwap`; a blob catching fire `rocket-fire`, ice putting it out `clink` (fire-burn D7).
 - Burning-blob look and flee are the owner's picks from the options page (fire-burn D1–D3): variant 2's look with drawn-only hops (never real sim hops, so a hop can't throw a jump), full-speed flee with no input, off ledges too, control unchanged.
 - Burn damage (owner fire-burn D10, superseding D5's single chunk): two chunks over the 2 s burn, only one when crouching at the end.
+- The torch flame leaves just inside the rim of the torch's funnel mouth: `FLAME_LOOK.spray.nozzleReach` is 18 units along the aim from the helmet point and follows the shared `weaponTube` funnel shape (weapon-visuals-embellish D1, D8).
 - Burn rules (fire-burn D4–D6, D8): a bump passes the fire; each tick is a `burn` hit not halved by crouch; catching reach is the body radius plus one sample; 0.5 s grace after going out.

@@ -55,6 +55,7 @@ describe("feel tunables conform to the juice scale", () => {
       player.squash.jump,
       player.squash.wallJump,
       knockout,
+      feel.barrelPop,
     ]) {
       expect(isJuiceSquash(preset)).toBe(true);
       expect(isInJuiceWindow("squash", preset.seconds)).toBe(true);

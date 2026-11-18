@@ -141,6 +141,22 @@ const easeOutBack = (t: number): number => {
 
 const easeOutQuad = (t: number): number => 1 - (1 - t) * (1 - t);
 
+export type BarrelPopTunables = GameTunables["feel"]["barrelPop"];
+
+/**
+ * Scale of the helmet barrel `elapsedMs` after a shot (weapon-visuals-embellish D5): the pop pose
+ * at the shot, springing back to rest with a small overshoot. Along the barrel is x.
+ */
+export function barrelPopScale(
+  elapsedMs: number,
+  pop: BarrelPopTunables
+): { sx: number; sy: number } {
+  const t = elapsedMs / (pop.seconds * 1000);
+  if (t < 0 || t >= 1) return { sx: 1, sy: 1 };
+  const k = 1 - easeOutBack(t);
+  return { sx: 1 + (pop.sx - 1) * k, sy: 1 + (pop.sy - 1) * k };
+}
+
 /**
  * Starts a squash for the newest sim event since the last frame (the latest one wins). Returns
  * the squash it started, or null, so the helmet spring can react to the same moment.

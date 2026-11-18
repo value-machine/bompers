@@ -71,7 +71,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 |--------|------|-------|--------|-------|-------|----------|--------|--------|
 | Jump / wall-jump | light | `jump` | stretch tall | — | — | — | — | kick |
 | Land | light | `land` (gain by speed) | squash wide (by speed) | — | — | — | — | kick |
-| Rocket fire | light | `rocket-fire` | — | — | — | — | — (visual: the recoil row) | — |
+| Shot (any weapon whose readiness drops) | light | the weapon's fire cue (`rocket-fire`) | barrel pop 0.78 × 1.22, 200 ms back-out (`feel.barrelPop`) | — | — | — | mouth accent drops to 15 % and refills with the cooldown | — |
 | Rocket recoil | light | `rocket-fire` (the fire cue) | — | — | — | — | body kick opposite the aim (sim impulse `combat.rocket.recoil`) | — |
 | Pickup collected | light | `pickup` | — | — | — | — | — | — |
 | Headbutt reset taken | light | `pickup` (pitched by the collector) | — | — | — | — | ring burst in the crystal colour, 220 ms; then a ghost outline until it is back | — |

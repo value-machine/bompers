@@ -21,8 +21,11 @@ export const ICE_LOOK = {
   /** One block in this many carries a gloss streak. */
   glossEvery: 9,
   breath: {
-    /** Where the breath leaves the emitter: units along the aim from the helmet point. */
-    emitterReach: 15,
+    /**
+     * Where the breath leaves the emitter: units along the aim from the helmet point, at the knob
+     * in front of the freeze ray's dish (`weaponTube` shape `dish`, 50 mockup units at u ≈ 0.41).
+     */
+    emitterReach: 20,
     /** Seconds to grow in, and for the head to let go after release (juice windows, as the torch). */
     growSeconds: 0.12,
     releaseSeconds: 0.3,
