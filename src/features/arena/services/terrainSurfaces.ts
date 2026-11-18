@@ -159,7 +159,7 @@ export function breakableRegion(grid: TerrainGrid): SampleRegion {
 const MARKED_DEPTH_SAMPLES = 1.5;
 
 /** Share of the solid samples around a sample (itself included) that are marked. */
-function markedShare(grid: TerrainGrid, marked: Uint8Array, index: number): number {
+function markedShare(grid: TerrainGrid, isMarked: (index: number) => boolean, index: number) {
   const cx = index % grid.widthCells;
   const cy = Math.floor(index / grid.widthCells);
   let solid = 0;
@@ -169,47 +169,67 @@ function markedShare(grid: TerrainGrid, marked: Uint8Array, index: number): numb
       const near = sampleIndex(grid, cx + dx, cy + dy);
       if (near < 0 || !isSolidSample(grid, near)) continue;
       solid += 1;
-      hits += marked[near] ?? 0;
+      if (isMarked(near)) hits += 1;
     }
   }
   return solid > 0 ? hits / solid : 0;
 }
 
-function widenBox(box: SampleBox, cx: number, cy: number): void {
-  box.minX = Math.min(box.minX, cx);
-  box.maxX = Math.max(box.maxX, cx);
-  box.minY = Math.min(box.minY, cy);
-  box.maxY = Math.max(box.maxY, cy);
-}
-
-/**
- * The region of a set of marked solid samples (the burning ones, the frozen ones). A marked
- * sample is always inside and an unmarked solid one never is; how far depends on the share of
- * its solid neighbours that are marked, so the region's edge inside the terrain is a curve
- * between the samples instead of their steps. Empty samples do not limit it: there the terrain's
- * own edge is the edge. Null when nothing solid is marked.
- */
-export function markedRegion(grid: TerrainGrid, samples: Iterable<number>): SampleRegion | null {
-  const marked = new Uint8Array(grid.cells.length);
+/** The solid ones among `samples` and the box that holds them (null when there are none). */
+function solidSamples(grid: TerrainGrid, samples: Iterable<number>) {
+  const solid: number[] = [];
   const box: SampleBox = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
   for (const index of samples) {
     if (!isSolidSample(grid, index)) continue;
-    marked[index] = 1;
-    widenBox(box, index % grid.widthCells, Math.floor(index / grid.widthCells));
+    solid.push(index);
+    const cx = index % grid.widthCells;
+    const cy = Math.floor(index / grid.widthCells);
+    box.minX = Math.min(box.minX, cx);
+    box.maxX = Math.max(box.maxX, cx);
+    box.minY = Math.min(box.minY, cy);
+    box.maxY = Math.max(box.maxY, cy);
   }
-  if (box.maxX < box.minX) return null;
+  return solid.length > 0 ? { solid, box } : null;
+}
+
+/**
+ * The region of a set of marked solid samples (the burning ones, the frozen ones, the stained
+ * ones). A marked sample is always inside and an unmarked solid one never is; how far depends on
+ * the share of its solid neighbours that are marked, so the region's edge inside the terrain is
+ * a curve between the samples instead of their steps. Empty samples do not limit it: there the
+ * terrain's own edge is the edge. Null when nothing solid is marked. Its working memory is the
+ * size of the marked samples' box, not of the grid, so a small part costs little to rebuild.
+ */
+export function markedRegion(grid: TerrainGrid, samples: Iterable<number>): SampleRegion | null {
+  const found = solidSamples(grid, samples);
+  if (!found) return null;
+  // One sample of margin: the unmarked samples next to the part get a value from their neighbours.
+  const x0 = found.box.minX - 1;
+  const y0 = found.box.minY - 1;
+  const width = found.box.maxX - x0 + 2;
+  const height = found.box.maxY - y0 + 2;
+  const local = (index: number): number => {
+    const cx = (index % grid.widthCells) - x0;
+    const cy = Math.floor(index / grid.widthCells) - y0;
+    return cx < 0 || cy < 0 || cx >= width || cy >= height ? -1 : cy * width + cx;
+  };
+  const marked = new Uint8Array(width * height);
+  for (const index of found.solid) marked[local(index)] = 1;
+  const isMarked = (index: number): boolean => marked[local(index)] === 1;
   const band = fieldBand(grid);
   const depth = MARKED_DEPTH_SAMPLES * grid.cellSize * 2;
-  const known = new Float32Array(grid.cells.length).fill(Number.NaN);
+  const known = new Float32Array(width * height).fill(Number.NaN);
   const value = (index: number): number => {
     if (!isSolidSample(grid, index)) return band;
-    const seen = known[index]!;
+    const at = local(index);
+    if (at < 0) return -depth / 2;
+    const seen = known[at]!;
     if (!Number.isNaN(seen)) return seen;
-    const fresh = (((marked[index] ?? 0) + markedShare(grid, marked, index)) / 2 - 0.5) * depth;
-    known[index] = fresh;
+    const fresh = (((marked[at] ?? 0) + markedShare(grid, isMarked, index)) / 2 - 0.5) * depth;
+    known[at] = fresh;
     return fresh;
   };
-  return { value, box };
+  return { value, box: found.box };
 }
 
 /**
