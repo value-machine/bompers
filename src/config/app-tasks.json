@@ -10,6 +10,21 @@
     "status": "to-do"
   },
   {
+    "title": "Ice lap 2: frozen blobs",
+    "description": "Ice element follow-up (owner pick 2026-11-18: freeze ray on the fire system, PR #63): frozen blobs and counterplay with crouch, dive and jump. Touches the player feature through overlays and the shared roll; starts with an options page. Size M.",
+    "status": "to-do"
+  },
+  {
+    "title": "Ice lap 3: ice sounds",
+    "description": "Ice element follow-up: freeze ray and frozen-ground sounds on a listening page before wiring in (DESIGN_LANGUAGE § 8). Size S.",
+    "status": "to-do"
+  },
+  {
+    "title": "Ice lap 4: look polish",
+    "description": "Ice element follow-up, optional: polish the freeze look after the owner has played it, as fire-visuals and fire-clusters did for fire. Size S.",
+    "status": "to-do"
+  },
+  {
     "title": "Fire and torch sounds",
     "description": "Follow-up from fire b1 (#53): the torch start and burn-outs reuse placeholder sounds (rocket-fire, cardboard thwap). Generate real takes (torch whoosh/loop, crackle, burn-out) per DESIGN_LANGUAGE § 8 incl. 'Owner listens first' (artifact page, owner picks before wiring); credits need the owner's go. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md. ",
     "status": "to-do"
