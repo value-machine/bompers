@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
-import { buildTerrainFromLevel } from "@/features/arena/api/arenaApi";
+import {
+  buildTerrainFromLevel,
+  isFrozenSample,
+  setSampleFrozen,
+} from "@/features/arena/api/arenaApi";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelApi";
 import { createPlayer } from "@/features/player/api/playerApi";
 import { createFireState } from "@/features/fire/services/fireSim";
@@ -110,5 +114,50 @@ describe("torch (blast-power D8)", () => {
     });
     expect(fire.sprays).toHaveLength(1);
     expect(fire.sprays[0]!.ends).toHaveLength(T.rays);
+  });
+});
+
+describe("torch on frozen terrain (ice-element D6)", () => {
+  it("should thaw frozen cardboard first and light it on a later step (ice-element D6)", () => {
+    const terrain = buildTerrainFromLevel(level([rect([240, 120, 40, 80], "cardboard")]));
+    const fire = createFireState(terrain);
+    const holder = blobAt(0, 200);
+    const helmetY = FLOOR - holder.height * 0.78;
+    const touched = sampleAt(terrain, 241, helmetY);
+    setSampleFrozen(terrain, touched, true);
+    const spray = (now: number): void =>
+      sprayTorch(fire, {
+        terrain,
+        players: [holder],
+        holder,
+        tunables: DEFAULT_GAME_TUNABLES,
+        now,
+        dt: 1 / 120,
+      });
+    spray(0);
+    expect(isFrozenSample(terrain, touched)).toBe(false);
+    expect(fire.igniteAt[touched]).toBe(Infinity);
+    spray(1 / 120);
+    expect(fire.igniteAt[touched]).toBeLessThan(Infinity);
+  });
+
+  it("should thaw frozen stone and never light it", () => {
+    const terrain = buildTerrainFromLevel(level([rect([240, 120, 40, 80], "stone")]));
+    const fire = createFireState(terrain);
+    const holder = blobAt(0, 200);
+    const touched = sampleAt(terrain, 241, FLOOR - holder.height * 0.78);
+    setSampleFrozen(terrain, touched, true);
+    for (const now of [0, 1 / 120]) {
+      sprayTorch(fire, {
+        terrain,
+        players: [holder],
+        holder,
+        tunables: DEFAULT_GAME_TUNABLES,
+        now,
+        dt: 1 / 120,
+      });
+    }
+    expect(isFrozenSample(terrain, touched)).toBe(false);
+    expect(fire.igniteAt[touched]).toBe(Infinity);
   });
 });

@@ -21,6 +21,8 @@ Seams for later work:
 
 - **Blasts:** `features/combat` calls `clearCrater` (reach from the blast's power) in sim step 3 and turns `byLook` into destroy effect / sound events (catalog material) with the colour for debris.
 - **Fire burn-out (fire-spread b1):** `burnOut(grid, samples)` empties burnt-out samples through `writeSample` (already-empty ones are skipped), then keeps the field true per chunk the samples fall in: `boundSolidsByNearestAir(grid, box, "all")` gives every neighbouring solid an edge distance and `remeasureAir` fixes the air (a crater bounds only `"unbreakable"` solids, since it writes exact rim distances itself). Returns `ClearedCells` like `clearCrater`. Cell slots carry the material's `burns` (fuel) and `douses` (fuel next to it never catches) for the fire feature.
+- **Things that spread through terrain (ice-element D4):** fire and ice run the shared sample front (`src/shared/utils/sampleFront.ts`) and the shared ray fan (`src/shared/utils/rayFan.ts`) on this grid; both read it as a plain `SampleField` (spacing, size, `cells`). A new element that travels through touching terrain uses those, not its own heap.
+- **Frozen terrain (ice-element D5):** `TerrainGrid.frozen` is a flag per sample (`terrainGrid.ts`: `isFrozenSample`, `setSampleFrozen`, `thawAround`; `frozenVersion` bumps on every change). A frozen sample keeps its material but reads `frozenFriction` (the ice material's friction, set at import) in `groundFrictionBelow`, is skipped by `clearCrater`, and is bounded like unbreakable terrain next to a crater. A sample that is emptied loses the flag. The ice feature sets and clears it; the torch thaws it.
 - **New maps:** not here; they are `LevelDefinition`s (see `level`).
 
 ## Dependencies

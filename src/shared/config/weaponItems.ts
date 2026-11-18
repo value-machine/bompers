@@ -5,6 +5,7 @@ const WEAPON_ITEMS: Readonly<Record<WeaponItemId, true>> = {
   "rocket-launcher": true,
   "homing-launcher": true,
   torch: true,
+  "freeze-ray": true,
 };
 
 /** True for catalog item ids that are weapons (a drop point may also list other items later). */

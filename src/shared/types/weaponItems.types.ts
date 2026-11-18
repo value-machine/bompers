@@ -3,4 +3,7 @@
  * collectibles feature drops them and the combat feature arms and fires them; neither imports the
  * other. Runtime check: `isWeaponItemId` in `src/shared/config/weaponItems.ts`.
  */
-export type WeaponItemId = "rocket-launcher" | "homing-launcher" | "torch";
+export type WeaponItemId = "rocket-launcher" | "homing-launcher" | SprayWeaponItemId;
+
+/** Weapons that are held and spray every step instead of firing a projectile per press. */
+export type SprayWeaponItemId = "torch" | "freeze-ray";

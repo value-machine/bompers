@@ -5,7 +5,7 @@
  * `shared/services/weaponTubeRenderer.ts`. A new weapon adds its shape id and parts here and its
  * look (accent, shape id) in `gamePalette.weaponLooks`.
  */
-export type WeaponTubeShape = "capped" | "twin-pod" | "nozzle";
+export type WeaponTubeShape = "capped" | "twin-pod" | "nozzle" | "emitter";
 
 export interface TubePart {
   x: number;
@@ -56,6 +56,15 @@ const SHAPES: Readonly<Record<WeaponTubeShape, ShapeSpec>> = {
       [19, -6, 6, 12, 3],
     ],
     muzzles: [[22, 0]],
+  },
+  // Freeze ray: a chunky body, a short neck and a wide flat dish at the tip (ice-element lap 1).
+  emitter: {
+    parts: [
+      [-3, -7, 16, 14, 6],
+      [11, -4, 8, 8, 3],
+      [17, -9, 5, 18, 2.5],
+    ],
+    muzzles: [[19.5, 0]],
   },
 };
 

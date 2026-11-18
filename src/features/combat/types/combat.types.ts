@@ -1,5 +1,5 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
-import type { WeaponItemId } from "@/shared/types/weaponItems.types";
+import type { SprayWeaponItemId, WeaponItemId } from "@/shared/types/weaponItems.types";
 
 /**
  * Combat slice of the game state (GDD § 3): per-player fighter state keyed by player `id`,
@@ -123,8 +123,9 @@ export type CombatEventBody =
       vy: number;
     }
   | {
-      /** A spray weapon started spraying (fire-spread b1): its start cue. */
-      type: "torchStarted";
+      /** A spray weapon (torch, freeze ray) started spraying: its start cue. */
+      type: "sprayStarted";
+      itemId: SprayWeaponItemId;
       slot: number;
       x: number;
       y: number;

@@ -67,7 +67,7 @@ Root attributes:
 | `drop` | `<circle>` | ≥ 1 | Weapon crates fall from here (`r="12"`); place high up. `data-items` = space-separated drop items (§ 4). `fill="#c94f7c"`. |
 | `collectible` | `<circle>` | ≥ 0 | A pickup point (`r="10"`), `data-item` = one collectible item (§ 4). `point-orb`: point orbs fall from the sky onto it. `dive-reset`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns 2.5 s after use) — hang them in the air between platforms and off edges for headbutt chains. `fill="#e0b62c"`. |
 
-Drop items: `rocket-launcher`, `homing-launcher`, `torch`. Collectible items: `point-orb`, `dive-reset`.
+Drop items: `rocket-launcher`, `homing-launcher`, `torch`, `freeze-ray`. Collectible items: `point-orb`, `dive-reset`.
 
 ### Moving parts (optional)
 
@@ -106,7 +106,7 @@ Reference content **by ID only**; IDs are lowercase-kebab. Unknown IDs fall back
 - `data-color` (looks; any colour on any material, names only, no hex) — use the hex as that shape's `fill`: `plum` `#5a3f7a`, `slate` `#4f6178`, `cardboard` `#c99a62`, `clay` `#c4673f`, `moss` `#5f8f3e`, `mint` `#3aa889`, `frost` `#a8cfe6`, `rose` `#c95a86`.
 - `data-effect`: `none`, `dust-burst`.
 - `data-sound`: `none`, `thud`, `crumble`, `thwap`, `clink`, `jump`, `land`, `tumble-bounce`, `dive-launch`, `dive-impact`, `hit`, `elimination`, `rocket-fire`, `explosion`, `pickup`, `respawn`, `round-start`, `round-end`.
-- `data-items` (drop): `rocket-launcher`, `homing-launcher`, `torch`; default `rocket-launcher`. List several to alternate crates.
+- `data-items` (drop): `rocket-launcher`, `homing-launcher`, `torch`, `freeze-ray`; default `rocket-launcher`. List several to alternate crates.
 - `data-item` (collectible): `point-orb`, `dive-reset`; default `point-orb`.
 - `data-behavior`: none yet — leave it out.
 
@@ -152,7 +152,7 @@ Smallest valid level (shape reference only; build the map from § 7):
       <circle data-role="spawn" cx="520" cy="536" r="14" fill="#3f8f5f" />
       <circle data-role="spawn" cx="680" cy="536" r="14" fill="#3f8f5f" />
       <circle data-role="spawn" cx="880" cy="536" r="14" fill="#3f8f5f" />
-      <circle data-role="drop" data-items="rocket-launcher homing-launcher torch" cx="600" cy="80" r="12" fill="#c94f7c" />
+      <circle data-role="drop" data-items="rocket-launcher homing-launcher torch freeze-ray" cx="600" cy="80" r="12" fill="#c94f7c" />
     </svg>
   </body>
 </html>
