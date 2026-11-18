@@ -1,16 +1,22 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import { syncDisplayById } from "@/shared/utils/displaySync";
-import { posePoint } from "@/shared/utils/levelMotion";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
-import type { MoverBody } from "@/features/arena/api/arenaApi";
-import { splatShape, type SplatShape } from "@/features/knockout/services/splatShape";
-import { drawLooseHelmet, drawLooseTube } from "@/features/player/api/playerApi";
 import {
-  pieceAlpha,
-  splatAlpha,
-  type KnockoutWorld,
-} from "@/features/knockout/services/knockoutSim";
+  drawContour,
+  markedRegion,
+  terrainContour,
+  type MoverBody,
+  type TerrainGrid,
+} from "@/features/arena/api/arenaApi";
+import {
+  STAIN_LOOK,
+  stainFade,
+  stainSamples,
+  stainStage,
+} from "@/features/knockout/services/stainShape";
+import { drawLooseHelmet, drawLooseTube } from "@/features/player/api/playerApi";
+import { pieceAlpha, type KnockoutWorld } from "@/features/knockout/services/knockoutSim";
 import type {
   GooDroplet,
   GooSplat,
@@ -19,20 +25,44 @@ import type {
 } from "@/features/knockout/types/knockout.types";
 
 /**
- * Knockout layer (above terrain and effects, under rockets and players): goo splats on terrain,
- * goo droplets in flight and the loose helmet and tube. The flying blob itself is drawn by the
- * player renderer (match feeds it `knockoutBodies`). Each sprite is drawn once when it appears
- * (outline width at that zoom, like the effects); per frame only transforms and alpha change.
- * Goo is the victim's body colour: an effect of that player's own (DESIGN_LANGUAGE § 1).
+ * Knockout layers. Goo is the victim's body colour: an effect of that player's own
+ * (DESIGN_LANGUAGE § 1).
+ * - Right above the terrain (`stainLayer`): goo stains. A stain is not a shape laid on top; it
+ *   dyes a patch of the terrain itself, see-through (owner, terrain-stains D1: "the same shape as
+ *   ice"): its samples are drawn with the terrain's contour, one drawing per burst, on the arena
+ *   and on each moving part's own field (in a container that follows the part). Frozen ground
+ *   and fire are drawn over it. A drawing is redrawn only when one of its stains lands or runs
+ *   or the terrain changes; fading changes its alpha only.
+ * - Above terrain and effects, under rockets and players (`layer`): goo droplets in flight and
+ *   the loose helmet and tube, one sprite each, drawn once when it appears (outline width at
+ *   that zoom, like the effects); per frame only transforms and alpha change.
+ * The flying blob itself is drawn by the player renderer (match feeds it `knockoutBodies`).
  */
 export interface KnockoutView {
   layer: Container;
-  splatLayer: Container;
+  /** Goo stains: add right above the terrain, under frozen ground and fire. */
+  stainLayer: Container;
+  /**
+   * One drawing per burst of goo and stained field, by `<field>:<burst>` (field -1 = the arena),
+   * in landing order: a burst's stains are one shape in one colour, so they never stack on each
+   * other, and the burst fades as one. Stains of different bursts lie over each other,
+   * see-through, the newer on top.
+   */
+  stains: Map<string, StainDrawing>;
+  /** One container per moving part, following its pose; made when a part is first stained. */
+  partLayers: Map<number, Container>;
   dropletLayer: Container;
   pieceLayer: Container;
-  splats: Map<string, Container>;
   droplets: Map<string, Container>;
   pieces: Map<string, Container>;
+}
+
+interface StainDrawing {
+  g: Graphics;
+  /** What it was drawn from; it is redrawn when this changes. */
+  drawn: string;
+  /** Age of the burst's first landing: the whole drawing fades by it. */
+  age: number;
 }
 
 export interface KnockoutFrame {
@@ -42,25 +72,23 @@ export interface KnockoutFrame {
   playerHeight: number;
   tunables: KnockoutTunables;
   respawnDelaySeconds: number;
-  /** The arena's moving parts: splats stuck on one move and turn with it. */
-  movers?: readonly MoverBody[];
+  /** The arena's terrain: stains colour its samples and those of its moving parts. */
+  terrain: TerrainGrid;
 }
 
-/** A wall splat's streak runs down to its full length (`splatShape`) over this long. */
-const STREAK = { seconds: 0.8 };
-
 export function createKnockoutView(): KnockoutView {
-  const splatLayer = new Container({ label: "goo-splats" });
+  const stainLayer = new Container({ label: "goo-stains" });
   const dropletLayer = new Container({ label: "goo-droplets" });
   const pieceLayer = new Container({ label: "knockout-pieces" });
   const layer = new Container({ label: "knockouts" });
-  layer.addChild(splatLayer, dropletLayer, pieceLayer);
+  layer.addChild(dropletLayer, pieceLayer);
   return {
     layer,
-    splatLayer,
+    stainLayer,
+    stains: new Map(),
+    partLayers: new Map(),
     dropletLayer,
     pieceLayer,
-    splats: new Map(),
     droplets: new Map(),
     pieces: new Map(),
   };
@@ -80,51 +108,109 @@ function drawDroplet(droplet: GooDroplet, width: number): Container {
     .fill({ color: GAME_PALETTE.gloss, alpha: 0.7 });
 }
 
-/**
- * A splat flat on the surface it hit, no outline: a wide lens on a floor (with satellite dots),
- * a hanging drip under a ceiling, a tall smear with a streak running down on a wall.
- */
-/** Traces the splat's seeded shape (`splatShape`): its blobs and its hanging drips. */
-function traceSplat(g: Graphics, shape: SplatShape): Graphics {
-  for (const blob of shape.blobs) g.ellipse(blob.x, blob.y, blob.rx, blob.ry);
-  for (const drip of shape.drips) {
-    const { x, halfWidth: w, length } = drip;
-    g.moveTo(x - w, 0)
-      .quadraticCurveTo(x - w, 0.7 * length, x, length)
-      .quadraticCurveTo(x + w, 0.7 * length, x + w, 0);
-  }
-  return g;
+/** The field a stain is on: the arena (-1) or a moving part's own field, with its offset. */
+function stainField(splat: GooSplat, terrain: TerrainGrid) {
+  const mover = splat.rides ? terrain.movers[splat.rides.mover] : undefined;
+  if (!mover) return { id: -1, field: terrain, x: splat.x, y: splat.y };
+  const { origin } = mover;
+  return {
+    id: splat.rides!.mover,
+    field: mover.field,
+    x: splat.x - origin.x,
+    y: splat.y - origin.y,
+  };
 }
 
-function drawSplat(splat: GooSplat): Container {
-  const r = splat.radius;
-  const color = gooColor(splat.slot);
-  const shape = splatShape(splat);
-  const root = new Container();
-  root.addChild(traceSplat(new Graphics(), shape).fill(color));
-  if (shape.streak > 0) {
-    const streak = new Graphics()
-      .roundRect(-0.25 * r, 0, 0.5 * r, shape.streak, 0.25 * r)
-      .fill(color);
-    streak.label = "streak";
-    root.addChild(streak);
-  }
-  root.position.set(splat.x, splat.y);
-  return root;
+/** The layer that follows one moving part's pose, made when the part is first stained. */
+function partLayer(view: KnockoutView, mover: MoverBody, id: number): Container {
+  const known = view.partLayers.get(id);
+  if (known) return known;
+  const layer = new Container({ label: `goo-stains-part-${id}` });
+  layer.pivot.set(mover.pivot.x, mover.pivot.y);
+  view.partLayers.set(id, layer);
+  view.stainLayer.addChild(layer);
+  return layer;
 }
 
-function placeSplat(sprite: Container, splat: GooSplat, frame: KnockoutFrame): void {
-  sprite.alpha = splatAlpha(splat.age, {
+/** A burst's stains on one field: the stains of one knockout (`<seq>:…` keys) that share it. */
+interface StainGroup {
+  id: number;
+  slot: number;
+  field: TerrainGrid;
+  members: { splat: GooSplat; x: number; y: number }[];
+}
+
+function stainGroups(frame: KnockoutFrame): Map<string, StainGroup> {
+  const groups = new Map<string, StainGroup>();
+  for (const splat of frame.world.splats) {
+    const { id, field, x, y } = stainField(splat, frame.terrain);
+    const key = `${id}:${splat.key.split(":")[0]}`;
+    const group = groups.get(key) ?? { id, slot: splat.slot, field, members: [] };
+    group.members.push({ splat, x, y });
+    groups.set(key, group);
+  }
+  return groups;
+}
+
+/** The drawing of one group, made on first use (a moving part's in the part's layer). */
+function stainDrawing(view: KnockoutView, frame: KnockoutFrame, entry: [string, StainGroup]) {
+  const [key, group] = entry;
+  const known = view.stains.get(key);
+  if (known) return known;
+  const g = new Graphics({ label: `goo-stain-${key}` });
+  const mover = frame.terrain.movers[group.id];
+  if (mover) g.position.set(mover.origin.x, mover.origin.y);
+  (mover ? partLayer(view, mover, group.id) : view.stainLayer).addChild(g);
+  const drawing: StainDrawing = { g, drawn: "", age: 0 };
+  view.stains.set(key, drawing);
+  return drawing;
+}
+
+/** Redraws a group when a stain landed or ran, or its terrain changed: the stained samples' contour. */
+function drawStainGroup(drawing: StainDrawing, group: StainGroup): void {
+  const { field, members } = group;
+  const stages = members.map(({ splat }) => `${splat.key}@${stainStage(splat, splat.age)}`);
+  const drawn = `${field.shapeVersion}|${stages.join(",")}`;
+  if (drawn === drawing.drawn) return;
+  drawing.drawn = drawn;
+  const samples = members.flatMap(({ splat, x, y }) =>
+    stainSamples(field, splat, { x, y, age: splat.age })
+  );
+  const region = markedRegion(field, samples);
+  if (!region) drawing.g.clear();
+  else drawContour(drawing.g, terrainContour(field, { grow: 0, region }), gooColor(group.slot));
+}
+
+/** Matches the stain drawings to the landed goo, fades them and moves the parts' layers. */
+function syncStains(view: KnockoutView, frame: KnockoutFrame): void {
+  const groups = stainGroups(frame);
+  const timing = {
     respawnDelaySeconds: frame.respawnDelaySeconds,
     splatSeconds: frame.tunables.splatSeconds,
-  });
-  const streak = sprite.getChildByLabel("streak");
-  if (streak) streak.scale.y = Math.min(1, splat.age / STREAK.seconds);
-  const mover = splat.rides ? frame.movers?.[splat.rides.mover] : undefined;
-  if (!mover) return;
-  const at = posePoint(mover.pose, mover.pivot, { x: splat.x, y: splat.y });
-  sprite.position.set(at.x, at.y);
-  sprite.rotation = mover.pose.angle;
+  };
+  for (const [key, drawing] of view.stains) {
+    if (groups.has(key)) continue;
+    drawing.g.destroy();
+    view.stains.delete(key);
+  }
+  for (const entry of groups) {
+    const drawing = stainDrawing(view, frame, entry);
+    drawStainGroup(drawing, entry[1]);
+    // The burst fades by its first landing, also after that stain itself is gone.
+    drawing.age = Math.max(drawing.age, ...entry[1].members.map(({ splat }) => splat.age));
+    drawing.g.alpha = STAIN_LOOK.alpha * (1 - stainFade(drawing.age, timing));
+  }
+  placePartLayers(view, frame.terrain);
+}
+
+/** Moves each stained part's layer to the part's pose. */
+function placePartLayers(view: KnockoutView, terrain: TerrainGrid): void {
+  for (const [id, layer] of view.partLayers) {
+    const mover = terrain.movers[id];
+    if (!mover) continue;
+    layer.position.set(mover.pivot.x + mover.pose.dx, mover.pivot.y + mover.pose.dy);
+    layer.rotation = mover.pose.angle;
+  }
 }
 
 function drawPiece(piece: KnockoutPiece, frame: KnockoutFrame, width: number): Container {
@@ -137,12 +223,7 @@ function drawPiece(piece: KnockoutPiece, frame: KnockoutFrame, width: number): C
 export function syncKnockoutView(view: KnockoutView, frame: KnockoutFrame): void {
   const width = outlineWidth("character", frame.zoom).width;
   const { world } = frame;
-  syncDisplayById(view.splats, view.splatLayer, {
-    list: world.splats,
-    key: (splat) => splat.key,
-    create: drawSplat,
-    place: (sprite, splat) => placeSplat(sprite, splat, frame),
-  });
+  syncStains(view, frame);
   syncDisplayById(view.droplets, view.dropletLayer, {
     list: world.droplets,
     key: (droplet) => droplet.key,

@@ -1,8 +1,13 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { WeaponItemId } from "@/shared/types/weaponItems.types";
-import { stepFallingBody, type FallingBody, type SolidAt } from "@/shared/utils/fallingBody";
+import {
+  stepFallingBody,
+  type FallingBody,
+  type FallingContact,
+  type SolidAt,
+} from "@/shared/utils/fallingBody";
 import { unposePoint } from "@/shared/utils/levelMotion";
-import type { MoverBody } from "@/features/arena/api/arenaApi";
+import { moverDistanceAt, type MoverBody } from "@/features/arena/api/arenaApi";
 import type { CombatEvent, CrushSqueeze } from "@/features/combat/api/combatApi";
 import { reactToHit, type PlayerState } from "@/features/player/api/playerApi";
 import type {
@@ -205,6 +210,9 @@ export interface StepKnockoutsArgs {
   respawnDelaySeconds: number;
 }
 
+/** How far behind a touch point a moving part is looked for, world units. */
+const PART_PROBES = [2, 6, 12] as const;
+
 type SubStep = StepKnockoutsArgs & { h: number };
 
 const fall = (body: FallingBody, step: SubStep, bounce: number) =>
@@ -381,20 +389,46 @@ function stepKnockout(world: KnockoutWorld, knockout: Knockout, step: SubStep): 
   return false;
 }
 
-/** A droplet becomes a splat the instant it touches terrain (no bounce, no squish). */
+/**
+ * The moving part a touch point is on, with the point in the part's rest pose; null on static
+ * terrain. A fast droplet stops up to a step short of the surface, so the part is looked for at
+ * a few depths behind the touch point.
+ */
+function partAt(movers: readonly MoverBody[] | undefined, contact: FallingContact) {
+  const index =
+    movers?.findIndex((mover) =>
+      PART_PROBES.some(
+        (depth) =>
+          moverDistanceAt(mover, {
+            x: contact.x - contact.nx * depth,
+            y: contact.y - contact.ny * depth,
+          }) > 0
+      )
+    ) ?? -1;
+  const mover = movers?.[index];
+  if (!mover) return null;
+  return { mover: index, rest: unposePoint(mover.pose, mover.pivot, contact) };
+}
+
+/**
+ * A droplet becomes a stain the instant it touches terrain (no bounce, no squish). On a moving
+ * part the stain is stored in the part's rest pose and rides with it, like a crush's.
+ */
 function stepDroplet(world: KnockoutWorld, droplet: GooDroplet, step: SubStep): boolean {
   droplet.age += step.h;
   const contact = fall(droplet.body, step, 0);
   if (contact) {
+    const part = partAt(step.movers, contact);
     world.splats.push({
       key: droplet.key,
       slot: droplet.slot,
-      x: contact.x,
-      y: contact.y,
+      x: part ? part.rest.x : contact.x,
+      y: part ? part.rest.y : contact.y,
       nx: contact.nx,
       ny: contact.ny,
       radius: droplet.body.radius,
       age: 0,
+      ...(part && { rides: { mover: part.mover } }),
     });
     return false;
   }
@@ -434,14 +468,4 @@ export const knockoutBodies = (world: KnockoutWorld, tunables: KnockoutTunables)
 export function pieceAlpha(piece: KnockoutPiece, blinkSeconds: number): number {
   if (piece.lifeSeconds - piece.age > blinkSeconds) return 1;
   return Math.floor(piece.age * 16) % 2 === 0 ? 1 : 0.2;
-}
-
-/** Splats stay full until the respawn, then fade out by `splatSeconds`. */
-export function splatAlpha(
-  age: number,
-  timing: { respawnDelaySeconds: number; splatSeconds: number }
-): number {
-  const { respawnDelaySeconds, splatSeconds } = timing;
-  if (age <= respawnDelaySeconds) return 1;
-  return Math.max(0, 1 - (age - respawnDelaySeconds) / (splatSeconds - respawnDelaySeconds));
 }

@@ -3,14 +3,14 @@ import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import type { SolidAt } from "@/shared/utils/fallingBody";
 import type { CombatEvent } from "@/features/combat/api/combatApi";
 import { createPlayer, type PlayerState } from "@/features/player/api/playerApi";
-import type { MoverBody } from "@/features/arena/api/arenaApi";
+import { buildTerrainFromLevel, isSolidAt, type MoverBody } from "@/features/arena/api/arenaApi";
+import type { LevelDefinition } from "@/features/level/api/levelApi";
 import {
   createKnockoutWorld,
   CRUSH_PANCAKE,
   knockoutBodies,
   noteKnockoutEvents,
   pieceAlpha,
-  splatAlpha,
   stepKnockouts,
   type KnockoutWorld,
 } from "@/features/knockout/services/knockoutSim";
@@ -164,15 +164,6 @@ describe("knockout — burst", () => {
   });
 });
 
-describe("knockout — splats", () => {
-  it("should keep splats full until the respawn and fade them out by splatSeconds", () => {
-    const timing = { respawnDelaySeconds: RESPAWN, splatSeconds: T.splatSeconds };
-    expect(splatAlpha(RESPAWN - 0.1, timing)).toBe(1);
-    expect(splatAlpha((RESPAWN + T.splatSeconds) / 2, timing)).toBeCloseTo(0.5);
-    expect(splatAlpha(T.splatSeconds, timing)).toBe(0);
-  });
-});
-
 // Ground truth: the owner's crush pick R2A (moving-parts B3): pancake 0.15 s, then splats on both
 // faces, the part's riding along.
 describe("knockout — crush", () => {
@@ -214,5 +205,60 @@ describe("knockout — crush", () => {
     expect(onPart.every((splat) => splat.nx === 1 && splat.x < 400)).toBe(true);
     expect(onWall.every((splat) => splat.nx === -1 && splat.x > 400)).toBe(true);
     expect(world.pieces.length).toBeGreaterThan(0);
+  });
+});
+
+// Ground truth: the owner's stain pick (terrain-stains D1): goo stains the object it lands on,
+// so a droplet that lands on a moving part is stored on that part, like a crush's splats.
+describe("knockout — droplets on a moving part", () => {
+  const level: LevelDefinition = {
+    formatVersion: 2,
+    meta: { levelId: "m", title: "M" },
+    settings: { cellSize: 4, gravity: 1 },
+    worldSize: { w: 800, h: 600 },
+    terrain: [{ shape: { type: "rect", x: 300, y: 500, w: 200, h: 40 }, materialId: "stone" }],
+    movers: [
+      {
+        motion: { kind: "slide", offset: { x: 60, y: 0 }, periodS: 4, phase: 0 },
+        pivot: { x: 400, y: 520 },
+        terrainIndices: [0],
+      },
+    ],
+    spawns: [],
+    drops: [],
+    collectibles: [],
+    bounds: { x: -100, y: -100, w: 1000, h: 800 },
+  };
+
+  it("should store the stain in the part's rest pose and let it ride when a droplet lands on the part", () => {
+    const terrain = buildTerrainFromLevel(level);
+    const [mover] = terrain.movers;
+    mover!.pose = { dx: 40, dy: 0, angle: 0 };
+    const solidAt: SolidAt = (x, y) => isSolidAt(terrain, x, y);
+    const world = knockedOut(eliminated({ overkill: true, x: 440, y: 480, vx: 0, vy: 300 }));
+    for (let i = 0; i < 60; i += 1) {
+      stepKnockouts(world, {
+        dt: 1 / 60,
+        gravity: GRAVITY,
+        solidAt,
+        roll: rollOver(solidAt),
+        movers: terrain.movers,
+        tunables: T,
+        respawnDelaySeconds: RESPAWN,
+      });
+    }
+    expect(world.splats.length).toBeGreaterThan(0);
+    for (const splat of world.splats) {
+      expect(splat.rides).toEqual({ mover: 0 });
+      // Rest pose: 40 units back from where it landed on the shifted part (x 340 … 540).
+      expect(splat.x).toBeGreaterThan(300 - 1);
+      expect(splat.x).toBeLessThan(500 + 1);
+    }
+  });
+
+  it("should leave a stain on static ground without a part when the droplet lands there", () => {
+    const world = knockedOut(eliminated({ overkill: true, y: 499, vx: 0, vy: 400 }));
+    run(world, 1);
+    expect(world.splats.every((splat) => splat.rides === undefined)).toBe(true);
   });
 });

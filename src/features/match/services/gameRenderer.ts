@@ -85,7 +85,7 @@ import { createHudView, syncHudView, type HudView } from "@/features/match/servi
  *   │  ├─ contact shadows: weapon crates (collectibles), rockets (combat), players (player)
  *   │  ├─ weapon crates, headbutt resets, point orbs (collectibles)
  *   │  ├─ effects (debris, explosions, rocket-hit pops — effects)
- *   │  ├─ knockouts (goo splats, goo droplets, loose helmets and tubes — knockout)
+ *   │  ├─ knockouts (goo droplets, loose helmets and tubes — knockout; its goo stains sit right above the terrain)
  *   │  ├─ rockets (+ trails — combat)
  *   │  ├─ dive effects (dive impact pops)   (dive)
  *   │  ├─ players   (player; above effects so they never cover a player outline; protected
@@ -137,6 +137,8 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const ice = createIceView();
   world.addChild(
     terrain.container,
+    // Goo stains colour the terrain itself; frozen ground and fire are drawn over them.
+    knockouts.stainLayer,
     // Frozen ground under the flames: a fire next to ice stays readable.
     ice.terrainLayer,
     fire.terrainLayer,
@@ -359,7 +361,7 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     playerHeight: state.tunables.player.height,
     tunables: state.tunables.feel.knockout,
     respawnDelaySeconds: state.tunables.match.respawnDelaySeconds,
-    movers: state.arena.terrain.movers,
+    terrain: state.arena.terrain,
   });
   syncPlayersView(renderer.players, blobs.players, {
     nowMs,
