@@ -348,5 +348,10 @@
     "title": "Weapon visuals: embellish",
     "description": "Owner 2026-11-16 signed off the weapon and crate visual system (#38) as a work in progress: 'we will embellish further later on'. Polish pass on crates, helmet tubes, muzzle lights and HUD ammo once the owner names what to improve. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "done"
+  },
+  {
+    "title": "Fire and ice follow the terrain shape",
+    "description": "Owner 2026-11-18: burning and frozen areas lose the base shape (per-row rounded slabs). Owner picked C: draw states with the same contour rule as the terrain (terrainContour region option replacing breakableOnly, a sample-region field, surface points). Fire and ice renderers switch over after the freeze ray (#63) merges. Thread: Fire and ice overlays keep the terrain shape.",
+    "status": "done"
   }
 ]
