@@ -23,7 +23,7 @@ The owner has picked a direction from the options page and answered the open que
 | 3 | Levels turn dials | level sets bounded rule switches and a few per-shape / per-part overrides | + a little per dial, opt-in parts |
 | 4 | Levels script behaviour | triggers and actions from a fixed vocabulary | at least double; high agent error rate |
 
-Recommendation: 2 as the backbone before ice lands; from 3 only per-part sounds per moment and one level-wide `data-rules` list; a copyable import report so an agent can read the importer's errors and warnings; 4 not now; gallery and remix parked.
+The agent recommended direction 2 plus two dials. **Outcome (owner, 2026-11-18):** closer to direction 1 with two new principles. The level states layout plus optional match settings and the game owns behaviour; weapons become a match setting with auto = all; objects are plain boxes whose look comes from the game, so the plain file shows the layout only; the importer becomes forgiving; the prompt is touched only when a feature adds something an author can place or set. Details and backlog: DECISIONS.md.
 
 ## Grounding notes
 
