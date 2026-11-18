@@ -17,15 +17,10 @@ Task (owner, 2026-11-18, via the orchestrator): do for every element what was do
 | D6 | Fire and ice | closed | Spreading fire stops at frozen ground. The torch always turns frozen ground back to normal, and burns it afterwards only if it could have burned in the first place. Freezing a burning piece puts it out | loop-refine | Owner, 2026-11-18. The last clause is the agent's reading of "ice puts fire out" from the task. A stopped fire does not return when the ground thaws |
 | D7 | Starting values and look | closed | 40 units/s, frozen 8 s, 3 s of charge, beam 180 units and ±3°, push 300, torch thaw radius 8; frozen ground in the `frost` swatch with a lip and gloss, the beam pale with a white core; accent glacier `#6fc8e8`, tube `emitter` | loop-plan | agent-pick; the owner tunes and judges the look on the preview (no look options page was shown for the ray itself) |
 | D8 | Where the ice grows (Change round) | closed | The cold flows from the beam: a fixed amount of ice per second (3600 units²), always on the nearest unfrozen ground to where the beam touches, through solid ground | loop-refine | Owner, 2026-11-18, after playing the first build ("it will grow on the wrong locations when I'm freezing somewhere else"). Asked with three options; rejected: forget waiting edges on release (a sweep in one hold still grows the first spot); only edges near the beam grow (keeps the steady speed, nothing grows from a patch's middle). Price accepted: no steady fire-like speed; a crate makes a fixed amount of ice. Replaces `ice.spreadSpeed` with `ice.freezeAreaPerSecond` |
-
-## Open
-
-| id | topic | status | options briefly | blocked phase |
-|----|-------|--------|-----------------|---------------|
-| D9 | Freeze ray look (Change round) | open | Owner, 2026-11-18: "spray design needs work". Options page with beam looks to follow | refine |
+| D9 | Freeze ray look (Change round) | closed | "Cold breath": the torch's twin in ice colours, a thin neck that billows into a rolling cloud where it lands, with snow specks drifting down | loop-refine | Owner, 2026-11-18 ("spray design needs work"), options page https://claude.ai/artifact/UqokHg7XBvdBbBPPAqgfbs, over B Snow stream, C Pulse beam, D Ice lance and the first build's thin beam. What the ray hits is unchanged |
 
 ## Log
 
 - 2026-11-18 — D1 asked (options page https://claude.ai/artifact/UZNxUhkw7VSVGWjPKpwUfo, version 1); owner answered in chat with his own concept (D1, D3, D6)
 - 2026-11-18 — D2, D5 closed (clear-winner); D4, D7 closed in the plan
-- 2026-11-18 — Change verdict on PR #63: D8 asked and closed (owner picked option 3); D9 opened
+- 2026-11-18 — Change verdict on PR #63: D8 asked and closed (owner picked option 3); D9 asked on its options page and closed (owner picked A)

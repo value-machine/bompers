@@ -209,7 +209,13 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
   const { inPlay, nowMs, zoom } = frame;
   const weapons = blobWeapons(state);
   syncTerrainView(renderer.terrain, state.arena.terrain, zoom);
-  syncIceView(renderer.ice, { ice: state.ice, terrain: state.arena.terrain, nowMs, zoom });
+  syncIceView(renderer.ice, {
+    ice: state.ice,
+    terrain: state.arena.terrain,
+    nowMs,
+    timeSeconds: state.timeSeconds,
+    zoom,
+  });
   syncFireView(renderer.fire, {
     fire: state.fire,
     terrain: state.arena.terrain,

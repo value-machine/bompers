@@ -88,8 +88,9 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Terrain destroyed | light | material's sound (`thud` / `crumble` / `thwap` / `clink`) | — | — | — | — | debris | — |
 | Torch spray (held) | light | `rocket-fire` on spray start (placeholder, fire-spread D8) | — | — | — | — | outlined flame from the nozzle: neck, rolling head, flames peeling off upward, flare at terrain; grows in over 120 ms | — |
 | Torch released | light | — (the spray's start cue covers the action) | — | — | — | — | the head lets go as one rising puff, 300 ms | — |
-| Freeze ray (held) | light | `clink` on start (placeholder, ice-element D2) | — | — | — | — | outlined pale beam with a white core; a frost burst pulsing at 9 Hz where it touches terrain | — |
-| Ground freezing | — | — (deliberately silent per sample, like fire spreading) | — | — | — | — | the frozen shape grows in the ice colours with a lip and gloss streaks | — |
+| Freeze ray (held) | light | `clink` on start (placeholder, ice-element D2) | — | — | — | — | outlined cold breath from the emitter: neck, rolling head where it lands, snow specks; grows in over 120 ms | — |
+| Freeze ray released | light | — (the ray's start cue covers the action) | — | — | — | — | the head lets go as three rising puffs, 300 ms | — |
+| Ground freezing | — | — (deliberately silent per sample, like fire spreading) | — | — | — | — | the frozen shape grows from where the breath lands, in the ice colours with a lip and gloss streaks | — |
 | Ground thawing | — | — (silent; a sound comes with the listening page) | — | — | — | — | the frozen shape recedes, oldest part first | — |
 | Torch held, idle | — | — (a loop, deliberately silent) | — | — | — | — | small outlined flame on the nozzle | — |
 | Fire spreading | — | — (deliberately silent per sample: a big fire would be noise) | — | — | — | — | one outlined fire shape per cluster of burning terrain, its flames bigger with more fire around them and tallest in the middle; scorch on earth | — |
