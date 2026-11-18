@@ -1,6 +1,7 @@
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { SprayWeaponItemId } from "@/shared/types/weaponItems.types";
 import { resolveBeamClashes } from "@/shared/utils/beamClash";
+import { terrainBodies } from "@/features/arena/api/arenaApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import {
   emitCombatEvent,
@@ -123,7 +124,7 @@ function clashBeams(ctx: CombatContext, turns: readonly AttackTurn[]): Map<numbe
     return [{ slot: attacker.slot, beam: { ...beam, origin: helmetPoint(attacker), aim } }];
   });
   const { reach, clashes } = resolveBeamClashes(
-    ctx.terrain,
+    terrainBodies(ctx.terrain),
     sprayers.map((sprayer) => sprayer.beam),
     ctx.tunables.combat.beamClash
   );
