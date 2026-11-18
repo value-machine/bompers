@@ -17,7 +17,7 @@ The feedback layer of the design system ([`DESIGN_LANGUAGE.md`](DESIGN_LANGUAGE.
 
 ## 2. Impact tiers
 
-`JUICE_TIERS` in code. A moment's tier sets every visual channel at full strength; scaling below that by speed or blast size is allowed (a light landing squashes half), going above is not.
+`JUICE_TIERS` in code. A moment's tier sets every visual channel at full strength; scaling below that by speed or blast size is allowed (the lightest landing squashes a quarter), going above is not.
 
 | Tier | Use for | Shake | Flash | Hit-stop | Music duck |
 |------|---------|-------|-------|----------|-----------|
@@ -37,7 +37,8 @@ The feedback layer of the design system ([`DESIGN_LANGUAGE.md`](DESIGN_LANGUAGE.
 | `flash` — flash hold, hit-stop | 30–70 ms | hit flash hold 50 ms, hit-stop 50 ms |
 | `fade` — a flash fading out | 50–150 ms | hit flash fade 80 ms |
 | `shake` — one shake kick | 60–150 ms | hit 80 ms, roll bounce 100 ms, explosion 120 ms |
-| `squash` — squash recovering, HUD pip pop | 100–200 ms | wall-jump 120 ms, jump 150 ms, land 180 ms, health pip 150 ms |
+| `squash` — squash recovering, HUD pip pop | 100–200 ms | wall-jump 120 ms, jump 150 ms, health pip 150 ms |
+| `settle` — a landing squash sinking and wobbling back, never held still | 300–450 ms | land 370–410 ms (sink 70–110 ms by impact + 300 ms wobble back; owner, soft-landing) |
 | `effect` — pop-in effect clearing | 180–320 ms | impact pop 220 ms, explosion star 250 ms |
 | `linger` — things flying off | 300–600 ms | elimination droplets 300 ms, debris 500 ms |
 
@@ -45,10 +46,10 @@ Loops (idle breathing 1.6 s, respawn blink 8 Hz) are not bound by a window. Owne
 
 ## 4. Squash and stretch
 
-`JUICE_SQUASH` in code: body scale `sx · sy` stays in **0.93–1.01**, and each axis stays in **0.75–1.25**. The land pose (1.25, 0.75) is the strongest allowed. A new pose:
+`JUICE_SQUASH` in code: body scale `sx · sy` stays in **0.93–1.01**, and each axis stays in **0.72–1.3**. The land pose (1.3, 0.72) is the strongest allowed (widened from 1.25 × 0.75 so the blob reads as soft jelly; owner, soft-landing). A new pose:
 
 - squashes **wide** on impact (landing, a hit taken, a bounce) and stretches **tall** on launch (jump, wall-jump push);
-- recovers with a back-out overshoot inside the `squash` window;
+- recovers with a back-out overshoot inside the `squash` window (a landing: the `settle` window, sinking then wobbling back);
 - scales its amount by the impact (speed / full-impact speed), never above the preset;
 - kicks the helmet spring (`feel.helmet`) in the same frame, so body and helmet answer together.
 
@@ -70,7 +71,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Moment | Tier | Sound | Squash | Flash | Shake | Hit-stop | Effect | Helmet |
 |--------|------|-------|--------|-------|-------|----------|--------|--------|
 | Jump / wall-jump | light | `jump` | stretch tall | — | — | — | — | kick |
-| Land | light | `land` (gain by speed) | squash wide (by speed) | — | — | — | — | kick |
+| Land | light | `land` soft squish (gain by speed) | squash wide (by speed), sinks then one wobble back (`settle`) | — | — | — | — | kick |
 | Shot (any weapon whose readiness drops) | light | the weapon's fire cue (`rocket-fire`) | barrel pop 0.78 × 1.22, 200 ms back-out (`feel.barrelPop`) | — | — | — | mouth accent drops to 15 % and refills with the cooldown | — |
 | Rocket recoil | light | `rocket-fire` (the fire cue) | — | — | — | — | body kick opposite the aim (sim impulse `combat.rocket.recoil`) | — |
 | Pickup collected | light | `pickup` | — | — | — | — | — | — |

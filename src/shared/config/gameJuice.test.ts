@@ -23,7 +23,8 @@ describe("game juice scale", () => {
   it("should reject a squash pose when it loses volume or overstretches", () => {
     expect(isJuiceSquash({ sx: 1.25, sy: 0.75 })).toBe(true);
     expect(isJuiceSquash({ sx: 1.4, sy: 0.6 })).toBe(false);
-    expect(isJuiceSquash({ sx: 1.3, sy: 0.77 })).toBe(false);
+    expect(isJuiceSquash({ sx: 1.3, sy: 0.72 })).toBe(true);
+    expect(isJuiceSquash({ sx: 1.35, sy: 0.74 })).toBe(false);
   });
 });
 
@@ -50,15 +51,17 @@ describe("feel tunables conform to the juice scale", () => {
 
   it("should keep every squash preset inside the volume band and squash window when built", () => {
     const knockout = feel.knockout.squash;
-    for (const preset of [
-      player.squash.land,
-      player.squash.jump,
-      player.squash.wallJump,
-      knockout,
-      feel.barrelPop,
-    ]) {
+    for (const preset of [player.squash.jump, player.squash.wallJump, knockout, feel.barrelPop]) {
       expect(isJuiceSquash(preset)).toBe(true);
       expect(isInJuiceWindow("squash", preset.seconds)).toBe(true);
+    }
+  });
+
+  it("should keep the landing squash inside the volume band and settle window when built", () => {
+    const { land } = player.squash;
+    expect(isJuiceSquash(land)).toBe(true);
+    for (const sink of land.sinkSeconds) {
+      expect(isInJuiceWindow("settle", sink + land.seconds)).toBe(true);
     }
   });
 });

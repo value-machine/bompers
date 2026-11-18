@@ -72,8 +72,17 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     // Helmet down 4 u and eyes up 2 u: the rim lands on about the middle of the eyes (crouch D7).
     crouch: { bodySx: 1.18, bodySy: 0.68, easeSeconds: 0.07, helmetDrop: 4, eyeLift: 2 },
     squash: {
-      land: { sx: 1.25, sy: 0.75, seconds: 0.18 },
+      // Soft jelly landing (owner pick M2, soft-landing lap): sinks, then one wobble back.
+      land: {
+        sx: 1.3,
+        sy: 0.72,
+        sinkSeconds: [0.07, 0.11],
+        seconds: 0.3,
+        wobbles: 2.2,
+        damping: 2.6,
+      },
       landFullImpact: 1100,
+      landMinAmount: 0.25,
       jump: { sx: 0.85, sy: 1.18, seconds: 0.15 },
       wallJump: { sx: 0.8, sy: 1.2, seconds: 0.12 },
       breathAmplitude: 0.03,
