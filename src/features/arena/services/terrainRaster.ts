@@ -215,7 +215,6 @@ function buildMoverBody(level: LevelDefinition, mover: LevelMover): MoverBody {
   const reach = Math.max(
     ...corners.map((c) => Math.hypot(c.x - mover.pivot.x, c.y - mover.pivot.y))
   );
-  const frictions = pieces.map((piece) => pieceCellSlot(piece).friction);
   const pose = motionPose(mover.motion, 0);
   return {
     motion: mover.motion,
@@ -225,7 +224,6 @@ function buildMoverBody(level: LevelDefinition, mover: LevelMover): MoverBody {
     pose,
     prevPose: pose,
     reach,
-    friction: frictions.reduce((sum, f) => sum + f, 0) / Math.max(1, frictions.length),
     terrainIndices: mover.terrainIndices,
     sounds: { move: mover.sounds?.move ?? null, end: mover.sounds?.end ?? null },
   };

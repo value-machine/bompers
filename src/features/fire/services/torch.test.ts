@@ -202,4 +202,19 @@ describe("torch on moving parts (mover-materials lap 1)", () => {
     expect(spray()).toEqual([rival]);
     expect(rival.vx).toBeGreaterThan(0);
   });
+
+  it("should thaw a frozen part where the flame touches and never light a sample that is still frozen", () => {
+    const { part, fire, spray } = scene();
+    const { field } = part;
+    field.cells.forEach((slot, index) => {
+      if (slot !== 0) setSampleFrozen(field, index, true);
+    });
+    spray();
+    expect(field.frozen.some((flag, index) => flag === 0 && field.cells[index] !== 0)).toBe(true);
+    spray();
+    // The thawed cardboard is lit; what is still frozen is not (as on the ground, ice-element D6).
+    const queued = fire.grounds[1]!.front.heapIndex;
+    expect(queued.length).toBeGreaterThan(0);
+    expect(queued.every((index) => field.frozen[index] === 0)).toBe(true);
+  });
 });

@@ -5,9 +5,13 @@ import { inkColor } from "@/shared/utils/debugInk";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import {
   EMPTY_CELL,
+  bodyGrids,
+  createPoseLayer,
   drawContour,
   markedRegion,
+  placePoseLayer,
   terrainContour,
+  type MoverBody,
   type SampleRegion,
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
@@ -30,7 +34,9 @@ import type { IceState } from "@/features/ice/types/ice.types";
  * - Over the terrain: frozen ground in the ice colours, in the terrain's own shape
  *   (element-overlay-shape D1): the terrain's contour limited to the frozen samples, lighter
  *   along its top (the lip) and with a few gloss streaks. It sits inside the terrain's own ink
- *   line, so it needs none. Redrawn only when the frozen flags or the terrain change.
+ *   line, so it needs none. Redrawn only when the frozen flags or the terrain change. Every
+ *   body of the arena has its own frost layers (mover-materials lap 2b): a moving part's are
+ *   drawn in the part's frame and follow its pose, so the ice rides and turns with the part.
  * - Above the players: each freeze ray as a cold breath ("Cold breath", owner D9), ink first and
  *   colour on top: a thin neck, a rolling head where it lands, snow specks; the head lets go as a
  *   few rising puffs when the ray stops.
@@ -41,18 +47,26 @@ export interface IceView {
   terrainLayer: Container;
   /** Freeze rays: add above the players. */
   beamLayer: Container;
-  /** Frozen ground: the whole shape in the lip colour, its body one sample lower, gloss on top. */
-  frostLip: Graphics;
-  frostBody: Graphics;
-  frost: Graphics;
+  /** One set of frost layers per body, in the arena's body order; made when first drawn. */
+  grounds: FrostView[];
   /** Ice blocks around frozen blobs and their moments, under the rays. */
   blocks: Graphics;
   beams: Graphics;
-  /** Terrain `frozenVersion` and `shapeVersion` the frost was drawn at. */
-  frostVersion: number;
-  frostShapeVersion: number;
   /** Per ray slot: when its breath started and where its head last was (grow-in, release puff). */
   breaths: Map<number, BreathMemo>;
+}
+
+/** The frozen ground of one body. */
+interface FrostView {
+  /** Holds the layers; a moving part's follows its pose (the arena's pose layer). */
+  layer: Container;
+  /** The whole shape in the lip colour, its body one sample lower, gloss on top. */
+  frostLip: Graphics;
+  frostBody: Graphics;
+  frost: Graphics;
+  /** The body's `frozenVersion` and `shapeVersion` the frost was drawn at. */
+  frostVersion: number;
+  frostShapeVersion: number;
 }
 
 interface BreathMemo {
@@ -82,28 +96,38 @@ const INK = inkColor("ice");
 /** A breath missing for longer than this has stopped (its next start grows in again). */
 const BREATH_GAP_SECONDS = 0.1;
 
-export function createIceView(): IceView {
+/** One body's frost layers; a moving part's sit in its rest pose inside a pose layer. */
+function createFrostView(mover: MoverBody | undefined): FrostView {
   const frostLip = new Graphics({ label: "ice-frost-lip" });
   const frostBody = new Graphics({ label: "ice-frost-body" });
   const frost = new Graphics({ label: "ice-frost-gloss" });
+  const layer = mover
+    ? createPoseLayer(mover, "ice-on-part")
+    : new Container({ label: "ice-on-terrain" });
+  const parts = [frostLip, frostBody, frost];
+  // A part's field starts at its origin in the rest pose.
+  if (mover) for (const g of parts) g.position.set(mover.origin.x, mover.origin.y);
+  layer.addChild(...parts);
+  return { layer, frostLip, frostBody, frost, frostVersion: -1, frostShapeVersion: -1 };
+}
+
+export function createIceView(): IceView {
   const beams = new Graphics({ label: "freeze-rays" });
   const terrainLayer = new Container({ label: "ice" });
-  terrainLayer.addChild(frostLip, frostBody, frost);
   const beamLayer = new Container({ label: "freeze-ray" });
   const blocks = new Graphics({ label: "ice-blocks" });
   beamLayer.addChild(blocks, beams);
-  return {
-    terrainLayer,
-    beamLayer,
-    blocks,
-    frostLip,
-    frostBody,
-    frost,
-    beams,
-    frostVersion: -1,
-    frostShapeVersion: -1,
-    breaths: new Map(),
-  };
+  return { terrainLayer, beamLayer, blocks, grounds: [], beams, breaths: new Map() };
+}
+
+/** The frost view of body `body`, made the first time that body is drawn. */
+function frostView(view: IceView, terrain: TerrainGrid, body: number): FrostView {
+  const known = view.grounds[body];
+  if (known) return known;
+  const made = createFrostView(terrain.movers[body - 1]);
+  view.grounds[body] = made;
+  view.terrainLayer.addChild(made.layer);
+  return made;
 }
 
 /** The 2 × 2 blocks that hold a frozen sample, by `by * widthCells + bx`. */
@@ -140,7 +164,7 @@ function frozenSamples(terrain: TerrainGrid): number[] {
   return frozen;
 }
 
-function drawFrost(view: IceView, terrain: TerrainGrid): void {
+function drawFrost(view: FrostView, terrain: TerrainGrid): void {
   view.frost.clear();
   view.frostVersion = terrain.frozenVersion;
   view.frostShapeVersion = terrain.shapeVersion;
@@ -230,10 +254,14 @@ function drawReleases(view: IceView, frame: IceFrame, look: { ink: number; on: S
 }
 
 export function syncIceView(view: IceView, frame: IceFrame): void {
-  const { terrain } = frame;
-  const stale =
-    view.frostVersion !== terrain.frozenVersion || view.frostShapeVersion !== terrain.shapeVersion;
-  if (stale) drawFrost(view, terrain);
+  bodyGrids(frame.terrain).forEach((grid, body) => {
+    const frost = frostView(view, frame.terrain, body);
+    const mover = frame.terrain.movers[body - 1];
+    if (mover) placePoseLayer(frost.layer, mover);
+    const stale =
+      frost.frostVersion !== grid.frozenVersion || frost.frostShapeVersion !== grid.shapeVersion;
+    if (stale) drawFrost(frost, grid);
+  });
   const ink = outlineWidth("effect", frame.zoom).width;
   view.blocks.clear();
   drawBlobIce(view.blocks, {

@@ -9,8 +9,9 @@ import {
   type SoundWorldSnapshot,
 } from "@/features/sound/api/soundApi";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
-import { getCellInfo, type TerrainGrid } from "@/features/arena/api/arenaApi";
+import { frozenVersionOf, getCellInfo, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import { burningCount } from "@/features/fire/api/fireApi";
+import { thawedCount } from "@/features/ice/api/iceApi";
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import { isInPlay } from "@/features/match/services/matchRules";
@@ -70,8 +71,8 @@ export function soundWorldOf(state: GameState): SoundWorldSnapshot {
     freezeSlots: ice.rays.map((ray) => ray.slot),
     burningSamples: burningCount(fire),
     burningBlobs: state.blobFire.blobs.size,
-    thawedSamples: ice.frozenHead,
-    frozenVersion: state.arena.terrain.frozenVersion,
+    thawedSamples: thawedCount(ice),
+    frozenVersion: frozenVersionOf(state.arena.terrain),
     beamClashes: state.combat.beamClashes.length,
   };
 }

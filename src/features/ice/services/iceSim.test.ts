@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import {
+  bodyGrids,
   buildTerrainFromLevel,
   clearCrater,
   getCellInfo,
   groundFrictionBelow,
   isFrozenSample,
+  terrainBodies,
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
 import { burningSamples, createFireState, ignite, stepFire } from "@/features/fire/api/fireApi";
@@ -234,5 +236,90 @@ describe("ice and fire (ice-element D6)", () => {
     stepBoth(f, fire, dt);
     expect(burningSamples(fire.grounds[0]!)).not.toContain(f.at(202, 118));
     expect(getCellInfo(f.grid, 50, 29)).not.toBeNull();
+  });
+});
+
+describe("iceSim — cold on moving parts (mover-materials lap 2b)", () => {
+  /** A stone floor and one cardboard part (piece 1): a 160 × 40 slab at x 120–280, y 100–140. */
+  const partScene = () => {
+    const terrain = buildTerrainFromLevel({
+      ...world([rect([0, 300, 400, 40], "stone"), rect([120, 100, 160, 40], "cardboard")]),
+      movers: [
+        {
+          motion: { kind: "slide", offset: { x: 0, y: -60 }, periodS: 4, phase: 0 },
+          pivot: { x: 200, y: 120 },
+          terrainIndices: [1],
+        },
+      ],
+    });
+    const ice = createIceState(terrain);
+    const field = bodyGrids(terrain)[1]!;
+    /** The part's sample at a world point (in the part's pose now). */
+    const at = (x: number, y: number): number => {
+      const local = terrainBodies(terrain)[1]!.toLocal!({ x, y })!;
+      return Math.floor(local.y / CELL) * field.widthCells + Math.floor(local.x / CELL);
+    };
+    const state = { time: 0 };
+    const run = (seconds: number, on?: readonly [number, number]) => {
+      const end = state.time + seconds;
+      while (state.time < end - 1e-9) {
+        state.time += dt;
+        if (on) {
+          const samples = [at(on[0], on[1])];
+          feedCold(ice, terrain, {
+            slot: 0,
+            body: 1,
+            samples,
+            now: state.time,
+            dt,
+            tunables: TUNABLES,
+          });
+        }
+        stepIce(ice, terrain, { now: state.time });
+      }
+    };
+    const frozenCount = (grid: TerrainGrid) => grid.frozen.reduce((sum, flag) => sum + flag, 0);
+    return { terrain, ice, field, part: terrain.movers[0]!, at, run, state, frozenCount };
+  };
+
+  it("should freeze the part the beam touches, the same amount of ice per second, and none of the ground", () => {
+    const s = partScene();
+    s.run(0.25, [200, 120]);
+    expect(isFrozenSample(s.field, s.at(200, 120))).toBe(true);
+    expect(Math.abs(s.frozenCount(s.field) - samplesIn(0.25))).toBeLessThanOrEqual(2);
+    expect(s.frozenCount(s.terrain)).toBe(0);
+  });
+
+  it("should thaw a frozen part by itself after the frozen time", () => {
+    const s = partScene();
+    s.run(0.1, [200, 120]);
+    expect(s.frozenCount(s.field)).toBeGreaterThan(0);
+    s.run(I.frozenSeconds + 0.2);
+    expect(s.frozenCount(s.field)).toBe(0);
+  });
+
+  it("should grip like ice on the frozen patch of a part and normally beside it, where the part is", () => {
+    const s = partScene();
+    // The part has moved up 60: its top is at y 40.
+    s.part.pose = { dx: 0, dy: -60, angle: 0 };
+    s.run(0.05, [160, 42]);
+    const iceGrip = s.field.frozenFriction;
+    expect(iceGrip).toBeLessThan(1);
+    expect(groundFrictionBelow(s.terrain, { x: 156, y: 40, w: 8 })).toBeCloseTo(iceGrip, 6);
+    expect(groundFrictionBelow(s.terrain, { x: 252, y: 40, w: 8 })).toBe(1);
+  });
+
+  it("should put out a burning part sample when it freezes and keep fire out of the frozen patch", () => {
+    const s = partScene();
+    const fire = createFireState(s.terrain);
+    ignite(fire, s.terrain, { body: 1, index: s.at(130, 120), time: 0 });
+    stepFire(fire, s.terrain, { now: 0.1, tunables: TUNABLES });
+    expect(burningSamples(fire.grounds[1]!)).toContain(s.at(130, 120));
+    s.run(0.05, [130, 120]);
+    stepFire(fire, s.terrain, { now: s.state.time, tunables: TUNABLES });
+    expect(burningSamples(fire.grounds[1]!)).not.toContain(s.at(130, 120));
+    expect(ignite(fire, s.terrain, { body: 1, index: s.at(130, 120), time: s.state.time })).toBe(
+      false
+    );
   });
 });

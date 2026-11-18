@@ -1,5 +1,5 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
-import { castRayFan, pushAlongAim } from "@/shared/utils/rayFan";
+import { castRayFan, pushAlongAim, type RayHit } from "@/shared/utils/rayFan";
 import { terrainBodies, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import { helmetPoint } from "@/features/combat/api/combatApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
@@ -10,7 +10,8 @@ import type { IceState } from "@/features/ice/types/ice.types";
 /**
  * The freeze ray (owner, ice-element D1): the torch's twin on the same shared ray fan
  * (`castRayFan`), as a narrow beam. While its holder holds fire, each ray stops at the first
- * terrain it meets; the cold flows out from those samples for this step (`feedCold`), so the
+ * terrain or moving part it meets; the cold flows out from those samples for this step, on the
+ * body they belong to (`feedCold`), so the
  * ice grows where the beam points for as long as it is held (D3, D8). A blob the beam reaches
  * before terrain is pushed lightly along the aim and gathers chill (`chillBlob`, frozen blobs).
  */
@@ -29,6 +30,25 @@ export interface FreezeRayArgs {
   canChill?: (player: PlayerState) => boolean;
 }
 
+/**
+ * The cold flows on the body each ray touches: the ground or a moving part (mover-materials
+ * lap 2b). A fan split over bodies splits its ice by the rays on each, so a step never makes
+ * more ice than one ray's worth.
+ */
+function feedTouchedBodies(ice: IceState, rays: readonly RayHit[], args: FreezeRayArgs): void {
+  const byBody = new Map<number, number[]>();
+  for (const hit of rays) {
+    if (hit.sample === null) continue;
+    byBody.set(hit.body, [...(byBody.get(hit.body) ?? []), hit.sample]);
+  }
+  const touching = [...byBody.values()].reduce((sum, samples) => sum + samples.length, 0);
+  const { terrain, holder, tunables, now, dt } = args;
+  for (const [body, samples] of byBody) {
+    const share = samples.length / touching;
+    feedCold(ice, terrain, { slot: holder.slot, body, samples, share, now, dt, tunables });
+  }
+}
+
 /** One step of holding the ray: freeze what it touches, push the blobs in it, record the beam. */
 export function sprayFreezeRay(ice: IceState, args: FreezeRayArgs): void {
   const { terrain, tunables, holder } = args;
@@ -40,11 +60,7 @@ export function sprayFreezeRay(ice: IceState, args: FreezeRayArgs): void {
     aim: { x: holder.aimX, y: holder.aimY },
     shape: { ...ray, length: args.reach ?? ray.length },
   });
-  const samples = hits.rays.flatMap((hit) =>
-    // A ray that ends on a moving part stops there; parts take no cold yet (mover-materials L1).
-    hit.sample === null || hit.body !== 0 ? [] : [hit.sample]
-  );
-  feedCold(ice, terrain, { slot: holder.slot, samples, now: args.now, dt: args.dt, tunables });
+  feedTouchedBodies(ice, hits.rays, args);
   pushAlongAim(hits, { accel: ray.push, dt: args.dt });
   for (const blob of hits.bodies) {
     if (args.canChill && !args.canChill(blob)) continue;
