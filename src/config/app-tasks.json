@@ -10,6 +10,11 @@
     "status": "to-do"
   },
   {
+    "title": "Split blob fire out of the fire feature",
+    "description": "Found in world-of-bodies L2a: the fire and arena features are at their 10-files-per-layer budget. Move burning blobs (burningBlobs + blobFireRenderer) into their own feature before L3 adds to fire. Behaviour-neutral refactor. Size S.",
+    "status": "to-do"
+  },
+  {
     "title": "World of bodies L3: reactions as data",
     "description": "Material x element and element x element tables in the catalog replace burns/douses/frozen special cases; beam-clash pair rule moves in. Size M.",
     "status": "to-do"
