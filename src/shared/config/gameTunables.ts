@@ -100,6 +100,10 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     stopSpeed: 40,
     maxSeconds: 6,
     standUpSpeed: 14,
+    // Roll carry (double-jump-bash D11): a jump out of a roll keeps up to 600 sideways (run is 340)
+    // and bleeds 150 / s while the stick holds that way: ≈ 610 units of jump reach vs ≈ 410.
+    jumpCarryMax: 600,
+    airCarryDecel: 150,
   },
   dive: {
     minHitSpeed: 150,
@@ -111,6 +115,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     launchSpeed: 900,
     travelSeconds: 0.25,
     exitSpeedScale: 0.35,
+    // A dive out of a fast roll launches up to 1150 (D13): 288 units of travel vs 225.
+    rollCarryMax: 1150,
     recoverySeconds: 0.2,
     recoverySteerScale: 0.3,
     cooldownSeconds: 0.5,

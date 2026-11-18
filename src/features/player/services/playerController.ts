@@ -55,10 +55,13 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     facing: 1,
     aimX: 1,
     aimY: 0,
+    aimHeld: false,
     prevJump: false,
     jumpRising: false,
     coyoteTimer: 0,
     jumpBufferTimer: 0,
+    jumpPressCounted: false,
+    airCarrySpeed: 0,
     wallDir: 0,
     lastWallDir: 1,
     wallCoyoteTimer: 0,
@@ -71,6 +74,7 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     terrainHitSpeedX: 0,
     terrainHitSpeedY: 0,
     rollSource: null,
+    rollHoldButton: null,
     rollLockSeconds: 0,
     rollSeconds: 0,
     rollAngle: 0,
@@ -83,6 +87,7 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     crouchCount: 0,
     groundBelowY: null,
     jumpCount: 0,
+    airJumpPressCount: 0,
     wallJumpCount: 0,
     landCount: 0,
     airSeconds: 0,
@@ -111,8 +116,9 @@ export function placePlayer(player: PlayerState, at: Vec2): void {
   resetRoll(player);
 }
 
-/** Plain movement again: no ability modifiers, no crouch. */
+/** Plain movement again: no ability modifiers, no crouch, no carried speed. */
 function resetStance(player: PlayerState): void {
+  player.airCarrySpeed = 0;
   player.steerScale = 1;
   player.gravityScale = 1;
   player.jumpLocked = false;
@@ -239,7 +245,8 @@ export function moveAxis(
 /** Unit aim vector from input; (facing, 0) when the stick / keys give no direction. */
 function updateAim(player: PlayerState, input: PlayerInput): void {
   const length = Math.hypot(input.aimX, input.aimY);
-  if (length < 1e-6) {
+  player.aimHeld = length >= 1e-6;
+  if (!player.aimHeld) {
     player.aimX = player.facing;
     player.aimY = 0;
     return;
@@ -250,7 +257,10 @@ function updateAim(player: PlayerState, input: PlayerInput): void {
 
 /** Jump press opens the buffer; release while rising cuts the rise once (variable height). */
 function readJumpButton(player: PlayerState, input: PlayerInput, p: PlayerTunables): void {
-  if (input.jump && !player.prevJump) player.jumpBufferTimer = p.jumpBufferTime;
+  if (input.jump && !player.prevJump) {
+    player.jumpBufferTimer = p.jumpBufferTime;
+    player.jumpPressCounted = false;
+  }
   if (!input.jump && player.jumpRising) {
     if (player.vy < 0) player.vy *= p.jumpCutMultiplier;
     player.jumpRising = false;
@@ -296,13 +306,13 @@ function groundGrip(player: PlayerState, terrain: TerrainGrid): number {
  * the air. During a wall-jump lock the launch momentum is kept.
  */
 function applyHorizontal(player: PlayerState, input: PlayerInput, args: StepPlayersArgs): void {
-  const p = args.tunables.player;
   // steerScale 0 (an ability owns the motion): velocity and facing are left alone.
   if (player.steerScale <= 0) return;
   if (input.moveX !== 0) player.facing = input.moveX > 0 ? 1 : -1;
   if (player.wallJumpLockTimer > 0) return;
   leaveGroundIfPushedOff(player, args.terrain);
   if (isRolling(player)) {
+    player.airCarrySpeed = 0;
     steerRoll(player, input, args);
     return;
   }
@@ -311,9 +321,33 @@ function applyHorizontal(player: PlayerState, input: PlayerInput, args: StepPlay
     steerOnGround(player, input, { args, scale });
     return;
   }
+  steerAir(player, input, { args, scale });
+}
+
+/**
+ * Air steering toward the input speed. Roll carry (double-jump-bash D11): speed a jump carried
+ * out of a roll, above run speed, bleeds slowly while the stick holds along it; let go or reverse
+ * and the carry ends, so steering is as before. Speed above the carry (a blast) steers as always.
+ */
+function steerAir(
+  player: PlayerState,
+  input: PlayerInput,
+  ctx: { args: StepPlayersArgs; scale: number }
+) {
+  const { player: p, roll } = ctx.args.tunables;
+  const speed = Math.abs(player.vx);
+  const holding = input.moveX !== 0 && Math.sign(input.moveX) === Math.sign(player.vx);
+  const carried = holding && speed > p.runSpeed && speed <= player.airCarrySpeed + 1e-6;
+  if (carried) {
+    const kept = Math.max(p.runSpeed, speed - roll.airCarryDecel * ctx.scale * ctx.args.dt);
+    player.vx = Math.sign(player.vx) * kept;
+    player.airCarrySpeed = kept;
+    return;
+  }
+  player.airCarrySpeed = 0;
   // A crouching blob turns but does not walk: it brakes to a stop.
   const target = player.crouching ? 0 : input.moveX * p.runSpeed;
-  player.vx = approach(player.vx, target, airRate(player, target, p) * scale * args.dt);
+  player.vx = approach(player.vx, target, airRate(player, target, p) * ctx.scale * ctx.args.dt);
 }
 
 // ── Ground (slope walking) ───────────────────────────────────────────────────
@@ -437,7 +471,11 @@ function steerRoll(player: PlayerState, input: PlayerInput, args: StepPlayersArg
 
 // ── Jump ─────────────────────────────────────────────────────────────────────
 
-function launch(player: PlayerState, vy: number): void {
+function launch(player: PlayerState, vy: number, tunables: GameTunables): void {
+  // Roll carry (double-jump-bash D11): a jump out of a roll keeps its sideways speed, capped.
+  const carry = isRolling(player) ? Math.min(Math.abs(player.vx), tunables.roll.jumpCarryMax) : 0;
+  player.vx = carry > 0 ? Math.sign(player.vx) * carry : player.vx;
+  player.airCarrySpeed = carry;
   // A jump is the way out of a roll once the lock ran out (shared-roll D6).
   endRoll(player);
   player.vy = vy;
@@ -449,22 +487,57 @@ function launch(player: PlayerState, vy: number): void {
   player.wallCoyoteTimer = 0;
 }
 
+/**
+ * Ground close enough under a falling or rising blob that a press is meant as the landing jump
+ * (jump buffer), not an air press: what the blob covers in the buffer time with gravity, plus
+ * one step because `groundBelowY` is from the previous step (double-jump-bash D2, A3).
+ */
+function isLandingNear(player: PlayerState, args: StepPlayersArgs): boolean {
+  if (player.groundBelowY === null) return false;
+  const t = args.tunables.player.jumpBufferTime;
+  const gravity = args.tunables.world.gravity * player.gravityScale;
+  const reach =
+    Math.max(player.vy, 0) * t + 0.5 * gravity * t * t + Math.abs(player.vy) * args.dt + 4;
+  return player.groundBelowY - player.y <= reach;
+}
+
+/**
+ * A buffered press that is no ground, coyote or wall jump and has no landing near is an air
+ * press: counted once (the dive reads it), while the buffer stays, so a wall or landing jump
+ * still fires if the dive does not start (double-jump-bash D2, D3, A4).
+ */
+function countAirPress(player: PlayerState, args: StepPlayersArgs): void {
+  if (player.jumpPressCounted || isLandingNear(player, args)) return;
+  player.jumpPressCounted = true;
+  player.airJumpPressCount += 1;
+}
+
+/** Jumps off the wall being touched (or the last one, within wall coyote time). */
+function wallJump(player: PlayerState, tunables: GameTunables): void {
+  const p = tunables.player;
+  const away = player.wallDir !== 0 ? -player.wallDir : -player.lastWallDir;
+  launch(player, -p.wallJumpSpeedY, tunables);
+  player.vx = away * p.wallJumpSpeedX;
+  player.airCarrySpeed = 0;
+  player.facing = away > 0 ? 1 : -1;
+  player.wallJumpLockTimer = p.wallJumpControlLock;
+  player.wallJumpCount += 1;
+}
+
 /** Fires a buffered jump off the ground (or within coyote time), else off a wall. */
-function applyJump(player: PlayerState, p: PlayerTunables): void {
+function applyJump(player: PlayerState, args: StepPlayersArgs): void {
+  const p = args.tunables.player;
   if (player.jumpBufferTimer <= 0 || player.jumpLocked || isRollLocked(player)) return;
   if (player.grounded || player.coyoteTimer > 0) {
-    launch(player, -p.jumpSpeed);
+    launch(player, -p.jumpSpeed, args.tunables);
     player.jumpCount += 1;
     return;
   }
   if (player.wallDir !== 0 || player.wallCoyoteTimer > 0) {
-    const away = player.wallDir !== 0 ? -player.wallDir : -player.lastWallDir;
-    launch(player, -p.wallJumpSpeedY);
-    player.vx = away * p.wallJumpSpeedX;
-    player.facing = away > 0 ? 1 : -1;
-    player.wallJumpLockTimer = p.wallJumpControlLock;
-    player.wallJumpCount += 1;
+    wallJump(player, args.tunables);
+    return;
   }
+  countAirPress(player, args);
 }
 
 // ── Motion ───────────────────────────────────────────────────────────────────
@@ -770,6 +843,7 @@ function updateContacts(player: PlayerState, args: StepPlayersArgs): void {
   player.groundBelowY = scanGroundBelow(player, terrain);
   player.coyoteTimer = player.grounded ? p.coyoteTime : Math.max(0, player.coyoteTimer - dt);
   player.airSeconds = player.grounded ? 0 : player.airSeconds + dt;
+  if (player.grounded) player.airCarrySpeed = 0;
   player.wallCoyoteTimer =
     player.wallDir !== 0 ? p.coyoteTime : Math.max(0, player.wallCoyoteTimer - dt);
   player.jumpBufferTimer = Math.max(0, player.jumpBufferTimer - dt);
@@ -787,7 +861,7 @@ export function stepPlayers(args: StepPlayersArgs): void {
     updateCrouch(player, input);
     applyHorizontal(player, input, args);
     updateAim(player, input);
-    applyJump(player, p);
+    applyJump(player, args);
     applyGravity(player, input, args);
     applyMotion(player, args);
     updateContacts(player, args);

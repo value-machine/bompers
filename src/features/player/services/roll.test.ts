@@ -175,6 +175,18 @@ describe("roll bounces", () => {
 });
 
 describe("roll exits", () => {
+  it("should keep a jump dive's dash roll while jump is held and end it when jump is released", () => {
+    const sim = createSim({ x: 100, y: FLOOR_Y });
+    sim.step({}, 10);
+    startRoll(sim.player, { source: "dash", holdButton: "jump" }, T);
+    // Jump has been held since the press that started the dive: no new press edge.
+    sim.player.prevJump = true;
+    sim.step({ jump: true }, 5);
+    expect(isRolling(sim.player)).toBe(true);
+    sim.step({ fire: true }, 1);
+    expect(isRolling(sim.player)).toBe(false);
+  });
+
   it("should end a dash roll when fire is released", () => {
     const sim = createSim({ x: 100, y: FLOOR_Y });
     sim.step({}, 10);

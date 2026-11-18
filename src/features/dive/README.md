@@ -2,27 +2,29 @@
 
 ## Purpose
 
-The unarmed attack (GDD § 3 "Ongewapende aanval", the "bomp"): fire makes a blob dive headfirst along its aim, a committed straight missile; hitting another blob knocks it away and ricochets the attacker up with the dive ready again. Owns the dive state machine, the strike and the ricochet; damage, health and spawn protection are combat's. Design and numbers: `documentation/jobs/temp_job_dive-headbutt/DIVE_DESIGN.md`.
+The headbutt (GDD § 3 "Ongewapende aanval", the "bomp"): fire (unarmed) or a mid-air jump press (anyone, armed too) makes a blob dive headfirst along its aim, a committed straight missile; hitting another blob knocks it away and ricochets the attacker up with the dive ready again. Owns the dive state machine, the strike and the ricochet; damage, health and spawn protection are combat's. Design and numbers: `documentation/jobs/temp_job_dive-headbutt/DIVE_DESIGN.md`.
 
 ## Structure
 
-| Layer    | Path                       | Purpose |
-| -------- | -------------------------- | ------- |
-| Types    | `types/dive.types.ts`      | `DiveState` (slice of `GameState`), `DiveMotion` per player, `DiveHit` (combat's `Hit` + its result + the impulse) |
+| Layer    | Path                       | Purpose                                                                                                                                                                                                                                 |
+| -------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Types    | `types/dive.types.ts`      | `DiveState` (slice of `GameState`), `DiveMotion` per player, `DiveHit` (combat's `Hit` + its result + the impulse)                                                                                                                      |
 | Services | `services/diveSim.ts`      | `stepDives({ dive, players, combat, contacts, tunables, timeSeconds, dt })` → this step's `DiveHit[]` (sim step 3b); `requestDive` (a fire press), `resetDive` (respawn), `createDiveState`. Phases: idle → wind-up → travel → recovery |
-| Services | `services/divePose.ts`     | Pure render pose per phase (crouch, launch stretch, ricochet squash, bonk squash, hit squash) as a `BlobPoseOverlay` |
-| Services | `services/diveRenderer.ts` | Impact pops (world effects layer) and `diveBlobPoses` for the player layer |
-| API      | `api/diveApi.ts`           | Public seam |
+| Services | `services/divePose.ts`     | Pure render pose per phase (crouch, launch stretch, ricochet squash, bonk squash, hit squash) as a `BlobPoseOverlay`                                                                                                                    |
+| Services | `services/diveRenderer.ts` | Impact pops (world effects layer) and `diveBlobPoses` for the player layer                                                                                                                                                              |
+| API      | `api/diveApi.ts`           | Public seam                                                                                                                                                                                                                             |
 
 ## How it works
 
 - **Dive:** 12 frames of wind-up (hang, crouch, direction locked, 16-way: 22.5° steps), then up to 30 frames dead straight at 900 units / s with no gravity, no steering and no cancel. One dive per airtime.
 - The dive **never moves a player**. It writes velocity at events (launch, bonk, strike) and the controller's motion modifiers (`steerScale`, `gravityScale`, `jumpLocked`) every step; `stepPlayers` does all movement and terrain collision, so a dive cannot tunnel.
 - A **hit** = a `BodyContact` from `resolveBodyContacts` (player feature) where the attacker is travelling toward the other at `dive.minHitSpeed` or more. The body collision has already exchanged the momentum; the dive adds the strike on the victim (push + upward pop + a short steering stagger) and the **ricochet** on the attacker (pops straight up, dive ready again at once).
-- **Hurt reaction:** the strike calls the player feature's `reactToHit` with the impulse it gave: the victim rolls as long as the impulse says (a back hit at least `roll.hardLockSeconds`). A rolling blob cannot start a dive. The attacker itself never bounces off terrain.
-- **Dash-hold roll (shared-roll D1, D2):** a dive whose travel ends (time-out or a glancing terrain touch) while fire is still held rolls on at full dive speed in the player feature's roll (`startRoll`, source `dash`) instead of recovering; the dive goes idle with its cooldown. Letting go of fire ends the roll. `stepDives` reads fire from its optional `inputs`.
+- **Hurt reaction:** the strike calls the player feature's `reactToHit` with the impulse it gave: the victim rolls as long as the impulse says (a back hit at least `roll.hardLockSeconds`). A blob in a hit roll that is still locked cannot start a dive; an unlocked roll can, and the dive ends it (double-jump-bash D12). The attacker itself never bounces off terrain.
+- **Dash-hold roll (shared-roll D1, D2):** a dive whose travel ends (time-out or a glancing terrain touch) while the button that started it (fire, or jump for a jump dive) is still held rolls on at full dive speed in the player feature's roll (`startRoll`, source `dash`) instead of recovering; the dive goes idle with its cooldown. Letting go of fire ends the roll. `stepDives` reads fire from its optional `inputs`.
 - **Terrain always ends the dive and never bounces it:** head-on is a bonk (small hop back, short stun), a glancing touch a plain recovery (or the dash roll while fire is held).
 - **Combat:** the dive starts from combat's `unarmedAttack` hook (match passes `requestDive`), so it only fires for an unarmed, non-eliminated player, once per press. Every strike goes through combat's `applyHit` with `kind: "contact"`, `source: "dive"`: zone, damage (`combat.hitDamage.contact`), spawn protection, kill credit and the `playerHit` event are combat's. A spawn-protected victim is still bounced (`landed: false`, no damage). The knockback, ricochet and cooldown are the dive's.
+- **Jump dive (owner, double-jump-bash D1–D5, D17):** a mid-air jump press is the dive's second input, so armed players can headbutt too. The player controller counts an air press it did not use (no ground, coyote or wall jump, no ground near enough for the landing buffer) in `airJumpPressCount`; `stepDives` reads each rise (`DiveState.airJumpPressesRead`) as a request that starts now, in the air, or is dropped (never buffered, so a landing jump never turns into a ground dive). Same 16-way aim, strike, ricochet, cooldown and one shared charge per airtime as a fire dive; with no aim input a jump dive goes straight up (a bashing double jump), a fire dive along facing. Each dive keeps its `trigger`, whose button holds the dash roll.
+- **Roll carry (owner, double-jump-bash D12, D13):** a dive out of a roll launches at `max(launchSpeed, min(roll speed along the aim, dive.rollCarryMax))`, read before the wind-up slows the blob (`DiveMotion.launchSpeed`); travel time stays the same, so it reaches up to 288 units instead of 225. Falls and blasts never feed it.
 
 ## Dependencies
 

@@ -186,6 +186,10 @@ export interface GameTunables {
     maxSeconds: number;
     /** How fast the body turns back upright after a roll, radians / s. */
     standUpSpeed: number;
+    /** Most horizontal speed a jump out of a roll keeps, units / s (roll carry, D11). */
+    jumpCarryMax: number;
+    /** How fast carried speed above run speed bleeds in the air while the stick holds that way. */
+    airCarryDecel: number;
   };
   /**
    * Unarmed attack: the dive headbutt ("bomp", GDD § 3). A committed straight missile that
@@ -202,12 +206,14 @@ export interface GameTunables {
     windupSpeedScale: number;
     /** Gravity during the wind-up (0 = hang in the air). */
     windupGravityScale: number;
-    /** Launch speed along the 8-way aim, units / s. Travel has no gravity and no steering. */
+    /** Launch speed along the 16-way aim, units / s. Travel has no gravity and no steering. */
     launchSpeed: number;
     /** Longest travel; reach = launchSpeed × travelSeconds. */
     travelSeconds: number;
     /** Velocity is multiplied by this when the travel times out. */
     exitSpeedScale: number;
+    /** A dive out of a roll launches at the roll's speed along the aim, up to this (D13). */
+    rollCarryMax: number;
     /** Recovery after a dive that hit nobody: seconds and steering; jump stays locked. */
     recoverySeconds: number;
     recoverySteerScale: number;
