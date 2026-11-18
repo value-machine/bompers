@@ -343,5 +343,10 @@
     "title": "Ice element",
     "description": "Owner request 2026-11-18: do for each element what was done for fire, one by one: a weapon/projectile, an effect on blobs, and an effect per map material (stone, earth, cardboard, ice), plus element interactions (ice puts out fire, fire melts ice). Ice is next; after it lands the owner decides whether another element follows. Starts with an ideation options page (loop-refine step 6). Shared spread/material mechanism named by role, not after fire (code-style F1/F2). Thread: Ice element (Fable).",
     "status": "done"
+  },
+  {
+    "title": "Weapon visuals: embellish",
+    "description": "Owner 2026-11-16 signed off the weapon and crate visual system (#38) as a work in progress: 'we will embellish further later on'. Polish pass on crates, helmet tubes, muzzle lights and HUD ammo once the owner names what to improve. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
+    "status": "done"
   }
 ]
