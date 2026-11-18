@@ -1,6 +1,5 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { Rect } from "@/shared/types/gameGeometry.types";
-import { isWeaponItemId } from "@/shared/config/weaponItems";
 import { rectHitsSolid, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { LevelDrop } from "@/features/level/api/levelApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
@@ -14,9 +13,9 @@ import type {
 /**
  * Weapon crates (GDD § 3, § 4: weapons fall from the sky). Deterministic schedule: after
  * `firstDelaySeconds`, then every `intervalSeconds` while fewer than `maxActive` lie in the
- * arena, the next drop point (round-robin) releases a weapon crate. Which weapon: the drop point's
- * weapon items in turn, by a counter over all released crates (homing-missiles D4), so a level
- * that lists both weapons everywhere alternates them. Crates fall with the match
+ * arena, the next drop point (round-robin) releases a weapon crate. Which weapon: the match's
+ * weapons setting (`tunables.match.weaponIds`, level-direction D6) in turn, by a counter over all
+ * released crates (homing-missiles D4); an empty setting drops no crates. Crates fall with the match
  * gravity, land on terrain (and fall again when the ground is blasted away), vanish out of
  * bounds, and are taken by the first player touching them. Combat arms the collector (`match`
  * hands it the step result). Numbers: the `combat.drops` tunables.
@@ -51,10 +50,11 @@ export const crateBox = (crate: WeaponCrate, size: number): Rect => ({
 
 function spawnCrate(args: StepWeaponCratesArgs, result: CrateStepResult): void {
   const { crates: state, drops } = args;
+  const weapons = args.tunables.match.weaponIds;
+  if (weapons.length === 0) return;
   const drop = drops[state.nextDropIndex % drops.length];
   state.nextDropIndex += 1;
-  const weapons = drop?.itemIds.filter(isWeaponItemId) ?? [];
-  const itemId = weapons[state.nextItemIndex % Math.max(1, weapons.length)];
+  const itemId = weapons[state.nextItemIndex % weapons.length];
   if (!drop || !itemId) return;
   state.nextItemIndex += 1;
   state.list.push({ id: state.nextId, itemId, x: drop.at.x, y: drop.at.y, vy: 0, grounded: false });

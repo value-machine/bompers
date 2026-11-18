@@ -3,6 +3,7 @@ import { castRayFan, pushAlongAim } from "@/shared/utils/rayFan";
 import type { TerrainGrid } from "@/features/arena/api/arenaApi";
 import { helmetPoint } from "@/features/combat/api/combatApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
+import { chillBlob } from "@/features/ice/services/frozenBlobs";
 import { feedCold } from "@/features/ice/services/iceSim";
 import type { IceState } from "@/features/ice/types/ice.types";
 
@@ -11,7 +12,7 @@ import type { IceState } from "@/features/ice/types/ice.types";
  * (`castRayFan`), as a narrow beam. While its holder holds fire, each ray stops at the first
  * terrain it meets; the cold flows out from those samples for this step (`feedCold`), so the
  * ice grows where the beam points for as long as it is held (D3, D8). A blob the beam reaches
- * before terrain is pushed lightly along the aim; freezing blobs is lap 2.
+ * before terrain is pushed lightly along the aim and gathers chill (`chillBlob`, frozen blobs).
  */
 export interface FreezeRayArgs {
   terrain: TerrainGrid;
@@ -22,6 +23,8 @@ export interface FreezeRayArgs {
   /** Sim time of this step, seconds. */
   now: number;
   dt: number;
+  /** Blobs the beam may chill (not one in a dive or under spawn protection); all when left out. */
+  canChill?: (player: PlayerState) => boolean;
 }
 
 /** One step of holding the ray: freeze what it touches, push the blobs in it, record the beam. */
@@ -38,6 +41,10 @@ export function sprayFreezeRay(ice: IceState, args: FreezeRayArgs): void {
   const samples = hits.rays.flatMap((hit) => (hit.sample === null ? [] : [hit.sample]));
   feedCold(ice, terrain, { slot: holder.slot, samples, now: args.now, dt: args.dt, tunables });
   pushAlongAim(hits, { accel: ray.push, dt: args.dt });
+  for (const blob of hits.bodies) {
+    if (args.canChill && !args.canChill(blob)) continue;
+    chillBlob(ice, blob, { now: args.now, dt: args.dt, tunables });
+  }
   ice.rays = ice.rays.filter((beam) => beam.slot !== holder.slot);
   ice.rays.push({
     slot: holder.slot,

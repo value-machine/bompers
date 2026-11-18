@@ -98,6 +98,11 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Blob catches fire (fire-burn b2) | light | `rocket-fire` (placeholder, fire-burn D7) | — | — | — | — | amber flame pop (0.6 s linger); then helmet flames, sweat, pinprick pupils while burning | — |
 | Burning blob panic (held) | — | — (the catch cue only) | drawn hop every 0.4 s, sx · sy within the band (±0.08) | — | — | — | drawn 5-unit hop; body and shadow stay on the ground | — |
 | Fire put out by ice | light | `clink` (placeholder) | — | — | — | — | white steam puffs (0.6 s) | — |
+| Frost building on a blob (held ray) | — | — (the ray's start cue) | — | — | — | — | the ice block forms around the blob as the chill fills | — |
+| Blob freezes (ice-frozen-blobs) | light | `clink` (placeholder, D2; own sound pending) | — | — | — | — | white pop ring (250 ms), then the glossy block with pinprick pupils inside | — |
+| Ice block cracks (jump press) | light | `clink`, soft (placeholder, D2; own sound pending) | drawn 4-unit hop, 200 ms | — | — | — | a crack line on the block, three ice chips (500 ms) | — |
+| Ice block breaks (third press, a hit, time up) | light | `clink` (placeholder, D2; own sound pending); a hit adds its own `hit` | — | — | — | — | eight ice shards fly off (500 ms) | — |
+| Ice block melts (fire) | light | fire's douse `clink` (placeholder) | — | — | — | — | white steam puffs (500 ms) | — |
 | Moving part moves / carries | — | — by default; the author's `data-move-sound` at its fastest point and `data-end-sound` at each turning point (owner B2) | — | — | — | — | — (no motion cue, owner B1) | — |
 | Crushed by a moving part | heavy | `land`, then `elimination` (owner B2) | pancake across the squeeze, held 0.15 s (past the band, owner B3) | — (no hit of its own) | 6 px (the back-hit kick) | — | goo stains on both faces, the part's riding along; helmet and tube fly off | pops off |
 | Squeezed by a moving part (survivable) | — (no hit) | — (the blob makes no sound; the part may have its own) | squash across the gap to the gap width, stretch along it up to 1.6×, every frame while squeezed; springs back the frame the gap opens (past the band, owner #64 change round) | — | — | — | — | — |

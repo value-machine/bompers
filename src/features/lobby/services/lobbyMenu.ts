@@ -22,7 +22,9 @@ import {
   defaultMatchSettings,
   DURATION_OPTIONS,
   GRAVITY_OPTIONS,
+  toggleWeapon,
 } from "@/features/lobby/services/matchSettings";
+import { ALL_WEAPON_ITEM_IDS } from "@/shared/config/weaponItems";
 
 /**
  * Menu rows top to bottom; the cursor starts on Start so joined players can go at once. The
@@ -32,6 +34,7 @@ export const LOBBY_ROWS: readonly LobbyRow[] = [
   "level",
   "loadFile",
   "duration",
+  "weapons",
   "gravity",
   "start",
   "musicVolume",
@@ -60,7 +63,27 @@ export const createLobbyState = (tunables: GameTunables): LobbyState => ({
   cursor: START_ROW,
   levelId: null,
   settings: defaultMatchSettings(tunables),
+  weaponCursor: 0,
 });
+
+const WEAPON_COUNT = ALL_WEAPON_ITEM_IDS.length;
+
+/**
+ * Weapons row: the crates are toggles with their own in-row cursor (owner, weapons-match-setting
+ * D5). Left / right move it (wrapping); confirm switches that crate. Nothing changes while the
+ * level sets its own weapons.
+ */
+function moveWeaponCursor(state: LobbyState, step: 1 | -1): LobbyState {
+  return { ...state, weaponCursor: (state.weaponCursor + step + WEAPON_COUNT) % WEAPON_COUNT };
+}
+
+function toggleWeaponAt(state: LobbyState, index: number, context: LobbyContext): LobbyState {
+  const weaponId = ALL_WEAPON_ITEM_IDS[index];
+  if (!weaponId) return state;
+  const moved = { ...state, weaponCursor: index };
+  if (context.weaponsSetByLevel) return moved;
+  return { ...moved, settings: toggleWeapon(state.settings, weaponId) };
+}
 
 export interface LobbyResult {
   state: LobbyState;
@@ -120,6 +143,7 @@ function cycleRow(state: LobbyState, { row, step, context }: CycleArgs): LobbySt
 function activateRow(state: LobbyState, row: LobbyRow, context: LobbyContext): LobbyResult {
   if (row === "start") return { state, effect: canStart(state, context) ? "start" : null };
   if (row === "loadFile") return { state, effect: "pickFile" };
+  if (row === "weapons") return none(toggleWeaponAt(state, state.weaponCursor, context));
   const volume = volumeEffect(row, 1, true);
   if (volume) return { state, effect: volume };
   return none(cycleRow(state, { row, step: 1, context }));
@@ -127,6 +151,7 @@ function activateRow(state: LobbyState, row: LobbyRow, context: LobbyContext): L
 
 /** Left / right (keys, pads or the pointer's steppers) on a row. */
 function stepRow(state: LobbyState, args: CycleArgs): LobbyResult {
+  if (args.row === "weapons") return none(moveWeaponCursor(state, args.step));
   const volume = args.row ? volumeEffect(args.row, args.step, false) : null;
   return volume ? { state, effect: volume } : none(cycleRow(state, args));
 }
@@ -182,6 +207,10 @@ export function reduceLobby(
       return stepRow(state, { row: action.row, step: action.step, context });
     case "selectLevel":
       return none({ ...state, levelId: action.levelId });
+    case "toggleWeapon": {
+      const onRow = { ...state, cursor: LOBBY_ROWS.indexOf("weapons") };
+      return none(toggleWeaponAt(onRow, ALL_WEAPON_ITEM_IDS.indexOf(action.weaponId), context));
+    }
     case "leave":
       return none({ ...state, slots: leaveSlot(state.slots, action.slot) });
   }

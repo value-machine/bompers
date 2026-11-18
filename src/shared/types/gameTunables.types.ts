@@ -1,4 +1,5 @@
 import type { CraterShape } from "@/shared/types/craterShape.types";
+import type { WeaponItemId } from "@/shared/types/weaponItems.types";
 
 /** Shape of the game tunables; values and docs: `src/shared/config/gameTunables.ts`. */
 export interface GameTunables {
@@ -19,6 +20,8 @@ export interface GameTunables {
   /** Round rules (GDD § 5, § 7). */
   match: {
     durationSeconds: number;
+    /** Weapons the sky crates hold, in turn; empty = no weapon crates (level-direction D6). */
+    weaponIds: readonly WeaponItemId[];
     maxPlayers: number;
     /** Seconds an eliminated player is out of play before respawning (GDD § 6). */
     respawnDelaySeconds: number;
@@ -263,6 +266,22 @@ export interface GameTunables {
     freezeAreaPerSecond: number;
     frozenSeconds: number;
     torchThawRadius: number;
+    /**
+     * Frozen blobs (owner, ice-frozen-blobs D1): a blob gathers chill in a freeze ray (×
+     * `crouchChillScale` while crouching) and is frozen solid at `freezeSeconds` of it, for
+     * `frozenSeconds`. The block brakes at `slideGrip` of normal, breaks on jump press number
+     * `cracksToBreak`, and its blob gathers no chill for `graceSeconds` after it ends. Effects
+     * show each moment for `momentSeconds`.
+     */
+    blob: {
+      freezeSeconds: number;
+      crouchChillScale: number;
+      frozenSeconds: number;
+      cracksToBreak: number;
+      slideGrip: number;
+      graceSeconds: number;
+      momentSeconds: number;
+    };
   };
   /** Health, hits, rocket launcher, explosions and weapon drops (GDD § 3). */
   combat: {

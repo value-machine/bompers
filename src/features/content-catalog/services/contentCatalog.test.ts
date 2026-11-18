@@ -48,7 +48,6 @@ describe("contentCatalog", () => {
     expect(exported.formatVersion).toBe(2);
     expect(exported.defaults.material).toBe("stone");
     expect(exported.defaults.items).toEqual({
-      drop: ["rocket-launcher"],
       collectible: "point-orb",
     });
     expect(exported.material.map((m) => m.id)).toEqual(["stone", "earth", "cardboard", "ice"]);

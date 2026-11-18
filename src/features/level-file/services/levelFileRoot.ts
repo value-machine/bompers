@@ -1,4 +1,5 @@
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
+import { isWeaponItemId } from "@/shared/config/weaponItems";
 import {
   DEFAULT_LEVEL_SETTINGS,
   LEVEL_FORMAT_VERSION,
@@ -163,7 +164,29 @@ const SETTING_SPECS = {
     fallback: `the match setting (${DEFAULT_GAME_TUNABLES.match.durationSeconds} s)`,
     valid: (v: number) => v > 0,
   },
-} satisfies Record<keyof LevelSettings, SettingSpec>;
+} satisfies Record<Exclude<keyof LevelSettings, "weaponIds">, SettingSpec>;
+
+const NO_WEAPONS = "none";
+const AUTO_WEAPONS = "auto";
+
+/**
+ * `data-weapons`: space-separated weapon IDs, or `none` (level-direction D6). Left out or `auto`
+ * = the lobby's choice. W4: a non-weapon ID is left out; when none is left, the lobby's choice.
+ */
+export function readWeaponsSetting(root: Element, log: LevelIssueLog): string[] | undefined {
+  const raw = root.getAttribute("data-weapons")?.trim();
+  if (raw === undefined || raw === "" || raw === AUTO_WEAPONS) return undefined;
+  if (raw === NO_WEAPONS) return [];
+  const ids = raw.split(/\s+/);
+  const weapons = ids.filter((id) => isWeaponItemId(id));
+  for (const id of ids) {
+    if (!isWeaponItemId(id))
+      addWarning(log, "W4", `data-weapons: "${id}" is not a weapon; left out.`);
+  }
+  if (weapons.length > 0) return weapons;
+  addWarning(log, "W4", "data-weapons names no weapon; using the lobby's weapons.");
+  return undefined;
+}
 
 /** W8: a setting out of range falls back to its default. */
 function readSetting(root: Element, spec: SettingSpec, log: LevelIssueLog): number | undefined {
@@ -181,9 +204,11 @@ export function readLevelSettings(root: Element, log: LevelIssueLog): LevelSetti
   const cellSize = readSetting(root, SETTING_SPECS.cellSize, log);
   const gravity = readSetting(root, SETTING_SPECS.gravity, log);
   const matchDurationS = readSetting(root, SETTING_SPECS.matchDurationS, log);
+  const weaponIds = readWeaponsSetting(root, log);
   return {
     cellSize: cellSize ?? DEFAULT_LEVEL_SETTINGS.cellSize,
     gravity: gravity ?? DEFAULT_LEVEL_SETTINGS.gravity,
     ...(matchDurationS !== undefined && { matchDurationS }),
+    ...(weaponIds !== undefined && { weaponIds }),
   };
 }

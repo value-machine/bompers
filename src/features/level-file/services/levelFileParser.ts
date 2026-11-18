@@ -14,7 +14,6 @@ import {
   checkPointBehavior,
   collectRoleElements,
   readCollectibleItem,
-  readDropItems,
   readTerrainRefs,
 } from "@/features/level-file/services/levelFileElements";
 import {
@@ -149,7 +148,7 @@ function readSpawns(items: readonly RoleElement[], ctx: PointContext): Vec2[] {
 function readDrops(items: readonly RoleElement[], ctx: PointContext): LevelDrop[] {
   const drops = ofRole(items, "drop").flatMap((item) => {
     const at = placedPoint(item, ctx);
-    return at ? [{ at, itemIds: readDropItems(item, ctx.log) }] : [];
+    return at ? [{ at }] : [];
   });
   if (drops.length === 0) {
     addError(ctx.log, "E7", 'No valid drop point: add at least one <circle data-role="drop">.');
