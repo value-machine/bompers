@@ -11,7 +11,6 @@ import {
 } from "@/features/arena/api/arenaApi";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelApi";
 import { createPlayer } from "@/features/player/api/playerApi";
-import { isBurning, stepBurningBlobs } from "@/features/fire/services/burningBlobs";
 import {
   createFireView,
   syncFireView,
@@ -329,25 +328,6 @@ describe("fire on moving parts (mover-materials-l2)", () => {
     expect(burningSamples(s.fire.grounds[0]!)).toEqual([]);
   });
 
-  it("should set a blob on fire when it touches a burning part", () => {
-    const s = partScene("cardboard");
-    ignite(s.fire, s.terrain, { body: 1, index: s.at(250, 102), time: 0 });
-    s.run(1);
-    // Standing on the part's top, above the burning samples.
-    const blob = createPlayer(0, { x: 252, y: 100 }, PART_TUNABLES);
-    const far = createPlayer(1, { x: 500, y: PART_FLOOR }, PART_TUNABLES);
-    stepBurningBlobs(s.fire, {
-      terrain: s.terrain,
-      players: [blob, far],
-      contacts: [],
-      isDiving: () => false,
-      now: s.world.time,
-      tunables: PART_TUNABLES,
-    });
-    expect(isBurning(s.fire, blob)).toBe(true);
-    expect(isBurning(s.fire, far)).toBe(false);
-  });
-
   it("should cut burnt samples out of the part's field, where the part is, when they burn out", () => {
     const s = partScene("cardboard");
     // The part has moved up 60: its fire and its burn-out follow it.
@@ -408,7 +388,6 @@ function burningPart() {
     nowMs: 1000,
     players: [],
     timeSeconds: 1,
-    momentSeconds: VIEW_TUNABLES.fire.blob.momentSeconds,
     zoom: 1,
     torchHolderIds: new Set(),
     torchLength: VIEW_TUNABLES.combat.torch.length,

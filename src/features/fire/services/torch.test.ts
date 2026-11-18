@@ -7,7 +7,6 @@ import {
 } from "@/features/arena/api/arenaApi";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelApi";
 import { createPlayer } from "@/features/player/api/playerApi";
-import { isBurning } from "@/features/fire/services/burningBlobs";
 import { createFireState } from "@/features/fire/services/fireSim";
 import { sprayTorch } from "@/features/fire/services/torch";
 
@@ -126,7 +125,7 @@ describe("torch on frozen terrain (ice-element D6)", () => {
     const helmetY = FLOOR - holder.height * 0.78;
     const touched = sampleAt(terrain, 241, helmetY);
     setSampleFrozen(terrain, touched, true);
-    const spray = (now: number): void =>
+    const spray = (now: number): void => {
       sprayTorch(fire, {
         terrain,
         players: [holder],
@@ -135,6 +134,7 @@ describe("torch on frozen terrain (ice-element D6)", () => {
         now,
         dt: 1 / 120,
       });
+    };
     spray(0);
     expect(isFrozenSample(terrain, touched)).toBe(false);
     expect(fire.grounds[0]!.igniteAt[touched]).toBe(Infinity);
@@ -186,20 +186,20 @@ describe("torch on moving parts (mover-materials lap 1)", () => {
 
   it("should end every ray on the part and leave the blob behind it alone when a part is in the cone", () => {
     const { part, fire, rival, spray } = scene();
-    spray();
+    const reached = spray();
     for (const end of fire.sprays[0]!.ends) expect(end.x).toBeLessThanOrEqual(240 + CELL);
     expect(rival.vx).toBe(0);
-    expect(isBurning(fire, rival)).toBe(false);
+    expect(reached).toEqual([]);
     // The flame acts on the part it touches (fireSim.test.ts › fire on moving parts), never on the ground behind it.
     expect(fire.grounds[0]!.igniteAt.every((time) => time === Infinity)).toBe(true);
     expect(part.field.frozen.some((flag) => flag !== 0)).toBe(false);
   });
 
   it("should reach the blob when the part has moved out of the cone", () => {
-    const { part, fire, rival, spray } = scene();
+    const { part, rival, spray } = scene();
     part.pose = { dx: 0, dy: -120, angle: 0 };
-    spray();
+    // The reached blobs are returned; the match sets them alight (blob-fire feature).
+    expect(spray()).toEqual([rival]);
     expect(rival.vx).toBeGreaterThan(0);
-    expect(isBurning(fire, rival)).toBe(true);
   });
 });

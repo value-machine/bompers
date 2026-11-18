@@ -55,11 +55,6 @@ export function createFireState(terrain: TerrainGrid): FireState {
     grounds: bodyGrids(terrain).map(createGroundFire),
     nextBurnOutAt: 0,
     sprays: [],
-    blobs: new Map(),
-    blobGraceUntil: new Map(),
-    blobMoments: [],
-    caughtCounts: {},
-    dousedCounts: {},
   };
 }
 

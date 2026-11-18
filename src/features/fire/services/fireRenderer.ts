@@ -19,7 +19,6 @@ import {
 import { helmetPoint } from "@/features/combat/api/combatApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import { burningSamples } from "@/features/fire/services/fireSim";
-import { drawBlobFire } from "@/features/fire/services/blobFireRenderer";
 import {
   FLAME_LOOK,
   clusterFlames,
@@ -44,8 +43,8 @@ import type { FireState, GroundFire } from "@/features/fire/types/fire.types";
  *   edge inside it (redrawn when the fire or the terrain changes, not per frame), with flames
  *   on its top edge only, rooted on the terrain's edge; a smoke puff where a batch burns out.
  * - Above the players: each torch spray as a neck and a rolling head (`flameShapes`), the head's
- *   puff when a spray stops, the idle flame on a held torch, then the burning blobs
- *   (`blobFireRenderer`, fire-burn b2).
+ *   puff when a spray stops and the idle flame on a held torch (burning blobs are drawn by the
+ *   blob-fire feature, on its own layer above this one).
  * Every body of the arena has its own set of terrain layers (mover-materials-l2 D3, D4): the
  * static terrain's in world coordinates, a moving part's in the part's own frame, following its
  * pose, so a part's fire rides and turns with it. Smoke is in world coordinates for all.
@@ -60,8 +59,6 @@ export interface FireView {
   grounds: GroundFireView[];
   smoke: Graphics;
   sprays: Graphics;
-  /** Burning blobs' flames and sweat, and their moments (above the players). */
-  blobs: Graphics;
   /** Per torch slot: when its spray started and where its head last was (grow-in, release puff). */
   torches: Map<number, TorchMemo>;
   puffs: SmokePuff[];
@@ -113,10 +110,9 @@ export interface FireFrame {
   terrain: TerrainGrid;
   /** Render clock, ms (flicker only). */
   nowMs: number;
-  /** Players in play (burning-blob flames, idle torch flames), sim time and moment length. */
+  /** Players in play (idle torch flames) and sim time. */
   players: readonly PlayerState[];
   timeSeconds: number;
-  momentSeconds: number;
   /** Camera zoom this frame (outline width clamp). */
   zoom: number;
   /** Ids of the players holding a torch (idle flame on the nozzle). */
@@ -171,18 +167,16 @@ function createGroundView(mover: MoverBody | undefined): GroundFireView {
 export function createFireView(): FireView {
   const smoke = new Graphics({ label: "fire-smoke" });
   const sprays = new Graphics({ label: "torch-sprays" });
-  const blobs = new Graphics({ label: "burning-blobs" });
   const terrainLayer = new Container({ label: "fire" });
   terrainLayer.addChild(smoke);
   const sprayLayer = new Container({ label: "torch" });
-  sprayLayer.addChild(sprays, blobs);
+  sprayLayer.addChild(sprays);
   return {
     terrainLayer,
     sprayLayer,
     grounds: [],
     smoke,
     sprays,
-    blobs,
     torches: new Map(),
     puffs: [],
   };
@@ -485,5 +479,4 @@ export function syncFireView(view: FireView, frame: FireFrame): void {
   const on = drawSprays(view, frame, ink);
   drawReleases(view, frame, { ink, on });
   drawPilots(view, frame, { ink, on });
-  drawBlobFire(view.blobs.clear(), frame);
 }
