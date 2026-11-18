@@ -1,8 +1,9 @@
-import { useImperativeHandle, useRef, type ChangeEvent, type Ref } from "react";
-import { Check, Copy, Upload } from "lucide-react";
+import { useCallback, useImperativeHandle, useRef, type ChangeEvent, type Ref } from "react";
+import { Check, Copy } from "lucide-react";
 import { Alert } from "@/components/common/Alert";
 import { Button } from "@/components/common/Button";
 import type { ClipboardCopyStatus } from "@/shared/hooks/useClipboardCopy";
+import { canLinkFiles, pickLinkedFile } from "@/features/level-memory/api/levelMemoryApi";
 import { useImportReportCopy } from "@/features/level-file/hooks/useImportReportCopy";
 import type { LevelImportReport } from "@/features/level-file/types/levelFile.types";
 
@@ -16,10 +17,11 @@ export interface LevelFilePicker {
 
 export interface LevelImportControlProps {
   report: LevelImportReport | null;
-  onFile: (file: File) => void;
+  /** A picked file; with a `handle` on Chrome / Edge, so the level stays linked to it. */
+  onFile: (file: File, handle?: FileSystemFileHandle) => void;
   onDismiss: () => void;
-  /** Optional handle to open the picker without clicking the button. */
-  pickerRef?: Ref<LevelFilePicker>;
+  /** Opens the picker from code (the control has no button of its own). */
+  pickerRef: Ref<LevelFilePicker>;
 }
 
 const COPY_REPORT_LABEL: Record<ClipboardCopyStatus, string> = {
@@ -72,7 +74,10 @@ const ReportBody = ({ report }: { report: LevelImportReport }) => {
   );
 };
 
-/** "Load level" button (file picker) plus the last import's errors or warnings. */
+/**
+ * The level file picker (opened through `pickerRef`: the lobby's "Load level" card or a menu
+ * row) plus the last import's errors or warnings.
+ */
 export const LevelImportControl = ({
   report,
   onFile,
@@ -80,7 +85,18 @@ export const LevelImportControl = ({
   pickerRef,
 }: LevelImportControlProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  useImperativeHandle(pickerRef, () => ({ open: () => inputRef.current?.click() }), []);
+  // Chrome / Edge: the native picker returns a handle, so the level stays linked to its file;
+  // elsewhere the plain input (saved copy only).
+  const open = useCallback((): void => {
+    if (!canLinkFiles()) {
+      inputRef.current?.click();
+      return;
+    }
+    void pickLinkedFile().then((picked) => {
+      if (picked) onFile(picked.file, picked.handle);
+    });
+  }, [onFile]);
+  useImperativeHandle(pickerRef, () => ({ open }), [open]);
   const onChange = (event: ChangeEvent<HTMLInputElement>): void => {
     const file = event.target.files?.[0];
     // Reset so picking the same file again still fires `change` (and restarts the match).
@@ -97,10 +113,6 @@ export const LevelImportControl = ({
 
   return (
     <div className="flex w-80 max-w-[calc(100vw-1rem)] flex-col items-end gap-2">
-      <Button size="sm" variant="secondary" onClick={() => inputRef.current?.click()}>
-        <Upload aria-hidden="true" />
-        Load level
-      </Button>
       <input
         ref={inputRef}
         type="file"
