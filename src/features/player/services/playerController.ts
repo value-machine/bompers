@@ -85,6 +85,7 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     jumpCount: 0,
     wallJumpCount: 0,
     landCount: 0,
+    airSeconds: 0,
     lastLandingSpeed: 0,
     groundAngle: 0,
     squeeze: null,
@@ -687,10 +688,24 @@ function moveInAir(player: PlayerState, args: StepPlayersArgs): void {
   if (player.grounded) land(player, impactSpeed, args.terrain);
 }
 
-/** Counts the landing and keeps the velocity along the ground (the part into it is absorbed). */
+/**
+ * Air time a touchdown needs to count as a landing (collision-sound-jitter). Where the ground
+ * contact flips off and on every step or two (a slope at the lip angle, a spinning or swinging
+ * part, a part pushing the blob), the feet touch down again after one step at the speed of one
+ * step of gravity: that is staying on the ground, not landing. The shortest real fall (a hop, a
+ * step down off a ledge) takes longer. Six steps at 120 fps, like the render's contact hold.
+ */
+const LANDING_MIN_AIR_SECONDS = 0.05;
+
+/**
+ * Keeps the velocity along the ground (the part into it is absorbed) and, after enough air time,
+ * counts the landing.
+ */
 function land(player: PlayerState, impactSpeed: number, terrain: TerrainGrid): void {
-  player.landCount += 1;
-  player.lastLandingSpeed = impactSpeed;
+  if (player.airSeconds >= LANDING_MIN_AIR_SECONDS) {
+    player.landCount += 1;
+    player.lastLandingSpeed = impactSpeed;
+  }
   const frame = groundFrame(player, terrain);
   followGround(player, frame, groundSpeed(player, frame));
 }
@@ -754,6 +769,7 @@ function updateContacts(player: PlayerState, args: StepPlayersArgs): void {
   if (player.wallDir !== 0) player.lastWallDir = player.wallDir;
   player.groundBelowY = scanGroundBelow(player, terrain);
   player.coyoteTimer = player.grounded ? p.coyoteTime : Math.max(0, player.coyoteTimer - dt);
+  player.airSeconds = player.grounded ? 0 : player.airSeconds + dt;
   player.wallCoyoteTimer =
     player.wallDir !== 0 ? p.coyoteTime : Math.max(0, player.wallCoyoteTimer - dt);
   player.jumpBufferTimer = Math.max(0, player.jumpBufferTimer - dt);
