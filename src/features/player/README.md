@@ -36,6 +36,8 @@ Seams for later work:
 - Player colors: `GAME_PALETTE.players` / `playerShades` / `playerTints`, indexed by `slot` (DESIGN_LANGUAGE § 1).
 - Consumed by `match`, `combat`, `collectibles` and `dive`.
 
+- `src/shared/utils/debugInk.ts`: the blob, helmet, foot and tube ink and the shadow colour (`?debugInk=1` tints them; fire-black-flash diagnosis).
+
 ## Decisions
 
 - **Body against terrain (slope-walking D7):** a round bottom (circle, radius width / 2) tested on the terrain distance field (`circleHitsSolid`), under a head box on the cells, inset half a sample at the sides and one sample above the circle's center, so cell steps never catch on a slope. Contacts back off by bisection (exact on flat ground). Airborne sideways moves into ground no steeper than the lip angle slide up it instead of stopping (A6).

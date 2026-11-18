@@ -39,6 +39,8 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 - Shared engine: `gameLoop`, `gameInputService`, `usePixiApp`, `gameTunables`, `gamePalette`, `gameInput.types`.
 - Mounted by `src/pages/GamePage.tsx` at `/` once the lobby starts a round.
 
+- `src/shared/utils/debugInk.ts`: `components/DebugInkLegend.tsx` shows which colour each ink pass has when the URL carries `?debugInk=1` (fire-black-flash diagnosis); nothing without the flag.
+
 ## Decisions
 
 - Only `match` knows `GameState`; other features take slices (game-engine-foundation D5).

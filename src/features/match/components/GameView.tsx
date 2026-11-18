@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { GAME_PALETTE, toCssColor } from "@/shared/config/gamePalette";
 import { usePixiApp } from "@/shared/hooks/usePixiApp";
+import { DebugInkLegend } from "@/features/match/components/DebugInkLegend";
 import { useGameSession, type MatchSetup } from "@/features/match/hooks/useGameSession";
 import { PauseMenu, usePauseMenu } from "@/features/pause/api/pauseApi";
 
@@ -38,6 +39,7 @@ export const GameView = ({ setup, onExitToLobby }: GameViewProps) => {
           {CONTROLS_HINT}
         </span>
       </p>
+      <DebugInkLegend />
       <PauseMenu
         menu={pause.menu}
         focusedRow={pause.focusedRow}

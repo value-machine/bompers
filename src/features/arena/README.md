@@ -32,6 +32,8 @@ Seams for later work:
 - `pixi.js` (renderer only), `src/shared/config/gamePalette.ts`, `src/shared/types/gameGeometry.types.ts`.
 - Consumed by `player` (collision queries), `combat` (blasts, rocket collision), `collectibles` (weapon-crate landing, crate shadows) and `match` (state + render composition).
 
+- `src/shared/utils/debugInk.ts`: the terrain and moving-part outline colours (`?debugInk=1` tints them; fire-black-flash diagnosis).
+
 ## Decisions
 
 - Solid slabs are drawn from the level's piece shapes, not the grid: solid never changes, and a vector slab gives the spec's one continuous rounded shape; its edge may differ from collision by up to half a cell (visual-pass D2).

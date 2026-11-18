@@ -24,6 +24,8 @@ Seams for later work:
 - `pixi.js`, `src/shared/config/gamePalette.ts`, `src/shared/utils/{outlineWidth,displaySync,shapeGeometry}.ts`.
 - Consumed by `match` (`gameRenderer.ts` places the layer).
 
+- `src/shared/utils/debugInk.ts`: the effect ink colour (`?debugInk=1` tints it; fire-black-flash diagnosis).
+
 ## Decisions
 
 - Split from `combat` (visual-pass): effects are a separate reason to change (look and motion) from fighting rules, and kept combat's services within budget.
