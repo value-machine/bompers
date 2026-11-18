@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fire Test — Bompers level</title>
+    <!-- Optional preview kit: legend, labels, grid. The level works without it. -->
+    <link rel="stylesheet" href="preview.css" />
+    <script src="preview.js" defer></script>
+  </head>
+  <body>
+    <svg
+      id="level"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 1600 1000"
+      data-level-format="2"
+      data-level-id="fire-test"
+      data-title="Fire Test"
+      data-author="Bompers team"
+      data-agent="claude"
+      data-description="Test level for fire: two big cardboard slabs for large fires, thin cardboard platforms and small blocks for small ones, torch drops over the spawns, on a stone floor that never burns."
+      data-cell-size="4"
+      data-gravity="1"
+      data-match-duration="180"
+      style="display: block; width: 100%; height: auto; background: #dfe9f2"
+    >
+      <title>Fire Test</title>
+
+      <!-- In-bounds area: leaving it eliminates the player. -->
+      <rect data-role="bounds" x="40" y="20" width="1520" height="960" fill="none" stroke="#d24b3a" stroke-width="3" stroke-dasharray="14 8" />
+
+      <g id="terrain">
+        <!-- Stone floor: never burns, so there is always ground left. Earth ends show scorch. -->
+        <rect id="floor" data-role="terrain" data-material="stone" data-label="Stone floor" x="240" y="840" width="1120" height="48" fill="#5a3f7a" />
+        <rect id="floor-end-left" data-role="terrain" data-material="earth" x="160" y="840" width="80" height="48" fill="#c4673f" />
+        <rect id="floor-end-right" data-role="terrain" data-material="earth" x="1360" y="840" width="80" height="48" fill="#c4673f" />
+
+        <!-- Big slabs: large fires -->
+        <rect id="slab-left" data-role="terrain" data-material="cardboard" data-label="Big slab" x="280" y="616" width="400" height="224" fill="#c99a62" />
+        <rect id="slab-right" data-role="terrain" data-material="cardboard" data-label="Big slab" x="920" y="616" width="400" height="224" fill="#c99a62" />
+
+        <!-- Middle block and small blocks on the floor: medium and lone fires -->
+        <rect id="block-middle" data-role="terrain" data-material="cardboard" data-label="Middle block" x="744" y="744" width="112" height="96" fill="#c99a62" />
+        <rect id="kindling-left" data-role="terrain" data-material="cardboard" x="704" y="824" width="16" height="16" fill="#c99a62" />
+        <rect id="kindling-right" data-role="terrain" data-material="cardboard" x="880" y="824" width="16" height="16" fill="#c99a62" />
+
+        <!-- Thin platforms: small fires -->
+        <rect id="thin-left" data-role="terrain" data-material="cardboard" data-label="Thin platform" x="520" y="440" width="240" height="16" fill="#c99a62" />
+        <rect id="thin-right" data-role="terrain" data-material="cardboard" data-label="Thin platform" x="840" y="440" width="240" height="16" fill="#c99a62" />
+        <rect id="thin-top" data-role="terrain" data-material="cardboard" data-label="Thin platform" x="680" y="288" width="240" height="16" fill="#c99a62" />
+        <rect id="step-left" data-role="terrain" data-material="cardboard" x="296" y="472" width="96" height="16" fill="#c99a62" />
+        <rect id="step-right" data-role="terrain" data-material="cardboard" x="1208" y="472" width="96" height="16" fill="#c99a62" />
+      </g>
+
+      <g id="spawns">
+        <circle data-role="spawn" cx="360" cy="592" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="600" cy="592" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="1000" cy="592" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="1240" cy="592" r="14" fill="#3f8f5f" />
+      </g>
+
+      <g id="drops">
+        <!-- Torches fall onto the slabs between the spawns; the middle drop mixes in rockets. -->
+        <circle data-role="drop" data-items="torch" cx="480" cy="80" r="12" fill="#c94f7c" />
+        <circle data-role="drop" data-items="torch" cx="1120" cy="80" r="12" fill="#c94f7c" />
+        <circle data-role="drop" data-items="torch rocket-launcher" cx="800" cy="80" r="12" fill="#c94f7c" />
+      </g>
+    </svg>
+  </body>
+</html>

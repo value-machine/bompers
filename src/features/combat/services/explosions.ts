@@ -81,7 +81,7 @@ function hitPlayers(ctx: CombatContext, blast: Blast): void {
  */
 export function reportTerrainDestroyed(
   combat: CombatState,
-  report: { cleared: ClearedCells; at: Vec2; timeSeconds: number }
+  report: { cleared: ClearedCells; at: Vec2; timeSeconds: number; silent?: boolean }
 ): void {
   const { at } = report;
   for (const { materialId, colorId, cells } of report.cleared.byLook) {
@@ -96,7 +96,7 @@ export function reportTerrainDestroyed(
         colorId,
         cells,
         effectId: material?.effect ?? "none",
-        soundId: material?.sound ?? "none",
+        soundId: report.silent ? "none" : (material?.sound ?? "none"),
       },
       report.timeSeconds
     );
