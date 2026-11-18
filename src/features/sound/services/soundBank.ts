@@ -64,6 +64,17 @@ export const SOUND_MIX = {
   /** The same sound retriggering faster than this is dropped (a pile-up of landings). */
   minRetriggerSeconds: 0.04,
   /**
+   * One blob's own sound (its landing, bounce, jump …) replaying sooner than this, in sim
+   * seconds, is dropped (collision-sound-jitter): longer than any contact jitter, shorter than
+   * the quickest real repeat (a jump and its landing are 0.3 s and more apart).
+   */
+  bodyRetriggerSeconds: 0.15,
+  /**
+   * Touchdowns slower than this (units / s) play no landing sound: a fall of under a third of the
+   * body height. The softest real landing, a cut-short hop, lands at about 380.
+   */
+  landingMinSpeed: 150,
+  /**
    * The two intensity knobs (owner, 2026-11-16): the impact speed (units / s) that plays at full
    * volume; slower is quieter, down to `JUICE_VOLUME.minGain` (`intensityGain`, gameJuice.ts).
    * Landing: fall speed at touchdown. Hit: a wall bonk's speed into the wall, or a hit victim's

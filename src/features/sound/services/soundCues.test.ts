@@ -78,8 +78,9 @@ describe("readSoundCues", () => {
   });
 
   it("should scale the land gain with landing speed when a player lands", () => {
+    const softest = SOUND_MIX.landingMinSpeed;
     const soft = cuesAfter(
-      snapshot({ players: [player(0, { landCount: 1, lastLandingSpeed: 0 }), player(1)] })
+      snapshot({ players: [player(0, { landCount: 1, lastLandingSpeed: softest }), player(1)] })
     );
     const hard = cuesAfter(
       snapshot({ players: [player(0, { landCount: 1, lastLandingSpeed: 5000 }), player(1)] })
@@ -318,5 +319,34 @@ describe("readSoundLoops", () => {
     expect(cuesAfter(cracked)).toEqual([{ soundId: "clink", slot: 0, gain: SOUND_MIX.crouchGain }]);
     const broke = snapshot({ players: [player(0), player(1, { iceShatterCount: 1 })] });
     expect(cuesAfter(broke)).toEqual([{ soundId: "clink", slot: 1, gain: 1 }]);
+  });
+});
+
+describe("readSoundCues — contact jitter guard", () => {
+  it("should not cue a land when the touchdown is slower than the landing minimum", () => {
+    const nudge = { landCount: 1, lastLandingSpeed: SOUND_MIX.landingMinSpeed - 1 };
+    expect(cuesAfter(snapshot({ players: [player(0, nudge), player(1)] }))).toEqual([]);
+  });
+
+  it("should drop a blob's repeat of its own sound when it comes sooner than the body re-trigger time", () => {
+    const at = (time: number, lands: number) =>
+      snapshot({
+        players: [player(0, { landCount: lands, lastLandingSpeed: 600 }), player(1)],
+        world: world({ timeSeconds: time }),
+      });
+    const gap = SOUND_MIX.bodyRetriggerSeconds;
+    let cursor = readSoundCues(null, at(0, 0)).cursor;
+    const heard = [at(0.01, 1), at(0.01 + gap / 2, 2), at(0.01 + gap, 3)].map((frame) => {
+      const read = readSoundCues(cursor, frame);
+      cursor = read.cursor;
+      return idsOf(read.cues);
+    });
+    expect(heard).toEqual([["land"], [], ["land"]]);
+  });
+
+  it("should keep each blob's own sounds apart when two blobs land on the same frame", () => {
+    const lands = { landCount: 1, lastLandingSpeed: 600 };
+    const cues = cuesAfter(snapshot({ players: [player(0, lands), player(1, lands)] }));
+    expect(cues.map((cue) => `${cue.soundId}:${cue.slot}`)).toEqual(["land:0", "land:1"]);
   });
 });
