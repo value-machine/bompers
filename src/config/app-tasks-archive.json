@@ -408,5 +408,20 @@
     "title": "Beam clash: torch meets freeze ray",
     "description": "Owner 2026-11-18: beams of opposing elements react where they meet instead of overlapping. Owner picked A, steam wall (PR #75): both stop at the meeting point in steam. One beam-vs-beam rule with a pair table.",
     "status": "done"
+  },
+  {
+    "title": "Bug: collision sound retriggers rapidly",
+    "description": "Owner 2026-11-18, found while playing: in some positions (against a moving platform, or other platforms) the player collision/land sound replays rapidly in bursts. Suspect the sim grounded/airborne flip (#59 found it) and resting/pushed contacts with movers. Fix at the source plus a per-body re-trigger guard.",
+    "status": "done"
+  },
+  {
+    "title": "Ability challenge levels",
+    "description": "Owner 2026-11-18: a creative thread designs levels that challenge every character ability (movement, headbutt, roll, crouch, moving parts) plus weapon abilities and combinations; concepts page first, then authored as kit levels via LEVEL_PROMPT with feedback on the prompt. Built as five built-in levels in PR #79.",
+    "status": "done"
+  },
+  {
+    "title": "Level prompt: crusher wording",
+    "description": "LEVEL_PROMPT section 3 says moving parts keep an 8-unit margin; the importer accepts flush contact and crush needs a gap under 5.6 (crusher-test-level contradicts the prompt). Fix the wording. Size XS. Owner OK 2026-11-18; also add movement numbers at base settings (jump height, running jump, dive length, wall-jump, jump+dive reach) instead of a route checker. Done in PR #79.",
+    "status": "done"
   }
 ]

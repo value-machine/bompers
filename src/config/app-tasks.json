@@ -10,11 +10,6 @@
     "status": "to-do"
   },
   {
-    "title": "Ability challenge levels",
-    "description": "Owner 2026-11-18: a creative thread designs levels that challenge every character ability (movement, headbutt, roll, crouch, moving parts) plus weapon abilities and combinations; concepts page first, then authored as kit levels via LEVEL_PROMPT with feedback on the prompt. Built as five built-in levels in PR #79.",
-    "status": "to-do"
-  },
-  {
     "title": "Moving parts: materials, fire, ice and beams",
     "description": "Owner 2026-11-18: spray beams (torch, freeze ray) must be stopped by moving parts, and moving parts can be any material, so they catch fire or freeze when their material takes it. Owner wants approaches, each deeper than the last, for a very extensible system; design page first.",
     "status": "to-do"
@@ -37,11 +32,6 @@
   {
     "title": "World of bodies L5: fire crosses where bodies touch",
     "description": "Fire spreads between a moving part and terrain where they touch (ask the owner first). Size S-M.",
-    "status": "to-do"
-  },
-  {
-    "title": "Bug: collision sound retriggers rapidly",
-    "description": "Owner 2026-11-18, found while playing: in some positions (against a moving platform, or other platforms) the player collision/land sound replays rapidly in bursts. Suspect the sim grounded/airborne flip (#59 found it) and resting/pushed contacts with movers. Fix at the source plus a per-body re-trigger guard.",
     "status": "to-do"
   },
   {
@@ -77,11 +67,6 @@
   {
     "title": "Roll speed carries into jump and dive",
     "description": "Owner go 2026-11-18: a jump or dive out of a roll keeps the roll speed. Built in the Double jump bash lap.",
-    "status": "to-do"
-  },
-  {
-    "title": "Level prompt: crusher wording",
-    "description": "LEVEL_PROMPT section 3 says moving parts keep an 8-unit margin; the importer accepts flush contact and crush needs a gap under 5.6 (crusher-test-level contradicts the prompt). Fix the wording. Size XS. Owner OK 2026-11-18; also add movement numbers at base settings (jump height, running jump, dive length, wall-jump, jump+dive reach) instead of a route checker. Done in PR #79.",
     "status": "to-do"
   },
   {
