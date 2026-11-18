@@ -54,7 +54,16 @@ export interface RocketState {
 
 /** What dealt a hit. The dive lap owns "dive"; new attacks add their source here. */
 export type HitSource = "rocket" | "dive" | "fire";
-export type EliminationCause = HitSource | "out-of-bounds";
+/** `crush`: squeezed between a moving part and terrain (LEVEL_FORMAT § 11, moving-parts D13). */
+export type EliminationCause = HitSource | "out-of-bounds" | "crush";
+
+/** Which way a crush squeezed the victim: the unit normal out of the part, and which part. */
+export interface CrushSqueeze {
+  nx: number;
+  ny: number;
+  /** Index in the arena's moving parts (the goo on the part rides with it). */
+  mover: number;
+}
 /** Damage table row a hit uses (`combat.hitDamage`): body contact, explosion or burning down. */
 export type HitKind = "contact" | "blast" | "burn";
 /** Where on the victim a hit lands, relative to the victim's facing. */
@@ -89,10 +98,29 @@ export type CombatEventBody =
       y: number;
     }
   | {
+      /** A moving part's author-declared sound (moving-parts B2; level file `data-*-sound`). */
+      type: "partSound";
+      soundId: string;
+      x: number;
+      y: number;
+    }
+  | {
       type: "playerEliminated";
       victimSlot: number;
       byPlayerSlot: number | null;
       cause: EliminationCause;
+      /**
+       * The lethal hit dealt more damage than the health left (it would end below 0). The
+       * knockout bursts on the spot instead of flying first (knockout feature).
+       */
+      overkill: boolean;
+      /** Set for a crush: the squeeze the pancake and its splats follow (knockout feature). */
+      squeeze?: CrushSqueeze;
+      /** The victim's feet point and velocity right after the lethal hit's knockback. */
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
     }
   | {
       /** A spray weapon started spraying (fire-spread b1): its start cue. */

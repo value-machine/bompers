@@ -19,7 +19,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   match: {
     durationSeconds: 180,
     maxPlayers: 4,
-    respawnDelaySeconds: 1.2,
+    // Long enough to see the knockout's goo splat land (owner, elimination-goo lap: 1.2 → 2.0).
+    respawnDelaySeconds: 2.0,
     spawnProtectionSeconds: 2.5,
     restartLockSeconds: 2,
     // A kill outweighs an orb; falling off alone costs a point (match-rules D1).
@@ -36,6 +37,7 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   player: {
     width: 28,
     height: 28,
+    crushGapFraction: 0.2,
     runSpeed: 340,
     groundAccel: 2600,
     groundDecel: 3000,
@@ -185,7 +187,15 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     // Chosen so power 50 (the rocket) keeps the pre-power blast: push 1080, reach 64, crater 34 on
     // toughness 1 (blast-power D3, D10). Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units;
     // with the recoil (1080 + 200) ≈ 585, well above a full jump (≈ 250).
-    blast: { pushPerPower: 21.6, reachPerPower: 1.28, craterPerPower: 0.68, minFalloff: 0.35 },
+    // hitPushScale: the push on hit players, lowered so a hit no longer flings a blob off the map
+    // (owner, elimination-goo Change round: 1 → 0.55); the shooter's rocket jump stays full.
+    blast: {
+      pushPerPower: 21.6,
+      reachPerPower: 1.28,
+      craterPerPower: 0.68,
+      minFalloff: 0.35,
+      hitPushScale: 0.55,
+    },
     drops: { firstDelaySeconds: 3, intervalSeconds: 7, maxActive: 2, size: 22 },
   },
   camera: {
@@ -250,5 +260,25 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     },
     // About 3 frames at 60 fps.
     hitStop: { seconds: JUICE_TIERS.heavy.hitStopSeconds },
+    // Owner's pick from the knockout demo rounds (elimination-goo lap, 2026-11-16).
+    knockout: {
+      hardContactSpeed: 200,
+      flungMaxSeconds: 0.65,
+      // The land pose: the strongest squash the juice band allows.
+      squash: { sx: 1.25, sy: 0.75, seconds: 0.1 },
+      bounce: 0.3,
+      friction: 0.25,
+      droplets: {
+        count: 6,
+        minRadius: 0.28,
+        maxRadius: 0.4,
+        minSpread: 90,
+        maxSpread: 200,
+        startOffset: 0.45,
+      },
+      piecePop: 300,
+      blinkSeconds: 0.5,
+      splatSeconds: 4,
+    },
   },
 };

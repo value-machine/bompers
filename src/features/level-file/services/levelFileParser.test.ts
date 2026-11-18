@@ -18,6 +18,7 @@ import type { LevelIssue } from "@/features/level-file/types/levelFile.types";
 const readRepoFile = (rel: string): string => readFileSync(path.join(process.cwd(), rel), "utf8");
 const EXAMPLE = readRepoFile("public/level-kit/v2/example-level.html");
 const FIRE_TEST = readRepoFile("public/level-kit/v2/fire-test-level.html");
+const CRUSHER_TEST = readRepoFile("public/level-kit/v2/crusher-test-level.html");
 const BUILT_INS = ["start-arena", "floating-garden"].map((id) => ({
   id,
   text: readRepoFile(`public/levels/${id}.html`),
@@ -454,5 +455,21 @@ describe("material system (acceptance)", () => {
       if (b.material === "ice") expect(grip).toBeLessThan(0.5);
       else expect(grip).toBe(1);
     }
+  });
+});
+
+describe("parseLevelFile — moving-parts test level", () => {
+  it("should import the crusher test level with its four moving parts and no warnings", () => {
+    const { level: def, warnings } = okLevel(parseLevelFile(CRUSHER_TEST));
+    expect(warnings).toEqual([]);
+    expect(def.meta.levelId).toBe("crusher-test");
+    expect(def.spawns).toHaveLength(4);
+    expect(def.movers?.map((mover) => mover.motion.kind)).toEqual([
+      "slide",
+      "spin",
+      "slide",
+      "slide",
+    ]);
+    expect(def.movers?.[0]?.sounds).toEqual({ end: "thud" });
   });
 });
