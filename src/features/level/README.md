@@ -8,7 +8,7 @@ The level model the engine runs on: `LevelDefinition` (geometry, spawns, drops, 
 
 | Layer    | Path                             | Purpose                                                                                                                                                                                                                                                                                                                                |
 | -------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Types    | `types/levelDefinition.types.ts` | `LevelDefinition` `{ formatVersion, meta{levelId, title, author?, agent?, description?}, settings{cellSize, gravity, matchDurationS?}, worldSize{w,h}, terrain[{shape: rect\|polygon\|circle, materialId, colorId?, effectId?, soundId?, behaviorId?}], spawns[], drops[{at, itemIds}], collectibles[{at, itemId}], bounds{x,y,w,h} }` |
+| Types    | `types/levelDefinition.types.ts` | `LevelDefinition` `{ formatVersion, meta{levelId, title, author?, agent?, description?}, settings{cellSize, gravity, matchDurationS?, weaponIds?}, worldSize{w,h}, terrain[{shape: rect\|polygon\|circle, materialId, colorId?, effectId?, soundId?, behaviorId?}], spawns[], drops[{at}], collectibles[{at, itemId}], bounds{x,y,w,h} }` |
 | Services | `services/levelDefinition.ts`    | `LEVEL_FORMAT_VERSION`, `DEFAULT_LEVEL_SETTINGS` (from the catalog defaults), `normalizeLevelDefinition(level)` → `{ level, warnings }`                                                                                                                                                                                                |
 | API      | `api/levelApi.ts`                | Public seam                                                                                                                                                                                                                                                                                                                            |
 
@@ -16,7 +16,7 @@ Units: 1 world unit = 1 SVG unit, origin top-left, y down. Spawn points are feet
 
 Normalisation applies the format's warnings that make sense on a parsed level and never throws. Each correction adds a warning naming its path (`terrain[3]: unknown material "lava", using "stone"`):
 
-- W4: unknown material → the catalog default material (`stone`); missing or unknown colour → the material's `defaultColor` (unknown warns); unknown effect / sound / behavior → dropped, so the material's default applies; unknown items → removed, a drop left empty gets the default drop items, a collectible gets the default collectible.
+- W4: unknown material → the catalog default material (`stone`); missing or unknown colour → the material's `defaultColor` (unknown warns); unknown effect / sound / behavior → dropped, so the material's default applies; an unknown collectible item → the default collectible; non-weapon IDs in `settings.weaponIds` → removed (a list emptied only by removals is dropped, so the lobby's weapons apply; an empty list stays = no weapons).
 - W5: spawn, drop and collectible points outside `bounds` are ignored. Spawn-inside-terrain needs the grid and is the importer's check.
 - W8: out-of-range settings → defaults.
 - Fewer than 2 valid spawns → warning (the importer turns it into error E5).
@@ -37,6 +37,7 @@ Seams for later work:
 - Levels hold geometry and gameplay data only; looks, sounds and behaviours are string IDs resolved through the content catalog (owner requirement, via orchestrator).
 - Unknown IDs resolve to a safe default plus a warning, never a crash (orchestrator).
 - Terrain has no role: the material alone decides breakability, the colour is looks only (material-system D1, D5).
+- Drops are spawn points only; `settings.weaponIds?` (file `data-weapons`) is an optional level default of the match's weapons setting and wins over the lobby, like `matchDurationS` (level-direction D6, weapons-match-setting D1).
 - `settings.cellSize` defaults to the catalog's 4: the arena turns it into the spacing of its distance-field samples (terrain-field D1).
 - `movers?: LevelMover[]` (`{ motion, pivot, terrainIndices, sounds? }`, sounds = author-declared `move` / `end` IDs, LEVEL_FORMAT § 11): moving parts keep their pieces in `terrain` at the rest pose and name them by index; the arena leaves them out of its static samples and runs each as a moving body. Motion is geometry, not a catalog behaviour; `data-behavior` stays for catalog behaviours (moving-parts D1, D2, D10).
 - A mover's pose is a pure function of round time, `motionPose(motion, t)` in `src/shared/utils/levelMotion.ts`; no mover state is stored (moving-parts D7).

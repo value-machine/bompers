@@ -1,16 +1,29 @@
 import type { InputSource } from "@/shared/types/gameInput.types";
+import type { WeaponItemId } from "@/shared/types/weaponItems.types";
 
 /** Match settings the players choose (GDD § 7). Gravity is a multiplier of the engine default. */
 export interface MatchSettings {
   durationSeconds: number;
   gravityScale: number;
+  /**
+   * Weapons switched off. Stored as the off set, so "all on" is auto: a weapon added to the game
+   * later is on without touching the setting (level-direction D6).
+   */
+  weaponsOff: readonly WeaponItemId[];
 }
 
 /** Player slots 0–3: the device that claimed each slot, or null when free. */
 export type LobbySlots = readonly (InputSource | null)[];
 
 /** The lobby menu, top to bottom. */
-export type LobbyRow = "level" | "loadFile" | "duration" | "gravity" | "start" | VolumeRow;
+export type LobbyRow =
+  | "level"
+  | "loadFile"
+  | "duration"
+  | "weapons"
+  | "gravity"
+  | "start"
+  | VolumeRow;
 
 export interface LobbyState {
   slots: LobbySlots;
@@ -19,6 +32,8 @@ export interface LobbyState {
   /** Chosen level library id; null = the first playable level. */
   levelId: string | null;
   settings: MatchSettings;
+  /** Index into `ALL_WEAPON_ITEM_IDS` of the crate the in-row cursor is on (weapons row). */
+  weaponCursor: number;
 }
 
 /** A menu button of one device (see `MenuInput`). */
@@ -32,6 +47,8 @@ export type LobbyAction =
   /** Pointer: step a value row. */
   | { type: "cycle"; row: LobbyRow; step: 1 | -1 }
   | { type: "selectLevel"; levelId: string }
+  /** Pointer: switch one weapon on or off (puts both cursors on it). */
+  | { type: "toggleWeapon"; weaponId: WeaponItemId }
   /** Pointer: free a slot. */
   | { type: "leave"; slot: number };
 
@@ -53,6 +70,18 @@ export type LobbyEffect = "start" | "pickFile" | VolumeEffect | null;
 export interface LobbyContext {
   /** Ids of the levels that can be played now, in picker order. */
   playableLevelIds: readonly string[];
+  /** The chosen level sets its own weapons, so the weapons row cannot change them. */
+  weaponsSetByLevel?: boolean;
+}
+
+/** One crate toggle on the weapons row. */
+export interface WeaponToggleView {
+  weaponId: WeaponItemId;
+  label: string;
+  /** In the match: the lobby's choice, or the level's when it sets them. */
+  on: boolean;
+  /** The in-row cursor is here and the weapons row has the menu cursor. */
+  focused: boolean;
 }
 
 export interface SlotView {
@@ -81,6 +110,11 @@ export interface LobbyView {
   gravity: string;
   /** "1:30" when the level's own match length overrides the lobby's, else null. */
   levelDuration: string | null;
+  weapons: WeaponToggleView[];
+  /** "All weapons" / "No weapons" / "Set by the level", else null (a mix speaks for itself). */
+  weaponsNote: string | null;
+  /** The level sets the weapons: the crates show its choice and do not toggle. */
+  weaponsLocked: boolean;
   /** "0.8× = 1.2×" style note when the level scales gravity, else null. */
   levelGravity: string | null;
   /** Volumes as "0"–"10". */

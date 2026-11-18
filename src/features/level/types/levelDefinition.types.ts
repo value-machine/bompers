@@ -40,12 +40,16 @@ export interface LevelSettings {
   gravity: number;
   /** Round length override, seconds. */
   matchDurationS?: number;
+  /**
+   * Weapons override (`data-weapons`): weapon item IDs the crates hold; empty = none. Unset = the
+   * lobby's choice (level-direction D6). Wins over the lobby, like `matchDurationS`.
+   */
+  weaponIds?: readonly string[];
 }
 
+/** A spawn point for sky crates; which weapon falls is the match's weapons setting. */
 export interface LevelDrop {
   at: Vec2;
-  /** Item IDs that may drop here. */
-  itemIds: readonly string[];
 }
 
 export interface LevelCollectible {

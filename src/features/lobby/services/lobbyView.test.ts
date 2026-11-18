@@ -35,6 +35,36 @@ describe("lobbyView", () => {
     expect(view.startable).toBe(true);
   });
 
+  it("should show every crate on with an All weapons note when the lobby opens", () => {
+    const view = lobbyView(createLobbyState(DEFAULT_GAME_TUNABLES), {
+      tunables: DEFAULT_GAME_TUNABLES,
+      context,
+      level: levelWith({ cellSize: 8, gravity: 1 }),
+      sound: DEFAULT_SOUND_SETTINGS,
+    });
+    expect(view.weapons.map((w) => [w.weaponId, w.on])).toEqual([
+      ["rocket-launcher", true],
+      ["homing-launcher", true],
+      ["torch", true],
+      ["freeze-ray", true],
+    ]);
+    expect(view.weapons[0]?.label).toBe("Rocket launcher");
+    expect(view.weaponsNote).toBe("All weapons");
+    expect(view.weaponsLocked).toBe(false);
+  });
+
+  it("should show the level's weapons locked with a note when the level sets them", () => {
+    const view = lobbyView(createLobbyState(DEFAULT_GAME_TUNABLES), {
+      tunables: DEFAULT_GAME_TUNABLES,
+      context,
+      level: levelWith({ cellSize: 8, gravity: 1, weaponIds: ["torch"] }),
+      sound: DEFAULT_SOUND_SETTINGS,
+    });
+    expect(view.weapons.filter((w) => w.on).map((w) => w.weaponId)).toEqual(["torch"]);
+    expect(view.weaponsNote).toBe("Set by the level");
+    expect(view.weaponsLocked).toBe(true);
+  });
+
   it("should note the level's own match length and gravity when the level sets them", () => {
     const state = createLobbyState(DEFAULT_GAME_TUNABLES);
     const level = levelWith({ cellSize: 8, gravity: 0.5, matchDurationS: 90 });

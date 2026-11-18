@@ -79,10 +79,7 @@ describe("parseLevelFile — kit files", () => {
       { x: 560, y: 436 },
       { x: 1040, y: 436 },
     ]);
-    expect(def.drops).toEqual([
-      { at: { x: 600, y: 80 }, itemIds: ["rocket-launcher", "homing-launcher"] },
-      { at: { x: 1000, y: 80 }, itemIds: ["rocket-launcher", "homing-launcher"] },
-    ]);
+    expect(def.drops).toEqual([{ at: { x: 600, y: 80 } }, { at: { x: 1000, y: 80 } }]);
     expect(def.collectibles).toHaveLength(3);
   });
 
@@ -127,13 +124,13 @@ describe("parseLevelFile — kit files", () => {
     expect(items.filter((id) => id === "dive-reset")).toHaveLength(3);
   });
 
-  it("should give the fire test level cardboard to burn, four spawns and a torch in every drop when imported", () => {
+  it("should give the fire test level cardboard to burn, four spawns and only torches when imported", () => {
     const { level: def, warnings } = okLevel(parseLevelFile(FIRE_TEST));
     expect(warnings).toEqual([]);
     expect(def.meta.levelId).toBe("fire-test");
     expect(def.spawns).toHaveLength(4);
     expect(def.drops).toHaveLength(3);
-    expect(def.drops.every((drop) => drop.itemIds.includes("torch"))).toBe(true);
+    expect(def.settings.weaponIds).toEqual(["torch", "rocket-launcher"]);
     expect(def.terrain.filter((piece) => piece.materialId === "cardboard")).toHaveLength(10);
     // Spawns stand on the big slabs, not inside them.
     const grid = buildTerrainFromLevel(def);
@@ -248,7 +245,7 @@ describe("parseLevelFile — element warnings load with fallbacks", () => {
       BOUNDS +
         SPAWNS +
         '<rect id="a" data-role="terrain" data-material="lava" data-color="teal" data-sound="Boom" x="100" y="400" width="600" height="64" />' +
-        '<circle data-role="drop" data-items="laser" cx="400" cy="40" r="1" />' +
+        '<circle data-role="drop" cx="400" cy="40" r="1" />' +
         '<circle data-role="collectible" data-item="gem" cx="400" cy="80" r="1" />'
     );
     expect(result.warnings).toEqual([
@@ -259,44 +256,64 @@ describe("parseLevelFile — element warnings load with fallbacks", () => {
         message:
           'terrain "a": data-sound="Boom" is not a valid ID (lowercase kebab-case); using the material\'s.',
       },
-      { code: "W4", message: 'drop #1: unknown item "laser"; left out.' },
-      { code: "W4", message: 'drop #1: no known item in data-items; using "rocket-launcher".' },
       { code: "W4", message: 'collectible #1: unknown item "gem"; using "point-orb".' },
     ]);
     expect(result.level.terrain[0]).toMatchObject({ materialId: "stone", colorId: "plum" });
     expect(result.level.terrain[0]).not.toHaveProperty("soundId");
-    expect(result.level.drops[0]?.itemIds).toEqual(["rocket-launcher"]);
     expect(result.level.collectibles[0]?.itemId).toBe("point-orb");
   });
 
-  it("should fall back to the role default with W11 when a known item sits on the wrong role", () => {
+  it("should fall back to the role default with W11 when a weapon sits on a collectible", () => {
     const result = warn(
       VALID_BODY +
-        '<circle data-role="drop" data-items="dive-reset homing-launcher" cx="400" cy="40" r="1" />' +
-        '<circle data-role="drop" data-items="point-orb" cx="300" cy="40" r="1" />' +
         '<circle id="c" data-role="collectible" data-item="rocket-launcher" cx="400" cy="80" r="1" />'
     );
     expect(result.warnings).toEqual([
-      {
-        code: "W11",
-        message: 'drop #2: "dive-reset" is a collectible item, not a drop item; left out.',
-      },
-      {
-        code: "W11",
-        message: 'drop #3: "point-orb" is a collectible item, not a drop item; left out.',
-      },
-      { code: "W4", message: 'drop #3: no known item in data-items; using "rocket-launcher".' },
       {
         code: "W11",
         message:
           'collectible "c": "rocket-launcher" is a drop item, not a collectible item; using "point-orb".',
       },
     ]);
-    expect(result.level.drops.map((drop) => drop.itemIds).slice(-2)).toEqual([
-      ["homing-launcher"],
-      ["rocket-launcher"],
-    ]);
     expect(result.level.collectibles.map((c) => c.itemId)).toEqual(["point-orb"]);
+  });
+
+  it("should warn W10 when a drop still lists data-items", () => {
+    const result = warn(
+      VALID_BODY + '<circle data-role="drop" data-items="torch" cx="300" cy="40" r="1" />'
+    );
+    expect(codes(result.warnings)).toEqual(["W10"]);
+  });
+});
+
+describe("parseLevelFile — weapons setting", () => {
+  const weaponsOf = (attr: string) =>
+    warn(VALID_BODY, `data-level-format="2" data-title="T" ${attr}`);
+
+  it("should leave the weapons to the lobby when data-weapons is missing or auto", () => {
+    expect(weaponsOf("").level.settings).not.toHaveProperty("weaponIds");
+    expect(weaponsOf('data-weapons="auto"').level.settings).not.toHaveProperty("weaponIds");
+  });
+
+  it("should read the listed weapons when data-weapons names some", () => {
+    const result = weaponsOf('data-weapons="rocket-launcher  freeze-ray"');
+    expect(result.warnings).toEqual([]);
+    expect(result.level.settings.weaponIds).toEqual(["rocket-launcher", "freeze-ray"]);
+  });
+
+  it("should read no weapons when data-weapons is none", () => {
+    expect(weaponsOf('data-weapons="none"').level.settings.weaponIds).toEqual([]);
+  });
+
+  it("should leave out non-weapons with W4 and fall back to the lobby when none is left", () => {
+    const some = weaponsOf('data-weapons="torch point-orb"');
+    expect(some.level.settings.weaponIds).toEqual(["torch"]);
+    expect(some.warnings).toEqual([
+      { code: "W4", message: 'data-weapons: "point-orb" is not a weapon; left out.' },
+    ]);
+    const none = weaponsOf('data-weapons="laser"');
+    expect(none.level.settings).not.toHaveProperty("weaponIds");
+    expect(codes(none.warnings)).toEqual(["W4", "W4"]);
   });
 });
 

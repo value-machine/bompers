@@ -1,4 +1,5 @@
 import type { CraterShape } from "@/shared/types/craterShape.types";
+import type { WeaponItemId } from "@/shared/types/weaponItems.types";
 
 /** Shape of the game tunables; values and docs: `src/shared/config/gameTunables.ts`. */
 export interface GameTunables {
@@ -19,6 +20,8 @@ export interface GameTunables {
   /** Round rules (GDD § 5, § 7). */
   match: {
     durationSeconds: number;
+    /** Weapons the sky crates hold, in turn; empty = no weapon crates (level-direction D6). */
+    weaponIds: readonly WeaponItemId[];
     maxPlayers: number;
     /** Seconds an eliminated player is out of play before respawning (GDD § 6). */
     respawnDelaySeconds: number;

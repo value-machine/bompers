@@ -1,6 +1,7 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
+import { isWeaponItemId } from "@/shared/config/weaponItems";
 import { cuePointsPassed, motionCuePoints } from "@/shared/utils/levelMotion";
 import { createArenaState, moversDistanceAt, type ArenaState } from "@/features/arena/api/arenaApi";
 import {
@@ -166,6 +167,8 @@ export function applyLevelSettings(tunables: GameTunables, settings: LevelSettin
     match: {
       ...tunables.match,
       durationSeconds: settings.matchDurationS ?? tunables.match.durationSeconds,
+      // A level's weapons win over the lobby's, like its duration (weapons-match-setting D1).
+      weaponIds: settings.weaponIds?.filter(isWeaponItemId) ?? tunables.match.weaponIds,
     },
   };
 }
