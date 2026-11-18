@@ -260,7 +260,7 @@ describe("combat — blast hurt reaction", () => {
     explode(world.ctx(), p0Blast({ x: 284, y: blastY + 6 }));
     expect(victim.rollSource).toBe("hit");
     // Thrown off the floor, then at rest. A low landing like this one no longer re-bounces
-    // (owner: "the roll bounces too much", double-jump-bash D16).
+    // (owner: "the roll bounces too much", roll-spin-bounce, 2026-11-18).
     let leftFloor = false;
     for (let i = 0; i < 900; i += 1) {
       world.step([], 1);

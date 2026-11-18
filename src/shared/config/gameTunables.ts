@@ -85,7 +85,7 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   // Rolling friction 200 + 1.5 × speed: a 1000 roll on the flat stops in ≈ 1.4 s (≈ 480 units);
   // on 20° it rolls down at ≈ 190 units / s. Bounces: restitution 0.3 above 300 units / s, so a
   // 250-unit fall hops once ≈ 22 units and a roll hugs slopes (was 0.6 / 160: an 89-unit hop and
-  // four more; owner bug report, double-jump-bash D16).
+  // four more; owner bug report, roll-spin-bounce, 2026-11-18).
   roll: {
     lockPerImpulse: 0.0008,
     maxLockSeconds: 1.2,

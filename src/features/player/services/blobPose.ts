@@ -64,6 +64,12 @@ export interface BlobPoseOverlay {
   pupilScale?: number;
 }
 
+/**
+ * Pinprick pupils of a blob in panic: burning (fire-burn D1), and squeezed or crushed by a moving
+ * part (owner, squish-eyes). Shared so every panic reads as the same face.
+ */
+export const PANIC_PUPIL_SCALE = 0.45;
+
 /** Feet lag the body by about two display frames (DESIGN_LANGUAGE § 6). */
 export const FEET_LAG_MS = 33;
 /** Feet squash this much harder than the body. */

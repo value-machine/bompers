@@ -426,12 +426,18 @@ interface PoseFrame {
   nowMs: number;
 }
 
+/** The body's scale: the movement pose's squash times the overlay's. */
+const bodyScale = ({ pose, overlay }: Pick<PoseFrame, "pose" | "overlay">) => ({
+  sx: pose.bodySx * (overlay?.sx ?? 1),
+  sy: pose.bodySy * (overlay?.sy ?? 1),
+});
+
 /**
  * Places and scales the blob. The root turns around the body centre (overlay rotation, roll, and
  * the lean on sloped ground).
  */
 function placeBlob(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): void {
-  const { pose, overlay } = frame;
+  const { overlay } = frame;
   // With no overlay, roll or slope this is the plain feet-point placement.
   const centerY = player.height / 2 + overlayLift(overlay);
   sprite.root.pivot.set(0, -player.height / 2);
@@ -445,8 +451,7 @@ function placeBlob(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
   });
   // The roll's spin is sim state (`roll.ts`): it follows the ball physics and eases upright.
   sprite.root.rotation = (overlay?.rotation ?? 0) + player.rollAngle + slopeLean;
-  const sx = pose.bodySx * (overlay?.sx ?? 1);
-  const sy = pose.bodySy * (overlay?.sy ?? 1);
+  const { sx, sy } = bodyScale(frame);
   const lean = overlay ? 0 : Math.max(-0.15, Math.min(0.15, player.vx / 2400));
   eachSide(sprite.body, (c) => {
     c.scale.set(sx, sy);
@@ -485,21 +490,27 @@ function placeFeet(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
   });
 }
 
+interface EyeLook {
+  face: CrouchFace;
+  pupilScale: number;
+  /** The body's scale this frame; the eyes undo it (owner, squish-eyes). */
+  bodyScale: { sx: number; sy: number };
+}
+
 /**
  * Eyes sit under the helmet rim and look toward the aim. While crouching they rise a little and
- * slip under the dome, so the lowered rim covers about half of each eye (crouch D7).
+ * slip under the dome, so the lowered rim covers about half of each eye (crouch D7). Every squash
+ * squishes the body but never the eyes: they ride their spot on the squashed face and undo the
+ * body's scale, so they keep their size and shape (owner, squish-eyes).
  */
-function placeEyes(
-  sprite: BlobSprite,
-  player: PlayerState,
-  look: { face: CrouchFace; pupilScale: number }
-): void {
-  const { face, pupilScale } = look;
+function placeEyes(sprite: BlobSprite, player: PlayerState, look: EyeLook): void {
+  const { face, pupilScale, bodyScale } = look;
   const { r, u } = sprite.metrics;
   const y = 0.12 * r + player.aimY * 2 * u - face.eyeLift * u;
   sprite.eyes.forEach((eye, i) => {
     const side = i === 0 ? -1 : 1;
     eye.position.set(side * 0.27 * r + player.aimX * 5 * u, y);
+    eye.scale.set(1 / bodyScale.sx, 1 / bodyScale.sy);
     eye.zIndex = face.eyesUnderHelmet ? EYES_UNDER_HELMET : EYES_OVER_HELMET;
     sprite.pupils[i]!.position.set(player.aimX * 1.6 * u, 1.5 * u + player.aimY * 1.2 * u);
     sprite.pupils[i]!.scale.set(pupilScale);
@@ -521,7 +532,11 @@ function applyPose(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
   const { pose } = frame;
   placeBlob(sprite, player, frame);
   placeFeet(sprite, player, frame);
-  placeEyes(sprite, player, { face: pose.face, pupilScale: frame.overlay?.pupilScale ?? 1 });
+  placeEyes(sprite, player, {
+    face: pose.face,
+    pupilScale: frame.overlay?.pupilScale ?? 1,
+    bodyScale: bodyScale(frame),
+  });
   placeFace(sprite, player, frame.armed);
   const { shadow } = pose;
   sprite.shadow.visible = shadow !== null;

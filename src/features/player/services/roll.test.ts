@@ -219,7 +219,7 @@ describe("roll exits", () => {
   });
 });
 
-// Owner bug reports on the ability levels (double-jump-bash D15, D16). The ice bowl stands in
+// Owner bug reports on the ability levels (roll-spin-bounce, 2026-11-18). The ice bowl stands in
 // for the chutes of Bobsled Run and Slush Bowl, which are not on main yet.
 const bowlPoints = Array.from({ length: 33 }, (_, a) => {
   const t = (Math.PI * a) / 32;

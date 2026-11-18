@@ -132,7 +132,7 @@ const wrapAngle = (angle: number): number => {
 /**
  * Spin: on the ground it follows the speed (a ball, no slip); in the air it keeps its rate. A roll
  * that starts in the air (a dash out of a dive, a blast) has no rate yet: it takes one from its
- * speed, or it would hang frozen until it lands (owner bug report, double-jump-bash D15).
+ * speed, or it would hang frozen until it lands (owner bug report, roll-spin-bounce, 2026-11-18).
  */
 function spin(player: PlayerState, dt: number): void {
   if (player.grounded || player.rollSpin === 0) {

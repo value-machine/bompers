@@ -9,7 +9,7 @@ import {
 import { unposePoint } from "@/shared/utils/levelMotion";
 import { moverDistanceAt, type MoverBody } from "@/features/arena/api/arenaApi";
 import type { CombatEvent, CrushSqueeze } from "@/features/combat/api/combatApi";
-import { reactToHit, type PlayerState } from "@/features/player/api/playerApi";
+import { PANIC_PUPIL_SCALE, reactToHit, type PlayerState } from "@/features/player/api/playerApi";
 import type {
   GooDroplet,
   GooSplat,
@@ -61,10 +61,10 @@ export interface Knockout {
  */
 export const CRUSH_PANCAKE = {
   holdSeconds: 0.15,
-  /** Body scale across and along the squeezed faces, and the startled pupils. */
+  /** Body scale across and along the squeezed faces, and the panic pupils (owner, squish-eyes). */
   across: 0.22,
   along: 1.6,
-  pupilScale: 1.4,
+  pupilScale: PANIC_PUPIL_SCALE,
   /** Splat offsets along each face (× R): on the part, then on the other face. */
   partOffsets: [-0.45, 0.35],
   wallOffsets: [-0.3, 0.5],

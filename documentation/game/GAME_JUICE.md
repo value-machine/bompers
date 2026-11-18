@@ -52,7 +52,7 @@ Loops (idle breathing 1.6 s, respawn blink 8 Hz) are not bound by a window. Owne
 - scales its amount by the impact (speed / full-impact speed), never above the preset;
 - kicks the helmet spring (`feel.helmet`) in the same frame, so body and helmet answer together.
 
-Feet lag the body by two frames and squash flatter (`player` feature, `blobPose.ts`).
+Feet lag the body by two frames and squash flatter (`player` feature, `blobPose.ts`). The eyes never squash: every squash and stretch leaves them their size and shape on the squashed face (owner, squish-eyes; `playerRenderer.ts` `placeEyes`).
 
 ## 5. Sound
 
@@ -105,8 +105,8 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Ice block breaks (third press, a hit, time up) | light | `ice-shatter` (pitched by the blob); a hit adds its own `hit` | — | — | — | — | eight ice shards fly off (500 ms) | — |
 | Ice block melts (fire) | light | fire's douse `steam-hiss` | — | — | — | — | white steam puffs (500 ms) | — |
 | Moving part moves / carries | — | — by default; the author's `data-move-sound` at its fastest point and `data-end-sound` at each turning point (owner B2) | — | — | — | — | — (no motion cue, owner B1) | — |
-| Crushed by a moving part | heavy | `land`, then `elimination` (owner B2) | pancake across the squeeze, held 0.15 s (past the band, owner B3) | — (no hit of its own) | 6 px (the back-hit kick) | — | goo stains on both faces, the part's riding along; helmet and tube fly off | pops off |
-| Squeezed by a moving part (survivable) | — (no hit) | — (the blob makes no sound; the part may have its own) | squash across the gap to the gap width, stretch along it up to 1.6×, every frame while squeezed; springs back the frame the gap opens (past the band, owner #64 change round) | — | — | — | — | — |
+| Crushed by a moving part | heavy | `land`, then `elimination` (owner B2) | pancake across the squeeze, held 0.15 s (past the band, owner B3); the eyes keep their size and show the panic pupils (owner, squish-eyes) | — (no hit of its own) | 6 px (the back-hit kick) | — | goo stains on both faces, the part's riding along; helmet and tube fly off | pops off |
+| Squeezed by a moving part (survivable) | — (no hit) | — (the blob makes no sound; the part may have its own) | squash across the gap to the gap width, stretch along it up to 1.6×, every frame while squeezed; springs back the frame the gap opens (past the band, owner #64 change round); the eyes keep their size and show the burning blob's panic pupils while squeezed (owner, squish-eyes) | — | — | — | — | — |
 | Fire blown off by a dive | light | the dive's `dive-launch` | — | — | — | — | ember flames thrown up and out (0.6 s) | — |
 | Fire passed by a bump | light | the bump's own cue | — | — | — | — | flame ball arcing to the rival (0.3 s) | — |
 | Burn tick (−1 chunk at 1 s, and at 2 s unless crouching) | medium (a `playerHit`) | `hit` via `playerHit` | as a hit | as a hit | as a hit | — | as a hit | as a hit |
