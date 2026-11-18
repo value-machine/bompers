@@ -66,6 +66,8 @@ export interface SoundWorldSnapshot {
   thawedSamples: number;
   /** The terrain's frozen-flag version (changes whenever a sample freezes or thaws). */
   frozenVersion: number;
+  /** Held beams ending each other in steam this step (beam-clash D1). */
+  beamClashes: number;
 }
 
 /**

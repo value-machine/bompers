@@ -218,6 +218,9 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       rays: 3,
       push: 300,
     },
+    // Beam clash (beam-clash D1): beams of reacting elements end each other where they come
+    // within one sample of touching.
+    beamClash: { thickness: 4 },
     // Chosen so power 50 (the rocket) keeps the pre-power blast: push 1080, reach 64, crater 34 on
     // toughness 1 (blast-power D3, D10). Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units;
     // with the recoil (1080 + 200) ≈ 585, well above a full jump (≈ 250).

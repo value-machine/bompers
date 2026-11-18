@@ -43,6 +43,7 @@ const world = (patch: Partial<SoundWorldSnapshot> = {}): SoundWorldSnapshot => (
   burningBlobs: 0,
   thawedSamples: 0,
   frozenVersion: 0,
+  beamClashes: 0,
   ...patch,
 });
 
@@ -281,6 +282,15 @@ describe("readSoundCues — thaw and steam", () => {
   it("should hiss steam when the torch melts frozen ground", () => {
     const cues = cuesOver(world(), world({ timeSeconds: 1, torchSlots: [0], frozenVersion: 1 }));
     expect(idsOf(cues)).toEqual(["steam-hiss"]);
+  });
+
+  it("should hiss steam at most once per element cue window when beams keep clashing", () => {
+    const step = SOUND_MIX.elementCueSeconds / 5;
+    const frames = Array.from({ length: 11 }, (_, i) =>
+      world({ timeSeconds: i * step, beamClashes: i === 0 ? 0 : 1 })
+    );
+    // Two windows of clashing: a hiss when it starts, and one per window after that.
+    expect(idsOf(cuesOver(...frames))).toEqual(["steam-hiss", "steam-hiss"]);
   });
 
   it("should stay quiet when the freeze ray changes frozen ground", () => {

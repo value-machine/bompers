@@ -389,6 +389,14 @@ export interface GameTunables {
       push: number;
     };
     /**
+     * Where two held beams of reacting elements meet (owner, beam-clash D1, the "Steam wall";
+     * the rule is `src/shared/utils/beamClash.ts`): both end there.
+     */
+    beamClash: {
+      /** How close two beams must come to count as touching, world units. */
+      thickness: number;
+    };
+    /**
      * One blast power P (0–100, each weapon's `power`) drives everything an explosion does, in
      * straight lines (blast-power D1, D3): players within `reachPerPower · P` of the blast
      * (nearest body point) get `pushPerPower · P` units / s at the centre, falling off linearly to

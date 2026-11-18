@@ -98,6 +98,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Blob catches fire (fire-burn b2) | light | `catch-fire` (pitched by the blob) | — | — | — | — | amber flame pop (0.6 s linger); then helmet flames, sweat, pinprick pupils while burning | — |
 | Burning blob panic (held) | — | — (the catch cue only) | drawn hop every 0.4 s, sx · sy within the band (±0.08) | — | — | — | drawn 5-unit hop; body and shadow stay on the ground | — |
 | Fire put out by ice | light | `steam-hiss` (pitched by the blob) | — | — | — | — | white steam puffs (0.6 s) | — |
+| Beam clash (torch flame meets freeze ray, held) | light | `steam-hiss` when it starts, then at most every 0.5 s while it holds | — | — | — | — | both beams end at the meeting point; white steam puffs with an ink edge keep rising from it (0.6 s each) | — |
 | Frost building on a blob (held ray) | — | — (the ray's start cue) | — | — | — | — | the ice block forms around the blob as the chill fills | — |
 | Blob freezes (ice-frozen-blobs) | light | `freeze-solid` (pitched by the blob) | — | — | — | — | white pop ring (250 ms), then the glossy block with pinprick pupils inside | — |
 | Ice block cracks (jump press) | light | `ice-crack`, soft (crouch gain, pitched by the blob) | drawn 4-unit hop, 200 ms | — | — | — | a crack line on the block, three ice chips (500 ms) | — |
