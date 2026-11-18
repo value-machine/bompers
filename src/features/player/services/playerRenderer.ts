@@ -7,6 +7,9 @@ import { weaponTubeParts } from "@/shared/utils/weaponTube";
 import {
   blobPose,
   createBlobAnim,
+  createContactHold,
+  stepContactHold,
+  type ContactHold,
   createFeetMotion,
   stepFeetMotion,
   type FeetMotion,
@@ -111,6 +114,8 @@ interface BlobSprite {
   wobble: HelmetWobble;
   feetMotion: FeetMotion;
   groundTilt: GroundTilt;
+  /** Steadied ground / wall contact the feet, the lean and the shadow read. */
+  contactHold: ContactHold;
   metrics: BlobMetrics;
   /** Outline step the ink was drawn at (null before the first draw). */
   inkStep: number | null;
@@ -319,6 +324,7 @@ function createBlobSprite(player: PlayerState): BlobSprite {
     wobble: createHelmetWobble(),
     feetMotion: createFeetMotion(player),
     groundTilt: createGroundTilt(),
+    contactHold: createContactHold(player),
     metrics: m,
     inkStep: null,
   };
@@ -381,9 +387,10 @@ function placeBlob(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
   const centerY = player.height / 2 + overlayLift(overlay);
   sprite.root.pivot.set(0, -player.height / 2);
   sprite.root.position.set(player.x, player.y - centerY);
+  const { contact } = sprite.contactHold;
   const slopeLean = stepGroundTilt(sprite.groundTilt, {
-    groundAngle: player.groundAngle,
-    grounded: player.grounded,
+    groundAngle: contact.groundAngle,
+    grounded: contact.grounded,
     nowMs: frame.nowMs,
     tunables: frame.groundTilt ?? DEFAULT_GAME_TUNABLES.feel.groundTilt,
   });
@@ -415,6 +422,7 @@ function placeFeet(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
     bodySx: pose.bodySx,
     footCentre: centre,
     rootLean: groundTiltLean(sprite.groundTilt),
+    contact: sprite.contactHold.contact,
     nowMs: frame.nowMs,
   });
   sprite.feet.forEach((foot, i) => {
@@ -538,10 +546,11 @@ function pruneSprites(view: PlayersView, seen: ReadonlySet<string>): void {
   }
 }
 
-/** Squash and crouch settings, defaulting to the shared tunables. */
+/** Squash, crouch and contact-hold settings, defaulting to the shared tunables. */
 const bodyTunables = (options: SyncPlayersOptions) => ({
   squash: options.squash ?? DEFAULT_GAME_TUNABLES.player.squash,
   crouch: options.crouch ?? DEFAULT_GAME_TUNABLES.player.crouch,
+  holdSeconds: (options.feet ?? DEFAULT_GAME_TUNABLES.feel.feet).contactHoldSeconds,
 });
 
 /** Matches the layer to the current players and poses them. Call once per rendered frame. */
@@ -551,14 +560,21 @@ export function syncPlayersView(
   options: SyncPlayersOptions = {}
 ): void {
   const nowMs = options.nowMs ?? performance.now();
-  const { squash, crouch } = bodyTunables(options);
+  const { squash, crouch, holdSeconds } = bodyTunables(options);
   const { helmet } = options;
   const zoom = options.zoom ?? 1;
   for (const player of players) {
     const sprite = spriteFor(view, player);
     const moment = noteBlobEvents(sprite.anim, { player, squash, nowMs });
     stepCrouchBlend(sprite.anim, { player, crouch, nowMs });
-    const pose = blobPose(sprite.anim, { player, squash, nowMs, crouch });
+    // Steadied first: the shadow, the lean and the feet all read it this frame.
+    const pose = blobPose(sprite.anim, {
+      player,
+      squash,
+      nowMs,
+      crouch,
+      contact: stepContactHold(sprite.contactHold, { player, nowMs, seconds: holdSeconds }),
+    });
     syncInk(sprite, zoom);
     syncTube(sprite, options.weapons?.get(player.id), zoom);
     applyPose(sprite, player, {

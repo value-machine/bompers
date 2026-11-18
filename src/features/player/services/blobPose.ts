@@ -202,9 +202,75 @@ function motionStretch(player: PlayerState, frame: { squash: SquashTunables; now
   return 1 + frame.squash.breathAmplitude * Math.sin(phase);
 }
 
-/** Flat contact shadow while airborne over ground within range; null otherwise. */
-export function blobShadow(player: PlayerState): BlobShadow | null {
-  if (player.grounded || player.groundBelowY === null) return null;
+/**
+ * What the blob touches, as the render layer reads it. `PlayerState` fits as is; `stepContactHold`
+ * gives a steadied copy.
+ */
+export interface SurfaceContact {
+  grounded: boolean;
+  /** Radians, + rising right. */
+  groundAngle: number;
+  wallDir: -1 | 0 | 1;
+}
+
+/** Per-player contact memory kept by the render layer. */
+export interface ContactHold {
+  contact: SurfaceContact;
+  /** Render clock when the sim last reported the ground / a wall. */
+  groundAtMs: number;
+  wallAtMs: number;
+  seenJumps: number;
+  seenWallJumps: number;
+}
+
+export const createContactHold = (player: PlayerState): ContactHold => ({
+  contact: { grounded: player.grounded, groundAngle: player.groundAngle, wallDir: player.wallDir },
+  groundAtMs: -Infinity,
+  wallAtMs: -Infinity,
+  seenJumps: player.jumpCount,
+  seenWallJumps: player.wallJumpCount,
+});
+
+/**
+ * Steadies the sim's contact for drawing (leg-locomotion D5). Where a slope is as steep as a wall
+ * the sim slides the blob off and lands it again, so `grounded` and `wallDir` can flip on every
+ * step; drawn straight, the feet, the lean and the shadow flicker. A contact the sim just
+ * reported is kept for `seconds` after it is gone. A jump or wall-jump lets go at once.
+ */
+export function stepContactHold(
+  hold: ContactHold,
+  frame: { player: PlayerState; nowMs: number; seconds: number }
+): SurfaceContact {
+  const { player, nowMs } = frame;
+  const { contact } = hold;
+  const jumped = player.jumpCount !== hold.seenJumps || player.wallJumpCount !== hold.seenWallJumps;
+  hold.seenJumps = player.jumpCount;
+  hold.seenWallJumps = player.wallJumpCount;
+  // A clock that jumped back (tab switch, reset) holds nothing.
+  const expired = (sinceMs: number): boolean =>
+    jumped || nowMs < sinceMs || nowMs - sinceMs > frame.seconds * 1000;
+  if (player.grounded) {
+    contact.groundAngle = player.groundAngle;
+    hold.groundAtMs = nowMs;
+  }
+  contact.grounded = player.grounded || (contact.grounded && !expired(hold.groundAtMs));
+  if (player.wallDir !== 0) {
+    contact.wallDir = player.wallDir;
+    hold.wallAtMs = nowMs;
+  }
+  if (expired(hold.wallAtMs)) contact.wallDir = 0;
+  return contact;
+}
+
+/**
+ * Flat contact shadow while airborne over ground within range; null otherwise. `contact` is the
+ * steadied contact when the caller has one.
+ */
+export function blobShadow(
+  player: PlayerState,
+  contact: SurfaceContact = player
+): BlobShadow | null {
+  if (contact.grounded || player.grounded || player.groundBelowY === null) return null;
   const shadow = contactShadow(player.groundBelowY - player.y, player.width);
   if (!shadow || shadow.alpha <= 0) return null;
   return { y: player.groundBelowY, ...shadow };
@@ -216,7 +282,14 @@ export function blobShadow(player: PlayerState): BlobShadow | null {
  */
 export function blobPose(
   anim: BlobAnim,
-  frame: { player: PlayerState; squash: SquashTunables; nowMs: number; crouch?: CrouchTunables }
+  frame: {
+    player: PlayerState;
+    squash: SquashTunables;
+    nowMs: number;
+    crouch?: CrouchTunables;
+    /** Steadied contact for the shadow; the player's own when left out. */
+    contact?: SurfaceContact;
+  }
 ): BlobPose {
   const { player, squash, nowMs } = frame;
   const body = eventSquash(anim, { squash, atMs: nowMs });
@@ -228,7 +301,7 @@ export function blobPose(
     bodySy: body.sy * stretch * crouched.sy,
     feetSx: 1 + (feet.sx - 1) * FEET_SQUASH_GAIN,
     feetSy: Math.max(0.3, 1 + (feet.sy - 1) * FEET_SQUASH_GAIN),
-    shadow: blobShadow(player),
+    shadow: blobShadow(player, frame.contact),
     face: crouchFace(anim, frame.crouch),
   };
 }
@@ -375,6 +448,8 @@ interface FeetFrame {
   footCentre: number;
   /** Lean the blob's root already carries for the slope (rad, clockwise); the feet turn the rest. */
   rootLean: number;
+  /** Steadied contact (`stepContactHold`); the player's own when left out. */
+  contact?: SurfaceContact;
   nowMs: number;
 }
 
@@ -382,15 +457,17 @@ interface FeetFrame {
 interface FeetStep extends FeetFrame {
   /** Slope of that surface (rad, + rising right; a wall is ±90°), or null in the air. */
   slope: number | null;
+  /** Whether that surface is the ground. */
+  onGround: boolean;
 }
 
 /** Moves further than this many R in one step (a respawn, a teleport) don't count as travel. */
 const MAX_STEP_TRAVEL = 4;
 
 /** The surface the feet stand on: the ground, else the wall the blob touches, else none. */
-function surfaceSlope(player: PlayerState): number | null {
-  if (player.grounded) return player.groundAngle;
-  if (player.wallDir !== 0) return player.wallDir * (Math.PI / 2);
+function surfaceSlope(contact: SurfaceContact): number | null {
+  if (contact.grounded) return contact.groundAngle;
+  if (contact.wallDir !== 0) return contact.wallDir * (Math.PI / 2);
   return null;
 }
 
@@ -408,9 +485,9 @@ function noteFeetEvents(motion: FeetMotion, frame: FeetFrame): void {
 }
 
 /** Air tilt target: feet trail the horizontal speed and droop (rising) or flare (falling). */
-function airTiltTarget(player: PlayerState, feet: FeetTunables): number {
-  if (player.grounded) return 0;
-  return -clamp(player.vx / feet.airTiltSpeed, -1, 1) * feet.airTilt;
+function airTiltTarget(step: FeetStep): number {
+  if (step.onGround) return 0;
+  return -clamp(step.player.vx / step.feet.airTiltSpeed, -1, 1) * step.feet.airTilt;
 }
 
 /** Adds the distance moved along the surface since the last step (sideways in the air). */
@@ -432,7 +509,7 @@ function noteTravel(motion: FeetMotion, step: FeetStep): void {
  */
 function angleTarget(step: FeetStep): number {
   const { player, slope } = step;
-  if (slope === null || player.rollSource !== null) return airTiltTarget(player, step.feet);
+  if (slope === null || player.rollSource !== null) return airTiltTarget(step);
   return -slope - step.rootLean;
 }
 
@@ -534,7 +611,8 @@ export function stepFeetMotion(motion: FeetMotion, frame: FeetFrame): [FootPose,
   // A clock that stalls or jumps back (tab switch, reset) steps nothing.
   const dt = motion.lastMs === null ? 0 : Math.max(0, (frame.nowMs - motion.lastMs) / 1000);
   motion.lastMs = frame.nowMs;
-  const step: FeetStep = { ...frame, slope: surfaceSlope(frame.player) };
+  const contact = frame.contact ?? frame.player;
+  const step: FeetStep = { ...frame, slope: surfaceSlope(contact), onGround: contact.grounded };
   noteFeetEvents(motion, frame);
   noteTravel(motion, step);
   stepSprings(motion, step, dt);

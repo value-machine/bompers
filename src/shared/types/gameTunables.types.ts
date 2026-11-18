@@ -459,6 +459,12 @@ export interface GameTunables {
        * when the surface changes. Stiffness 1/s², damping 1/s.
        */
       surface: { stiffness: number; damping: number };
+      /**
+       * Seconds the drawn blob keeps a ground or wall contact after the sim stops reporting it, so
+       * a contact that flips every step (a slope as steep as a wall) doesn't flicker the feet, the
+       * lean or the shadow. A jump lets go at once.
+       */
+      contactHoldSeconds: number;
     };
     /** Render-only freeze after a hard hit (the sim keeps running); 0 turns it off. */
     hitStop: { seconds: number };

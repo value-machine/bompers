@@ -16,8 +16,13 @@ import {
   stepFeetMotion,
   createGroundTilt,
   stepGroundTilt,
+  createContactHold,
+  stepContactHold,
 } from "@/features/player/services/blobPose";
-import { createPlayer } from "@/features/player/services/playerController";
+import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
+import { buildTerrainFromLevel } from "@/features/arena/api/arenaApi";
+import type { LevelDefinition } from "@/features/level/api/levelApi";
+import { createPlayer, stepPlayers } from "@/features/player/services/playerController";
 import type { PlayerState } from "@/features/player/types/player.types";
 
 const squash = DEFAULT_GAME_TUNABLES.player.squash;
@@ -437,5 +442,144 @@ describe("stepGroundTilt", () => {
       tunables,
     });
     expect(Math.abs(first)).toBeLessThan(tunables.share * 30 * DEG * 0.5);
+  });
+});
+
+// --- Contact hold ---
+
+const HOLD_SECONDS = feet.contactHoldSeconds;
+
+describe("stepContactHold", () => {
+  it("should keep the ground contact when the sim flips it off and on every step", () => {
+    const p = feetPlayer({ groundAngle: 1.4 });
+    const hold = createContactHold(p);
+    const seen: boolean[] = [];
+    for (let i = 0; i < 60; i += 1) {
+      p.grounded = i % 2 === 0;
+      p.wallDir = p.grounded ? 0 : 1;
+      p.groundAngle = p.grounded ? 1.4 : 0;
+      const contact = stepContactHold(hold, { player: p, nowMs: i * 8, seconds: HOLD_SECONDS });
+      seen.push(contact.grounded);
+      expect(contact.groundAngle).toBe(1.4);
+    }
+    expect(seen.every(Boolean)).toBe(true);
+  });
+
+  it("should let go of the ground at once when a jump is counted", () => {
+    const p = feetPlayer();
+    const hold = createContactHold(p);
+    stepContactHold(hold, { player: p, nowMs: 0, seconds: HOLD_SECONDS });
+    p.grounded = false;
+    p.jumpCount += 1;
+    const contact = stepContactHold(hold, { player: p, nowMs: 8, seconds: HOLD_SECONDS });
+    expect(contact.grounded).toBe(false);
+  });
+
+  it("should let go of the ground when it stays gone longer than the hold time", () => {
+    const p = feetPlayer();
+    const hold = createContactHold(p);
+    stepContactHold(hold, { player: p, nowMs: 0, seconds: HOLD_SECONDS });
+    p.grounded = false;
+    const at = (ms: number) =>
+      stepContactHold(hold, { player: p, nowMs: ms, seconds: HOLD_SECONDS }).grounded;
+    expect(at(HOLD_SECONDS * 1000 - 10)).toBe(true);
+    expect(at(HOLD_SECONDS * 1000 + 10)).toBe(false);
+  });
+});
+
+// A floor that curves up through a quarter arc (radius 120, 4-unit samples) into a wall: every
+// slope angle from 0° to 90°, across many cell edges.
+const ARC_R = 120;
+const arcWorld: LevelDefinition = {
+  formatVersion: 1,
+  meta: { levelId: "arc", title: "Arc" },
+  settings: { cellSize: 4, gravity: 1 },
+  worldSize: { w: 800, h: 400 },
+  terrain: [
+    {
+      shape: {
+        type: "polygon",
+        points: [
+          { x: 0, y: 320 },
+          ...Array.from({ length: 25 }, (_, i) => {
+            const a = (i / 24) * (Math.PI / 2);
+            return { x: 500 + ARC_R * Math.sin(a), y: 320 - ARC_R * (1 - Math.cos(a)) };
+          }),
+          { x: 620, y: 0 },
+          { x: 800, y: 0 },
+          { x: 800, y: 400 },
+          { x: 0, y: 400 },
+        ],
+      },
+      materialId: "stone",
+    },
+  ],
+  spawns: [],
+  drops: [],
+  collectibles: [],
+  bounds: { x: 0, y: 0, w: 800, h: 400 },
+};
+
+/**
+ * Runs the real controller up the arc and into the wall, holding right, and draws every
+ * `stride`-th sim step (1 = 120 fps, 2 = 60 fps). Returns what the screen shows per drawn frame.
+ */
+function drawArcRun(stride: number) {
+  const terrain = buildTerrainFromLevel(arcWorld);
+  const p = createPlayer(0, { x: 300, y: 280 }, DEFAULT_GAME_TUNABLES);
+  const draw = arcDrawer(p);
+  const frames: ReturnType<typeof draw>[] = [];
+  for (let i = 0; i < 600; i += 1) {
+    const inputs = [{ ...EMPTY_PLAYER_INPUT, connected: true, moveX: i < 60 ? 0 : 1 }];
+    stepPlayers({ players: [p], inputs, terrain, tunables: DEFAULT_GAME_TUNABLES, dt: 1 / 120 });
+    if (i % stride === 0) frames.push(draw((i * 1000) / 120));
+  }
+  // From the first frame standing on the floor.
+  return frames.slice(frames.findIndex((frame) => frame.rawGrounded));
+}
+
+/** One drawn frame the way the renderer chains it: contact hold, then lean, then feet and shadow. */
+function arcDrawer(p: PlayerState) {
+  const hold = createContactHold(p);
+  const motion = createFeetMotion(p);
+  const tilt = createGroundTilt();
+  const tunables = DEFAULT_GAME_TUNABLES.feel.groundTilt;
+  return (nowMs: number) => {
+    const contact = stepContactHold(hold, { player: p, nowMs, seconds: HOLD_SECONDS });
+    const { groundAngle, grounded } = contact;
+    const lean = stepGroundTilt(tilt, { groundAngle, grounded, nowMs, tunables });
+    stepFeetMotion(motion, { ...feetFrame(p, nowMs, lean), contact });
+    return {
+      // Where the soles face on screen, without the run cycle's own toe tilt.
+      sole: motion.lastAngleTarget + motion.angle.value + lean,
+      lean,
+      shadow: blobShadow(p, contact) !== null,
+      rawGrounded: p.grounded,
+    };
+  };
+}
+
+const flips = (values: boolean[]): number =>
+  values.filter((value, i) => i > 0 && value !== values[i - 1]).length;
+
+const maxStep = (values: number[]): number =>
+  Math.max(...values.slice(1).map((value, i) => Math.abs(value - values[i]!)));
+
+describe("feet, lean and shadow on a slope that steepens into a wall", () => {
+  it("should reproduce the sim flipping its ground contact where the slope meets the wall", () => {
+    // The cause of the flicker: without it this suite proves nothing.
+    expect(flips(drawArcRun(1).map((frame) => frame.rawGrounded))).toBeGreaterThan(20);
+  });
+
+  it.each([1, 2])("should not flicker when drawn every %i sim steps", (stride) => {
+    const frames = drawArcRun(stride);
+    expect(frames.some((frame) => frame.shadow)).toBe(false);
+    // Radians per drawn frame: a smooth turn, never a ping-pong.
+    expect(maxStep(frames.map((frame) => frame.sole))).toBeLessThan(0.08 * stride);
+    expect(maxStep(frames.map((frame) => frame.lean))).toBeLessThan(0.05 * stride);
+    // Pushing into the wall at the end, everything stands still.
+    const tail = frames.slice(-60 / stride);
+    expect(maxStep(tail.map((frame) => frame.sole))).toBeLessThan(0.005);
+    expect(maxStep(tail.map((frame) => frame.lean))).toBeLessThan(0.005);
   });
 });

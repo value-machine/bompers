@@ -244,6 +244,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       maxSplay: 0.6,
       // Turns to a new surface in about a fifth of a second, with a small overshoot.
       surface: { stiffness: 300, damping: 24 },
+      // 6 frames at 60 fps: longer than the sim's on / off flips, too short to see as a delay.
+      contactHoldSeconds: 0.1,
     },
     // About 3 frames at 60 fps.
     hitStop: { seconds: JUICE_TIERS.heavy.hitStopSeconds },
