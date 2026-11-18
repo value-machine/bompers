@@ -21,7 +21,17 @@
   },
   {
     "title": "Ice lap 4: look polish",
-    "description": "Ice element follow-up, optional: polish the freeze look after the owner has played it, as fire-visuals and fire-clusters did for fire. Size S.",
+    "description": "Ice element follow-up, optional: polish the frozen ground look after the owner has played it. The ray look was settled in #63 (owner pick D9, cold breath). Size S.",
+    "status": "to-do"
+  },
+  {
+    "title": "Fire and ice follow the terrain shape",
+    "description": "Owner 2026-11-18: burning and frozen areas lose the base shape (per-row rounded slabs). Owner picked C: draw states with the same contour rule as the terrain (terrainContour region option replacing breakableOnly, a sample-region field, surface points). Fire and ice renderers switch over after the freeze ray (#63) merges. Thread: Fire and ice overlays keep the terrain shape.",
+    "status": "to-do"
+  },
+  {
+    "title": "Stains as a terrain state",
+    "description": "Owner 2026-11-18: goo splats should stain the actual objects (the samples/texels of terrain and moving parts) instead of drawing a sprite on top. Use the same per-sample state system as fire and ice (a third state with a colour per stain and fading), drawn through the region/contour mechanism, including on moving parts. Starts with an options page. After the fire and ice overlay-shape lap.",
     "status": "to-do"
   },
   {
