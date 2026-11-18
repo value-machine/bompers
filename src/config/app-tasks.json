@@ -11,7 +11,7 @@
   },
   {
     "title": "Ability challenge levels",
-    "description": "Owner 2026-11-18: a creative thread designs levels that challenge every character ability (movement, headbutt, roll, crouch, moving parts) plus weapon abilities and combinations; concepts page first, then authored as kit levels via LEVEL_PROMPT with feedback on the prompt.",
+    "description": "Owner 2026-11-18: a creative thread designs levels that challenge every character ability (movement, headbutt, roll, crouch, moving parts) plus weapon abilities and combinations; concepts page first, then authored as kit levels via LEVEL_PROMPT with feedback on the prompt. Built as five built-in levels in PR #79.",
     "status": "to-do"
   },
   {
@@ -72,6 +72,26 @@
   {
     "title": "Level gallery",
     "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): later, unshaped. No remix feature.",
+    "status": "to-do"
+  },
+  {
+    "title": "Roll speed carries into jump and dive",
+    "description": "Proposed by ability-levels (PR #79): today a jump or dive out of a roll does not keep the roll speed, so no level can require the roll (Bobsled Run). Option: a jump or dive out of a roll keeps the roll speed. Gameplay change: owner decides.",
+    "status": "to-do"
+  },
+  {
+    "title": "Level prompt: crusher wording",
+    "description": "LEVEL_PROMPT section 3 says moving parts keep an 8-unit margin; the importer accepts flush contact and crush needs a gap under 5.6 (crusher-test-level contradicts the prompt). Fix the wording. Size XS.",
+    "status": "to-do"
+  },
+  {
+    "title": "Per-drop weapon choice",
+    "description": "Proposed by ability-levels: let a drop name one weapon (data-item) within the match weapons setting, so a level can place e.g. a torch crate at a bridge. Revisits the level-direction drop decision (#61): owner decides.",
+    "status": "to-do"
+  },
+  {
+    "title": "Route checker for level authors",
+    "description": "Proposed by ability-levels: a tool that checks whether jumps/gaps in a level are reachable with current tunables, so AI authors stop hand-calculating. Size M.",
     "status": "to-do"
   }
 ]
