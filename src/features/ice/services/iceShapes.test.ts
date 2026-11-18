@@ -4,7 +4,7 @@ import {
   ICE_LOOK,
   breathRelease,
   breathShape,
-  frozenShapes,
+  frostGloss,
 } from "@/features/ice/services/iceShapes";
 import type { FreezeRayBeam } from "@/features/ice/types/ice.types";
 
@@ -94,15 +94,21 @@ describe("iceShapes — cold breath (ice-element D9)", () => {
 });
 
 describe("iceShapes — frozen ground (ice-element D4)", () => {
-  it("should cost one body slab per row run and a lip on top edges only", () => {
+  it("should streak only blocks with frozen ground all round when a patch is frozen", () => {
     const blocks = new Map<number, { bx: number; by: number }>();
     const stride = 100;
-    for (let by = 0; by < 3; by += 1) {
-      for (let bx = 0; bx < 5; bx += 1) blocks.set(by * stride + bx, { bx, by });
+    for (let by = 0; by < 12; by += 1) {
+      for (let bx = 0; bx < 12; bx += 1) blocks.set(by * stride + bx, { bx, by });
     }
-    const shapes = frozenShapes(blocks, { size: 8, stride });
-    expect(shapes.body).toHaveLength(3);
-    expect(shapes.lip).toHaveLength(1);
-    expect(shapes.lip[0]!.y).toBe(0);
+    const gloss = frostGloss(blocks, { size: 8, stride });
+    expect(gloss.length).toBeGreaterThan(0);
+    for (const { a, b } of gloss) {
+      for (const p of [a, b]) {
+        expect(p.x).toBeGreaterThan(8);
+        expect(p.x).toBeLessThan(11 * 8);
+        expect(p.y).toBeGreaterThan(8);
+        expect(p.y).toBeLessThan(11 * 8);
+      }
+    }
   });
 });

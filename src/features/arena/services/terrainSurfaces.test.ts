@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 import { clearCrater } from "@/features/arena/services/terrainGrid";
-import { terrainContour, type MaskShapes } from "@/features/arena/services/terrainSurfaces";
+import {
+  breakableRegion,
+  edgeAbove,
+  markedRegion,
+  terrainContour,
+  type MaskShapes,
+} from "@/features/arena/services/terrainSurfaces";
 
 const level: LevelDefinition = {
   formatVersion: 2,
@@ -38,9 +44,9 @@ const covers = (mask: MaskShapes, x: number, y: number): boolean =>
 
 const W = 3;
 const fill = (grid: ReturnType<typeof buildTerrainFromLevel>): MaskShapes =>
-  terrainContour(grid, { grow: 0, breakableOnly: true });
+  terrainContour(grid, { grow: 0, region: breakableRegion(grid) });
 const outline = (grid: ReturnType<typeof buildTerrainFromLevel>): MaskShapes =>
-  terrainContour(grid, { grow: W, breakableOnly: false });
+  terrainContour(grid, { grow: W });
 
 describe("terrainContour", () => {
   it("should trace an untouched slab as itself: fill inside its edge, ink one width outside it", () => {
@@ -97,5 +103,116 @@ describe("terrainContour", () => {
     }
     // The stone floor below keeps its outline.
     expect(covers(ink, 200, 168)).toBe(true);
+  });
+});
+
+describe("terrainContour limited to marked samples (a burning or frozen part)", () => {
+  type Grid = ReturnType<typeof buildTerrainFromLevel>;
+  const centre = (grid: Grid, index: number) => ({
+    x: ((index % grid.widthCells) + 0.5) * grid.cellSize,
+    y: (Math.floor(index / grid.widthCells) + 0.5) * grid.cellSize,
+  });
+  /** The earth slab's samples that pass `keep` (the stone floor starts at y 170). */
+  const earth = (grid: Grid, keep: (at: { x: number; y: number }) => boolean): number[] =>
+    [...grid.cells.keys()].filter((index) => {
+      const at = centre(grid, index);
+      return grid.cells[index] !== 0 && at.y < 165 && keep(at);
+    });
+  const part = (grid: Grid, samples: number[], grow = 0): MaskShapes => {
+    const region = markedRegion(grid, samples);
+    return region ? terrainContour(grid, { grow, region }) : { rects: [], pieces: [] };
+  };
+
+  it("should follow the terrain's own edge when the marked part reaches it", () => {
+    const grid = buildTerrainFromLevel(level);
+    const mask = part(
+      grid,
+      earth(grid, (at) => at.x < 200)
+    );
+    expect(covers(mask, 120, 101.6)).toBe(true);
+    expect(covers(mask, 120, 100.4)).toBe(false);
+    // The slab's rounded corner, as the terrain fill has it.
+    expect(covers(mask, 50.3, 101.3)).toBe(false);
+  });
+
+  it("should follow the curved crater rim to within half a unit when the marked ground is cut", () => {
+    const grid = buildTerrainFromLevel(level);
+    const hole = { x: 200, y: 101 };
+    clearCrater(grid, { ...hole, reach: 34, shape: "round" });
+    const mask = part(
+      grid,
+      earth(grid, () => true)
+    );
+    for (let deg = 20; deg <= 160; deg += 7) {
+      const a = (deg * Math.PI) / 180;
+      for (const r of [34 - 0.5, 34 + 0.5]) {
+        const x = hole.x + Math.cos(a) * r;
+        const y = hole.y + Math.sin(a) * r;
+        expect(covers(mask, x, y), `${deg}° r ${r}`).toBe(r > 34);
+      }
+    }
+  });
+
+  it("should hold every marked sample and no unmarked one when the part ends inside the terrain", () => {
+    const grid = buildTerrainFromLevel(level);
+    const inPart = (at: { x: number; y: number }) => at.x < 200 + 12 * Math.sin(at.y / 8);
+    const samples = earth(grid, inPart);
+    const mask = part(grid, samples);
+    const marked = new Set(samples);
+    for (const index of earth(grid, (at) => at.x > 150 && at.x < 250)) {
+      const at = centre(grid, index);
+      expect(covers(mask, at.x, at.y), `${at.x}, ${at.y}`).toBe(marked.has(index));
+    }
+  });
+
+  it("should show a single marked sample when a part has just started", () => {
+    const grid = buildTerrainFromLevel(level);
+    const [index] = earth(grid, (at) => at.x > 200 && at.y > 130);
+    const at = centre(grid, index!);
+    const mask = part(grid, [index!]);
+    expect(covers(mask, at.x, at.y)).toBe(true);
+    expect(covers(mask, at.x + grid.cellSize, at.y)).toBe(false);
+  });
+
+  it("should stay inside the terrain's outline when the part is grown for its ink line", () => {
+    const grid = buildTerrainFromLevel(level);
+    const ink = part(
+      grid,
+      earth(grid, (at) => at.x < 200),
+      W
+    );
+    expect(covers(ink, 120, 101 - W + 0.6)).toBe(true);
+    expect(covers(ink, 120, 101 - W - 0.6)).toBe(false);
+  });
+
+  it("should be nothing when no solid sample is marked", () => {
+    const grid = buildTerrainFromLevel(level);
+    expect(markedRegion(grid, [])).toBeNull();
+    expect(markedRegion(grid, [0])).toBeNull();
+  });
+});
+
+describe("edgeAbove", () => {
+  it("should give the slab's top where a sample has air above it and null where it has terrain", () => {
+    const grid = buildTerrainFromLevel(level);
+    const firstRow = [...Array(grid.heightCells).keys()].find(
+      (cy) => grid.cells[cy * grid.widthCells + 50] !== 0
+    )!;
+    const top = firstRow * grid.widthCells + 50;
+    expect(edgeAbove(grid, top)).toBeCloseTo(101, 0);
+    expect(edgeAbove(grid, top + grid.widthCells)).toBeNull();
+    expect(edgeAbove(grid, top - grid.widthCells)).toBeNull();
+  });
+
+  it("should move with the terrain when a blast cuts it", () => {
+    const grid = buildTerrainFromLevel(level);
+    const before = grid.shapeVersion;
+    clearCrater(grid, { x: 200, y: 101, reach: 34, shape: "round" });
+    expect(grid.shapeVersion).toBeGreaterThan(before);
+    const column = 50;
+    const first = [...Array(grid.heightCells).keys()].find(
+      (cy) => grid.cells[cy * grid.widthCells + column] !== 0
+    )!;
+    expect(edgeAbove(grid, first * grid.widthCells + column)).toBeCloseTo(101 + 34, 0);
   });
 });

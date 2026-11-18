@@ -53,6 +53,8 @@ export interface TerrainGrid {
   chunksY: number;
   /** Chunk indices (row-major) changed since the renderer last drew them. */
   dirtyChunks: Set<number>;
+  /** Bumps whenever a sample's slot or distance changes (layers drawn in the terrain's shape). */
+  shapeVersion: number;
   /**
    * Row-major 1 = frozen (ice-element D5): the sample keeps its material but behaves like ice
    * while set — it reads `frozenFriction`, blasts do not cut it and fire does not enter it.
