@@ -65,6 +65,32 @@ describe("lobbyMenu", () => {
     expect(state.settings.durationSeconds).toBe(300);
   });
 
+  it("should move the crate cursor with left and right and toggle that crate with confirm on the weapons row", () => {
+    const toWeapons = LOBBY_ROWS.indexOf("start") - LOBBY_ROWS.indexOf("weapons");
+    const ups = Array.from({ length: toWeapons }, () => press(LEFT, "up"));
+    const { state } = run([
+      press(LEFT, "confirm"),
+      ...ups,
+      press(LEFT, "right"),
+      press(LEFT, "confirm"),
+      press(LEFT, "left"),
+      press(LEFT, "left"),
+    ]);
+    expect(LOBBY_ROWS[state.cursor]).toBe("weapons");
+    expect(state.settings.weaponsOff).toEqual(["homing-launcher"]);
+    expect(state.weaponCursor).toBe(3); // wrapped from the first crate to the last
+  });
+
+  it("should toggle a weapon by pointer and leave it alone when the level sets the weapons", () => {
+    const action: LobbyAction = { type: "toggleWeapon", weaponId: "torch" };
+    const { state } = run([action]);
+    expect(state.settings.weaponsOff).toEqual(["torch"]);
+    expect(LOBBY_ROWS[state.cursor]).toBe("weapons");
+    expect(state.weaponCursor).toBe(2);
+    const locked = reduceLobby(state, action, { ...CONTEXT, weaponsSetByLevel: true });
+    expect(locked.state.settings.weaponsOff).toEqual(["torch"]);
+  });
+
   it("should cycle levels and default to the first playable one when choosing a level", () => {
     const start = createLobbyState(DEFAULT_GAME_TUNABLES);
     expect(selectedLevelId(start, CONTEXT)).toBe("a");

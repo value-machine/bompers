@@ -18,7 +18,7 @@ Which weapons a crate holds is listed per drop point (`data-items`). Old maps ne
 - Sim: `tunables.match.weaponIds` (default = all weapon IDs); crates take the next weapon of that list (round-robin over all crates, homing-missiles D4 alternation kept).
 - Level: `LevelSettings.weaponIds?`; root attr `data-weapons` (space-separated weapon IDs or `none`); importer, normalizer, precedence through `applyLevelSettings`.
 - Drops: `LevelDrop = { at }`; remove `readDropItems`, `CATALOG_DEFAULTS.items.drop`, `data-items` everywhere.
-- Lobby: weapons setting in `MatchSettings`, the menu row and the level note — control shape per the options page (owner pick).
+- Lobby: weapons setting in `MatchSettings` (off set), a Weapons row after Match length with one crate toggle per weapon (owner pick D5), in-row pad cursor (D7), locked level default (D6).
 - Prompt: one line for `data-weapons` in root attributes (D1 standing rule); regenerate `LEVEL_PROMPT.md` via `pnpm level-kit:sync`.
 
 ## Out of scope

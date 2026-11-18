@@ -2,6 +2,7 @@ import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE, weaponLook } from "@/shared/config/gamePalette";
 import { traceWeaponTube } from "@/shared/services/weaponTubeRenderer";
 import { weaponTubeMark } from "@/shared/utils/weaponTube";
+import { WEAPON_CRATE_SHAPE } from "@/shared/utils/weaponCrate";
 import { syncContactShadows, type ContactShadowLayer } from "@/shared/utils/contactShadowLayer";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 import { surfaceBelow, type TerrainGrid } from "@/features/arena/api/arenaApi";
@@ -28,14 +29,13 @@ export interface CrateFrame {
   terrain: TerrainGrid;
 }
 
-/** The mark tilts up like an aimed barrel. */
-const MARK_TILT = -0.38;
-/** Mark scale: mockup units per crate size (the design page drew 0.9 on a 54-unit crate). */
-const MARK_UNITS = 60;
-/** White outline around the mark, as a share of the crate size. */
-const MARK_OUTLINE = 0.054;
-/** Gloss oval on the upper left, like the blob's (DESIGN_LANGUAGE § 3): share of the crate size. */
-const GLOSS = { x: -0.27, y: -0.76, rx: 0.065, ry: 0.11, tilt: (18 * Math.PI) / 180, alpha: 0.7 };
+const {
+  cornerRadius: CORNER,
+  markTilt: MARK_TILT,
+  markUnits: MARK_UNITS,
+  markOutline: MARK_OUTLINE,
+  gloss: GLOSS,
+} = WEAPON_CRATE_SHAPE;
 
 interface CrateLook {
   itemId: WeaponCrate["itemId"];
@@ -53,7 +53,7 @@ function drawCrate({ itemId, size, width }: CrateLook): Container {
   const look = weaponLook(itemId);
   const crate = new Container();
   const box = new Graphics()
-    .roundRect(-half, -size, size, size, size * 0.24)
+    .roundRect(-half, -size, size, size, size * CORNER)
     .fill(look.accent)
     .stroke({ width, color: GAME_PALETTE.ink, join: "round" });
   const gloss = new Graphics()
