@@ -135,7 +135,22 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   // so a full 3 s charge makes 10 800 units²: a round patch about 59 units in radius inside a
   // big slab, or about 270 units along a 40-unit-thick platform. Frozen ground thaws by itself
   // after 8 s; the torch thaws a patch two samples round each ray's end.
-  ice: { freezeAreaPerSecond: 3600, frozenSeconds: 8, torchThawRadius: 8 },
+  ice: {
+    freezeAreaPerSecond: 3600,
+    frozenSeconds: 8,
+    torchThawRadius: 8,
+    // The ice block (ice-frozen-blobs D1, D8, starting values): half a second of beam freezes a
+    // blob (a full second while crouching) for 2.5 s; the block brakes at 15 % of normal.
+    blob: {
+      freezeSeconds: 0.5,
+      crouchChillScale: 0.5,
+      frozenSeconds: 2.5,
+      cracksToBreak: 3,
+      slideGrip: 0.15,
+      graceSeconds: 0.5,
+      momentSeconds: 0.5,
+    },
+  },
   combat: {
     maxHealth: 4,
     killCreditSeconds: 4,

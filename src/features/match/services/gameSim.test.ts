@@ -4,6 +4,7 @@ import { mapPlayerInputs } from "@/shared/utils/gameInputMapping";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { applyHit } from "@/features/combat/api/combatApi";
 import { catchFire } from "@/features/fire/api/fireApi";
+import { chillBlob, isFrozen, isIced } from "@/features/ice/api/iceApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
 
 const level: LevelDefinition = {
@@ -441,5 +442,72 @@ describe("gameSim — moving parts squeeze and crush (owner D13, change round on
     // Ends at 1 s (top) and 2 s (rest) of a 2 s slide.
     expect(partSounds(withSounds({ end: "thud" }), 2.05)).toBe(2);
     expect(partSounds(withSounds(), 2.05)).toBe(0);
+  });
+});
+
+describe("gameSim — ice blocks (ice-frozen-blobs D1–D7)", () => {
+  const B = DEFAULT_GAME_TUNABLES.ice.blob;
+  /** A game past spawn protection with player 0 frozen solid. */
+  const withFrozenBlob = () => {
+    const state = stepFor(newGame(), 3);
+    const player = state.players[0]!;
+    const chill = { now: state.timeSeconds, dt: B.freezeSeconds, tunables: state.tunables };
+    chillBlob(state.ice, player, chill);
+    return { state, player };
+  };
+
+  it("should ignore a frozen blob's move input and give control back when the block ends", () => {
+    const { state, player } = withFrozenBlob();
+    const startX = player.x;
+    stepFor(state, B.frozenSeconds - 0.2, keys("KeyD"));
+    expect(isFrozen(state.ice, player)).toBe(true);
+    expect(player.x).toBeCloseTo(startX, 0);
+    stepFor(state, 0.7, keys("KeyD"));
+    expect(isFrozen(state.ice, player)).toBe(false);
+    expect(player.x).toBeGreaterThan(startX + 50);
+  });
+
+  it("should shatter the block and keep the hit when a hit lands on a frozen blob", () => {
+    const { state, player } = withFrozenBlob();
+    applyHit(
+      { ...state, players: state.players },
+      {
+        victimSlot: 0,
+        attackerSlot: 1,
+        kind: "contact",
+        source: "dive",
+        contactPoint: { x: player.x, y: player.y },
+        direction: { x: 1, y: 0 },
+      }
+    );
+    stepGame(state, keys(), dt);
+    expect(isFrozen(state.ice, player)).toBe(false);
+    expect(state.ice.blobMoments.map((moment) => moment.kind)).toContain("shatter");
+    // The hit itself is untouched: the chunks it took are gone.
+    expect(state.combat.fighters.get(player.id)?.health).toBeLessThan(
+      DEFAULT_GAME_TUNABLES.combat.maxHealth
+    );
+  });
+
+  it("should melt the block and not leave the blob burning when fire touches a frozen blob", () => {
+    const { state, player } = withFrozenBlob();
+    catchFire(state.fire, player, { now: state.timeSeconds, fromX: player.x - 50, bySlot: 1 });
+    stepGame(state, keys(), dt);
+    expect(isIced(state.ice, player)).toBe(false);
+    expect(state.fire.blobs.size).toBe(0);
+    expect(state.ice.blobMoments.map((moment) => moment.kind)).toContain("melt");
+  });
+
+  it("should put a burning blob out and keep no chill when a freeze ray reaches it", () => {
+    const state = stepFor(newGame(), 3);
+    const player = state.players[0]!;
+    catchFire(state.fire, player, { now: state.timeSeconds, fromX: player.x - 50, bySlot: 1 });
+    chillBlob(state.ice, player, { now: state.timeSeconds, dt, tunables: state.tunables });
+    stepGame(state, keys(), dt);
+    expect(state.fire.blobs.size).toBe(0);
+    expect(isIced(state.ice, player)).toBe(false);
+    expect(state.combat.fighters.get(player.id)?.health).toBe(
+      DEFAULT_GAME_TUNABLES.combat.maxHealth
+    );
   });
 });
