@@ -37,6 +37,7 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   player: {
     width: 28,
     height: 28,
+    crushGapFraction: 0.2,
     runSpeed: 340,
     groundAccel: 2600,
     groundDecel: 3000,

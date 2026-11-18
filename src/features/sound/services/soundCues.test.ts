@@ -118,6 +118,15 @@ describe("readSoundCues", () => {
     ]);
   });
 
+  it("should play the land splut then the elimination pop when a moving part crushes a player", () => {
+    const events = [event({ type: "playerEliminated", victimSlot: 2, cause: "crush" })];
+    const cues = cuesAfter(snapshot({ events }));
+    expect(cues.map((cue) => [cue.soundId, cue.slot])).toEqual([
+      ["land", 2],
+      ["elimination", 2],
+    ]);
+  });
+
   it("should not replay events when they were already read", () => {
     const events = [event({ type: "rocketFired", slot: 0 })];
     const start = readSoundCues(null, snapshot());

@@ -5,6 +5,7 @@ import type { PlayerState } from "@/features/player/api/playerApi";
 import type {
   CombatEventBody,
   CombatState,
+  CrushSqueeze,
   EliminationCause,
   FighterState,
   Hit,
@@ -91,10 +92,12 @@ export interface EliminateArgs {
   cause: EliminationCause;
   tunables: GameTunables;
   timeSeconds: number;
+  /** A crush's squeeze (moving parts), passed on in the event. */
+  squeeze?: CrushSqueeze;
 }
 
 /**
- * Eliminates a player for a non-combat cause (falling out of bounds). The last hitter within
+ * Eliminates a player for a non-combat cause (falling out of bounds, crushed by a moving part). The last hitter within
  * `killCreditSeconds` gets the credit. No-op when the fighter is already eliminated.
  */
 export function eliminateFighter(args: EliminateArgs): void {
@@ -113,10 +116,20 @@ export function eliminateFighter(args: EliminateArgs): void {
       byPlayerSlot,
       cause,
       overkill: false,
+      ...(args.squeeze && { squeeze: args.squeeze }),
       ...victimMotion(player),
     },
     timeSeconds
   );
+}
+
+/** Logs a moving part's author-declared sound (moving-parts B2) for the sound layer. */
+export function reportPartSound(
+  combat: CombatState,
+  report: { soundId: string; at: Vec2; timeSeconds: number }
+): void {
+  const { soundId, at, timeSeconds } = report;
+  emitCombatEvent(combat, { type: "partSound", soundId, x: at.x, y: at.y }, timeSeconds);
 }
 
 /** Where the victim is and how it moves at the moment it is eliminated (knockout render). */

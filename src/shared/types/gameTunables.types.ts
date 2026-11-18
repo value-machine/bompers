@@ -62,6 +62,11 @@ export interface GameTunables {
     /** Collision box, world units. Position is the feet point (bottom-center). */
     width: number;
     height: number;
+    /**
+     * A moving part squeezing a blob into a gap narrower than this fraction of its width
+     * crushes it; a wider gap squashes it to fit and it recovers (owner, moving-parts lap B-2).
+     */
+    crushGapFraction: number;
     /** Top horizontal speed from input, units / s. */
     runSpeed: number;
     /** Ground acceleration toward the input speed, units / s². */

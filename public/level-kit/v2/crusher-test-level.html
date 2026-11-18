@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Crusher Test — Bompers level</title>
+    <!-- Optional preview kit: legend, labels, grid, moving-part animation. The level works without it. -->
+    <link rel="stylesheet" href="preview.css" />
+    <script src="preview.js" defer></script>
+  </head>
+  <body>
+    <svg
+      id="level"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 1600 1000"
+      data-level-format="2"
+      data-level-id="crusher-test"
+      data-title="Crusher Test"
+      data-author="Bompers team"
+      data-agent="claude"
+      data-description="Test level for moving parts: a block that slides into a wall and thuds (stand in the gap to be crushed), a block that stops short of a post (stand in the gap to be squeezed and survive), a spinning bar to ride, and a fast lift to jump off, each one short walk from a spawn."
+      data-cell-size="4"
+      data-gravity="1"
+      data-match-duration="180"
+      style="display: block; width: 100%; height: auto; background: #dfe9f2"
+    >
+      <title>Crusher Test</title>
+
+      <!-- In-bounds area: leaving it eliminates the player. -->
+      <rect data-role="bounds" x="40" y="20" width="1520" height="960" fill="none" stroke="#d24b3a" stroke-width="3" stroke-dasharray="14 8" />
+
+      <g id="terrain">
+        <rect id="floor" data-role="terrain" data-material="stone" data-label="Floor" x="160" y="840" width="1280" height="48" fill="#5a3f7a" />
+        <!-- The wall the crusher closes on. -->
+        <rect id="wall" data-role="terrain" data-material="stone" data-label="Wall" x="160" y="600" width="48" height="240" fill="#5a3f7a" />
+        <!-- The post the squeezer closes toward. -->
+        <rect id="post" data-role="terrain" data-material="stone" data-label="Post" x="1048" y="720" width="32" height="120" fill="#5a3f7a" />
+      </g>
+
+      <!-- 1. Crusher: slides left until it meets the wall and back every 4 s, thuds at each end.
+           Jump over it into the gap while it is out to the right to get crushed. -->
+      <g id="crusher" data-motion="slide -192,0" data-end-sound="thud">
+        <rect data-role="terrain" data-material="stone" data-color="slate" data-label="Crusher" x="400" y="768" width="80" height="72" fill="#4f6178" />
+      </g>
+
+      <!-- 2. Spinner: a bar turning about its centre every 6 s; jump on and ride it round. -->
+      <g id="spinner" data-motion="spin 6s">
+        <rect data-role="terrain" data-material="stone" data-color="moss" data-label="Spinner" x="680" y="548" width="240" height="24" fill="#5f8f3e" />
+      </g>
+
+      <!-- 3. Squeezer: slides right until 20 units from the post (about 70% of a blob) and back every
+           4 s. Jump over it into the gap: you squash to fit, can still jump out, and spring back; no crush. -->
+      <g id="squeezer" data-motion="slide 60,0">
+        <rect data-role="terrain" data-material="stone" data-color="clay" data-label="Squeezer" x="920" y="768" width="48" height="72" fill="#c4673f" />
+      </g>
+
+      <!-- 4. Fast lift: rises 200 and back every 2 s; jump off while it rises to fly higher. -->
+      <g id="lift" data-motion="slide 0,-200 2s">
+        <rect data-role="terrain" data-material="stone" data-color="rose" data-label="Fast lift" x="1120" y="816" width="120" height="24" fill="#c95a86" />
+      </g>
+
+      <g id="spawns">
+        <circle data-role="spawn" cx="560" cy="816" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="800" cy="816" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="880" cy="816" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="1320" cy="816" r="14" fill="#3f8f5f" />
+      </g>
+
+      <g id="drops">
+        <circle data-role="drop" cx="800" cy="80" r="12" fill="#c94f7c" />
+      </g>
+    </svg>
+  </body>
+</html>

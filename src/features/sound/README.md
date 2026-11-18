@@ -60,3 +60,4 @@ Hits and eliminations take the victim's pitch; actions (jump, fire, pickup) take
 - Sounds and Music volumes plus on/off switches per channel; M stays a master mute (music D2).
 - The last 30 s of a round play a dedicated final piece, started in time with the clock (music D4).
 - Music files are `lobby.mp3`, `match.mp3` (60 s loops, 32 bars at 128 BPM) and `final.mp3` (30 s, once) in `public/audio/music/`, one take each, processed as DESIGN_LANGUAGE § 8 describes; the bank test checks each track has its file.
+- Events that name their own sound (`terrainDestroyed`, `partSound` from moving parts) play that ID. A crush (`playerEliminated`, cause `crush`) plays `land`, then `elimination` (owner, moving-parts B2).
