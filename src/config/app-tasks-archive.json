@@ -448,5 +448,30 @@
     "title": "World of bodies L2a: fire on moving parts",
     "description": "Body list as state; fire per body; torch lights parts; burn-out cuts the part (outline, collision, drawing follow); blobs catch from a burning part; W13 + LEVEL_FORMAT 11 + prompt line. Owner 2026-11-18: a fully burnt part leaves nothing for the rest of the round (same rule as terrain). Size M.",
     "status": "done"
+  },
+  {
+    "title": "World of bodies L2b: cold on moving parts",
+    "description": "Freeze ray freezes parts, grip per sample on a part, frozen overlay on parts, thaw, torch thaws parts. Size S-M.",
+    "status": "done"
+  },
+  {
+    "title": "Split blob fire out of the fire feature",
+    "description": "Found in world-of-bodies L2a: the fire and arena features are at their 10-files-per-layer budget. Move burning blobs (burningBlobs + blobFireRenderer) into their own feature before L3 adds to fire. Behaviour-neutral refactor. Size S.",
+    "status": "done"
+  },
+  {
+    "title": "Bobsled Run needs the roll",
+    "description": "After roll speed carries into jump and dive lands: retune Bobsled Run (PR #79) so the final gap needs a roll-launched jump/dive.",
+    "status": "done"
+  },
+  {
+    "title": "World of bodies L5: fire crosses where bodies touch",
+    "description": "Fire spreads between a moving part and terrain where they touch (ask the owner first). Size S-M.",
+    "status": "done"
+  },
+  {
+    "title": "World of bodies L3: reactions as data",
+    "description": "Material x element and element x element tables in the catalog replace burns/douses/frozen special cases; beam-clash pair rule moves in. Size M.",
+    "status": "done"
   }
 ]

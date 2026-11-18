@@ -1,27 +1,7 @@
 [
   {
-    "title": "World of bodies L2b: cold on moving parts",
-    "description": "Freeze ray freezes parts, grip per sample on a part, frozen overlay on parts, thaw, torch thaws parts. Size S-M.",
-    "status": "to-do"
-  },
-  {
-    "title": "Split blob fire out of the fire feature",
-    "description": "Found in world-of-bodies L2a: the fire and arena features are at their 10-files-per-layer budget. Move burning blobs (burningBlobs + blobFireRenderer) into their own feature before L3 adds to fire. Behaviour-neutral refactor. Size S.",
-    "status": "to-do"
-  },
-  {
-    "title": "World of bodies L3: reactions as data",
-    "description": "Material x element and element x element tables in the catalog replace burns/douses/frozen special cases; beam-clash pair rule moves in. Size M.",
-    "status": "to-do"
-  },
-  {
     "title": "World of bodies L4: craters on parts",
-    "description": "If the owner wants blasts to break moving parts (ask then). Size S-M.",
-    "status": "to-do"
-  },
-  {
-    "title": "World of bodies L5: fire crosses where bodies touch",
-    "description": "Fire spreads between a moving part and terrain where they touch (ask the owner first). Size S-M.",
+    "description": "Owner 2026-11-18: yes, blasts break moving parts like terrain (cardboard and earth crater; stone and ice stay whole). Arena is at its services budget: make room first. Size S-M.",
     "status": "to-do"
   },
   {
@@ -57,11 +37,6 @@
   {
     "title": "Per-drop weapon choice",
     "description": "Proposed by ability-levels: let a drop name one weapon (data-item) within the match weapons setting, so a level can place e.g. a torch crate at a bridge. Revisits the level-direction drop decision (#61): owner decides.",
-    "status": "to-do"
-  },
-  {
-    "title": "Bobsled Run needs the roll",
-    "description": "After roll speed carries into jump and dive lands: retune Bobsled Run (PR #79) so the final gap needs a roll-launched jump/dive.",
     "status": "to-do"
   },
   {
