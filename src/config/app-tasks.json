@@ -1,17 +1,7 @@
 [
   {
-    "title": "Ice lap 3: ice sounds",
-    "description": "Ice element follow-up: freeze ray and frozen-ground sounds on a listening page before wiring in (DESIGN_LANGUAGE § 8). Size S.",
-    "status": "to-do"
-  },
-  {
     "title": "Ice lap 4: look polish",
     "description": "Ice element follow-up, optional: polish the frozen ground look after the owner has played it. The ray look was settled in #63 (owner pick D9, cold breath). Size S.",
-    "status": "to-do"
-  },
-  {
-    "title": "Fire and torch sounds",
-    "description": "Follow-up from fire b1 (#53): the torch start and burn-outs reuse placeholder sounds (rocket-fire, cardboard thwap). Generate real takes (torch whoosh/loop, crackle, burn-out) per DESIGN_LANGUAGE § 8 incl. 'Owner listens first' (artifact page, owner picks before wiring); credits need the owner's go. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md. ",
     "status": "to-do"
   },
   {
@@ -37,11 +27,6 @@
   {
     "title": "Level gallery",
     "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): later, unshaped. No remix feature.",
-    "status": "to-do"
-  },
-  {
-    "title": "Controller focus highlight in menus",
-    "description": "Owner 2026-11-18 (for later): in the UI, a controller (gamepad) needs a visible highlight on the active UI element, but mouse/keyboard on PC does not. Show the focus highlight only while the last input came from a pad (input-modality detection, like :focus-visible), across lobby rows (incl. the weapons crate cursor from #68 and the level strip), pause menu and other menus. Visible UI change: options page first.",
     "status": "to-do"
   }
 ]
