@@ -264,9 +264,9 @@ describe("freeze ray on moving parts (mover-materials lap 1)", () => {
     for (const end of ice.rays[0]!.ends) expect(end.x).toBeLessThanOrEqual(228 + 4);
     expect(victim.vx).toBe(0);
     expect(ice.blobs.has(victim.id)).toBe(false);
-    // Parts take no cold yet: nothing frozen on the ground or on the part.
+    // The cold lands on the part the beam touches (iceSim.test.ts), not on the ground behind it.
     expect(terrain.frozen.some((flag) => flag !== 0)).toBe(false);
-    expect(part.field.frozen.some((flag) => flag !== 0)).toBe(false);
+    expect(part.field.frozen.some((flag) => flag !== 0)).toBe(true);
   });
 
   it("should reach the blob when the part has moved out of the beam", () => {

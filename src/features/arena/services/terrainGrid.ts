@@ -235,18 +235,18 @@ export function moverDistanceAt(mover: MoverBody, p: Vec2, pose: MotionPose = mo
  */
 export function terrainBodies(grid: TerrainGrid): PosedField[] {
   const parts = grid.movers.map(
-    (mover): PosedField => ({
-      field: mover.field,
-      toLocal: (p) => {
-        const dx = p.x - mover.pivot.x - mover.pose.dx;
-        const dy = p.y - mover.pivot.y - mover.pose.dy;
-        if (dx * dx + dy * dy > mover.reach * mover.reach) return null;
-        const rest = unposePoint(mover.pose, mover.pivot, p);
-        return { x: rest.x - mover.origin.x, y: rest.y - mover.origin.y };
-      },
-    })
+    (mover): PosedField => ({ field: mover.field, toLocal: (p) => partLocalPoint(mover, p) })
   );
   return [{ field: grid }, ...parts];
+}
+
+/** World point `p` in a part's own grid in its pose this step; null beyond the part's reach. */
+function partLocalPoint(mover: MoverBody, p: Vec2): Vec2 | null {
+  const dx = p.x - mover.pivot.x - mover.pose.dx;
+  const dy = p.y - mover.pivot.y - mover.pose.dy;
+  if (dx * dx + dy * dy > mover.reach * mover.reach) return null;
+  const rest = unposePoint(mover.pose, mover.pivot, p);
+  return { x: rest.x - mover.origin.x, y: rest.y - mover.origin.y };
 }
 
 /**
@@ -257,6 +257,10 @@ export const bodyGrids = (grid: TerrainGrid): TerrainGrid[] => [
   grid,
   ...grid.movers.map((mover) => mover.field),
 ];
+
+/** One number that changes whenever a frozen flag changes on any body (sound, redraw keys). */
+export const frozenVersionOf = (grid: TerrainGrid): number =>
+  bodyGrids(grid).reduce((sum, body) => sum + body.frozenVersion, 0);
 
 /** The world point of a point in body `body`'s own grid (the inverse of its `toLocal`). */
 export function bodyWorldPoint(grid: TerrainGrid, body: number, local: Vec2): Vec2 {
@@ -584,13 +588,49 @@ export function groundFrictionBelow(
   for (let cx = range.minX; cx <= range.maxX; cx += 1) {
     const info = getCellInfo(grid, cx, range.minY);
     if (!info) continue;
-    const frozen = grid.frozen[range.minY * grid.widthCells + cx] === 1;
-    sum += frozen ? Math.min(info.friction, grid.frozenFriction) : info.friction;
+    sum += sampleFriction(grid, range.minY * grid.widthCells + cx, info);
     count += 1;
   }
   if (count > 0) return sum / count;
-  const under = moverAt(grid, { x: span.x + span.w / 2, y: span.y + grid.cellSize / 2 });
-  return under && under.distance > 0 ? under.mover.friction : 1;
+  return partFrictionBelow(grid, span) ?? 1;
+}
+
+/** Grip of one solid sample: its material's, or the ice grip while it is frozen. */
+const sampleFriction = (grid: TerrainGrid, index: number, info: TerrainCellSlot): number =>
+  grid.frozen[index] === 1 ? Math.min(info.friction, grid.frozenFriction) : info.friction;
+
+/**
+ * Friction of the moving part under a span: the average over the part samples just below it,
+ * each read in the part's own frame, so a frozen patch on a part is slippery where it is frozen
+ * (mover-materials lap 2b). Null when no part is under the span.
+ */
+function partFrictionBelow(
+  grid: TerrainGrid,
+  span: { x: number; y: number; w: number }
+): number | null {
+  let sum = 0;
+  let count = 0;
+  for (let x = span.x + grid.cellSize / 2; x < span.x + span.w; x += grid.cellSize) {
+    const grip = partFrictionAt(grid, { x, y: span.y + grid.cellSize / 2 });
+    if (grip === null) continue;
+    sum += grip;
+    count += 1;
+  }
+  return count > 0 ? sum / count : null;
+}
+
+/** Grip of the first moving part that is solid at world point `p`; null when none is. */
+function partFrictionAt(grid: TerrainGrid, p: Vec2): number | null {
+  for (const mover of grid.movers) {
+    const local = partLocalPoint(mover, p);
+    if (!local) continue;
+    const part = mover.field;
+    const cx = Math.floor(local.x / part.cellSize);
+    const cy = Math.floor(local.y / part.cellSize);
+    const info = getCellInfo(part, cx, cy);
+    if (info) return sampleFriction(part, cy * part.widthCells + cx, info);
+  }
+  return null;
 }
 
 /** Returns the dirty chunk indices and clears the set (called by the renderer). */

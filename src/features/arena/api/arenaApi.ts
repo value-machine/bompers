@@ -13,6 +13,7 @@ export {
   bodyWorldPoint,
   burnOut,
   clearCrater,
+  frozenVersionOf,
   getCellInfo,
   isBreakableSlot,
   type ClearedCells,

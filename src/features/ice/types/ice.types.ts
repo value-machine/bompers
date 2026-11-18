@@ -4,20 +4,17 @@ import type { SampleFront } from "@/shared/types/sampleFront.types";
 /**
  * Frozen ground (owner, ice-element D1–D8): the cold flows out from where a freeze ray touches
  * the ground. Which samples are frozen right now is the arena's `frozen` flag; this state holds
- * each ray's feed and when each frozen sample thaws. Sample indices are the arena grid's
- * (`cy * widthCells + cx`).
+ * each ray's feed and when each frozen sample thaws, per body of the arena (mover-materials
+ * lap 2b): the static terrain and each moving part's own field.
  */
 export interface IceState {
-  /** One feed per player slot holding a freeze ray. */
+  /** One feed per freeze ray and body it touches (`feedKey`). */
   feeds: Map<number, ColdFeed>;
-  /** Sim seconds each frozen sample thaws by itself; 0 = not frozen by this state. */
-  thawAt: Float32Array;
-  /** Frozen samples in freezing order (constant frozen time ⇒ also thaw order). */
-  frozen: number[];
-  /** The thaw time each `frozen` entry was given (an entry is stale when `thawAt` differs). */
-  frozenDue: number[];
-  /** First entry of `frozen` not yet thawed. */
-  frozenHead: number;
+  /**
+   * The thaw queue of every body, in the arena's body order (`bodyGrids`): 0 = the static
+   * terrain, then each moving part's own field.
+   */
+  grounds: GroundIce[];
   /** The freeze rays of the last step, for the renderer. */
   rays: FreezeRayBeam[];
   /** Blobs gathering chill or frozen in a block, by player id (ice-frozen-blobs D1, D3). */
@@ -30,6 +27,20 @@ export interface IceState {
   frozeCounts: Record<string, number>;
   crackCounts: Record<string, number>;
   shatterCounts: Record<string, number>;
+}
+
+/** When one body's frozen samples thaw. Sample indices are that body's grid's. */
+export interface GroundIce {
+  /** Sim seconds each frozen sample thaws by itself; 0 = not frozen by this state. */
+  thawAt: Float32Array;
+  /** Frozen samples in freezing order (constant frozen time ⇒ also thaw order). */
+  frozen: number[];
+  /** The thaw time each `frozen` entry was given (an entry is stale when `thawAt` differs). */
+  frozenDue: number[];
+  /** First entry of `frozen` not yet thawed. */
+  frozenHead: number;
+  /** Queue entries passed so far (only goes up; the thaw sound reads it). */
+  thawed: number;
 }
 
 /** One blob's ice: chill building up in a freeze ray, or the block it is frozen in. */

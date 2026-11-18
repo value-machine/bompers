@@ -16,7 +16,13 @@ export {
   type StepFrozenBlobsArgs,
 } from "@/features/ice/services/frozenBlobs";
 export { frozenBlobPoses } from "@/features/ice/services/blobIceRenderer";
-export { canFreeze, createIceState, feedCold, stepIce } from "@/features/ice/services/iceSim";
+export {
+  canFreeze,
+  createIceState,
+  feedCold,
+  stepIce,
+  thawedCount,
+} from "@/features/ice/services/iceSim";
 export { sprayFreezeRay, type FreezeRayArgs } from "@/features/ice/services/freezeRay";
 export {
   createIceView,

@@ -91,8 +91,6 @@ export interface MoverBody {
   prevPose: MotionPose;
   /** Farthest field point from the pivot plus the band: beyond it the part reads as air. */
   reach: number;
-  /** Grip of the part's material (ice parts are slippery). */
-  friction: number;
   /** Indices into the level's terrain pieces this part carries (the renderer draws them). */
   terrainIndices: readonly number[];
   /** Author-declared sound IDs (null = silent): at its fastest point, at each turning point. */
