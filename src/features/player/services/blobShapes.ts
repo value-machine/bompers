@@ -74,7 +74,6 @@ const slotColor = (colors: readonly number[], slot: number): number =>
   colors[slot % colors.length] ?? GAME_PALETTE.ink;
 
 const bodyGradients = new Map<number, FillGradient>();
-let helmetGradient: FillGradient | null = null;
 
 /** Radial body gradient (tint → body → shade), one cached per slot (§ 3 Body shading). */
 function bodyGradient(slot: number): FillGradient {
@@ -98,20 +97,9 @@ function bodyGradient(slot: number): FillGradient {
   return gradient;
 }
 
-/** Vertical helmet gradient, white to the shell mixed 10 % toward ink (§ 3 Helmet shading). */
-function helmetFill(): FillGradient {
-  helmetGradient ??= new FillGradient({
-    type: "linear",
-    start: { x: 0, y: 0 },
-    end: { x: 0, y: 1 },
-    colorStops: [
-      { offset: 0, color: GAME_PALETTE.gloss },
-      { offset: 1, color: GAME_PALETTE.helmetShade },
-    ],
-    textureSpace: "local",
-  });
-  return helmetGradient;
-}
+/** Where the weapon barrel pivots: the middle of the helmet, under the emblem (torso space). */
+export const helmetCentreY = (m: BlobMetrics): number =>
+  (m.helmet.top + m.helmet.rim) / 2 + 3 * m.u;
 
 const inkStroke = (width: number) => ({
   width: width * 2,
@@ -131,7 +119,7 @@ export const drawFootInk = (g: Graphics, m: BlobMetrics, width: number): Graphic
 
 /** Ink pass of a weapon's helmet tube (DESIGN_LANGUAGE § 9: the silhouette names the weapon). */
 export const drawTubeInk = (g: Graphics, tube: WeaponTubeParts, width: number): Graphics =>
-  traceWeaponTube(g.clear(), tube).stroke(inkStroke(width));
+  traceWeaponTube(g.clear(), tube.parts).stroke(inkStroke(width));
 
 /** Fill pass of the body: the gradient egg. */
 export const drawBodyFill = (slot: number, m: BlobMetrics): Graphics =>
@@ -141,9 +129,9 @@ export const drawBodyFill = (slot: number, m: BlobMetrics): Graphics =>
 export const drawBodyFlash = (m: BlobMetrics): Graphics =>
   eggPath(new Graphics(), m.r).fill(GAME_PALETTE.hitFlash);
 
-/** Fill pass of the helmet dome: the vertical gradient. */
+/** Fill pass of the helmet dome: flat cream, the same fill as the weapon barrel (§ 3, § 9). */
 export const drawHelmetFill = (m: BlobMetrics): Graphics =>
-  helmetPath(new Graphics(), m).fill(helmetFill());
+  helmetPath(new Graphics(), m).fill(GAME_PALETTE.helmet);
 
 /** Gloss oval on the body (0.13 R × 0.22 R, tilted 18°), as its own shape so it can rotate. */
 export function drawBodyGloss(m: BlobMetrics): Graphics {
@@ -157,39 +145,40 @@ export function drawBodyGloss(m: BlobMetrics): Graphics {
 
 /** Helmet gloss stroke along the dome and the slot emblem in the player colour, no outlines. */
 export function drawHelmetDetails(slot: number, m: BlobMetrics): Graphics[] {
-  const { half, top, rim } = m.helmet;
+  const { half, top } = m.helmet;
   const { u } = m;
   const gloss = new Graphics()
-    .moveTo(-half * 0.6, top + 7 * u)
-    .quadraticCurveTo(-half * 0.2, top - u, half * 0.12, top + 2 * u)
+    // 3 u below the dome's nominal top: the dome's curve peaks lower than `top`, and a stroke
+    // drawn up to it poked over the outline.
+    .moveTo(-half * 0.6, top + 10 * u)
+    .quadraticCurveTo(-half * 0.2, top + 2 * u, half * 0.12, top + 5 * u)
     .stroke({ width: 3.5 * u, color: GAME_PALETTE.gloss, alpha: 0.85, cap: "round" });
   const emblem = traceEmblem(new Graphics(), playerEmblemShape(slot, 6.5 * u)).fill(
     slotColor(GAME_PALETTE.players, slot)
   );
-  emblem.position.set(0, (top + rim) / 2 + 3 * u);
+  emblem.position.set(0, helmetCentreY(m));
   return [gloss, emblem];
 }
 
 export const drawFootFill = (slot: number, m: BlobMetrics): Graphics =>
   footPath(new Graphics(), m).fill(slotColor(GAME_PALETTE.playerShades, slot));
 
-/** Fill pass of a weapon's helmet tube: cream like the helmet shell. */
-export const drawTubeFill = (g: Graphics, tube: WeaponTubeParts): Graphics =>
-  traceWeaponTube(g.clear(), tube).fill(GAME_PALETTE.helmet);
+/**
+ * Fill pass of a weapon's barrel: the barrel in the helmet's cream, so helmet and barrel read as
+ * one piece, and the mouth in its pale resting colour (weapon-visuals-embellish D2, D7).
+ */
+export const drawTubeFill = (g: Graphics, tube: WeaponTubeParts): Graphics => {
+  traceWeaponTube(g.clear(), tube.parts, "barrel").fill(GAME_PALETTE.helmet);
+  return traceWeaponTube(g, tube.parts, "mouth").fill(GAME_PALETTE.mouthPale);
+};
 
 /**
- * Muzzle ready light (weapon-visuals D3): one accent dot per muzzle, no outline (inner detail,
- * § 3). The renderer sets its alpha from the shot cooldown: faded while recharging, full when ready.
+ * Mouth ready light (weapon-visuals-embellish D7): the mouth parts in the weapon accent, no
+ * outline of their own. The renderer sets the alpha from the shot cooldown: faded over the pale
+ * mouth while recharging, full when ready.
  */
-export const drawMuzzleLight = (
-  g: Graphics,
-  tube: WeaponTubeParts,
-  { accent, u }: { accent: number; u: number }
-): Graphics => {
-  g.clear();
-  for (const muzzle of tube.muzzles) g.circle(muzzle.x, muzzle.y, 3.2 * u);
-  return g.fill(accent);
-};
+export const drawMouthLight = (g: Graphics, tube: WeaponTubeParts, accent: number): Graphics =>
+  traceWeaponTube(g.clear(), tube.parts, "mouth").fill(accent);
 
 /** Eye white (5 × 7.5) and pupil (2.8 × 4.2), no outline. */
 export function drawEye(u: number): { white: Graphics; pupil: Graphics } {
@@ -214,7 +203,7 @@ export function drawLooseHelmet(slot: number, height: number, width: number): Co
   return piece;
 }
 
-/** A weapon tube off the helmet (knockout): its silhouette and muzzle light, centred. */
+/** A weapon barrel off the helmet (knockout): its silhouette with the mouth lit. */
 export function drawLooseTube(itemId: WeaponItemId, height: number, width: number): Container {
   const { u } = blobMetrics(height);
   const look = weaponLook(itemId);
@@ -223,7 +212,7 @@ export function drawLooseTube(itemId: WeaponItemId, height: number, width: numbe
   piece.addChild(
     drawTubeInk(new Graphics(), tube, width),
     drawTubeFill(new Graphics(), tube),
-    drawMuzzleLight(new Graphics(), tube, { accent: look.accent, u })
+    drawMouthLight(new Graphics(), tube, look.accent)
   );
   return piece;
 }
