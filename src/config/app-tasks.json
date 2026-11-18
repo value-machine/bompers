@@ -20,6 +20,26 @@
     "status": "to-do"
   },
   {
+    "title": "World of bodies L2: fire and ice on moving parts",
+    "description": "Owner pick 2026-11-18 (mover-materials D1 = one world of bodies): body list; fire and ice state per body; torch/ray act on parts; parts drawn cut and overlaid; grip per sample; blobs catch from burning parts; W13 + prompt line. Reverses \"moving parts never burn\" (owner). Size M.",
+    "status": "to-do"
+  },
+  {
+    "title": "World of bodies L3: reactions as data",
+    "description": "Material x element and element x element tables in the catalog replace burns/douses/frozen special cases; beam-clash pair rule moves in. Size M.",
+    "status": "to-do"
+  },
+  {
+    "title": "World of bodies L4: craters on parts",
+    "description": "If the owner wants blasts to break moving parts (ask then). Size S-M.",
+    "status": "to-do"
+  },
+  {
+    "title": "World of bodies L5: fire crosses where bodies touch",
+    "description": "Fire spreads between a moving part and terrain where they touch (ask the owner first). Size S-M.",
+    "status": "to-do"
+  },
+  {
     "title": "Bug: collision sound retriggers rapidly",
     "description": "Owner 2026-11-18, found while playing: in some positions (against a moving platform, or other platforms) the player collision/land sound replays rapidly in bursts. Suspect the sim grounded/airborne flip (#59 found it) and resting/pushed contacts with movers. Fix at the source plus a per-body re-trigger guard.",
     "status": "to-do"
