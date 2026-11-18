@@ -145,15 +145,6 @@ describe("parseLevelFile — kit files", () => {
     }
   });
 
-  it("should import the crusher test level with its three moving parts and no warnings", () => {
-    const { level: def, warnings } = okLevel(parseLevelFile(CRUSHER_TEST));
-    expect(warnings).toEqual([]);
-    expect(def.meta.levelId).toBe("crusher-test");
-    expect(def.spawns).toHaveLength(4);
-    expect(def.movers?.map((mover) => mover.motion.kind)).toEqual(["slide", "spin", "slide"]);
-    expect(def.movers?.[0]?.sounds).toEqual({ end: "thud" });
-  });
-
   it("should import both AUTHORING.md examples without errors", () => {
     expect(AUTHORING_EXAMPLES).toHaveLength(2);
     for (const text of AUTHORING_EXAMPLES) {
@@ -464,5 +455,16 @@ describe("material system (acceptance)", () => {
       if (b.material === "ice") expect(grip).toBeLessThan(0.5);
       else expect(grip).toBe(1);
     }
+  });
+});
+
+describe("parseLevelFile — moving-parts test level", () => {
+  it("should import the crusher test level with its three moving parts and no warnings", () => {
+    const { level: def, warnings } = okLevel(parseLevelFile(CRUSHER_TEST));
+    expect(warnings).toEqual([]);
+    expect(def.meta.levelId).toBe("crusher-test");
+    expect(def.spawns).toHaveLength(4);
+    expect(def.movers?.map((mover) => mover.motion.kind)).toEqual(["slide", "spin", "slide"]);
+    expect(def.movers?.[0]?.sounds).toEqual({ end: "thud" });
   });
 });
