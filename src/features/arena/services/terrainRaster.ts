@@ -227,6 +227,7 @@ function buildMoverBody(level: LevelDefinition, mover: LevelMover): MoverBody {
     reach,
     friction: frictions.reduce((sum, f) => sum + f, 0) / Math.max(1, frictions.length),
     terrainIndices: mover.terrainIndices,
+    sounds: { move: mover.sounds?.move ?? null, end: mover.sounds?.end ?? null },
   };
 }
 

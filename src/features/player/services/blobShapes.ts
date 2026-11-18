@@ -1,9 +1,10 @@
-import { FillGradient, Graphics } from "pixi.js";
-import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import { Container, FillGradient, Graphics } from "pixi.js";
+import { GAME_PALETTE, weaponLook } from "@/shared/config/gamePalette";
 import { traceEmblem } from "@/shared/services/emblemRenderer";
 import { traceWeaponTube } from "@/shared/services/weaponTubeRenderer";
 import { playerEmblemShape } from "@/shared/utils/playerEmblem";
-import type { WeaponTubeParts } from "@/shared/utils/weaponTube";
+import { weaponTubeParts, type WeaponTubeParts } from "@/shared/utils/weaponTube";
+import type { WeaponItemId } from "@/shared/types/weaponItems.types";
 
 /**
  * Blob shapes in line style E (DESIGN_LANGUAGE § 2–3, mockup variant E). Geometry is the mockup's
@@ -195,4 +196,34 @@ export function drawEye(u: number): { white: Graphics; pupil: Graphics } {
   const white = new Graphics().ellipse(0, 0, 5 * u, 7.5 * u).fill(GAME_PALETTE.eyeWhite);
   const pupil = new Graphics().ellipse(0, 0, 2.8 * u, 4.2 * u).fill(GAME_PALETTE.ink);
   return { white, pupil };
+}
+
+/**
+ * A helmet off the blob (knockout): ink pass, gradient dome, gloss and emblem in one container,
+ * centred on the dome so it can spin as a loose piece.
+ */
+export function drawLooseHelmet(slot: number, height: number, width: number): Container {
+  const m = blobMetrics(height);
+  const piece = new Container();
+  piece.addChild(
+    drawHelmetInk(new Graphics(), m, width),
+    drawHelmetFill(m),
+    ...drawHelmetDetails(slot, m)
+  );
+  piece.pivot.set(0, (m.helmet.top + m.helmet.rim) / 2);
+  return piece;
+}
+
+/** A weapon tube off the helmet (knockout): its silhouette and muzzle light, centred. */
+export function drawLooseTube(itemId: WeaponItemId, height: number, width: number): Container {
+  const { u } = blobMetrics(height);
+  const look = weaponLook(itemId);
+  const tube = weaponTubeParts(look.tube, u);
+  const piece = new Container();
+  piece.addChild(
+    drawTubeInk(new Graphics(), tube, width),
+    drawTubeFill(new Graphics(), tube),
+    drawMuzzleLight(new Graphics(), tube, { accent: look.accent, u })
+  );
+  return piece;
 }

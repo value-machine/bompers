@@ -227,6 +227,21 @@ describe("combat — rockets and explosions", () => {
     expect(outside.players[1]!.vx).toBe(0);
     expect(health(outside, 1)).toBe(C.maxHealth);
   });
+
+  it("should push a hit player by hitPushScale of the shooter's push when both are equally far", () => {
+    // Shooter at x 260, victim at x 340: the blast between them is 40 from each body centre.
+    const world = createWorld({
+      at: [
+        { x: 260, y: FLOOR_Y },
+        { x: 340, y: FLOOR_Y },
+      ],
+    });
+    explode(world.ctx(), p0Blast({ x: 300, y: FLOOR_Y - P.height / 2 }));
+    const shooterPush = Math.abs(world.players[0]!.vx);
+    const victimPush = Math.abs(world.players[1]!.vx);
+    expect(shooterPush).toBeGreaterThan(0);
+    expect(victimPush / shooterPush).toBeCloseTo(C.blast.hitPushScale);
+  });
 });
 
 describe("combat — blast hurt reaction", () => {

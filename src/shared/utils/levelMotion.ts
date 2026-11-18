@@ -160,3 +160,50 @@ export function motionPeakSpeed(motion: LevelMotion, reach: number): number {
       return (((motion.degrees * Math.PI) / 180) * TAU * reach) / T;
   }
 }
+
+/**
+ * Where in the cycle (fractions 0–1) a part's author-declared sounds play (moving-parts B2):
+ * `end` when it reaches a turning point (slide and path: each waypoint, rest included; swing:
+ * each extreme), `move` at its fastest point between them (a woosh: slide and path halfway,
+ * swing through the bottom, spin once per turn). Spin has no ends.
+ */
+export function motionCuePoints(motion: LevelMotion): { move: number[]; end: number[] } {
+  switch (motion.kind) {
+    case "slide":
+      return { move: [0.25, 0.75], end: [0, 0.5] };
+    case "swing":
+      return { move: [0, 0.5], end: [0.25, 0.75] };
+    case "spin":
+      return { move: [0], end: [] };
+    case "path": {
+      const points = loopPoints(motion.offsets);
+      const total = pathLength(motion.offsets) || 1;
+      const end: number[] = [];
+      const move: number[] = [];
+      let along = 0;
+      for (let i = 1; i < points.length; i += 1) {
+        const seg = Math.hypot(points[i]!.x - points[i - 1]!.x, points[i]!.y - points[i - 1]!.y);
+        end.push(along / total);
+        move.push((along + seg / 2) / total);
+        along += seg;
+      }
+      return { move, end };
+    }
+  }
+}
+
+/** How many of the cycle `points` the part passes in the step (t0, t1] (sim time, seconds). */
+export function cuePointsPassed(
+  motion: LevelMotion,
+  points: readonly number[],
+  span: { t0: number; t1: number }
+): number {
+  if (!(motion.periodS > 0) || span.t1 <= span.t0) return 0;
+  const c0 = span.t0 / motion.periodS + motion.phase;
+  const c1 = span.t1 / motion.periodS + motion.phase;
+  // Count every k + p (whole cycles k) with c0 < k + p ≤ c1.
+  return points.reduce(
+    (count, p) => count + Math.max(0, Math.floor(c1 - p) - Math.floor(c0 - p)),
+    0
+  );
+}

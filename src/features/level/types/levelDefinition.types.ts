@@ -64,6 +64,11 @@ export interface LevelMover {
   pivot: Vec2;
   /** Indices into `LevelDefinition.terrain`, ascending. */
   terrainIndices: readonly number[];
+  /**
+   * Author-declared sound IDs (silent by default, moving-parts B2): `move` at its fastest point
+   * (a woosh), `end` at each turning point (`motionCuePoints`).
+   */
+  sounds?: { move?: string; end?: string };
 }
 
 export interface LevelDefinition {

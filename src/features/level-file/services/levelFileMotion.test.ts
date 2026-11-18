@@ -91,6 +91,18 @@ describe("moving parts — import", () => {
     );
     expect(coded(warnings, "W14").join(" ")).toMatch(/faster than a player can ride/);
   });
+
+  it("should read the author's part sounds and leave out an unknown one with W4", () => {
+    const { level: def, warnings } = okLevel(
+      parseLevelFile(
+        level(
+          `<g data-motion="slide 0,-160" data-move-sound="jump" data-end-sound="whoosh">${LIFT}</g>`
+        )
+      )
+    );
+    expect(def.movers?.[0]?.sounds).toEqual({ move: "jump" });
+    expect(coded(warnings, "W4").join(" ")).toMatch(/data-end-sound="whoosh" is not a known sound/);
+  });
 });
 
 describe("parseMotionSpec", () => {
