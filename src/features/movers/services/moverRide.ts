@@ -2,6 +2,7 @@ import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { MOTION_LIMITS, motionPose, posePoint, unposePoint } from "@/shared/utils/levelMotion";
 import {
   fieldDistanceAt,
+  fieldNormalAt,
   moverDistanceAt,
   type MoverBody,
   type TerrainGrid,
@@ -26,10 +27,10 @@ export interface RiderBody {
 
 /** A part this close under the feet (world units) carries the body. */
 const CARRY_CONTACT = 2;
-/** Push-out steps along the part's normal before a body counts as pinned. */
+/** Push-out steps along the part's normal before a body counts as squeezed. */
 const PUSH_STEPS = 8;
-/** Overlap with all terrain deeper than this after the push = pinned. */
-const PINNED_DEPTH = 1;
+/** Overlap with terrain up to this deep after the push is just contact (resting, touching). */
+const SQUEEZE_SLOP = 1;
 
 /** Sets every part's pose for sim time `timeSeconds` and keeps last step's pose for the carry. */
 export function stepMoverPoses(terrain: TerrainGrid, timeSeconds: number): void {
@@ -98,41 +99,107 @@ export interface PinnedBody {
   ny: number;
 }
 
+/** A body squeezed into a gap narrower than itself but still alive: its size scale and the squeeze axis. */
+export interface Squeeze {
+  /** Gap ÷ body width, in (lethal fraction, 1). */
+  scale: number;
+  nx: number;
+  ny: number;
+}
+
 /** What one `rideMovers` call did, per body index. */
 export interface RideResult {
-  /** Bodies left overlapping terrain (pinned), for the crush rule. */
+  /** Bodies squeezed into a gap below the lethal fraction (crushed), for the crush rule. */
   pinned: PinnedBody[];
+  /** Bodies squeezed but alive (null = free): they squash to fit and recover. */
+  squeezed: (Squeeze | null)[];
   /** How far a part carried each body this step (null = not riding). */
   carried: (Vec2 | null)[];
 }
 
-/** The pin record of a body still overlapping terrain after the carry and pushes; null when free. */
-function pinOf(
+/** How narrow a gap may get, as a fraction of the body width, before it crushes. */
+export interface RideOptions {
+  crushGapFraction: number;
+}
+
+/** The part let go (the gap opened): the body steps back out of the terrain at full size. */
+function stepOut(terrain: TerrainGrid, body: RiderBody, overlap: number): null {
+  const out = fieldNormalAt(terrain, centerOf(body));
+  shift(body, { x: out.x * overlap, y: out.y * overlap });
+  return null;
+}
+
+/**
+ * A body still overlapping terrain after the carry and pushes is squeezed between the part that
+ * pushed it and the terrain beyond (owner, lap B-2): the gap left is its width minus the overlap.
+ * A gap under the lethal fraction crushes it; a wider one centres it in the gap and reports a
+ * squeeze (the body shrinks to fit for its own step and recovers when the gap opens).
+ */
+function squeezeOf(
   terrain: TerrainGrid,
   body: RiderBody,
-  at: { index: number; mover: MoverBody | null }
-): PinnedBody | null {
+  at: { index: number; mover: MoverBody | null; options: RideOptions }
+): { pinned: PinnedBody } | { squeeze: Squeeze } | null {
   const center = centerOf(body);
-  if (!at.mover || fieldDistanceAt(terrain, center) <= -body.width / 2 + PINNED_DEPTH) return null;
+  const radius = body.width / 2;
+  const overlap = fieldDistanceAt(terrain, center) + radius;
+  if (overlap <= SQUEEZE_SLOP) return null;
+  if (!at.mover) return stepOut(terrain, body, overlap);
   const normal = moverNormal(at.mover, center);
-  return { index: at.index, mover: terrain.movers.indexOf(at.mover), nx: normal.x, ny: normal.y };
+  const gap = body.width - overlap;
+  if (gap < body.width * at.options.crushGapFraction) {
+    const mover = terrain.movers.indexOf(at.mover);
+    return { pinned: { index: at.index, mover, nx: normal.x, ny: normal.y } };
+  }
+  // Centre the body in the gap: half the overlap back toward the part.
+  shift(body, { x: -normal.x * (overlap / 2), y: -normal.y * (overlap / 2) });
+  // A little smaller than the gap, so the shrunken body can slide and jump along both faces.
+  const scale = Math.max(0.05, (gap - SQUEEZE_SLOP * 2) / body.width);
+  return { squeeze: { scale, nx: normal.x, ny: normal.y } };
 }
 
 /** Carries and pushes every body (call after `stepMoverPoses`, before the bodies' own step). */
-export function rideMovers(terrain: TerrainGrid, bodies: readonly RiderBody[]): RideResult {
-  const result: RideResult = { pinned: [], carried: bodies.map(() => null) };
+export function rideMovers(
+  terrain: TerrainGrid,
+  bodies: readonly RiderBody[],
+  options: RideOptions
+): RideResult {
+  const result: RideResult = {
+    pinned: [],
+    squeezed: bodies.map(() => null),
+    carried: bodies.map(() => null),
+  };
   if (terrain.movers.length === 0) return result;
-  bodies.forEach((body, index) => {
-    const riding = carry(terrain, body);
-    result.carried[index] = riding?.by ?? null;
-    let pusher: MoverBody | null = riding?.mover ?? null;
-    for (const mover of terrain.movers) {
-      if (mover !== riding?.mover && pushOut(mover, body)) pusher = mover;
-    }
-    const pin = pinOf(terrain, body, { index, mover: pusher });
-    if (pin) result.pinned.push(pin);
-  });
+  bodies.forEach((body, index) => rideOne(terrain, { body, index, options, result }));
   return result;
+}
+
+/** Every part but the one carrying the body pushes it; the last that did (else the carrier). */
+function pushByOthers(
+  terrain: TerrainGrid,
+  body: RiderBody,
+  carrier: MoverBody | null
+): MoverBody | null {
+  let pusher = carrier;
+  for (const mover of terrain.movers) {
+    if (mover !== carrier && pushOut(mover, body)) pusher = mover;
+  }
+  return pusher;
+}
+
+/** One body: carry, push, then squeeze or crush; written into `result` at `index`. */
+function rideOne(
+  terrain: TerrainGrid,
+  step: { body: RiderBody; index: number; options: RideOptions; result: RideResult }
+): void {
+  const { body, index, options, result } = step;
+  const riding = carry(terrain, body);
+  result.carried[index] = riding?.by ?? null;
+  const pusher = pushByOthers(terrain, body, riding?.mover ?? null);
+  const squeezed = squeezeOf(terrain, body, { index, mover: pusher, options });
+  if (!squeezed) return;
+  if ("pinned" in squeezed) result.pinned.push(squeezed.pinned);
+  else result.squeezed[index] = squeezed.squeeze;
 }
 
 // ── Leaving a part (moving parts lap B-2, orchestrator via owner) ───────────

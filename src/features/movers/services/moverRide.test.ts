@@ -55,15 +55,35 @@ const LIFT_MOVER: LevelMover = {
 };
 
 const DT = 1 / 60;
+/** The game default: a gap under 20% of the body width crushes. */
+const OPTS = { crushGapFraction: 0.2 };
 
 /** Steps poses and riders from t = 0 to `until` seconds. */
 function run(terrain: ReturnType<typeof arenaWith>, bodies: RiderBody[], until: number) {
   const pinned = new Set<number>();
   for (let t = DT; t <= until + 1e-9; t += DT) {
     stepMoverPoses(terrain, t);
-    for (const pin of rideMovers(terrain, bodies).pinned) pinned.add(pin.index);
+    for (const pin of rideMovers(terrain, bodies, OPTS).pinned) pinned.add(pin.index);
   }
   return pinned;
+}
+
+/** Steps from `from` to `to` seconds: the tightest squeeze seen, any crush, and the last result. */
+function squeezeRun(
+  terrain: ReturnType<typeof arenaWith>,
+  body: RiderBody,
+  span: { from: number; to: number }
+) {
+  let tightest = 1;
+  let crushed = false;
+  let last: ReturnType<typeof rideMovers> | null = null;
+  for (let t = span.from + DT; t <= span.to + 1e-9; t += DT) {
+    stepMoverPoses(terrain, t);
+    last = rideMovers(terrain, [body], OPTS);
+    crushed ||= last.pinned.length > 0;
+    tightest = Math.min(tightest, last.squeezed[0]?.scale ?? 1);
+  }
+  return { tightest, crushed, last };
 }
 
 describe("moving parts — collision", () => {
@@ -114,7 +134,7 @@ describe("rideMovers", () => {
     let first: ReturnType<typeof rideMovers>["pinned"][number] | undefined;
     for (let t = DT; t <= 2 + 1e-9 && !first; t += DT) {
       stepMoverPoses(terrain, t);
-      first = rideMovers(terrain, [body]).pinned[0];
+      first = rideMovers(terrain, [body], OPTS).pinned[0];
     }
     // The squeeze points from the part toward the wall (+x) and names the part.
     expect(first?.index).toBe(0);
@@ -122,16 +142,47 @@ describe("rideMovers", () => {
     expect(first?.nx).toBeGreaterThan(0.9);
   });
 
+  // Ground truth: the owner's change round on #64 — a gap narrower than the blob but not near-closed
+  // is survivable: it squashes to fit and recovers when the gap opens.
+  it("should squeeze but not crush a body when the gap closes to 80% of its width, then free it", () => {
+    const slider = stone({ type: "rect", x: 300, y: 500, w: 80, h: 60 });
+    const mover: LevelMover = {
+      // Ends 22 units from the wall: 22 / 28 ≈ 0.79 of the body width.
+      motion: { kind: "slide", offset: { x: 198, y: 0 }, periodS: 4, phase: 0 },
+      pivot: { x: 340, y: 530 },
+      terrainIndices: [2],
+    };
+    const terrain = arenaWith([GROUND, WALL, slider], [mover]);
+    const body: RiderBody = { x: 560, y: 560, width: 28, height: 28 };
+    const closing = squeezeRun(terrain, body, { from: 0, to: 2 });
+    expect(closing.crushed).toBe(false);
+    // Gap 22 minus a 1-unit margin each side, over the 28 width: (22 − 2) / 28 ≈ 0.71.
+    expect(closing.tightest).toBeGreaterThan(0.68);
+    expect(closing.tightest).toBeLessThan(0.75);
+    // The slider pulls back: the body is free again.
+    const opening = squeezeRun(terrain, body, { from: 2, to: 4 });
+    expect(opening.last?.squeezed[0]).toBeNull();
+    expect(opening.last?.pinned).toEqual([]);
+  });
+
   it("should leave bodies alone when the level has no moving parts", () => {
     const terrain = arenaWith([GROUND], []);
     const body: RiderBody = { x: 280, y: 560, width: 28, height: 28 };
-    expect(rideMovers(terrain, [body])).toEqual({ pinned: [], carried: [null] });
+    expect(rideMovers(terrain, [body], OPTS)).toEqual({
+      pinned: [],
+      squeezed: [null],
+      carried: [null],
+    });
     expect(body).toEqual({ x: 280, y: 560, width: 28, height: 28 });
   });
 });
 
 describe("inheritOnLeave", () => {
-  const ride = (carried: RideResult["carried"]): RideResult => ({ pinned: [], carried });
+  const ride = (carried: RideResult["carried"]): RideResult => ({
+    pinned: [],
+    squeezed: carried.map(() => null),
+    carried,
+  });
   const rider = (): MovingRider => ({ id: "p0", x: 0, y: 0, width: 28, height: 28, vx: 10, vy: 0 });
 
   it("should remember the carry velocity while the body rides", () => {
@@ -162,11 +213,11 @@ describe("inheritOnLeave", () => {
     let memory: ReturnType<typeof inheritOnLeave> = new Map();
     for (let t = DT; t <= 1 + 1e-9; t += DT) {
       stepMoverPoses(terrain, t);
-      memory = inheritOnLeave(memory, [body], { ride: rideMovers(terrain, [body]), dt: DT });
+      memory = inheritOnLeave(memory, [body], { ride: rideMovers(terrain, [body], OPTS), dt: DT });
     }
     body.y -= 20; // the jump lifts the feet off the part
     stepMoverPoses(terrain, 1 + DT);
-    inheritOnLeave(memory, [body], { ride: rideMovers(terrain, [body]), dt: DT });
+    inheritOnLeave(memory, [body], { ride: rideMovers(terrain, [body], OPTS), dt: DT });
     // Mid-rise the lift moves up at π·160/4 ≈ 126 units/s (slide: s = (1 − cos 2πu) / 2).
     expect(body.vy).toBeCloseTo(-40 * Math.PI, 0);
   });

@@ -335,7 +335,9 @@ describe("gameSim — moving parts (LEVEL_FORMAT § 11)", () => {
     expect(player.x).toBeCloseTo(100, 0);
     expect(Math.abs(player.y - 128)).toBeLessThan(3);
   });
+});
 
+describe("gameSim — moving parts squeeze and crush (owner D13, change round on #64)", () => {
   it("should eliminate a player a moving part squeezes against a wall (crush)", () => {
     // Slot 0 spawns at x 100 between a slider (x 0–60) and a wall (x 180–220); the slider runs
     // right 160 in 2 s (LEVEL_FORMAT § 11, owner crush rule D13).
@@ -366,6 +368,45 @@ describe("gameSim — moving parts (LEVEL_FORMAT § 11)", () => {
       (event) => event.type === "playerEliminated" && event.cause === "crush"
     );
     expect(crush).toMatchObject({ victimSlot: 0, squeeze: { mover: 0 } });
+  });
+
+  it("should let a player squeezed into a gap of 80% of its width survive, jump out and recover", () => {
+    // Same wall; the slider stops 22 units short of it (22 / 28 ≈ 0.79), owner change round on #64.
+    const wall = {
+      shape: { type: "rect", x: 180, y: 200, w: 40, h: 120 },
+      materialId: "stone",
+    } as const;
+    const slider = {
+      shape: { type: "rect", x: 0, y: 260, w: 60, h: 60 },
+      materialId: "stone",
+    } as const;
+    const state = createGameState({
+      level: {
+        ...level,
+        terrain: [...level.terrain, wall, slider],
+        movers: [
+          {
+            motion: { kind: "slide", offset: { x: 98, y: 0 }, periodS: 4, phase: 0 },
+            pivot: { x: 30, y: 290 },
+            terrainIndices: [2],
+          },
+        ],
+      },
+      tunables: DEFAULT_GAME_TUNABLES,
+    });
+    stepFor(state, 2);
+    const player = state.players.find((p) => p.slot === 0)!;
+    expect(player.squeeze?.scale).toBeLessThan(0.9);
+    const yBefore = player.y;
+    stepFor(state, 0.15, keys("Space"));
+    expect(player.y).toBeLessThan(yBefore - 20);
+    stepFor(state, 2);
+    expect(player.squeeze).toBeNull();
+    const crushed = state.combat.events.some(
+      (event) => event.type === "playerEliminated" && event.cause === "crush"
+    );
+    expect(crushed).toBe(false);
+    expect(state.combat.fighters.get(player.id)?.eliminated).toBe(false);
   });
 
   it("should play a part's declared end sound at each turning point and nothing for a silent part", () => {

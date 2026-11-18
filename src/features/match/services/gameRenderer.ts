@@ -210,8 +210,27 @@ const blobOverlays = (
 ): Map<string, BlobPoseOverlay> => {
   const overlays = burningBlobPoses(state.fire, { players: frame.inPlay, nowMs: frame.nowMs });
   for (const [id, pose] of diveBlobPoses(state.dive, state.tunables)) overlays.set(id, pose);
+  for (const player of frame.inPlay) {
+    if (player.squeeze && !overlays.has(player.id))
+      overlays.set(player.id, squeezePose(player.squeeze));
+  }
   return overlays;
 };
+
+/** Longest a squeezed blob stretches along the gap (it goes past the squash band, owner #64). */
+const SQUEEZE_STRETCH_MAX = 1.6;
+
+/**
+ * A blob squeezed by a moving part (owner change round on #64): narrow across the squeeze, taller
+ * along it, axis-aligned so the eyes stay upright; it springs back when the squeeze ends.
+ */
+function squeezePose(squeeze: NonNullable<PlayerState["squeeze"]>): BlobPoseOverlay {
+  const along = Math.min(SQUEEZE_STRETCH_MAX, 1 / squeeze.scale);
+  const across = squeeze.scale;
+  return Math.abs(squeeze.nx) >= Math.abs(squeeze.ny)
+    ? { rotation: 0, sx: across, sy: along }
+    : { rotation: 0, sx: along, sy: across };
+}
 
 interface LayerFrame {
   inPlay: ReturnType<typeof playersInPlay>;

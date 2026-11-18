@@ -87,6 +87,7 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     landCount: 0,
     lastLandingSpeed: 0,
     groundAngle: 0,
+    squeeze: null,
   };
 }
 
@@ -98,6 +99,7 @@ export function placePlayer(player: PlayerState, at: Vec2): void {
   player.vy = 0;
   player.grounded = false;
   player.groundAngle = 0;
+  player.squeeze = null;
   player.jumpRising = false;
   player.coyoteTimer = 0;
   player.jumpBufferTimer = 0;
@@ -132,13 +134,20 @@ type Axis = "x" | "y";
  * that rides slopes) under a head box on the cells, inset half a sample at the sides and one
  * sample above the circle's center so cell steps never catch on a slope (slope-walking D7, A4).
  */
-const bodyRadius = (player: PlayerState): number => player.width / 2;
+const bodyRadius = (player: PlayerState): number =>
+  (player.width / 2) * (player.squeeze?.scale ?? 1);
+/** The circle sits on the feet point; squeezed, it shrinks and stays on the feet (moving parts). */
 const bodyCenter = (player: PlayerState): Vec2 => ({
   x: player.x,
-  y: player.y - player.height / 2,
+  y: player.y - (player.squeeze ? bodyRadius(player) : player.height / 2),
 });
 
 function headBox(player: PlayerState, terrain: TerrainGrid): Rect {
+  // Squeezed by a moving part, the blob is only its shrunken circle (no head box to catch).
+  if (player.squeeze) {
+    const center = bodyCenter(player);
+    return { x: center.x - 0.5, y: center.y - 0.5, w: 1, h: 1 };
+  }
   const side = terrain.cellSize / 2;
   return {
     x: player.x - player.width / 2 + side,

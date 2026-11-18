@@ -459,12 +459,17 @@ describe("material system (acceptance)", () => {
 });
 
 describe("parseLevelFile — moving-parts test level", () => {
-  it("should import the crusher test level with its three moving parts and no warnings", () => {
+  it("should import the crusher test level with its four moving parts and no warnings", () => {
     const { level: def, warnings } = okLevel(parseLevelFile(CRUSHER_TEST));
     expect(warnings).toEqual([]);
     expect(def.meta.levelId).toBe("crusher-test");
     expect(def.spawns).toHaveLength(4);
-    expect(def.movers?.map((mover) => mover.motion.kind)).toEqual(["slide", "spin", "slide"]);
+    expect(def.movers?.map((mover) => mover.motion.kind)).toEqual([
+      "slide",
+      "spin",
+      "slide",
+      "slide",
+    ]);
     expect(def.movers?.[0]?.sounds).toEqual({ end: "thud" });
   });
 });

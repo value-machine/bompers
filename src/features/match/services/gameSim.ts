@@ -244,8 +244,14 @@ function stepMovingParts(state: GameState, players: PlayerState[], dt: number): 
     vy: crate.vy,
   }));
   const bodies: MovingRider[] = [...players, ...crateBodies];
-  const ride = rideMovers(terrain, bodies);
+  const ride = rideMovers(terrain, bodies, {
+    crushGapFraction: state.tunables.player.crushGapFraction,
+  });
   state.moverCarry = inheritOnLeave(state.moverCarry, bodies, { ride, dt });
+  // Squeezed but alive: the player shrinks to fit for its own step and recovers when it opens.
+  players.forEach((player, i) => {
+    player.squeeze = ride.squeezed[i] ?? null;
+  });
   crushPinnedPlayers(state, players, ride.pinned);
   crates.forEach((crate, i) => {
     const body = crateBodies[i]!;

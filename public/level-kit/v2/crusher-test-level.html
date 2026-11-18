@@ -18,7 +18,7 @@
       data-title="Crusher Test"
       data-author="Bompers team"
       data-agent="claude"
-      data-description="Test level for moving parts: a block that slides into a wall and thuds (stand in the gap to be crushed), a spinning bar to ride, and a fast lift to jump off, each one short walk from a spawn."
+      data-description="Test level for moving parts: a block that slides into a wall and thuds (stand in the gap to be crushed), a block that stops short of a post (stand in the gap to be squeezed and survive), a spinning bar to ride, and a fast lift to jump off, each one short walk from a spawn."
       data-cell-size="4"
       data-gravity="1"
       data-match-duration="180"
@@ -33,11 +33,13 @@
         <rect id="floor" data-role="terrain" data-material="stone" data-label="Floor" x="160" y="840" width="1280" height="48" fill="#5a3f7a" />
         <!-- The wall the crusher closes on. -->
         <rect id="wall" data-role="terrain" data-material="stone" data-label="Wall" x="160" y="600" width="48" height="240" fill="#5a3f7a" />
+        <!-- The post the squeezer closes toward. -->
+        <rect id="post" data-role="terrain" data-material="stone" data-label="Post" x="1048" y="720" width="32" height="120" fill="#5a3f7a" />
       </g>
 
-      <!-- 1. Crusher: slides left until 8 units from the wall and back every 4 s, thuds at each end.
+      <!-- 1. Crusher: slides left until it meets the wall and back every 4 s, thuds at each end.
            Jump over it into the gap while it is out to the right to get crushed. -->
-      <g id="crusher" data-motion="slide -184,0" data-end-sound="thud">
+      <g id="crusher" data-motion="slide -192,0" data-end-sound="thud">
         <rect data-role="terrain" data-material="stone" data-color="slate" data-label="Crusher" x="400" y="768" width="80" height="72" fill="#4f6178" />
       </g>
 
@@ -46,7 +48,13 @@
         <rect data-role="terrain" data-material="stone" data-color="moss" data-label="Spinner" x="680" y="548" width="240" height="24" fill="#5f8f3e" />
       </g>
 
-      <!-- 3. Fast lift: rises 200 and back every 2 s; jump off while it rises to fly higher. -->
+      <!-- 3. Squeezer: slides right until 20 units from the post (about 70% of a blob) and back every
+           4 s. Jump over it into the gap: you squash to fit, can still jump out, and spring back; no crush. -->
+      <g id="squeezer" data-motion="slide 60,0">
+        <rect data-role="terrain" data-material="stone" data-color="clay" data-label="Squeezer" x="920" y="768" width="48" height="72" fill="#c4673f" />
+      </g>
+
+      <!-- 4. Fast lift: rises 200 and back every 2 s; jump off while it rises to fly higher. -->
       <g id="lift" data-motion="slide 0,-200 2s">
         <rect data-role="terrain" data-material="stone" data-color="rose" data-label="Fast lift" x="1120" y="816" width="120" height="24" fill="#c95a86" />
       </g>
@@ -54,7 +62,7 @@
       <g id="spawns">
         <circle data-role="spawn" cx="560" cy="816" r="14" fill="#3f8f5f" />
         <circle data-role="spawn" cx="800" cy="816" r="14" fill="#3f8f5f" />
-        <circle data-role="spawn" cx="1000" cy="816" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="880" cy="816" r="14" fill="#3f8f5f" />
         <circle data-role="spawn" cx="1320" cy="816" r="14" fill="#3f8f5f" />
       </g>
 

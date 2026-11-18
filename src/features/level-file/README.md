@@ -37,7 +37,7 @@ Messages name the element: `terrain "main-core"` (id or `data-label`), else `spa
 - A rejected import adds nothing; every accepted import (even the same file again) is a new library entry and becomes the lobby's level (level-importer, lobby D1).
 - The built-in list is a TS manifest checked against `public/levels/` by a test, not a JSON file in that folder (lobby D6).
 - The kit also ships `fire-test-level.html` (owner, fire-clusters, 2026-11-17): a level with a lot of cardboard and a torch in every drop, for testing fire by importing it in the lobby; `levelFileParser.test.ts` imports it without warnings and checks its spawns stand on the cardboard slabs.
-- The kit also ships `crusher-test-level.html` (moving-parts lap B-2): a crusher with an end sound, a spinner and a fast lift, for testing moving parts by importing it in the lobby; `levelFileParser.test.ts` (block "moving-parts test level") imports it without warnings and checks its three parts.
+- The kit also ships `crusher-test-level.html` (moving-parts lap B-2): a crusher with an end sound that closes fully on a wall, a squeezer that stops 20 short of a post (survivable squeeze), a spinner and a fast lift, for testing moving parts by importing it in the lobby; `levelFileParser.test.ts` (block "moving-parts test level") imports it without warnings and checks its three parts.
 - `data-cell-size` is the terrain sample spacing; the shipped levels and the kit example use 4 (terrain-field D1).
 - Point roles carry no behaviour in the engine yet; `data-behavior` on them is only checked (W4) (level-importer).
 - `x`, `y`, `cx`, `cy` default to 0 as in SVG; sizes (`width`, `height`, `r` on terrain, `points`) are required and positive (level-importer).

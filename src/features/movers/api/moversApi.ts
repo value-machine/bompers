@@ -8,6 +8,8 @@ export {
   type CarryMemory,
   type MovingRider,
   type PinnedBody,
+  type RideOptions,
+  type Squeeze,
   type RideResult,
   type RiderBody,
 } from "@/features/movers/services/moverRide";
