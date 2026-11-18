@@ -65,7 +65,7 @@ const bodyAt = <Body extends RayFanBody>(bodies: readonly Body[], p: Vec2): Body
   );
 
 /** Directions of the fan's rays: evenly spread over ±half-angle of the aim. */
-function rayDirections(aim: Vec2, shape: RayFanShape): Vec2[] {
+export function rayDirections(aim: Vec2, shape: RayFanShape): Vec2[] {
   const base = Math.atan2(aim.y, aim.x);
   const half = (shape.halfAngleDegrees * Math.PI) / 180;
   return Array.from({ length: shape.rays }, (_, i) => {
