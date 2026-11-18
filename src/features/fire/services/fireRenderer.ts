@@ -1,6 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import { inkColor } from "@/shared/utils/debugInk";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import {
   EMPTY_CELL,
@@ -103,7 +104,11 @@ export interface FireFrame {
 }
 
 const COLORS = GAME_PALETTE.fire;
-const INK = GAME_PALETTE.ink;
+/** Ink of the torch sprays, release puffs, pilot flames and smoke edges. */
+const INK = inkColor("fireSprays");
+const BODY_INK = inkColor("fireBody");
+const FLAME_INK = inkColor("fireFlames");
+const SCORCH = inkColor("fireScorch", COLORS.scorch);
 const MAX_PUFFS = 24;
 /** A spray missing for longer than this has stopped (its next start grows in again). */
 const SPRAY_GAP_SECONDS = 0.1;
@@ -160,7 +165,7 @@ function drawScorch(view: FireView, frame: FireFrame): void {
     const at = sampleCentre(terrain, index);
     view.scorch.circle(at.x, at.y, terrain.cellSize * 0.75);
   });
-  view.scorch.fill({ color: COLORS.scorch, alpha: 0.4 });
+  view.scorch.fill({ color: SCORCH, alpha: 0.4 });
   view.scorchVersion = fire.version;
 }
 
@@ -244,7 +249,7 @@ function drawBody(view: FireView, frame: FireFrame, ink: number): void {
     for (const g of [view.bodyInk, view.bodyFill, view.bodyHot]) g.clear();
     return;
   }
-  drawContour(view.bodyInk, terrainContour(terrain, { grow: ink, region }), INK);
+  drawContour(view.bodyInk, terrainContour(terrain, { grow: ink, region }), BODY_INK);
   drawContour(view.bodyFill, terrainContour(terrain, { grow: 0, region }), COLORS.outer);
   drawHot(view, frame, burning);
 }
@@ -281,7 +286,7 @@ function drawFlames(view: FireView, frame: FireFrame, ink: number): void {
     timeSeconds: frame.nowMs / 1000,
     burnSeconds: frame.burnSeconds,
   });
-  if (tongues(view.flameInk, flames, ink)) view.flameInk.fill(INK);
+  if (tongues(view.flameInk, flames, ink)) view.flameInk.fill(FLAME_INK);
   if (tongues(g, flames)) g.fill(COLORS.outer);
   const ambers = flames.map((tongue) => heart(tongue, 0.6));
   if (tongues(g, ambers)) g.fill(COLORS.mid);

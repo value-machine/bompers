@@ -5,6 +5,7 @@ import {
   syncContactShadows,
   type ContactShadowLayer,
 } from "@/shared/utils/contactShadowLayer";
+import { inkColor } from "@/shared/utils/debugInk";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 import { DESIGN_SCALE, outlineWidth } from "@/shared/utils/outlineWidth";
 import { surfaceBelow, type TerrainGrid } from "@/features/arena/api/arenaApi";
@@ -29,6 +30,8 @@ export interface CombatView {
   overlay: Container;
   rocketSprites: Map<number, Container>;
   health: Map<string, { pips: Graphics; shown: number }>;
+  /** Steam where beams end each other; in the overlay, so it lies over the beams. */
+  clashSteam: Graphics;
 }
 
 const PIP = { w: 6, h: 5, gap: 2, lift: 10 };
@@ -38,17 +41,21 @@ const ROCKET_LENGTH = 32 * S;
 /** Smoke puffs behind a rocket: one more appears every this many seconds of flight. */
 const PUFF_SECONDS = 0.012;
 
-const ink = (width: number) => ({ width, color: GAME_PALETTE.ink, join: "round" as const });
+const ink = (width: number) => ({ width, color: inkColor("other"), join: "round" as const });
 const slotColor = (slot: number): number =>
   GAME_PALETTE.players[slot % GAME_PALETTE.players.length] ?? GAME_PALETTE.ink;
 
 export function createCombatView(): CombatView {
+  const overlay = new Container({ label: "combat-overlay" });
+  const clashSteam = new Graphics();
+  overlay.addChild(clashSteam);
   return {
     shadows: createContactShadowLayer("contact-shadows"),
     rockets: new Container({ label: "rockets" }),
-    overlay: new Container({ label: "combat-overlay" }),
+    overlay,
     rocketSprites: new Map(),
     health: new Map(),
+    clashSteam,
   };
 }
 
@@ -200,6 +207,39 @@ function syncPlayerExtras(view: CombatView, frame: CombatFrame): void {
   }
 }
 
+/**
+ * Steam where two beams end each other (beam-clash D1, the "Steam wall"): white puffs with an
+ * ink edge that keep rising from the meeting point while the clash holds. Drawn from the sim
+ * time alone, so there is nothing to keep between frames.
+ */
+const CLASH_STEAM = { puffs: 8, seconds: 0.6, rise: 26, spreadX: 14, spreadY: 10, radius: 6 };
+
+/** A repeatable 0–1 number per puff and per cycle, so each puff starts somewhere else each time. */
+const scatter = (n: number): number => {
+  const s = Math.sin(n * 127.1) * 43758.5453;
+  return s - Math.floor(s);
+};
+
+function drawClashSteam(g: Graphics, frame: CombatFrame, width: number): void {
+  g.clear();
+  const look = CLASH_STEAM;
+  for (const clash of frame.combat.beamClashes) {
+    for (let i = 0; i < look.puffs; i += 1) {
+      const turn = frame.timeSeconds / look.seconds + i / look.puffs;
+      const cycle = Math.floor(turn);
+      const f = turn - cycle;
+      const seed = cycle * look.puffs + i;
+      const x = clash.at.x + (scatter(seed) - 0.5) * look.spreadX;
+      const y = clash.at.y + (scatter(seed + 0.5) - 0.5) * look.spreadY - look.rise * f;
+      const size = look.radius * (1 + 0.6 * scatter(seed + 0.25));
+      const r = size * (f < 0.25 ? 0.5 + 2 * f : 1.15 - f);
+      if (r <= 0) continue;
+      g.circle(x, y, r + width / 2).fill({ color: GAME_PALETTE.ink, alpha: 0.5 * (1 - f) });
+      g.circle(x, y, r).fill({ color: GAME_PALETTE.fire.steam, alpha: 1 - 0.4 * f });
+    }
+  }
+}
+
 /** Rockets cast a contact shadow on the first surface below (§ 4). */
 function syncShadows(view: CombatView, frame: CombatFrame): void {
   syncContactShadows(view.shadows, {
@@ -240,4 +280,5 @@ export function syncCombatView(view: CombatView, frame: CombatFrame): void {
   });
   syncShadows(view, frame);
   syncPlayerExtras(view, frame);
+  drawClashSteam(view.clashSteam, frame, outlineWidth("effect", zoom).width);
 }

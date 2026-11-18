@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bobsled Run — Bompers level</title>
+    <!-- Optional preview kit: legend, labels, grid. The level works without it. -->
+    <link rel="stylesheet" href="/level-kit/v2/preview.css" />
+    <script src="/level-kit/v2/preview.js" defer></script>
+  </head>
+  <body>
+    <svg
+      id="level"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 2480 1400"
+      data-level-format="2"
+      data-level-id="bobsled-run"
+      data-title="Bobsled Run"
+      data-author="Bompers team"
+      data-agent="claude-sonnet"
+      data-description="Jump off the start tower, dive steeply into the ice chute and hold the headbutt to roll down it onto the ice runway. From its end a jump and a late dive cross the gap to the crown. Miss and the far floor catches you; ride the lift back up."
+      data-cell-size="4"
+      data-gravity="1"
+      data-match-duration="180"
+      data-weapons="freeze-ray torch"
+      style="display: block; width: 100%; height: auto; background: #dbe8f3"
+    >
+      <title>Bobsled Run</title>
+
+      <!-- Decoration (no data-role): distant snowy hills and drifting flakes. -->
+      <polygon points="40,1160 400,900 700,1060 1100,880 1500,1080 1900,920 2440,1160" fill="#c3d6e6" />
+      <polygon points="40,1160 300,1020 640,1120 1000,1000 1400,1130 1800,1030 2440,1160" fill="#b2c9de" />
+      <circle cx="1000" cy="200" r="6" fill="#ffffff" />
+      <circle cx="1500" cy="320" r="5" fill="#ffffff" />
+      <circle cx="1900" cy="180" r="7" fill="#ffffff" />
+      <circle cx="700" cy="120" r="5" fill="#ffffff" />
+      <circle cx="1700" cy="480" r="6" fill="#ffffff" />
+
+      <rect data-role="bounds" x="40" y="20" width="2400" height="1360" fill="none" stroke="#d24b3a" stroke-width="3" stroke-dasharray="14 8" />
+
+      <g id="terrain">
+        <!-- Start tower with a tunnel at the foot (lift side to undercroft). -->
+        <rect data-role="terrain" data-material="stone" data-label="Start tower" x="240" y="320" width="280" height="720" fill="#5a3f7a" />
+        <!-- Left wall behind the lift. -->
+        <rect data-role="terrain" data-material="stone" x="44" y="300" width="44" height="920" fill="#5a3f7a" />
+        <!-- Undercroft floor. -->
+        <rect data-role="terrain" data-material="stone" data-label="Undercroft floor" x="240" y="1160" width="1240" height="60" fill="#5a3f7a" />
+        <!-- The chute: ice, 30 degrees down, then a flat ice runway to the edge. -->
+        <polygon data-role="terrain" data-material="ice" data-label="Chute" points="520,320 1180,700 1460,700 1460,800 520,800" fill="#a8cfe6" />
+        <rect data-role="terrain" data-material="stone" x="520" y="800" width="940" height="60" fill="#5a3f7a" />
+        <!-- Landing pad and crown island. -->
+        <rect data-role="terrain" data-material="cardboard" data-label="Pad" x="2100" y="760" width="80" height="32" fill="#c99a62" />
+        <rect data-role="terrain" data-material="stone" data-label="Crown" x="2180" y="760" width="200" height="80" fill="#5a3f7a" />
+        <!-- Far floor and right wall. -->
+        <rect data-role="terrain" data-material="stone" data-label="Far floor" x="1900" y="1160" width="480" height="60" fill="#5a3f7a" />
+        <rect data-role="terrain" data-material="stone" x="2380" y="560" width="56" height="660" fill="#5a3f7a" />
+      </g>
+
+      <!-- Lift: rests level with the undercroft floor, rises to the tower top. -->
+      <g data-motion="slide 0,-840 8s">
+        <rect data-role="terrain" data-material="stone" data-color="slate" data-label="Lift" x="96" y="1160" width="136" height="60" fill="#4f6178" />
+      </g>
+
+      <g id="spawns">
+        <circle data-role="spawn" cx="300" cy="296" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="460" cy="296" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="760" cy="1136" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="1100" cy="1136" r="14" fill="#3f8f5f" />
+      </g>
+
+      <g id="drops">
+        <circle data-role="drop" cx="380" cy="120" r="12" fill="#c94f7c" />
+        <circle data-role="drop" cx="2280" cy="100" r="12" fill="#c94f7c" />
+        <circle data-role="drop" cx="2000" cy="100" r="12" fill="#c94f7c" />
+      </g>
+
+      <g id="collectibles">
+        <circle data-role="collectible" data-item="point-orb" cx="2240" cy="600" r="10" fill="#e0b62c" />
+        <circle data-role="collectible" data-item="point-orb" cx="2320" cy="600" r="10" fill="#e0b62c" />
+        <circle data-role="collectible" data-item="dive-reset" cx="1700" cy="1000" r="12" fill="#5fe0ff" />
+      </g>
+    </svg>
+  </body>
+</html>

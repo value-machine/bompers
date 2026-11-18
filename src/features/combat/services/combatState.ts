@@ -34,6 +34,7 @@ export function createCombatState(): CombatState {
     fighters: new Map(),
     rockets: [],
     events: [],
+    beamClashes: [],
     nextSeq: 1,
     nextEntityId: 1,
   };

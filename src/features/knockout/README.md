@@ -23,6 +23,8 @@ The flying and squashing blob is drawn by the player layer: each `KnockoutBody` 
 - `src/shared/utils/fallingBody.ts` (circle vs terrain point test), `displaySync`, `outlineWidth`, `gamePalette`; tunables `feel.knockout`.
 - Consumed by `match` (`gameRenderer.ts` steps it with the terrain's `isSolidAt` and places the layer above effects, under rockets and players).
 
+- `src/shared/utils/debugInk.ts`: the goo stain and droplet-edge colours (`?debugInk=1` tints them; fire-black-flash diagnosis).
+
 ## Decisions
 
 - The fling runs in the shared roll (orchestrator, after the shared-roll lap): no separate flight physics, so a knocked-out blob rolls exactly like a hit one until it bursts.
