@@ -58,6 +58,7 @@ import {
   syncFireView,
   type FireView,
 } from "@/features/fire/api/fireApi";
+import { createIceView, syncIceView, type IceView } from "@/features/ice/api/iceApi";
 import { playersInPlay, type GameState } from "@/features/match/services/gameSim";
 import { createHudView, syncHudView, type HudView } from "@/features/match/services/hudRenderer";
 
@@ -95,6 +96,7 @@ export interface GameRenderer {
   collectibles: CollectiblesView;
   dive: DiveView;
   fire: FireView;
+  ice: IceView;
   hud: HudView;
   camera: CameraView | null;
   feel: FeelState;
@@ -111,8 +113,11 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const collectibles = createCollectiblesView();
   const dive = createDiveView();
   const fire = createFireView();
+  const ice = createIceView();
   world.addChild(
     terrain.container,
+    // Frozen ground under the flames: a fire next to ice stays readable.
+    ice.terrainLayer,
     fire.terrainLayer,
     collectibles.shadows.container,
     combat.shadows.container,
@@ -125,6 +130,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     dive.effects,
     players.container,
     fire.sprayLayer,
+    ice.beamLayer,
     combat.overlay
   );
 
@@ -140,6 +146,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     collectibles,
     dive,
     fire,
+    ice,
     hud,
     camera: null,
     feel: createFeelState(),
@@ -202,6 +209,7 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
   const { inPlay, nowMs, zoom } = frame;
   const weapons = blobWeapons(state);
   syncTerrainView(renderer.terrain, state.arena.terrain, zoom);
+  syncIceView(renderer.ice, { ice: state.ice, terrain: state.arena.terrain, nowMs, zoom });
   syncFireView(renderer.fire, {
     fire: state.fire,
     terrain: state.arena.terrain,

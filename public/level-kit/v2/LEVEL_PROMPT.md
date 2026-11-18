@@ -67,7 +67,7 @@ Root attributes:
 | `drop` | `<circle>` | ≥ 1 | Weapon crates fall from here (`r="12"`); place high up. `data-items` = space-separated drop items (§ 4). `fill="#c94f7c"`. |
 | `collectible` | `<circle>` | ≥ 0 | A pickup point (`r="10"`), `data-item` = one collectible item (§ 4). `point-orb`: point orbs fall from the sky onto it. `dive-reset`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns 2.5 s after use) — hang them in the air between platforms and off edges for headbutt chains. `fill="#e0b62c"`. |
 
-Drop items: `rocket-launcher`, `homing-launcher`, `torch`. Collectible items: `point-orb`, `dive-reset`.
+Drop items: `rocket-launcher`, `homing-launcher`, `torch`, `freeze-ray`. Collectible items: `point-orb`, `dive-reset`.
 
 ### Moving parts (optional)
 
@@ -105,7 +105,7 @@ Reference content **by ID only**; IDs are lowercase-kebab. Unknown IDs fall back
 - `data-color` (looks; any colour on any material, names only, no hex) — use the hex as that shape's `fill`: `plum` `#5a3f7a`, `slate` `#4f6178`, `cardboard` `#c99a62`, `clay` `#c4673f`, `moss` `#5f8f3e`, `mint` `#3aa889`, `frost` `#a8cfe6`, `rose` `#c95a86`.
 - `data-effect`: `none`, `dust-burst`.
 - `data-sound`: `none`, `thud`, `crumble`, `thwap`, `clink`, `jump`, `land`, `tumble-bounce`, `dive-launch`, `dive-impact`, `hit`, `elimination`, `rocket-fire`, `explosion`, `pickup`, `respawn`, `round-start`, `round-end`.
-- `data-items` (drop): `rocket-launcher`, `homing-launcher`, `torch`; default `rocket-launcher`. List several to alternate crates.
+- `data-items` (drop): `rocket-launcher`, `homing-launcher`, `torch`, `freeze-ray`; default `rocket-launcher`. List several to alternate crates.
 - `data-item` (collectible): `point-orb`, `dive-reset`; default `point-orb`.
 - `data-behavior`: none yet — leave it out.
 
@@ -123,6 +123,7 @@ With another gravity multiplier `k`, heights and jump gaps scale by about `1 / k
 - Rocket jump (no self-damage): a point-blank blast under a standing player lifts ~`417` units, ~`585` with the shot's recoil.
 - Homing missiles fly `480` units/s and turn slowly: open spaces make them dodgeable, tight corridors make them deadly.
 - `torch`: `3` s of flame held on fire, a `84`-unit cone that lights cardboard and lightly pushes players; no blast, no crater. Fire spreads through touching cardboard at `13` units/s, each bit burns `7.5` s and is gone; it never crosses air, flows around stone, stops at earth, and cardboard touching ice never catches. Cardboard bridges and towers become timed hazards with a torch in the drop list.
+- `freeze-ray`: `3` s of a narrow `180`-unit beam held on fire. The ground it touches freezes, and the cold spreads through touching terrain of any material at `40` units/s for as long as the beam is held. Frozen ground behaves like ice for `8` s: slippery, blasts can't cut it, fire can't enter it. The torch thaws it. Breakable bridges can be saved from rockets, and any floor can become a slide.
 - Match: up to 4 players, 180 s by default; respawn after 1.2 s at a spawn.
 
 ## 6. Pre-output validation checklist
@@ -151,7 +152,7 @@ Smallest valid level (shape reference only; build the map from § 7):
       <circle data-role="spawn" cx="520" cy="536" r="14" fill="#3f8f5f" />
       <circle data-role="spawn" cx="680" cy="536" r="14" fill="#3f8f5f" />
       <circle data-role="spawn" cx="880" cy="536" r="14" fill="#3f8f5f" />
-      <circle data-role="drop" data-items="rocket-launcher homing-launcher torch" cx="600" cy="80" r="12" fill="#c94f7c" />
+      <circle data-role="drop" data-items="rocket-launcher homing-launcher torch freeze-ray" cx="600" cy="80" r="12" fill="#c94f7c" />
     </svg>
   </body>
 </html>

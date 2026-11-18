@@ -54,6 +54,16 @@ export interface TerrainGrid {
   /** Chunk indices (row-major) changed since the renderer last drew them. */
   dirtyChunks: Set<number>;
   /**
+   * Row-major 1 = frozen (ice-element D5): the sample keeps its material but behaves like ice
+   * while set — it reads `frozenFriction`, blasts do not cut it and fire does not enter it.
+   * Written only through `setSampleFrozen` / `thawAround` (`frozenTerrain.ts`).
+   */
+  frozen: Uint8Array;
+  /** Bumps whenever a `frozen` flag changes (consumers re-read on change). */
+  frozenVersion: number;
+  /** Grip of a frozen sample: the ice material's friction (1 until a level sets it). */
+  frozenFriction: number;
+  /**
    * Moving parts (LEVEL_FORMAT § 11): kinematic bodies with their own local field, never written
    * into this grid's samples (moving-parts D11). The solid queries read them; craters, fire and
    * the static outline do not. Empty for a static level and for a mover's own local field.

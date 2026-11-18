@@ -155,6 +155,7 @@ At least one `terrain` shape is required.
 | item | `rocket-launcher` | Rocket launcher | use: drop, default for drop |
 | item | `homing-launcher` | Homing launcher | use: drop |
 | item | `torch` | Torch | use: drop |
+| item | `freeze-ray` | Freeze ray | use: drop |
 | item | `point-orb` | Point orb | use: collectible, default for collectible |
 | item | `dive-reset` | Headbutt reset | use: collectible |
 <!-- level-kit:catalog-ids:end -->

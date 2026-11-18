@@ -457,8 +457,22 @@ describe("combat — spray weapons (torch, fire-spread b1)", () => {
     hold(world, 10);
     hold(world, 2, { fire: false });
     hold(world, 10);
-    const starts = world.combat.events.filter((event) => event.type === "torchStarted");
+    const starts = world.combat.events.filter((event) => event.type === "sprayStarted");
     expect(starts).toHaveLength(2);
+  });
+
+  it("should hand the hook the held spray weapon and drain its own charge when it is a freeze ray", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    world.combat.fighters.get("p0")!.weapon = { itemId: "freeze-ray", ammo: C.freezeRay.ammo };
+    const seen: string[] = [];
+    stepAttacks(world.ctx(), [{ ...EMPTY_PLAYER_INPUT, connected: true, fire: true }], {
+      dt,
+      sprayAttack: (step) => seen.push(step.itemId),
+    });
+    expect(seen).toEqual(["freeze-ray"]);
+    expect(world.combat.fighters.get("p0")!.weapon?.ammo).toBeCloseTo(C.freezeRay.ammo - dt, 6);
+    const start = world.combat.events.find((event) => event.type === "sprayStarted");
+    expect(start).toMatchObject({ itemId: "freeze-ray", slot: 0 });
   });
 });
 

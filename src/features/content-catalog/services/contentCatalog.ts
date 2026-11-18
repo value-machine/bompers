@@ -120,6 +120,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
     "homing-launcher": { id: "homing-launcher", label: "Homing launcher", use: "drop" },
     // A short flame cone that lights cardboard (blast-power D8, fire-spread b1).
     torch: { id: "torch", label: "Torch", use: "drop" },
+    // A held beam that freezes the ground it touches (owner, ice-element D1).
+    "freeze-ray": { id: "freeze-ray", label: "Freeze ray", use: "drop" },
     "point-orb": { id: "point-orb", label: "Point orb", use: "collectible" },
     // Placed, not dropped: gives a spent dive its charge back mid-flight (headbutt-reset D1).
     "dive-reset": { id: "dive-reset", label: "Headbutt reset", use: "collectible" },

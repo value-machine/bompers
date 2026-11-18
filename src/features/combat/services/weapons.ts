@@ -1,6 +1,6 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { CraterShape } from "@/shared/types/craterShape.types";
-import type { WeaponItemId } from "@/shared/types/weaponItems.types";
+import type { SprayWeaponItemId, WeaponItemId } from "@/shared/types/weaponItems.types";
 import { emitCombatEvent, fighterFor, type HitWorld } from "@/features/combat/services/combatState";
 import type { RocketKind } from "@/features/combat/types/combat.types";
 
@@ -34,12 +34,13 @@ const MODE_OF: Readonly<Record<WeaponItemId, WeaponMode>> = {
   "rocket-launcher": "projectile",
   "homing-launcher": "projectile",
   torch: "spray",
+  "freeze-ray": "spray",
 };
 
 export const weaponMode = (itemId: WeaponItemId): WeaponMode => MODE_OF[itemId];
 
 /** Weapons that fire a rocket kind. */
-export type ProjectileWeaponId = Exclude<WeaponItemId, "torch">;
+export type ProjectileWeaponId = Exclude<WeaponItemId, SprayWeaponItemId>;
 
 export const isProjectileWeapon = (itemId: WeaponItemId): itemId is ProjectileWeaponId =>
   MODE_OF[itemId] === "projectile";
@@ -68,11 +69,19 @@ export const flightTunables = (
 ): ProjectileWeaponTunables =>
   kind === "homing" ? tunables.combat.homing : tunables.combat.rocket;
 
+/** The tunables section of each spray weapon; a new one is a compile error until listed. */
+const SPRAY_TUNABLES: Readonly<
+  Record<SprayWeaponItemId, (tunables: GameTunables) => HeldWeaponTunables>
+> = {
+  torch: (tunables) => tunables.combat.torch,
+  "freeze-ray": (tunables) => tunables.combat.freezeRay,
+};
+
 /** The shared numbers of a held weapon (ammo, cooldown, recoil). */
 export const weaponTunables = (tunables: GameTunables, itemId: WeaponItemId): HeldWeaponTunables =>
   isProjectileWeapon(itemId)
     ? flightTunables(tunables, rocketKindOf(itemId))
-    : tunables.combat.torch;
+    : SPRAY_TUNABLES[itemId](tunables);
 
 /** The strongest recoil of any weapon: one shot per launch, so the kill-zone margin counts this. */
 export const maxWeaponRecoil = (tunables: GameTunables): number =>

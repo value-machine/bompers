@@ -57,6 +57,7 @@ describe("contentCatalog", () => {
       "rocket-launcher",
       "homing-launcher",
       "torch",
+      "freeze-ray",
       "point-orb",
       "dive-reset",
     ]);

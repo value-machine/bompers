@@ -21,6 +21,8 @@ export interface TerrainGridSize {
   widthCells: number;
   heightCells: number;
   chunkCells?: number;
+  /** Grip of frozen samples (default 1: freezing changes no grip). */
+  frozenFriction?: number;
 }
 
 const EMPTY_SLOT: TerrainCellSlot = {
@@ -75,6 +77,9 @@ export function createTerrainGrid(size: TerrainGridSize): TerrainGrid {
     chunksX,
     chunksY,
     dirtyChunks,
+    frozen: new Uint8Array(count),
+    frozenVersion: 0,
+    frozenFriction: size.frozenFriction ?? 1,
     movers: [],
   };
 }
@@ -135,8 +140,48 @@ export function writeSample(grid: TerrainGrid, write: SampleWrite): boolean {
   if (grid.cells[index] === slot && grid.distance[index] === distance) return false;
   grid.cells[index] = slot;
   grid.distance[index] = distance;
+  // Terrain that is gone is not frozen terrain.
+  if (slot === EMPTY_CELL && grid.frozen[index] === 1) {
+    grid.frozen[index] = 0;
+    grid.frozenVersion += 1;
+  }
   grid.dirtyChunks.add(chunkIndexOfCell(grid, cx, cy));
   return true;
+}
+
+/**
+ * Frozen terrain (ice-element D5): a flag per sample on top of its material. A frozen sample
+ * behaves like ice while the flag is set: slippery (`frozenFriction`), not cut by blasts, and
+ * closed to fire. The grid only stores the flag and applies it in its own queries; who freezes
+ * and thaws is the caller's (the ice feature's front and timers, the torch's flame).
+ */
+export const isFrozenSample = (grid: TerrainGrid, index: number): boolean =>
+  grid.frozen[index] === 1;
+
+/** Freezes or thaws one solid sample; returns whether the flag changed. */
+export function setSampleFrozen(grid: TerrainGrid, index: number, frozen: boolean): boolean {
+  const next = frozen ? 1 : 0;
+  if (grid.frozen[index] === next) return false;
+  if (frozen && (grid.cells[index] ?? EMPTY_CELL) === EMPTY_CELL) return false;
+  grid.frozen[index] = next;
+  grid.frozenVersion += 1;
+  return true;
+}
+
+/** Thaws every frozen sample within `radius` world units of a sample; returns how many. */
+export function thawAround(grid: TerrainGrid, index: number, radius: number): number {
+  const reach = Math.ceil(radius / grid.cellSize);
+  const cx = index % grid.widthCells;
+  const cy = Math.floor(index / grid.widthCells);
+  let thawed = 0;
+  for (let dy = -reach; dy <= reach; dy += 1) {
+    for (let dx = -reach; dx <= reach; dx += 1) {
+      if (!inGrid(grid, cx + dx, cy + dy)) continue;
+      if (Math.hypot(dx, dy) * grid.cellSize > radius) continue;
+      if (setSampleFrozen(grid, (cy + dy) * grid.widthCells + cx + dx, false)) thawed += 1;
+    }
+  }
+  return thawed;
 }
 
 /** Distance from a sample centre to the nearest empty sample centre within the band (else beyond). */
@@ -330,6 +375,8 @@ function carveSample(pass: CraterPass, cx: number, cy: number): void {
   const slot = getCellSlot(grid, cx, cy);
   const info = grid.slots[slot];
   if (slot === EMPTY_CELL || !info || info.toughness === null || info.toughness <= 0) return;
+  // Frozen terrain is as hard as ice: a blast leaves it whole (ice-element D5).
+  if (grid.frozen[cy * grid.widthCells + cx] === 1) return;
   const dx = (cx + 0.5) * grid.cellSize - crater.x;
   const dy = (cy + 0.5) * grid.cellSize - crater.y;
   const rim = craterShapeDistance(crater.shape, dx, dy) - crater.reach / info.toughness;
@@ -356,7 +403,9 @@ function boundSolidsByNearestAir(
     for (let cx = box.minX - pad; cx <= box.maxX + pad; cx += 1) {
       const slot = getCellSlot(grid, cx, cy);
       if (slot === EMPTY_CELL) continue;
-      if (which === "unbreakable" && isBreakableSlot(grid.slots[slot])) continue;
+      const cuttable =
+        isBreakableSlot(grid.slots[slot]) && grid.frozen[cy * grid.widthCells + cx] !== 1;
+      if (which === "unbreakable" && cuttable) continue;
       const bound = Math.max(
         EDGE_EPSILON,
         nearestEmptyDistance(grid, cx, cy) - HALF_DIAGONAL * grid.cellSize
@@ -481,7 +530,8 @@ export function burnOut(grid: TerrainGrid, samples: readonly number[]): ClearedC
 
 /**
  * Friction of the ground directly under a span (the row of cells just below `y`): the average
- * over the solid cells there, 1 when there are none. Ice under the feet makes the blob slide.
+ * over the solid cells there, 1 when there are none. Ice under the feet makes the blob slide,
+ * and so does frozen ground of any material.
  */
 export function groundFrictionBelow(
   grid: TerrainGrid,
@@ -493,7 +543,8 @@ export function groundFrictionBelow(
   for (let cx = range.minX; cx <= range.maxX; cx += 1) {
     const info = getCellInfo(grid, cx, range.minY);
     if (!info) continue;
-    sum += info.friction;
+    const frozen = grid.frozen[range.minY * grid.widthCells + cx] === 1;
+    sum += frozen ? Math.min(info.friction, grid.frozenFriction) : info.friction;
     count += 1;
   }
   if (count > 0) return sum / count;

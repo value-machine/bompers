@@ -24,6 +24,7 @@ import {
   stepFire,
   type FireState,
 } from "@/features/fire/api/fireApi";
+import { createIceState, sprayFreezeRay, stepIce, type IceState } from "@/features/ice/api/iceApi";
 import {
   createCollectiblesState,
   stepCollectibles,
@@ -69,8 +70,11 @@ import {
  *   2b. bodyContacts   — player feature: blob-vs-blob bounce; the contacts feed step 3b
  *   3. stepCombat      — combat feature: rockets, blasts (damage, impulse, clearCrater);
  *                        unarmed fire goes through its `unarmedAttack` hook to the dive, a held
- *                        torch through its `sprayAttack` hook to the fire feature's `sprayTorch`
- *   3c. stepFire       — fire feature: the front spreads through fuel; burnt-out samples go
+ *                        torch through its `sprayAttack` hook to the fire feature's `sprayTorch`,
+ *                        a held freeze ray to the ice feature's `sprayFreezeRay`
+ *   3e. stepIce        — ice feature: the cold spreads while a ray fed it this step; frozen
+ *                        samples whose time is over thaw (runs before 3c, so freezing puts fire out)
+ *   3c. stepFire      — fire feature: the front spreads through fuel; burnt-out samples go
  *                        (batched), reported as combat `terrainDestroyed` events
  *   3d. stepBurningBlobs — fire feature: blobs catch, go out (ice, dive), pass it on (bump) or
  *                        burn down (a chunk through combat's `applyHit`). Before step 2 its
@@ -126,6 +130,8 @@ export interface GameState {
   dive: DiveState;
   /** Fire on the terrain field and this step's torch sprays. */
   fire: FireState;
+  /** Frozen ground on the terrain field and this step's freeze rays. */
+  ice: IceState;
   /** Sky drops: point orbs falling onto the collectible points, weapon crates from the drop points. */
   collectibles: CollectiblesState;
   /** Scores and the respawn queue. */
@@ -162,6 +168,7 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
     tunables: matchTunables,
     arena,
     fire: createFireState(arena.terrain),
+    ice: createIceState(arena.terrain),
     killZone: killZoneOf(normalized.level.bounds, matchTunables),
     levelWarnings: normalized.warnings,
     players: [],
@@ -359,16 +366,14 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
     timeSeconds,
     dt,
     unarmedAttack: ({ attacker }) => requestDive(state.dive, attacker, tunables),
-    sprayAttack: ({ attacker }) =>
-      sprayTorch(state.fire, {
-        terrain,
-        players,
-        holder: attacker,
-        tunables,
-        now: timeSeconds,
-        dt,
-      }),
+    sprayAttack: ({ attacker, itemId }) => {
+      const spray = { terrain, players, holder: attacker, tunables, now: timeSeconds, dt };
+      if (itemId === "freeze-ray") sprayFreezeRay(state.ice, spray);
+      else sprayTorch(state.fire, spray);
+    },
   });
+  // Ice before fire: a burning sample frozen this step is out before the fire spreads again.
+  stepIce(state.ice, terrain, { now: timeSeconds, dt, tunables });
   stepBlobsOnFire(state, { players, contacts });
   stepCratePickups(state, dt);
   // The same in-play list as the contacts: a blob eliminated by a rocket this step still
