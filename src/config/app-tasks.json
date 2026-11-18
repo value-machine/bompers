@@ -11,12 +11,17 @@
   },
   {
     "title": "Moving parts: materials, fire, ice and beams",
-    "description": "Owner 2026-11-18: spray beams (torch, freeze ray) must be stopped by moving parts, and moving parts can be any material, so they catch fire or freeze when their material takes it. Owner wants approaches, each deeper than the last, for a very extensible system; design page first.",
+    "description": "Owner 2026-11-18: spray beams (torch, freeze ray) must be stopped by moving parts, and moving parts can be any material, so they catch fire or freeze when their material takes it. Owner wants approaches, each deeper than the last, for a very extensible system; design page first. L1 (beams stop on parts) merged in #77.",
     "status": "to-do"
   },
   {
-    "title": "World of bodies L2: fire and ice on moving parts",
-    "description": "Owner pick 2026-11-18 (mover-materials D1 = one world of bodies): body list; fire and ice state per body; torch/ray act on parts; parts drawn cut and overlaid; grip per sample; blobs catch from burning parts; W13 + prompt line. Reverses \"moving parts never burn\" (owner). Size M.",
+    "title": "World of bodies L2a: fire on moving parts",
+    "description": "Body list as state; fire per body; torch lights parts; burn-out cuts the part (outline, collision, drawing follow); blobs catch from a burning part; W13 + LEVEL_FORMAT 11 + prompt line. Owner 2026-11-18: a fully burnt part leaves nothing for the rest of the round (same rule as terrain). Size M.",
+    "status": "to-do"
+  },
+  {
+    "title": "World of bodies L2b: cold on moving parts",
+    "description": "Freeze ray freezes parts, grip per sample on a part, frozen overlay on parts, thaw, torch thaws parts. Size S-M.",
     "status": "to-do"
   },
   {
