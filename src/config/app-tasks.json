@@ -78,5 +78,10 @@
     "title": "Bobsled Run needs the roll",
     "description": "After roll speed carries into jump and dive lands: retune Bobsled Run (PR #79) so the final gap needs a roll-launched jump/dive.",
     "status": "to-do"
+  },
+  {
+    "title": "Level prompt: remaining ability numbers",
+    "description": "From PR #79 author feedback: LEVEL_PROMPT still lacks the roll, slope speeds, ice grip, freeze ray numbers, mover jump-off speed and headbutt details. Generate them from the tunables (touch the prompt only for things authors place or set, per #61, but movement numbers help authors size gaps). Size S.",
+    "status": "to-do"
   }
 ]
