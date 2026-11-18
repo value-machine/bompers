@@ -32,8 +32,7 @@ const EMPTY_SLOT: TerrainCellSlot = {
   toughness: null,
   friction: 1,
   surface: "plain",
-  burns: false,
-  douses: false,
+  reactions: { fire: "blocks", cold: "blocks" },
 };
 
 /** True for a slot a blast can clear (it has a toughness); false for empty or unbreakable. */

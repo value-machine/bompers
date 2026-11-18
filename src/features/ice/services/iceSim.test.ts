@@ -323,3 +323,31 @@ describe("iceSim — cold on moving parts (mover-materials lap 2b)", () => {
     );
   });
 });
+
+describe("material × element table (mover-materials D1, lap 3)", () => {
+  /** A slab at y 100–140 whose slot is turned into a material the catalog does not have. */
+  const slabOf = (reactions: TerrainGrid["slots"][number]["reactions"]) => {
+    const f = freeze([rect([0, 100, 400, 40], "stone")]);
+    const slot = f.grid.slots[f.grid.cells[f.at(202, 118)]!]!;
+    Object.assign(slot, { materialId: "fixture", reactions });
+    return f;
+  };
+
+  it("should keep fire out of a new material that blocks fire and still freeze it, with no sim change", () => {
+    // "Metal": blocks fire, takes cold.
+    const f = slabOf({ fire: "blocks", cold: "freezes" });
+    const fire = createFireState(f.grid);
+    expect(ignite(fire, f.grid, { body: 0, index: f.at(202, 118), time: 0 })).toBe(false);
+    f.run(0.1, [202, 118]);
+    expect(f.frozen(202, 118)).toBe(true);
+  });
+
+  it("should burn a new material that burns and keep cold out of one that blocks cold", () => {
+    // "Tar": burns, and the cold has nothing to freeze in it.
+    const f = slabOf({ fire: "burns", cold: "blocks" });
+    const fire = createFireState(f.grid);
+    expect(ignite(fire, f.grid, { body: 0, index: f.at(202, 118), time: 0 })).toBe(true);
+    f.run(0.1, [120, 118]);
+    expect(f.count()).toBe(0);
+  });
+});

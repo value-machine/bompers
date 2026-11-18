@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import type { SampleField } from "@/shared/types/sampleFront.types";
-import { beamReaction, resolveBeamClashes, type ClashBeam } from "@/shared/utils/beamClash";
+import { resolveBeamClashes, type ClashBeam } from "@/shared/utils/beamClash";
+import { elementPairReaction } from "@/shared/utils/elementPairs";
 
 const TORCH = DEFAULT_GAME_TUNABLES.combat.torch;
 const RAY = DEFAULT_GAME_TUNABLES.combat.freezeRay;
@@ -31,18 +32,19 @@ const rayAt = (x: number, y: number, aim = { x: -1, y: 0 }): ClashBeam => ({
   origin: { x, y },
   aim,
   shape: RAY,
-  element: "ice",
+  element: "cold",
 });
 
-describe("beamReaction", () => {
-  it("should react with steam when fire meets ice, either way round", () => {
-    expect(beamReaction("fire", "ice")).toBe("steam");
-    expect(beamReaction("ice", "fire")).toBe("steam");
+describe("elementPairReaction (the element × element table)", () => {
+  it("should cancel when fire meets cold, either way round", () => {
+    expect(elementPairReaction("fire", "cold")).toBe("cancel");
+    expect(elementPairReaction("cold", "fire")).toBe("cancel");
   });
 
-  it("should not react when two beams have the same element", () => {
-    expect(beamReaction("fire", "fire")).toBeNull();
-    expect(beamReaction("ice", "ice")).toBeNull();
+  it("should not react when two elements are the same or the table has no row for them", () => {
+    expect(elementPairReaction("fire", "fire")).toBeNull();
+    expect(elementPairReaction("cold", "cold")).toBeNull();
+    expect(elementPairReaction("fire", "acid")).toBeNull();
   });
 });
 
@@ -59,7 +61,7 @@ describe("resolveBeamClashes", () => {
     expect(reach[0]).toBeLessThan(65 + 1);
     expect(reach[1]).toBeCloseTo(reach[0] ?? 0, 5);
     expect(clashes).toHaveLength(1);
-    expect(clashes[0]?.reaction).toBe("steam");
+    expect(clashes[0]?.reaction).toBe("cancel");
     expect(clashes[0]?.at.x).toBeGreaterThan(150);
     expect(clashes[0]?.at.x).toBeLessThan(180);
   });
@@ -174,5 +176,17 @@ describe("resolveBeamClashes", () => {
     expect(resolveBeamClashes([{ field: field() }], [rayAt(230, 150)], LOOK).reach).toEqual([
       RAY.length,
     ]);
+  });
+});
+
+describe("resolveBeamClashes — the pair table", () => {
+  it("should clash two beams of a new element pair when only the pair table gains a row", () => {
+    // An acid beam where the freeze ray was: no clash with fire until the table says so.
+    const beams = [torchAt(100, 150), { ...rayAt(230, 150), element: "acid" }];
+    expect(resolveBeamClashes([{ field: field() }], beams, LOOK).clashes).toEqual([]);
+    const pairs = { fire: { acid: "cancel" }, acid: { fire: "cancel" } } as const;
+    const { reach, clashes } = resolveBeamClashes([{ field: field() }], beams, { ...LOOK, pairs });
+    expect(clashes).toHaveLength(1);
+    expect(reach[0]).toBeLessThan(TORCH.length);
   });
 });

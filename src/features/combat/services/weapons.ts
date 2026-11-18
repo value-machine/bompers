@@ -1,7 +1,7 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { CraterShape } from "@/shared/types/craterShape.types";
 import type { SprayWeaponItemId, WeaponItemId } from "@/shared/types/weaponItems.types";
-import type { BeamElement } from "@/shared/types/beamClash.types";
+import type { ElementId } from "@/shared/types/element.types";
 import type { RayFanShape } from "@/shared/utils/rayFan";
 import { emitCombatEvent, fighterFor, type HitWorld } from "@/features/combat/services/combatState";
 import type { RocketKind } from "@/features/combat/types/combat.types";
@@ -82,23 +82,20 @@ const SPRAY_TUNABLES: Readonly<
 /**
  * Each spray weapon's beam as the beam-clash rule sees it (beam-clash D2): its ray fan and its
  * element. A new spray weapon is a compile error until it has both; whether its element reacts
- * with another is the pair table in `src/shared/utils/beamClash.ts`.
+ * with another is the element pair table in `src/shared/utils/elementPairs.ts`.
  */
 const SPRAY_BEAM: Readonly<
-  Record<
-    SprayWeaponItemId,
-    { element: BeamElement; shape: (tunables: GameTunables) => RayFanShape }
-  >
+  Record<SprayWeaponItemId, { element: ElementId; shape: (tunables: GameTunables) => RayFanShape }>
 > = {
   torch: { element: "fire", shape: (tunables) => tunables.combat.torch },
-  "freeze-ray": { element: "ice", shape: (tunables) => tunables.combat.freezeRay },
+  "freeze-ray": { element: "cold", shape: (tunables) => tunables.combat.freezeRay },
 };
 
 /** The ray fan and element of a spray weapon's beam. */
 export const sprayBeamOf = (
   tunables: GameTunables,
   itemId: SprayWeaponItemId
-): { element: BeamElement; shape: RayFanShape } => ({
+): { element: ElementId; shape: RayFanShape } => ({
   element: SPRAY_BEAM[itemId].element,
   shape: SPRAY_BEAM[itemId].shape(tunables),
 });

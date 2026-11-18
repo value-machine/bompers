@@ -1,3 +1,4 @@
+import type { MaterialReactions } from "@/shared/types/element.types";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { LevelMotion, MotionPose } from "@/shared/types/levelMotion.types";
 import type { MaterialSurface } from "@/shared/types/terrainSurface.types";
@@ -16,10 +17,8 @@ export interface TerrainCellSlot {
   friction: number;
   /** Surface pattern the renderer draws (the material's `surface`). */
   surface: MaterialSurface;
-  /** Fire spreads through it and burns it away (the material's `burns`). */
-  burns: boolean;
-  /** Fuel touching it never catches (the material's `douses`). */
-  douses: boolean;
+  /** What fire and cold do to it (the material's `reactions`, its row of the element table). */
+  reactions: MaterialReactions;
 }
 
 export const EMPTY_CELL = 0;

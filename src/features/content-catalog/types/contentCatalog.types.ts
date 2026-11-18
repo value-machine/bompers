@@ -3,6 +3,7 @@
  * data keyed by a stable kebab-case ID; field names match the level kit's catalog.json
  * (documentation/game/LEVEL_FORMAT.md § 6, § 9) so the kit file is generated from code.
  */
+import type { MaterialReactions } from "@/shared/types/element.types";
 import type { MaterialSurface } from "@/shared/types/terrainSurface.types";
 
 export type { MaterialSurface };
@@ -33,10 +34,11 @@ export interface MaterialEntry extends CatalogEntryBase {
   surface: MaterialSurface;
   /** Colour ID used when a shape names none. */
   defaultColor: string;
-  /** Fuel: fire spreads through it and burns it away (blast-power D5; cardboard). */
-  burns: boolean;
-  /** Fuel touching it never catches (blast-power D5; ice). */
-  douses: boolean;
+  /**
+   * Its row of the material × element table (mover-materials D1; rules from blast-power D5):
+   * what it does when fire and when cold meet it. Blasts read `toughness` above.
+   */
+  reactions: MaterialReactions;
   /** Default effect ID when cells are destroyed (a shape's data-effect overrides it). */
   effect: string;
   /** Default sound ID when cells are hit or destroyed (a shape's data-sound overrides it). */

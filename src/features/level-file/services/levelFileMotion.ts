@@ -222,7 +222,7 @@ function warnContents(
   // a breakable material that does not burn behaves differently from what its author may expect.
   const breakable = indices.filter((i) => {
     const entry = resolveCatalogEntry("material", ctx.terrain[i]!.materialId).entry;
-    return !!entry && entry.toughness !== null && !entry.burns;
+    return !!entry && entry.toughness !== null && entry.reactions.fire !== "burns";
   });
   if (breakable.length > 0) {
     addWarning(
