@@ -5,6 +5,16 @@
     "status": "to-do"
   },
   {
+    "title": "Legs: one system for wall and slope",
+    "description": "Owner request 2026-11-17: leg animation from wall walk and arced slope walk should transition nicely or be one system. Owner picked B, one surface frame (PR #59). Planted feet (C) parked in the player README.",
+    "status": "to-do"
+  },
+  {
+    "title": "Ice element",
+    "description": "Owner request 2026-11-18: do for each element what was done for fire, one by one: a weapon/projectile, an effect on blobs, and an effect per map material (stone, earth, cardboard, ice), plus element interactions (ice puts out fire, fire melts ice). Ice is next; after it lands the owner decides whether another element follows. Starts with an ideation options page (loop-refine step 6). Shared spread/material mechanism named by role, not after fire (code-style F1/F2). Thread: Ice element (Fable).",
+    "status": "to-do"
+  },
+  {
     "title": "Fire and torch sounds",
     "description": "Follow-up from fire b1 (#53): the torch start and burn-outs reuse placeholder sounds (rocket-fire, cardboard thwap). Generate real takes (torch whoosh/loop, crackle, burn-out) per DESIGN_LANGUAGE § 8 incl. 'Owner listens first' (artifact page, owner picks before wiring); credits need the owner's go. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md. ",
     "status": "to-do"
