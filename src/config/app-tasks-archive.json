@@ -398,5 +398,15 @@
     "title": "Ice lap 3: ice sounds",
     "description": "Ice element follow-up: freeze ray and frozen-ground sounds on a listening page before wiring in (DESIGN_LANGUAGE § 8). Size S.",
     "status": "done"
+  },
+  {
+    "title": "Ice block sounds",
+    "description": "Follow-up from #69 and #73: the frozen-blob ice block freeze, crack and shatter moments still play clink placeholders (GAME_JUICE rows Blob freezes, Ice block cracks, Ice block breaks). Generate takes (ElevenLabs credits need owner go), listening page first, then wire in like #73.",
+    "status": "done"
+  },
+  {
+    "title": "Beam clash: torch meets freeze ray",
+    "description": "Owner 2026-11-18: beams of opposing elements react where they meet instead of overlapping. Owner picked A, steam wall (PR #75): both stop at the meeting point in steam. One beam-vs-beam rule with a pair table.",
+    "status": "done"
   }
 ]

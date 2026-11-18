@@ -45,18 +45,8 @@
     "status": "to-do"
   },
   {
-    "title": "Beam clash: torch meets freeze ray",
-    "description": "Owner 2026-11-18: beams of opposing elements react where they meet instead of overlapping. Owner picked A, steam wall (PR #75): both stop at the meeting point in steam. One beam-vs-beam rule with a pair table.",
-    "status": "to-do"
-  },
-  {
     "title": "Ice lap 4: look polish",
     "description": "Ice element follow-up, optional: polish the frozen ground look after the owner has played it. The ray look was settled in #63 (owner pick D9, cold breath). Size S.",
-    "status": "to-do"
-  },
-  {
-    "title": "Ice block sounds",
-    "description": "Follow-up from #69 and #73: the frozen-blob ice block freeze, crack and shatter moments still play clink placeholders (GAME_JUICE rows Blob freezes, Ice block cracks, Ice block breaks). Generate takes (ElevenLabs credits need owner go), listening page first, then wire in like #73.",
     "status": "to-do"
   },
   {
