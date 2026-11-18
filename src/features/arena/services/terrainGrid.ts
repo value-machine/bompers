@@ -3,7 +3,7 @@ import type { CraterShape } from "@/shared/types/craterShape.types";
 import type { MotionPose } from "@/shared/types/levelMotion.types";
 import type { PosedField } from "@/shared/types/sampleFront.types";
 import { craterShapeDistance } from "@/shared/utils/craterShape";
-import { unposePoint } from "@/shared/utils/levelMotion";
+import { posePoint, unposePoint } from "@/shared/utils/levelMotion";
 import {
   EMPTY_CELL,
   type MoverBody,
@@ -247,6 +247,23 @@ export function terrainBodies(grid: TerrainGrid): PosedField[] {
     })
   );
   return [{ field: grid }, ...parts];
+}
+
+/**
+ * Every body's own grid, in the order of `terrainBodies`: the static terrain, then each moving
+ * part's field. State kept per body (fire, mover-materials-l2 D3) is indexed the same way.
+ */
+export const bodyGrids = (grid: TerrainGrid): TerrainGrid[] => [
+  grid,
+  ...grid.movers.map((mover) => mover.field),
+];
+
+/** The world point of a point in body `body`'s own grid (the inverse of its `toLocal`). */
+export function bodyWorldPoint(grid: TerrainGrid, body: number, local: Vec2): Vec2 {
+  const mover = grid.movers[body - 1];
+  if (!mover) return local;
+  const rest = { x: local.x + mover.origin.x, y: local.y + mover.origin.y };
+  return posePoint(mover.pose, mover.pivot, rest);
 }
 
 /** The moving part deepest at a world point and its distance; null when the grid has none. */

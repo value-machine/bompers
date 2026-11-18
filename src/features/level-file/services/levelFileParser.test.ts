@@ -143,7 +143,9 @@ describe("parseLevelFile — kit files", () => {
     expect(def.spawns).toHaveLength(4);
     expect(def.drops).toHaveLength(3);
     expect(def.settings.weaponIds).toEqual(["torch", "rocket-launcher"]);
-    expect(def.terrain.filter((piece) => piece.materialId === "cardboard")).toHaveLength(10);
+    // Ten static pieces and two moving parts (a lift and a spinner) that burn away.
+    expect(def.terrain.filter((piece) => piece.materialId === "cardboard")).toHaveLength(12);
+    expect(def.movers).toHaveLength(2);
     // Spawns stand on the big slabs, not inside them.
     const grid = buildTerrainFromLevel(def);
     const cellAt = (x: number, y: number) =>

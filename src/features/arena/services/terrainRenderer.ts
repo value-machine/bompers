@@ -61,27 +61,54 @@ function slabPieces(level: LevelDefinition): { solids: SlabPiece[]; breakables: 
  * One moving part's view (moving-parts D16): its slabs in rest-pose world coordinates under an
  * ink outline from its own local field (the same one-rule outline as static terrain), in a
  * container turned about the pivot and shifted by the pose each frame. No motion cue (B1).
+ * Breakable slabs are clipped by the part's breakable field still standing, like static terrain,
+ * so a part that burns away is cut where it burnt (mover-materials-l2).
  */
 interface MoverView {
   container: Container;
   ink: Graphics;
+  /** Clip of the part's breakable slabs: the breakable part of its field still standing. */
+  breakableFill: Graphics;
+  breakableMask: Graphics;
+  /** The field's `shapeVersion` the ink and clip were drawn at (-1 before the first draw). */
+  shapeSeen: number;
+}
+
+/**
+ * A layer that follows one moving part (mover-materials-l2, code-style F2: the terrain's part
+ * view, goo stains and fire each draw on a part): children are drawn in the part's rest pose,
+ * in world coordinates, and `placePoseLayer` turns the layer about the part's pivot and shifts
+ * it by the pose each frame.
+ */
+export function createPoseLayer(mover: MoverBody, label: string): Container {
+  const layer = new Container({ label });
+  layer.pivot.set(mover.pivot.x, mover.pivot.y);
+  return layer;
+}
+
+/** Puts a pose layer where its part is this frame. */
+export function placePoseLayer(layer: Container, mover: MoverBody): void {
+  const { pose, pivot } = mover;
+  layer.position.set(pivot.x + pose.dx, pivot.y + pose.dy);
+  layer.rotation = pose.angle;
 }
 
 function createMoverView(level: LevelDefinition, mover: MoverBody): MoverView {
-  const container = new Container({ label: "moving-part" });
-  container.pivot.set(mover.pivot.x, mover.pivot.y);
+  const container = createPoseLayer(mover, "moving-part");
   const ink = new Graphics({ label: "moving-part-ink" });
   ink.position.set(mover.origin.x, mover.origin.y);
-  const fill = new Graphics({ label: "moving-part-fill" });
-  drawSlabFill(fill, mover.terrainIndices.flatMap((i) => level.terrain[i] ?? []).map(slabOf));
-  container.addChild(ink, fill);
-  return { container, ink };
-}
-
-function placeMoverView(view: MoverView, mover: MoverBody): void {
-  const { pose, pivot } = mover;
-  view.container.position.set(pivot.x + pose.dx, pivot.y + pose.dy);
-  view.container.rotation = pose.angle;
+  // A part's field starts at its origin in the rest pose; ink and clip are drawn from the field.
+  const breakableMask = new Graphics({ label: "moving-part-breakable-mask" });
+  breakableMask.position.set(mover.origin.x, mover.origin.y);
+  const pieces = mover.terrainIndices.flatMap((i) => level.terrain[i] ?? []);
+  const isBreakable = (piece: TerrainPiece): boolean => isBreakableSlot(pieceCellSlot(piece));
+  const solidFill = new Graphics({ label: "moving-part-fill" });
+  drawSlabFill(solidFill, pieces.filter((piece) => !isBreakable(piece)).map(slabOf));
+  const breakableFill = new Graphics({ label: "moving-part-breakable-fill" });
+  drawSlabFill(breakableFill, pieces.filter(isBreakable).map(slabOf));
+  breakableFill.mask = breakableMask;
+  container.addChild(ink, solidFill, breakableFill, breakableMask);
+  return { container, ink, breakableFill, breakableMask, shapeSeen: -1 };
 }
 
 export function createTerrainView(arena: {
@@ -126,11 +153,19 @@ export function syncTerrainView(view: TerrainView, grid: TerrainGrid, zoom: numb
   view.movers.forEach((moverView, i) => {
     const mover = grid.movers[i];
     if (!mover) return;
-    if (stepChanged) {
+    // A part's field changes when it burns away (mover-materials-l2): outline and clip follow.
+    const shapeChanged = mover.field.shapeVersion !== moverView.shapeSeen;
+    if (stepChanged || shapeChanged) {
       const shape = terrainContour(mover.field, { grow: outline.width });
       drawContour(moverView.ink, shape, inkColor("moverOutline"));
     }
-    placeMoverView(moverView, mover);
+    if (shapeChanged) {
+      moverView.shapeSeen = mover.field.shapeVersion;
+      const region = breakableRegion(mover.field);
+      const standing = terrainContour(mover.field, { grow: 0, region });
+      moverView.breakableFill.visible = drawContour(moverView.breakableMask, standing, 0xffffff);
+    }
+    placePoseLayer(moverView.container, mover);
   });
   if (terrainChanged) {
     const standing = terrainContour(grid, { grow: 0, region: breakableRegion(grid) });

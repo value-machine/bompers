@@ -96,6 +96,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Torch held, idle | — | — (a loop, deliberately silent) | — | — | — | — | small outlined flame on the nozzle | — |
 | Fire spreading / burning | — | one `fire-crackle` loop for the whole world, gain by burning samples plus burning blobs (`SOUND_MIX.fireFullSamples`; silent per sample) | — | — | — | — | one outlined fire shape per cluster of burning terrain, its flames bigger with more fire around them and tallest in the middle; scorch on earth | — |
 | Fire burn-out (batch) | light | `burn-out` via `terrainDestroyed` (fire's own, not the material's), once per 0.25 s batch | — | — | — | — | debris + a white smoke puff, 450 ms | — |
+| Fire on a moving part (mover-materials-l2) | as the two rows above | the same `fire-crackle` loop (a part's burning samples count in) and `burn-out` per batch | — | — | — | — | the same fire shape, flames and smoke, drawn in the part's frame so they ride and turn with it; the part's outline and fill are cut where it burnt | — |
 | Blob catches fire (fire-burn b2) | light | `catch-fire` (pitched by the blob) | — | — | — | — | amber flame pop (0.6 s linger); then helmet flames, sweat, pinprick pupils while burning | — |
 | Burning blob panic (held) | — | — (the catch cue only) | drawn hop every 0.4 s, sx · sy within the band (±0.08) | — | — | — | drawn 5-unit hop; body and shadow stay on the ground | — |
 | Fire put out by ice | light | `steam-hiss` (pitched by the blob) | — | — | — | — | white steam puffs (0.6 s) | — |

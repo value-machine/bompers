@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
-import { clearCrater } from "@/features/arena/services/terrainGrid";
+import { burnOut, clearCrater } from "@/features/arena/services/terrainGrid";
+import { createTerrainView, syncTerrainView } from "@/features/arena/services/terrainRenderer";
 import {
   breakableRegion,
   edgeAbove,
@@ -10,6 +11,7 @@ import {
   type MaskShapes,
 } from "@/features/arena/services/terrainSurfaces";
 
+// A stone floor and one cardboard part (piece 1), 120 wide.
 const level: LevelDefinition = {
   formatVersion: 2,
   meta: { levelId: "m", title: "M" },
@@ -214,5 +216,51 @@ describe("edgeAbove", () => {
       (cy) => grid.cells[cy * grid.widthCells + column] !== 0
     )!;
     expect(edgeAbove(grid, first * grid.widthCells + column)).toBeCloseTo(101 + 34, 0);
+  });
+});
+
+const partLevel: LevelDefinition = {
+  formatVersion: 2,
+  meta: { levelId: "v", title: "V" },
+  settings: { cellSize: 4, gravity: 1 },
+  worldSize: { w: 600, h: 300 },
+  terrain: [
+    { shape: { type: "rect", x: 0, y: 200, w: 600, h: 40 }, materialId: "stone" },
+    { shape: { type: "rect", x: 240, y: 100, w: 120, h: 40 }, materialId: "cardboard" },
+  ],
+  movers: [
+    {
+      motion: { kind: "slide", offset: { x: 0, y: -60 }, periodS: 4, phase: 0 },
+      pivot: { x: 300, y: 120 },
+      terrainIndices: [1],
+    },
+  ],
+  spawns: [],
+  drops: [],
+  collectibles: [],
+  bounds: { x: 0, y: 0, w: 600, h: 300 },
+};
+
+describe("moving part view (mover-materials-l2)", () => {
+  it("should redraw a part's outline and clip narrower when half of its field has burnt out", () => {
+    const terrain = buildTerrainFromLevel(partLevel);
+    const view = createTerrainView({ terrain, level: partLevel });
+    syncTerrainView(view, terrain, 1);
+    const part = view.movers[0]!;
+    const before = part.ink.getLocalBounds().width;
+    const maskBefore = part.breakableMask.getLocalBounds().width;
+    expect(before).toBeGreaterThan(120);
+    expect(maskBefore).toBeGreaterThan(100);
+
+    const field = terrain.movers[0]!.field;
+    const half = Math.floor(field.widthCells / 2);
+    const isLeft = (index: number): boolean => index % field.widthCells < half;
+    burnOut(
+      field,
+      [...field.cells.keys()].filter((index) => field.cells[index] !== 0 && isLeft(index))
+    );
+    syncTerrainView(view, terrain, 1);
+    expect(part.ink.getLocalBounds().width).toBeLessThan(before * 0.6);
+    expect(part.breakableMask.getLocalBounds().width).toBeLessThan(maskBefore * 0.6);
   });
 });

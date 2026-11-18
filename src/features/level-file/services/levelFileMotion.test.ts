@@ -85,6 +85,14 @@ describe("moving parts — import", () => {
     expect(coded(warnings, "W13")).toHaveLength(2);
   });
 
+  it("should warn W13 for an earth part and not for a cardboard part when a part uses a breakable material", () => {
+    const part = (material: string) =>
+      `<g data-motion="slide 0,-160"><rect id="lift" data-role="terrain" data-material="${material}" x="320" y="320" width="160" height="32" /></g>`;
+    // Earth neither breaks nor burns on a part; cardboard burns away (mover-materials D2).
+    expect(coded(okLevel(parseLevelFile(level(part("earth")))).warnings, "W13")).toHaveLength(1);
+    expect(coded(okLevel(parseLevelFile(level(part("cardboard")))).warnings, "W13")).toEqual([]);
+  });
+
   it("should warn W14 when the part moves faster than a player can ride", () => {
     const { warnings } = okLevel(
       parseLevelFile(level(`<g data-motion="path 0,-200 1s">${LIFT}</g>`))
