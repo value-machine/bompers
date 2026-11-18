@@ -1,22 +1,47 @@
 [
   {
-    "title": "Moving parts in levels",
-    "description": "Owner request 2026-11-17 (full lap): level parts can rotate and move, and the level builder (format, importer, level kit preview, Copy AI prompt) supports them. Must be easy for an agent that only has the level-builder prompt to author correctly and align shapes without seeing them (e.g. anchors, pivots, relative/snap coordinates, named groups). Keep the prompt and format token-light. Cover second-order effects: players/crates/pickups riding and being pushed or crushed by moving parts, collision against moving geometry vs the static distance field, destructibility and fire on moving parts, camera bounds, spawn safety, homing/rockets, determinism, validation warnings, performance. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; level format: documentation/game/LEVEL_FORMAT.md. ",
+    "title": "Squish keeps the eyes",
+    "description": "Owner 2026-11-18: when a blob is squished everything squashes except the eyes, which keep their size; the eyes switch to the burning-blob panic emotion while squeezed/crushed.",
     "status": "to-do"
   },
   {
-    "title": "Fire and torch sounds",
-    "description": "Follow-up from fire b1 (#53): the torch start and burn-outs reuse placeholder sounds (rocket-fire, cardboard thwap). Generate real takes (torch whoosh/loop, crackle, burn-out) per DESIGN_LANGUAGE § 8 incl. 'Owner listens first' (artifact page, owner picks before wiring); credits need the owner's go. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md. ",
+    "title": "Double jump bash",
+    "description": "Owner 2026-11-18: a double jump (mid-air jump) performs the bash, so armed players can bash too. Rule variants on an options page first; controller edits wait for the collision-sound fix.",
+    "status": "to-do"
+  },
+  {
+    "title": "Moving parts: materials, fire, ice and beams",
+    "description": "Owner 2026-11-18: spray beams (torch, freeze ray) must be stopped by moving parts, and moving parts can be any material, so they catch fire or freeze when their material takes it. Owner wants approaches, each deeper than the last, for a very extensible system; design page first.",
+    "status": "to-do"
+  },
+  {
+    "title": "World of bodies L2: fire and ice on moving parts",
+    "description": "Owner pick 2026-11-18 (mover-materials D1 = one world of bodies): body list; fire and ice state per body; torch/ray act on parts; parts drawn cut and overlaid; grip per sample; blobs catch from burning parts; W13 + prompt line. Reverses \"moving parts never burn\" (owner). Size M.",
+    "status": "to-do"
+  },
+  {
+    "title": "World of bodies L3: reactions as data",
+    "description": "Material x element and element x element tables in the catalog replace burns/douses/frozen special cases; beam-clash pair rule moves in. Size M.",
+    "status": "to-do"
+  },
+  {
+    "title": "World of bodies L4: craters on parts",
+    "description": "If the owner wants blasts to break moving parts (ask then). Size S-M.",
+    "status": "to-do"
+  },
+  {
+    "title": "World of bodies L5: fire crosses where bodies touch",
+    "description": "Fire spreads between a moving part and terrain where they touch (ask the owner first). Size S-M.",
+    "status": "to-do"
+  },
+  {
+    "title": "Ice lap 4: look polish",
+    "description": "Ice element follow-up, optional: polish the frozen ground look after the owner has played it. The ray look was settled in #63 (owner pick D9, cold breath). Size S.",
     "status": "to-do"
   },
   {
     "title": "Loose terrain falls",
     "description": "Owner idea 2026-11-16 (future, not scheduled): terrain cut off from its support by a blast or burnt-out fuel breaks loose and falls. On the distance field: flood-fill the touched region for islands not connected to anchored material or the level edge, lift each island out as a contour polygon into a falling body (simple custom body or a physics library — a new dependency is an owner choice), and stamp it back into the field when it settles; falling chunks can hit players. Precedent: Noita (pixel islands become rigid bodies). Waits on the distance field (a2) and collision on the field (a3). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. Note from the distance-field lap (#45): only unbreakable samples and the bottom row are anchored, so all-breakable floating platforms have no anchor — this lap needs its own rule for which piece stays put. ",
-    "status": "to-do"
-  },
-  {
-    "title": "Weapon visuals: embellish",
-    "description": "Owner 2026-11-16 signed off the weapon and crate visual system (#38) as a work in progress: 'we will embellish further later on'. Polish pass on crates, helmet tubes, muzzle lights and HUD ammo once the owner names what to improve. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. ",
     "status": "to-do"
   },
   {
@@ -27,6 +52,36 @@
   {
     "title": "Weekend: token-spend pass over skills",
     "description": "Weekend only (agent-behavior rule § Token budget); the owner starts it. Measure which skills and loop stages spend the most tokens per lap (loop-check: one subagent per rule, plan-compliance subagent, component lens, size-M parallel lenses; loop-plan review fan-out; browser checks; full-suite runs; large generations) using real session usage where available, then propose cuts with meta-audit-harness (context-cost lens extended to runtime spend). Proposals only; protected-file changes need the owner's yes.",
+    "status": "to-do"
+  },
+  {
+    "title": "Objects in levels",
+    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): when the first object is wanted: object role as a plain box with a catalog ID (the box is the size, the game draws the real thing); sizes at 1.0 in catalog and prompt; fit-to-box drawing; warnings; vision line becomes \"shows the layout\"; revisit the prompt structure here. Size M.",
+    "status": "to-do"
+  },
+  {
+    "title": "Level gallery",
+    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): later, unshaped. No remix feature.",
+    "status": "to-do"
+  },
+  {
+    "title": "Roll speed carries into jump and dive",
+    "description": "Owner go 2026-11-18: a jump or dive out of a roll keeps the roll speed. Built in the Double jump bash lap.",
+    "status": "to-do"
+  },
+  {
+    "title": "Per-drop weapon choice",
+    "description": "Proposed by ability-levels: let a drop name one weapon (data-item) within the match weapons setting, so a level can place e.g. a torch crate at a bridge. Revisits the level-direction drop decision (#61): owner decides.",
+    "status": "to-do"
+  },
+  {
+    "title": "Bobsled Run needs the roll",
+    "description": "After roll speed carries into jump and dive lands: retune Bobsled Run (PR #79) so the final gap needs a roll-launched jump/dive.",
+    "status": "to-do"
+  },
+  {
+    "title": "Level prompt: remaining ability numbers",
+    "description": "From PR #79 author feedback: LEVEL_PROMPT still lacks the roll, slope speeds, ice grip, freeze ray numbers, mover jump-off speed and headbutt details. Generate them from the tunables (touch the prompt only for things authors place or set, per #61, but movement numbers help authors size gaps). Size S.",
     "status": "to-do"
   }
 ]

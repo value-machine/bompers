@@ -10,6 +10,7 @@ import {
 } from "@/features/arena/api/arenaApi";
 import {
   createPlayersView,
+  PANIC_PUPIL_SCALE,
   stepPlayers,
   syncPlayersView,
   type BlobPoseOverlay,
@@ -242,14 +243,15 @@ const SQUEEZE_STRETCH_MAX = 1.6;
 
 /**
  * A blob squeezed by a moving part (owner change round on #64): narrow across the squeeze, taller
- * along it, axis-aligned so the eyes stay upright; it springs back when the squeeze ends.
+ * along it, axis-aligned so the eyes stay upright; it springs back when the squeeze ends. The
+ * eyes keep their size (the player renderer) and show the burning blob's panic (owner, squish-eyes).
  */
 function squeezePose(squeeze: NonNullable<PlayerState["squeeze"]>): BlobPoseOverlay {
   const along = Math.min(SQUEEZE_STRETCH_MAX, 1 / squeeze.scale);
   const across = squeeze.scale;
   return Math.abs(squeeze.nx) >= Math.abs(squeeze.ny)
-    ? { rotation: 0, sx: across, sy: along }
-    : { rotation: 0, sx: along, sy: across };
+    ? { rotation: 0, sx: across, sy: along, pupilScale: PANIC_PUPIL_SCALE }
+    : { rotation: 0, sx: along, sy: across, pupilScale: PANIC_PUPIL_SCALE };
 }
 
 interface LayerFrame {

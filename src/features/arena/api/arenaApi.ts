@@ -16,6 +16,7 @@ export {
   type ClearedCells,
   type ClearedLook,
   type Crater,
+  gridDistanceAt,
   groundFrictionBelow,
   isSolidAt,
   moverAt,
@@ -23,6 +24,7 @@ export {
   moversDistanceAt,
   rectHitsSolid,
   surfaceBelow,
+  terrainBodies,
 } from "@/features/arena/services/terrainGrid";
 export { isFrozenSample, setSampleFrozen, thawAround } from "@/features/arena/services/terrainGrid";
 export { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";

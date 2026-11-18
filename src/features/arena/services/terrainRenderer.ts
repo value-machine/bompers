@@ -1,5 +1,6 @@
 import { Container, Graphics } from "pixi.js";
-import { GAME_PALETTE, terrainSwatch } from "@/shared/config/gamePalette";
+import { terrainSwatch } from "@/shared/config/gamePalette";
+import { inkColor } from "@/shared/utils/debugInk";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelApi";
 import type { MoverBody, TerrainGrid } from "@/features/arena/types/arena.types";
@@ -120,14 +121,14 @@ export function syncTerrainView(view: TerrainView, grid: TerrainGrid, zoom: numb
     view.inkStep = outline.step;
     view.inkWidth = outline.width;
     const outlineShape = terrainContour(grid, { grow: outline.width });
-    drawContour(view.ink, outlineShape, GAME_PALETTE.ink);
+    drawContour(view.ink, outlineShape, inkColor("terrainOutline"));
   }
   view.movers.forEach((moverView, i) => {
     const mover = grid.movers[i];
     if (!mover) return;
     if (stepChanged) {
       const shape = terrainContour(mover.field, { grow: outline.width });
-      drawContour(moverView.ink, shape, GAME_PALETTE.ink);
+      drawContour(moverView.ink, shape, inkColor("moverOutline"));
     }
     placeMoverView(moverView, mover);
   });

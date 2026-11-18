@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { mapPlayerInputs } from "@/shared/utils/gameInputMapping";
@@ -5,6 +7,7 @@ import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { applyHit } from "@/features/combat/api/combatApi";
 import { catchFire } from "@/features/fire/api/fireApi";
 import { chillBlob, isFrozen, isIced } from "@/features/ice/api/iceApi";
+import { parseLevelFile } from "@/features/level-file/api/levelFileApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
 
 const level: LevelDefinition = {
@@ -548,5 +551,47 @@ describe("gameSim — ice blocks (ice-frozen-blobs D1–D7)", () => {
     expect(state.combat.fighters.get(player.id)?.health).toBe(
       DEFAULT_GAME_TUNABLES.combat.maxHealth
     );
+  });
+});
+
+// Owner reports (2026-11-18), on the crusher test level's squeezer: a block (x 920–968) that
+// slides 60 right toward a post (x 1048), leaving a 20-wide gap at its closest (t = 2 s).
+const CRUSHER_LEVEL = (() => {
+  const file = readFileSync(
+    path.join(process.cwd(), "public/level-kit/v2/crusher-test-level.html"),
+    "utf8"
+  );
+  const parsed = parseLevelFile(file);
+  if (!parsed.ok) throw new Error("crusher test level did not parse");
+  return parsed.level;
+})();
+const FLOOR_TOP = 840;
+
+/** The crusher level with player 0 placed at `at`, holding `held(t)` for `seconds`. */
+function onSqueezer(at: { x: number; y: number }, held: (t: number) => string[], seconds: number) {
+  const state = createGameState({ level: CRUSHER_LEVEL, tunables: DEFAULT_GAME_TUNABLES });
+  stepGame(state, keys(), dt);
+  const player = state.players[0]!;
+  Object.assign(player, { x: at.x, y: at.y, vx: 0, vy: 0 });
+  for (let i = 0; i < seconds / dt; i += 1) stepGame(state, keys(...held(i * dt)), dt);
+  return player;
+}
+
+describe("gameSim — leaving a squeeze", () => {
+  it("should free the player at full size on the floor when the squeezing block pulls back", () => {
+    // Squeezed against the post from 1.5 s to 2.5 s, then the block slides away.
+    const player = onSqueezer({ x: 1036, y: FLOOR_TOP }, () => [], 4);
+    expect(player.squeeze).toBeNull();
+    expect(player.y).toBeCloseTo(FLOOR_TOP, 0);
+    // Stayed by the post: not dragged along with the block (it is back near x 944).
+    expect(player.x).toBeGreaterThan(1030);
+  });
+
+  it("should not stick the player to the block when it rides it into the post and the block leaves", () => {
+    // Runs right off the block's top into the gap by the post, then lets go of the keys.
+    const player = onSqueezer({ x: 944, y: 768 }, (t) => (t < 2 ? ["KeyD"] : []), 5);
+    expect(player.squeeze).toBeNull();
+    expect(player.y).toBeCloseTo(FLOOR_TOP, 0);
+    expect(player.x).toBeGreaterThan(1030);
   });
 });

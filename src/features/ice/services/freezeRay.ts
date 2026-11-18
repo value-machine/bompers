@@ -1,6 +1,6 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import { castRayFan, pushAlongAim } from "@/shared/utils/rayFan";
-import type { TerrainGrid } from "@/features/arena/api/arenaApi";
+import { terrainBodies, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import { helmetPoint } from "@/features/combat/api/combatApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import { chillBlob } from "@/features/ice/services/frozenBlobs";
@@ -34,13 +34,16 @@ export function sprayFreezeRay(ice: IceState, args: FreezeRayArgs): void {
   const { terrain, tunables, holder } = args;
   const ray = tunables.combat.freezeRay;
   const hits = castRayFan({
-    field: terrain,
+    fields: terrainBodies(terrain),
     bodies: args.players.filter((player) => player !== holder),
     origin: helmetPoint(holder),
     aim: { x: holder.aimX, y: holder.aimY },
     shape: { ...ray, length: args.reach ?? ray.length },
   });
-  const samples = hits.rays.flatMap((hit) => (hit.sample === null ? [] : [hit.sample]));
+  const samples = hits.rays.flatMap((hit) =>
+    // A ray that ends on a moving part stops there; parts take no cold yet (mover-materials L1).
+    hit.sample === null || hit.body !== 0 ? [] : [hit.sample]
+  );
   feedCold(ice, terrain, { slot: holder.slot, samples, now: args.now, dt: args.dt, tunables });
   pushAlongAim(hits, { accel: ray.push, dt: args.dt });
   for (const blob of hits.bodies) {

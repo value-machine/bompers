@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Crystal Gap — Bompers level</title>
+    <!-- Optional preview kit: legend, labels, grid. The level works without it. -->
+    <link rel="stylesheet" href="/level-kit/v2/preview.css" />
+    <script src="/level-kit/v2/preview.js" defer></script>
+  </head>
+  <body>
+    <svg
+      id="level"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 2400 1400"
+      data-level-format="2"
+      data-level-id="crystal-gap"
+      data-title="Crystal Gap"
+      data-author="Bompers team"
+      data-agent="claude-sonnet"
+      data-description="No weapons: three islands joined only by headbutt chains through floating dive-reset crystals, a bonk post between the right gap, an icy catch ledge with a wall-jump chimney, and a high nest that needs a jump plus three dives."
+      data-cell-size="4"
+      data-gravity="1"
+      data-match-duration="180"
+      data-weapons="none"
+      style="display: block; width: 100%; height: auto; background: #d6e4f2"
+    >
+      <!-- Decoration (no data-role): faint crystal shards in the distance. -->
+      <polygon points="600,560 640,440 680,560" fill="#bcd3ea" />
+      <polygon points="1900,420 1940,300 1980,420" fill="#bcd3ea" />
+      <polygon points="1100,1100 1140,980 1180,1100" fill="#c6dbee" />
+
+      <!-- In-bounds area: leaving the bottom eliminates the player. -->
+      <rect data-role="bounds" x="40" y="20" width="2320" height="1360" fill="none" stroke="#d24b3a" stroke-width="3" stroke-dasharray="14 8" />
+
+      <g id="terrain">
+        <!-- Island A -->
+        <rect data-role="terrain" data-material="stone" data-label="Island A" x="160" y="900" width="320" height="60" fill="#5a3f7a" />
+        <!-- Island B with stem -->
+        <rect data-role="terrain" data-material="stone" data-label="Island B" x="1040" y="760" width="320" height="60" fill="#5a3f7a" />
+        <rect data-role="terrain" data-material="stone" x="1040" y="820" width="60" height="380" fill="#5a3f7a" />
+        <!-- Island C -->
+        <rect data-role="terrain" data-material="stone" data-label="Island C" x="1920" y="860" width="320" height="60" fill="#5a3f7a" />
+        <!-- The nest -->
+        <rect data-role="terrain" data-material="stone" data-label="Nest" x="1520" y="240" width="240" height="40" fill="#5a3f7a" />
+        <!-- Bonk post between B and C -->
+        <rect data-role="terrain" data-material="stone" data-color="slate" data-label="Bonk post" x="1620" y="560" width="40" height="260" fill="#4f6178" />
+        <!-- Catch ledge (ice) and chimney post -->
+        <rect data-role="terrain" data-material="ice" data-label="Catch ledge" x="520" y="1160" width="380" height="32" fill="#a8cfe6" />
+        <rect data-role="terrain" data-material="stone" data-label="Chimney post" x="860" y="800" width="40" height="392" fill="#5a3f7a" />
+      </g>
+
+      <g id="spawns">
+        <circle data-role="spawn" cx="240" cy="876" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="400" cy="876" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="1200" cy="736" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="2080" cy="836" r="14" fill="#3f8f5f" />
+      </g>
+
+      <g id="drops">
+        <circle data-role="drop" cx="1200" cy="100" r="12" fill="#c94f7c" />
+        <circle data-role="drop" cx="2080" cy="120" r="12" fill="#c94f7c" />
+      </g>
+
+      <g id="point-orbs">
+        <circle data-role="collectible" data-item="point-orb" cx="2160" cy="820" r="10" fill="#e0b62c" />
+        <circle data-role="collectible" data-item="point-orb" cx="1590" cy="210" r="10" fill="#e0b62c" />
+        <circle data-role="collectible" data-item="point-orb" cx="1690" cy="210" r="10" fill="#e0b62c" />
+      </g>
+
+      <g id="headbutt-resets">
+        <!-- A to B -->
+        <circle data-role="collectible" data-item="dive-reset" cx="790" cy="700" r="12" fill="#5fe0ff" />
+        <!-- B to C, over the bonk post -->
+        <circle data-role="collectible" data-item="dive-reset" cx="1500" cy="640" r="12" fill="#5fe0ff" />
+        <circle data-role="collectible" data-item="dive-reset" cx="1640" cy="480" r="12" fill="#5fe0ff" />
+        <circle data-role="collectible" data-item="dive-reset" cx="1780" cy="660" r="12" fill="#5fe0ff" />
+        <!-- B up to the nest -->
+        <circle data-role="collectible" data-item="dive-reset" cx="1280" cy="470" r="12" fill="#5fe0ff" />
+        <circle data-role="collectible" data-item="dive-reset" cx="1440" cy="300" r="12" fill="#5fe0ff" />
+      </g>
+    </svg>
+  </body>
+</html>

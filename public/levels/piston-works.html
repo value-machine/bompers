@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Piston Works — Bompers level</title>
+    <!-- Optional preview kit: legend, labels, grid, moving-part animation. The level works without it. -->
+    <link rel="stylesheet" href="/level-kit/v2/preview.css" />
+    <script src="/level-kit/v2/preview.js" defer></script>
+  </head>
+  <body>
+    <svg
+      id="level"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 1920 1600"
+      data-level-format="2"
+      data-level-id="piston-works"
+      data-title="Piston Works"
+      data-author="Bompers team"
+      data-agent="claude-sonnet"
+      data-description="A vertical machine hall: a wall-jump chimney, a squeezer, a fast lift to jump off, a crusher guarding an orb, and a spinning bar to ride up to the top decks. Earth patches on the top decks let rockets open the way."
+      data-cell-size="4"
+      data-gravity="1"
+      data-match-duration="180"
+      data-weapons="rocket-launcher homing-launcher"
+      style="display: block; width: 100%; height: auto; background: #dfe9f2"
+    >
+      <title>Piston Works</title>
+
+      <!-- Decoration (no data-role): back-wall gears and pipes. -->
+      <rect x="120" y="300" width="1680" height="24" fill="#c9d6e3" />
+      <rect x="120" y="1000" width="1680" height="16" fill="#cfdbe7" />
+      <circle cx="320" cy="420" r="70" fill="#cdd9e5" />
+      <circle cx="1620" cy="620" r="90" fill="#cdd9e5" />
+      <circle cx="960" cy="1180" r="60" fill="#cdd9e5" />
+
+      <!-- In-bounds area: leaving it eliminates the player. -->
+      <rect data-role="bounds" x="40" y="20" width="1840" height="1560" fill="none" stroke="#d24b3a" stroke-width="3" stroke-dasharray="14 8" />
+
+      <g id="terrain">
+        <rect id="floor" data-role="terrain" data-material="stone" data-label="Floor" x="200" y="1400" width="1520" height="60" fill="#5a3f7a" />
+
+        <!-- Wall-jump chimney (x 260-420) and the left deck it leads to -->
+        <rect id="chimney-outer" data-role="terrain" data-material="stone" data-label="Chimney wall" x="200" y="640" width="60" height="760" fill="#5a3f7a" />
+        <rect id="chimney-inner" data-role="terrain" data-material="stone" data-label="Chimney wall" x="420" y="760" width="60" height="520" fill="#5a3f7a" />
+        <rect id="left-deck" data-role="terrain" data-material="stone" data-label="Left deck" x="480" y="760" width="280" height="32" fill="#5a3f7a" />
+
+        <!-- Top decks: stone outside, earth inside so rockets widen the hole by the shaft -->
+        <rect id="top-left-stone" data-role="terrain" data-material="stone" data-label="Top deck" x="560" y="460" width="200" height="32" fill="#5a3f7a" />
+        <rect id="top-left-earth" data-role="terrain" data-material="earth" x="760" y="460" width="80" height="32" fill="#c4673f" />
+        <rect id="top-right-earth" data-role="terrain" data-material="earth" x="1080" y="460" width="80" height="32" fill="#c4673f" />
+        <rect id="top-right-stone" data-role="terrain" data-material="stone" data-label="Top deck" x="1160" y="460" width="200" height="32" fill="#5a3f7a" />
+
+        <!-- Step, right deck, end wall and the ledge beside the spinner -->
+        <rect id="step" data-role="terrain" data-material="stone" data-label="Step" x="1140" y="1260" width="100" height="140" fill="#5a3f7a" />
+        <rect id="right-deck" data-role="terrain" data-material="stone" data-label="Right deck" x="1240" y="1100" width="480" height="32" fill="#5a3f7a" />
+        <rect id="end-wall" data-role="terrain" data-material="stone" data-label="End wall" x="1688" y="900" width="32" height="200" fill="#5a3f7a" />
+        <rect id="spinner-ledge" data-role="terrain" data-material="stone" data-label="Ledge" x="1576" y="960" width="104" height="32" fill="#5a3f7a" />
+      </g>
+
+      <!-- Squeezer: slides down to leave 20 units above the floor (a squeeze, not a crush). -->
+      <g id="squeezer" data-motion="slide 0,220 4s" data-end-sound="thud">
+        <rect data-role="terrain" data-material="stone" data-color="clay" data-label="Squeezer" x="500" y="1080" width="120" height="80" fill="#c4673f" />
+      </g>
+
+      <!-- Fast lift: rises 640 every 6 s (top speed about 335); jump off it while it rises. -->
+      <g id="lift" data-motion="slide 0,-640 6s">
+        <rect data-role="terrain" data-material="stone" data-color="rose" data-label="Fast lift" x="880" y="1376" width="160" height="24" fill="#c95a86" />
+      </g>
+
+      <!-- Crusher: slides along the deck into the end wall and back every 3 s. -->
+      <g id="crusher" data-motion="slide 240,0 3s" data-end-sound="thud">
+        <rect data-role="terrain" data-material="stone" data-color="slate" data-label="Crusher" x="1368" y="1020" width="80" height="80" fill="#4f6178" />
+      </g>
+
+      <!-- Spinner: ride the rising (left) end up to the top deck. -->
+      <g id="spinner" data-motion="spin 6s">
+        <rect data-role="terrain" data-material="stone" data-color="moss" data-label="Spinner" x="1300" y="788" width="240" height="24" fill="#5f8f3e" />
+      </g>
+
+      <g id="spawns">
+        <circle data-role="spawn" cx="620" cy="736" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="1270" cy="1076" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="760" cy="1376" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="1100" cy="1376" r="14" fill="#3f8f5f" />
+      </g>
+
+      <g id="drops">
+        <circle data-role="drop" cx="700" cy="80" r="12" fill="#c94f7c" />
+        <circle data-role="drop" cx="960" cy="80" r="12" fill="#c94f7c" />
+        <circle data-role="drop" cx="1220" cy="80" r="12" fill="#c94f7c" />
+      </g>
+
+      <g id="collectibles">
+        <circle data-role="collectible" data-item="point-orb" cx="700" cy="436" r="10" fill="#e0b62c" />
+        <circle data-role="collectible" data-item="point-orb" cx="1260" cy="436" r="10" fill="#e0b62c" />
+        <circle data-role="collectible" data-item="point-orb" cx="1660" cy="1076" r="10" fill="#e0b62c" />
+      </g>
+    </svg>
+  </body>
+</html>

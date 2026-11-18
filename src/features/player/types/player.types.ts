@@ -85,6 +85,12 @@ export interface PlayerState {
   jumpCount: number;
   wallJumpCount: number;
   landCount: number;
+  /**
+   * Seconds since the feet last touched the ground (0 while grounded). A touchdown only counts as
+   * a landing after `LANDING_MIN_AIR_SECONDS` in the air, so a contact that flips off and on for a
+   * step or two (a steep lip, a moving part under the feet) never reads as a landing.
+   */
+  airSeconds: number;
   /** Downward speed at the last landing, units / s (scales the landing squash). */
   lastLandingSpeed: number;
   /** Slope under the feet while grounded, radians (+ = rising to the right); 0 in the air. */

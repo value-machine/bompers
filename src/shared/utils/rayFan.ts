@@ -1,11 +1,12 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
-import type { SampleField } from "@/shared/types/sampleFront.types";
+import type { PosedField } from "@/shared/types/sampleFront.types";
 
 /**
  * The ray fan of a spray weapon (fire-spread b1 D5–D7; shared by the torch and the freeze ray,
  * ice-element D4): `rays` rays fan out from `origin` over ±`halfAngleDegrees` of the aim, each
  * marching half a sample at a time up to `length`. A ray stops at the first solid sample it
- * meets, so a spray acts on what it touches and never through a wall. Round bodies a ray reaches
+ * meets in any of the cast's fields (the static terrain and every moving part, mover-materials
+ * D4), so a spray acts on what it touches and never through a wall or a part. Round bodies a ray reaches
  * before terrain are collected; what happens to the sample and the bodies is the weapon's.
  */
 export interface RayFanShape {
@@ -26,7 +27,8 @@ export interface RayFanBody {
 }
 
 export interface RayFanCast<Body extends RayFanBody> {
-  field: SampleField;
+  /** The fields a ray stops on, the static terrain first (its spacing sets the march). */
+  fields: readonly PosedField[];
   /** Bodies a ray can reach (leave the holder out). */
   bodies: readonly Body[];
   origin: Vec2;
@@ -37,8 +39,10 @@ export interface RayFanCast<Body extends RayFanBody> {
 
 export interface RayHit {
   end: Vec2;
-  /** Sample the ray stopped at, if any. */
+  /** Sample the ray stopped at, if any: an index into the samples of field `body`. */
   sample: number | null;
+  /** Which of the cast's fields the ray stopped on (0 = the first; 0 when it stopped on none). */
+  body: number;
 }
 
 export interface RayFanHits<Body extends RayFanBody> {
@@ -50,13 +54,26 @@ export interface RayFanHits<Body extends RayFanBody> {
   bodies: Set<Body>;
 }
 
-const solidAt = (field: SampleField, p: Vec2): number | null => {
-  const cx = Math.floor(p.x / field.cellSize);
-  const cy = Math.floor(p.y / field.cellSize);
+/** The solid sample of one field at world point `p`, if any. */
+const sampleAt = ({ field, toLocal }: PosedField, p: Vec2): number | null => {
+  const local = toLocal ? toLocal(p) : p;
+  if (!local) return null;
+  const cx = Math.floor(local.x / field.cellSize);
+  const cy = Math.floor(local.y / field.cellSize);
   if (cx < 0 || cy < 0 || cx >= field.widthCells || cy >= field.heightCells) return null;
   const index = cy * field.widthCells + cx;
   return (field.cells[index] ?? 0) === 0 ? null : index;
 };
+
+/** The first field that is solid at `p`, with the sample there. */
+function solidAt(fields: readonly PosedField[], p: Vec2): { sample: number; body: number } | null {
+  for (let body = 0; body < fields.length; body += 1) {
+    const posed = fields[body];
+    const sample = posed ? sampleAt(posed, p) : null;
+    if (sample !== null) return { sample, body };
+  }
+  return null;
+}
 
 /** A body whose circle holds `p`. */
 const bodyAt = <Body extends RayFanBody>(bodies: readonly Body[], p: Vec2): Body | undefined =>
@@ -80,17 +97,21 @@ function castRay<Body extends RayFanBody>(
   dir: Vec2,
   reached: Set<Body>
 ): RayHit {
-  const { origin, field } = cast;
+  const { origin, fields } = cast;
   const { length } = cast.shape;
-  const step = field.cellSize / 2;
+  const step = (fields[0]?.field.cellSize ?? 1) / 2;
   for (let s = step; s <= length; s += step) {
     const p = { x: origin.x + dir.x * s, y: origin.y + dir.y * s };
-    const sample = solidAt(field, p);
-    if (sample !== null) return { end: p, sample };
+    const solid = solidAt(fields, p);
+    if (solid) return { end: p, ...solid };
     const body = bodyAt(cast.bodies, p);
     if (body) reached.add(body);
   }
-  return { end: { x: origin.x + dir.x * length, y: origin.y + dir.y * length }, sample: null };
+  return {
+    end: { x: origin.x + dir.x * length, y: origin.y + dir.y * length },
+    sample: null,
+    body: 0,
+  };
 }
 
 /** Casts the fan for this step. */

@@ -49,7 +49,7 @@ describe("beamReaction", () => {
 describe("resolveBeamClashes", () => {
   it("should end both beams halfway when a torch and a freeze ray spray head-on", () => {
     const { reach, clashes } = resolveBeamClashes(
-      field(),
+      [{ field: field() }],
       [torchAt(100, 150), rayAt(230, 150)],
       LOOK
     );
@@ -65,7 +65,11 @@ describe("resolveBeamClashes", () => {
   });
 
   it("should leave nothing of either beam past the meeting when they spray head-on", () => {
-    const { reach } = resolveBeamClashes(field(), [torchAt(100, 150), rayAt(230, 150)], LOOK);
+    const { reach } = resolveBeamClashes(
+      [{ field: field() }],
+      [torchAt(100, 150), rayAt(230, 150)],
+      LOOK
+    );
 
     // The torch's far end and the ray's far end do not cross.
     expect(100 + (reach[0] ?? 0)).toBeLessThanOrEqual(
@@ -76,7 +80,7 @@ describe("resolveBeamClashes", () => {
   it("should end only the freeze ray when it meets the flame beyond the torch's own length", () => {
     // 200 apart: the flame ends 84 out by itself; the ray gets there later and ends on it.
     const { reach, clashes } = resolveBeamClashes(
-      field(),
+      [{ field: field() }],
       [torchAt(100, 150), rayAt(300, 150)],
       LOOK
     );
@@ -92,7 +96,11 @@ describe("resolveBeamClashes", () => {
     const aim = { x: -150, y: 90 };
     const length = Math.hypot(aim.x, aim.y);
     const ray = rayAt(140 + (150 * 150) / length, 150 - (90 * 150) / length, aim);
-    const { reach, clashes } = resolveBeamClashes(field(), [torchAt(100, 150), ray], LOOK);
+    const { reach, clashes } = resolveBeamClashes(
+      [{ field: field() }],
+      [torchAt(100, 150), ray],
+      LOOK
+    );
 
     expect(reach[0]).toBe(TORCH.length);
     // It ends before it reaches the torch's aim line, at the flame: no further from the torch
@@ -110,7 +118,7 @@ describe("resolveBeamClashes", () => {
   it("should end the freeze ray when it only grazes the edge of the flame", () => {
     // The ray flies 20 units above the torch's aim line: the cone is that wide about 62 out.
     const { reach, clashes } = resolveBeamClashes(
-      field(),
+      [{ field: field() }],
       [torchAt(100, 150), rayAt(260, 130)],
       LOOK
     );
@@ -121,9 +129,13 @@ describe("resolveBeamClashes", () => {
   });
 
   it("should leave both beams whole when they do not touch", () => {
-    const apart = resolveBeamClashes(field(), [torchAt(100, 150), rayAt(500, 150)], LOOK);
+    const apart = resolveBeamClashes(
+      [{ field: field() }],
+      [torchAt(100, 150), rayAt(500, 150)],
+      LOOK
+    );
     const away = resolveBeamClashes(
-      field(),
+      [{ field: field() }],
       [torchAt(100, 150, { x: -1, y: 0 }), rayAt(230, 150, { x: 1, y: 0 })],
       LOOK
     );
@@ -136,7 +148,11 @@ describe("resolveBeamClashes", () => {
 
   it("should leave both beams whole when a wall stands between them", () => {
     const wall = field((x) => x > 160 && x < 172);
-    const { reach, clashes } = resolveBeamClashes(wall, [torchAt(100, 150), rayAt(230, 150)], LOOK);
+    const { reach, clashes } = resolveBeamClashes(
+      [{ field: wall }],
+      [torchAt(100, 150), rayAt(230, 150)],
+      LOOK
+    );
 
     expect(reach).toEqual([TORCH.length, RAY.length]);
     expect(clashes).toEqual([]);
@@ -144,7 +160,7 @@ describe("resolveBeamClashes", () => {
 
   it("should let two beams of the same element pass through each other", () => {
     const { reach, clashes } = resolveBeamClashes(
-      field(),
+      [{ field: field() }],
       [torchAt(100, 150), torchAt(230, 150, { x: -1, y: 0 })],
       LOOK
     );
@@ -154,7 +170,9 @@ describe("resolveBeamClashes", () => {
   });
 
   it("should return each beam's own length when fewer than two beams spray", () => {
-    expect(resolveBeamClashes(field(), [], LOOK)).toEqual({ reach: [], clashes: [] });
-    expect(resolveBeamClashes(field(), [rayAt(230, 150)], LOOK).reach).toEqual([RAY.length]);
+    expect(resolveBeamClashes([{ field: field() }], [], LOOK)).toEqual({ reach: [], clashes: [] });
+    expect(resolveBeamClashes([{ field: field() }], [rayAt(230, 150)], LOOK).reach).toEqual([
+      RAY.length,
+    ]);
   });
 });
