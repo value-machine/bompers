@@ -1,6 +1,6 @@
 import { act, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useClipboardCopy } from "@/features/level-kit/hooks/useClipboardCopy";
+import { useClipboardCopy } from "@/shared/hooks/useClipboardCopy";
 import { renderHookWithProviders } from "tests/test-utils";
 
 const stubClipboard = (writeText: (text: string) => Promise<void>): void => {

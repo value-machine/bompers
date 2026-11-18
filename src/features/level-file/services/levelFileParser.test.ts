@@ -7,7 +7,10 @@ import {
   getCellInfo,
   groundFrictionBelow,
 } from "@/features/arena/api/arenaApi";
+import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { LEVEL_FILE_MIGRATIONS } from "@/features/level-file/services/levelFileMigrations";
+import { spawnLift } from "@/features/level-file/services/levelFileGeometry";
+import { formatLevelImportReport } from "@/features/level-file/services/levelFileIssues";
 import {
   parseLevelFile,
   type LevelImportResult,
@@ -19,6 +22,7 @@ const readRepoFile = (rel: string): string => readFileSync(path.join(process.cwd
 const EXAMPLE = readRepoFile("public/level-kit/v2/example-level.html");
 const FIRE_TEST = readRepoFile("public/level-kit/v2/fire-test-level.html");
 const CRUSHER_TEST = readRepoFile("public/level-kit/v2/crusher-test-level.html");
+const FORGIVING_TEST = readRepoFile("public/level-kit/v2/forgiving-test-level.html");
 const BUILT_INS = ["start-arena", "floating-garden"].map((id) => ({
   id,
   text: readRepoFile(`public/levels/${id}.html`),
@@ -158,39 +162,23 @@ describe("parseLevelFile — kit files", () => {
 describe("parseLevelFile — errors reject the file", () => {
   const cases: [string, string, string][] = [
     ["E1", "<html><body><svg viewBox='0 0 10 10'></svg></body></html>", "No level found"],
-    ["E1", level(VALID_BODY) + level(VALID_BODY), "Found 2"],
-    ["E2", level(VALID_BODY, 'data-level-format="one" data-title="T"'), "not a format version"],
     ["E2", level(VALID_BODY, 'data-level-format="3" data-title="T"'), "newer version of the game"],
     [
+      "E2",
+      level(VALID_BODY, 'data-level-format="2.5" data-title="T"'),
+      "newer version of the game",
+    ],
+    [
       "E3",
-      level(VALID_BODY).replace('viewBox="0 0 800 600"', 'viewBox="10 0 800 600"'),
-      'must be "0 0 <width> <height>"',
+      level(GROUND + SPAWNS + DROP).replace('viewBox="0 0 800 600"', 'viewBox="wide"'),
+      "no width/height or bounds rect gives the size",
     ],
-    ["E4", level(GROUND + SPAWNS + DROP), "No bounds"],
-    ["E4", level(BOUNDS + BOUNDS + GROUND + SPAWNS + DROP), "Found 2 bounds"],
-    [
-      "E4",
-      level(VALID_BODY.replace('width="800" height="600"', 'width="900" height="600"')),
-      "outside the viewBox",
-    ],
-    [
-      "E5",
-      level(BOUNDS + GROUND + DROP + '<circle data-role="spawn" cx="200" cy="300" r="1"/>'),
-      "Only 1 valid spawn",
-    ],
+    ["E5", level(BOUNDS.replace('y="0"', 'y="390"') + GROUND + DROP), "no room above the terrain"],
     ["E6", level(BOUNDS + SPAWNS + DROP), "No valid terrain"],
-    ["E7", level(BOUNDS + GROUND + SPAWNS), "No valid drop point"],
     [
-      "E8",
-      level(VALID_BODY.replace('width="600"', 'width="600px"')),
-      'terrain "ground": width "600px" uses a unit',
-    ],
-    ["E8", level(VALID_BODY.replace('height="64"', "")), 'terrain "ground": height is missing'],
-    ["E8", level(VALID_BODY.replace('cx="400"', 'cx="mid"')), 'drop #1: cx "mid" is not a number'],
-    [
-      "E8",
+      "E6",
       level(BOUNDS + SPAWNS + DROP + '<polygon data-role="terrain" points="0,0 10,10" />'),
-      "at least 3",
+      "No valid terrain",
     ],
   ];
 
@@ -208,6 +196,118 @@ describe("parseLevelFile — errors reject the file", () => {
 });
 
 const warn = (body: string, rootAttrs?: string) => okLevel(parseLevelFile(level(body, rootAttrs)));
+
+describe("parseLevelFile — forgiving import (survivable rules load with fallbacks)", () => {
+  /** The owner's odd file: no viewBox, no bounds, one spawn, no drop, one shape with a unit. */
+  const ODD_FILE = `<svg data-level-format="2" data-title="Odd" width="800" height="600">
+    ${GROUND}
+    <rect id="bad" data-role="terrain" x="10" y="10" width="10px" height="10" />
+    <circle data-role="spawn" cx="400" cy="376" r="14" />
+  </svg>`;
+
+  it("should load the odd file with a warning per survivable rule", () => {
+    const result = okLevel(parseLevelFile(ODD_FILE));
+    expect(codes(result.warnings)).toEqual(["W17", "W21", "W18", "W6", "W20"]);
+    expect(result.level.worldSize).toEqual({ w: 800, h: 600 });
+    expect(result.level.bounds).toEqual({ x: 0, y: 0, w: 800, h: 600 });
+    expect(result.level.terrain).toHaveLength(1);
+    expect(result.level.spawns).toHaveLength(1);
+    expect(result.level.drops).toEqual([]);
+  });
+
+  it("should load the kit's forgiving test level with exactly the warnings its comment lists", () => {
+    const result = okLevel(parseLevelFile(FORGIVING_TEST));
+    expect(codes(result.warnings)).toEqual(["W16", "W17", "W21", "W21", "W18", "W6", "W20"]);
+    expect(result.level.terrain).toHaveLength(3);
+    expect(result.level.collectibles).toHaveLength(2);
+  });
+
+  it("should use the first root with W15 when the file holds two", () => {
+    const result = okLevel(parseLevelFile(level(VALID_BODY) + level(VALID_BODY)));
+    expect(codes(result.warnings)).toEqual(["W15"]);
+  });
+
+  it("should read a version that is not a whole number as the game's with W16", () => {
+    const result = warn(VALID_BODY, 'data-level-format="two" data-title="T"');
+    expect(result.warnings[0]?.message).toContain("reading it as v2");
+  });
+
+  it("should take the far corner of an offset viewBox with W17", () => {
+    const text = level(VALID_BODY).replace('viewBox="0 0 800 600"', 'viewBox="10 0 790 600"');
+    const result = okLevel(parseLevelFile(text));
+    expect(codes(result.warnings)).toEqual(["W17"]);
+    expect(result.level.worldSize).toEqual({ w: 800, h: 600 });
+  });
+
+  it("should size the world from the bounds rect with W17 when nothing else gives it", () => {
+    const text = level(VALID_BODY).replace('viewBox="0 0 800 600"', "");
+    expect(okLevel(parseLevelFile(text)).level.worldSize).toEqual({ w: 800, h: 600 });
+  });
+
+  it("should use the first bounds or clip it to the world with W18", () => {
+    expect(codes(warn(VALID_BODY + BOUNDS).warnings)).toEqual(["W18"]);
+    const wide = warn(VALID_BODY.replace('width="800" height="600"', 'width="900" height="600"'));
+    expect(wide.warnings[0]?.message).toContain("outside the viewBox");
+    expect(wide.level.bounds).toEqual({ x: 0, y: 0, w: 800, h: 600 });
+  });
+
+  it("should place spawns above the widest terrain with W19 when the file names none", () => {
+    const result = warn(BOUNDS + GROUND + DROP);
+    expect(codes(result.warnings)).toEqual(["W19"]);
+    expect(result.level.spawns).toEqual([{ x: 400, y: 400 - spawnLift(DEFAULT_GAME_TUNABLES) }]);
+  });
+
+  it("should load without crates with W20 when there is no drop point", () => {
+    const result = warn(BOUNDS + GROUND + SPAWNS);
+    expect(codes(result.warnings)).toEqual(["W20"]);
+    expect(result.level.drops).toEqual([]);
+  });
+
+  it.each([
+    [VALID_BODY.replace('width="600"', 'width="600px"'), 'width "600px" uses a unit'],
+    [VALID_BODY.replace('cx="400"', 'cx="mid"'), 'drop #1: cx "mid" is not a number'],
+  ])("should skip an element with broken geometry with W21 (%#)", (body, message) => {
+    const result = parseLevelFile(level(body + GROUND.replace('id="ground" ', "")));
+    const w21 = result.warnings.find((w) => w.code === "W21");
+    expect(w21?.message).toContain(message);
+    expect(w21?.message).toContain("ignored");
+  });
+});
+
+describe("formatLevelImportReport", () => {
+  it("should list each warning with its code when the odd file loaded", () => {
+    const result = okLevel(parseLevelFile(level(BOUNDS + GROUND + SPAWNS)));
+    const text = formatLevelImportReport({
+      fileName: "odd.html",
+      ok: true,
+      errors: [],
+      warnings: [...result.warnings, { message: "engine note" }],
+    });
+    expect(text).toBe(
+      [
+        "Bompers level import report (rules: LEVEL_FORMAT.md § 7, format v2)",
+        "File: odd.html",
+        "Loaded with 2 warning(s).",
+        "",
+        "Warnings:",
+        `- W20 ${result.warnings[0]?.message}`,
+        "- engine note",
+        "",
+      ].join("\n")
+    );
+  });
+
+  it("should list the errors first when the file was rejected", () => {
+    const result = parseLevelFile(level(BOUNDS + SPAWNS + DROP));
+    const text = formatLevelImportReport({
+      fileName: "empty.html",
+      ok: result.ok,
+      errors: result.ok ? [] : result.errors,
+      warnings: result.warnings,
+    });
+    expect(text).toContain("Rejected: 1 error(s), the game can't run it.\n\nErrors:\n- E6 ");
+  });
+});
 
 describe("parseLevelFile — element warnings load with fallbacks", () => {
   it("should load a valid level without warnings", () => {

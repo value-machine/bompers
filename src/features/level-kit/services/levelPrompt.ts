@@ -4,7 +4,7 @@ import {
   exportCatalog,
   type ExportedCatalog,
 } from "@/features/content-catalog/api/contentCatalogApi";
-import { MIN_SPAWNS, RECOMMENDED_SPAWNS } from "@/features/level-file/api/levelFileApi";
+import { RECOMMENDED_SPAWNS, spawnLift } from "@/features/level-file/api/levelFileApi";
 import { DEFAULT_GAME_TUNABLES, type GameTunables } from "@/shared/config/gameTunables";
 import { terrainSwatch, toCssColor } from "@/shared/config/gamePalette";
 import { blastPushAt, blastReach, craterReach } from "@/shared/utils/blastPower";
@@ -37,9 +37,6 @@ const round = (n: number): number => Math.round(n);
 const code = (s: string | number): string => `\`${s}\``;
 const codeList = (ids: readonly string[]): string => ids.map((id) => code(id)).join(", ");
 const snapDown = (n: number, cell: number): number => Math.floor(n / cell) * cell;
-
-/** Units a centred spawn sits above the surface: half a body plus a small gap. */
-const spawnLift = (t: GameTunables): number => t.player.height / 2 + 10;
 
 const materialFill = (catalog: ExportedCatalog, materialId: string): string => {
   const material = catalog.material.find((m) => m.id === materialId);
@@ -136,7 +133,7 @@ function renderRoles(ctx: PromptContext): string {
     "|---|---|---|---|",
     `| \`bounds\` | \`<rect>\` | exactly 1 | The play area, inside the viewBox. Falling below its **bottom** edge eliminates a player. The **side and top edges are open**: the kill lines there lie far beyond the bounds, so players can be launched out and fly back. Suggested \`fill="none" stroke="${PREVIEW_FILLS.bounds}"\`. |`,
     `| \`terrain\` | rect, polygon, circle | ≥ 1 | Ground. \`data-material\` = behaviour (default \`${CATALOG_DEFAULTS.material}\`), \`data-color\` = looks (optional, default = the material's colour). Optional \`data-effect\`, \`data-sound\`, \`data-label\`, \`id\`. Later shapes paint over earlier ones where they overlap. |`,
-    `| \`spawn\` | \`<circle>\` | ≥ ${RECOMMENDED_SPAWNS} (min ${MIN_SPAWNS}) | Player start (the centre counts, \`r="${POINT_RADIUS.spawn}"\`). Inside bounds, never inside terrain, centre ~\`${lift}\` above a solid surface, not over a pit. \`fill="${PREVIEW_FILLS.spawn}"\`. |`,
+    `| \`spawn\` | \`<circle>\` | ≥ ${RECOMMENDED_SPAWNS} | Player start (the centre counts, \`r="${POINT_RADIUS.spawn}"\`). Inside bounds, never inside terrain, centre ~\`${lift}\` above a solid surface, not over a pit. \`fill="${PREVIEW_FILLS.spawn}"\`. |`,
     `| \`drop\` | \`<circle>\` | ≥ 1 | Weapon crates fall from here (\`r="${POINT_RADIUS.drop}"\`); place high up. The game picks each crate's weapon. \`fill="${PREVIEW_FILLS.drop}"\`. |`,
     `| \`collectible\` | \`<circle>\` | ≥ 0 | A pickup point (\`r="${POINT_RADIUS.collectible}"\`), \`data-item\` = one collectible item (§ 4). \`point-orb\`: point orbs fall from the sky onto it. \`dive-reset\`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns ${respawn} s after use) — hang them in the air between platforms and off edges for headbutt chains. \`fill="${PREVIEW_FILLS.collectible}"\`. |`,
     "",

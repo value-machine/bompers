@@ -19,7 +19,7 @@ Normalisation applies the format's warnings that make sense on a parsed level an
 - W4: unknown material → the catalog default material (`stone`); missing or unknown colour → the material's `defaultColor` (unknown warns); unknown effect / sound / behavior → dropped, so the material's default applies; an unknown collectible item → the default collectible; non-weapon IDs in `settings.weaponIds` → removed (a list emptied only by removals is dropped, so the lobby's weapons apply; an empty list stays = no weapons).
 - W5: spawn, drop and collectible points outside `bounds` are ignored. Spawn-inside-terrain needs the grid and is the importer's check.
 - W8: out-of-range settings → defaults.
-- Fewer than 2 valid spawns → warning (the importer turns it into error E5).
+- No valid spawn → warning; one spawn is enough, players share it (forgiving-import). The importer places fallback spawns (W19) or rejects with E5 when there is no room.
 
 The structural errors E1–E8 belong to the importer.
 

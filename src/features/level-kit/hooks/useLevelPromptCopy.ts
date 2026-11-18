@@ -1,4 +1,4 @@
-import { useClipboardCopy, type ClipboardCopy } from "@/features/level-kit/hooks/useClipboardCopy";
+import { useClipboardCopy, type ClipboardCopy } from "@/shared/hooks/useClipboardCopy";
 import { buildLevelPrompt } from "@/features/level-kit/services/levelPrompt";
 
 const levelPrompt = (): string => buildLevelPrompt();

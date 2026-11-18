@@ -7,15 +7,9 @@ import {
   loadLevelFromUrl,
   type LoadedLevel,
 } from "@/features/level-file/services/levelFileSource";
-import type { LevelIssue } from "@/features/level-file/types/levelFile.types";
+import type { LevelImportReport } from "@/features/level-file/types/levelFile.types";
 
-/** Outcome of the last import, shown to the player (and the AI agent's human). */
-export interface LevelImportReport {
-  fileName: string;
-  ok: boolean;
-  errors: LevelIssue[];
-  warnings: LevelIssue[];
-}
+export type { LevelImportReport };
 
 /** One playable level of the library: a built-in file or one imported this session. */
 export interface LevelLibraryEntry {
