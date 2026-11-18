@@ -43,23 +43,37 @@ describe("blobPose", () => {
     player.landCount += 1;
     player.lastLandingSpeed = squash.landFullImpact * 2;
     noteBlobEvents(anim, { player, squash, nowMs: 1000 });
-    expect(eventSquash(anim, { squash, atMs: 1000 })).toEqual({
-      sx: squash.land.sx,
-      sy: squash.land.sy,
-    });
+    const deepest = 1000 + squash.land.sinkSeconds[1] * 1000;
+    expect(eventSquash(anim, { squash, atMs: deepest }).sx).toBeCloseTo(squash.land.sx, 6);
+    expect(eventSquash(anim, { squash, atMs: deepest }).sy).toBeCloseTo(squash.land.sy, 6);
   });
 
-  it("should squash about half as much when the landing is light", () => {
+  it("should squash only the minimum amount when the landing is barely counted", () => {
     const player = standing();
     const anim = createBlobAnim(player);
     player.landCount += 1;
     player.lastLandingSpeed = 120;
     noteBlobEvents(anim, { player, squash, nowMs: 0 });
-    const amount = 0.5 + 0.5 * (120 / squash.landFullImpact);
-    expect(eventSquash(anim, { squash, atMs: 0 }).sy).toBeCloseTo(
-      1 - (1 - squash.land.sy) * amount,
-      6
+    const impact = 120 / squash.landFullImpact;
+    const amount = squash.landMinAmount + (1 - squash.landMinAmount) * impact;
+    expect(anim.active?.amount).toBeCloseTo(amount, 6);
+  });
+
+  it("should keep the landing squash moving across many frames when the drop is big", () => {
+    const player = standing();
+    const anim = createBlobAnim(player);
+    player.landCount += 1;
+    player.lastLandingSpeed = squash.landFullImpact;
+    noteBlobEvents(anim, { player, squash, nowMs: 0 });
+    const frames = Array.from({ length: 40 }, (_, n) =>
+      eventSquash(anim, { squash, atMs: (n * 1000) / 60 })
     );
+    const moving = frames.filter((pose) => Math.abs(pose.sy - 1) > 0.005).length;
+    expect(moving).toBeGreaterThanOrEqual(18);
+    for (let n = 1; n < frames.length; n++) {
+      if (frames[n].sy !== 1) expect(frames[n].sy).not.toBe(frames[n - 1].sy);
+    }
+    expect(eventSquash(anim, { squash, atMs: 1000 })).toEqual({ sx: 1, sy: 1 });
   });
 
   it("should return to rest after the squash time has passed", () => {
@@ -107,7 +121,7 @@ describe("blobPose", () => {
     player.lastLandingSpeed = squash.landFullImpact;
     noteBlobEvents(anim, { player, squash, nowMs: 0 });
     expect(blobPose(anim, { player, squash, nowMs: 0 }).feetSy).toBe(1);
-    const later = blobPose(anim, { player, squash, nowMs: 40 });
+    const later = blobPose(anim, { player, squash, nowMs: 100 });
     expect(later.feetSy).toBeLessThan(later.bodySy);
   });
 

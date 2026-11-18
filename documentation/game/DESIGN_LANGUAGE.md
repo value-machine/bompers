@@ -171,11 +171,11 @@ Back to front:
 
 ## 6. Motion and squash
 
-Squash and stretch keep area roughly constant (`sx × sy` between 0.93 and 1.01, each axis 0.75–1.25). Numbers are starting values; the movement task tunes them in its config module. Tiers, timing windows and the per-moment channel ledger for all feedback: [`GAME_JUICE.md`](GAME_JUICE.md).
+Squash and stretch keep area roughly constant (`sx × sy` between 0.93 and 1.01, each axis 0.72–1.3). Numbers are starting values; the movement task tunes them in its config module. Tiers, timing windows and the per-moment channel ledger for all feedback: [`GAME_JUICE.md`](GAME_JUICE.md).
 
 | Moment          | Shape                                                                  | Timing                                  |
 | --------------- | ---------------------------------------------------------------------- | --------------------------------------- |
-| Landing         | body scale (1.25, 0.75), scaled by impact speed (light landing = half) | recover with back-out overshoot, 180 ms |
+| Landing         | body scale (1.3, 0.72), scaled by impact speed (lightest landing = a quarter) | sinks over 70–110 ms (by impact), then one jelly wobble back over 300 ms, never held still (owner, soft-landing) |
 | Take-off / jump | (0.85, 1.18)                                                           | ease back to (1, 1) over 150 ms         |
 | Wall-jump push  | (0.8, 1.2) rotated toward the wall normal                              | 120 ms                                  |
 | Bash hit taken  | (1.15, 0.88) toward the hit, plus knockback                            | 100 ms                                  |
@@ -272,7 +272,7 @@ Every SFX prompt is built from one template: **material + action + palette words
 
 **Chosen takes** (owner, 2026-11-14; files in `public/audio/sfx/`, wiring in `src/features/sound/`): jump, tumble bounce, rocket fire and respawn from the first batch (one take each); explosion 3 takes and pickup 2 takes from the first batch; hit from the test batch; round start, all 4 test takes; land, dive launch, dive impact and elimination from round two; round end, all 6 round-two takes, one picked at random each time. Spares kept for later: dive impact × 2, elimination × 2.
 
-**Material sounds** (owner, 2026-11-16, material-sounds lap): stone `thud` take 4; earth `crumble` take 3 + dive-impact spare 1; cardboard `thwap` take 4; ice `clink` take 2 + dive-impact spare 4. One sound per material, played when it is blasted and, layered over the blob's splut, when a dive bonks into it. The owner's A/B: a wall bonk's blob part is the landing splut; landings keep it. Volume follows intensity: landings by fall speed, hits and bonks by impact speed (GAME_JUICE § 5).
+**Material sounds** (owner, 2026-11-16, material-sounds lap): stone `thud` take 4; earth `crumble` take 3 + dive-impact spare 1; cardboard `thwap` take 4; ice `clink` take 2 + dive-impact spare 4. One sound per material, played when it is blasted and, layered over the blob's splut, when a dive bonks into it. The owner's A/B: a wall bonk's blob part is the landing splut; landings keep it. Soft jump and land (owner, soft-landing lap, 2026-11-18): both files are the original takes pitched down 3 semitones, low-passed at 2.2 kHz, given a 10 ms attack and a compressed click, and left quieter than the −16 LUFS norm on purpose (jump −21.4, land −25.4 LUFS), so they sound like a soft blob, not a wood block. Volume follows intensity: landings by fall speed, hits and bonks by impact speed (GAME_JUICE § 5).
 
 **Fire and ice sounds** (owner, 2026-11-18, element-sounds lap; prompts in the lap's BRIEF, generated with `eleven_text_to_sound_v2`, shorts 0.5 s, loops with the generator's loop option): torch start take 4, torch loop take 3, fire crackle loop take 1, burn-out take 1 (over cardboard's thwap), catch fire take 2, steam hiss take 3, freeze start take 3, thaw take 2. The freeze-ray loop is re-take 2 after the owner's note: "a continuous mix of leaf blower and whistling wind".
 

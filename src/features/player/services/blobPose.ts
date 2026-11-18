@@ -23,7 +23,8 @@ export interface BlobAnim {
   seenWallJumps: number;
   seenLandings: number;
   seenRollBounces: number;
-  active: { kind: SquashKind; startMs: number; amount: number } | null;
+  /** `impact` (0 … 1) sets a landing's sink time; jumps use 1. */
+  active: { kind: SquashKind; startMs: number; amount: number; impact: number } | null;
   /** Crouch pose progress 0 (standing) … 1 (sunk), and the render clock it was stepped at. */
   crouchBlend: number;
   crouchAtMs: number | null;
@@ -174,22 +175,50 @@ export function noteBlobEvents(
   const before = anim.active;
   const { player, squash, nowMs } = frame;
   if (player.landCount !== anim.seenLandings && player.lastLandingSpeed >= MIN_LANDING_SPEED) {
-    const impact = Math.min(1, player.lastLandingSpeed / squash.landFullImpact);
-    anim.active = { kind: "land", startMs: nowMs, amount: 0.5 + 0.5 * impact };
+    anim.active = landSquash(player.lastLandingSpeed, { squash, nowMs });
   }
   // A roll bounce (floor or wall) squashes like a landing at that speed.
   if (player.rollBounceCount !== anim.seenRollBounces) {
-    const impact = Math.min(1, player.lastRollBounceSpeed / squash.landFullImpact);
-    anim.active = { kind: "land", startMs: nowMs, amount: 0.5 + 0.5 * impact };
+    anim.active = landSquash(player.lastRollBounceSpeed, { squash, nowMs });
   }
   if (player.jumpCount !== anim.seenJumps) {
-    anim.active = { kind: "jump", startMs: nowMs, amount: 1 };
+    anim.active = { kind: "jump", startMs: nowMs, amount: 1, impact: 1 };
   }
   if (player.wallJumpCount !== anim.seenWallJumps) {
-    anim.active = { kind: "wallJump", startMs: nowMs, amount: 1 };
+    anim.active = { kind: "wallJump", startMs: nowMs, amount: 1, impact: 1 };
   }
   markEventsSeen(anim, player);
   return anim.active === before ? null : anim.active;
+}
+
+/** A landing (or roll bounce) squash at `speed`: light ones squash `landMinAmount`, full ones 1. */
+function landSquash(
+  speed: number,
+  frame: { squash: SquashTunables; nowMs: number }
+): NonNullable<BlobAnim["active"]> {
+  const { squash, nowMs } = frame;
+  const impact = Math.min(1, speed / squash.landFullImpact);
+  const amount = squash.landMinAmount + (1 - squash.landMinAmount) * impact;
+  return { kind: "land", startMs: nowMs, amount, impact };
+}
+
+/**
+ * Landing squash progress `ms` after touchdown (owner, soft-landing): eases down to 1 over the
+ * sink time, then springs back through a damped wobble (negative = the rebound stretch), never
+ * held still. 0 once it has played out.
+ */
+export function landSquashCurve(
+  ms: number,
+  frame: { land: SquashTunables["land"]; impact: number }
+): number {
+  const { land, impact } = frame;
+  const [lightSink, fullSink] = land.sinkSeconds;
+  const sinkMs = (lightSink + (fullSink - lightSink) * impact) * 1000;
+  if (ms < 0) return 0;
+  if (ms < sinkMs) return Math.sin((ms / sinkMs) * (Math.PI / 2));
+  const t = (ms - sinkMs) / (land.seconds * 1000);
+  if (t >= 1) return 0;
+  return Math.exp(-land.damping * t) * Math.cos(land.wobbles * Math.PI * t) * (1 - t);
 }
 
 function markEventsSeen(anim: BlobAnim, player: PlayerState): void {
@@ -207,9 +236,16 @@ export function eventSquash(
   const { active } = anim;
   if (!active) return { sx: 1, sy: 1 };
   const shape = frame.squash[active.kind];
-  const t = (frame.atMs - active.startMs) / (shape.seconds * 1000);
-  if (t >= 1 || t < 0) return { sx: 1, sy: 1 };
-  const remaining = active.kind === "land" ? 1 - easeOutBack(t) : 1 - easeOutQuad(t);
+  const ms = frame.atMs - active.startMs;
+  let remaining: number;
+  if (active.kind === "land") {
+    remaining = landSquashCurve(ms, { land: frame.squash.land, impact: active.impact });
+  } else {
+    const t = ms / (shape.seconds * 1000);
+    if (t >= 1 || t < 0) return { sx: 1, sy: 1 };
+    remaining = 1 - easeOutQuad(t);
+  }
+  if (remaining === 0) return { sx: 1, sy: 1 };
   const k = remaining * active.amount;
   return { sx: 1 + (shape.sx - 1) * k, sy: 1 + (shape.sy - 1) * k };
 }

@@ -41,7 +41,7 @@ export const JUICE_SHAKE_CAP_PX = 12;
 /** Inclusive [min, max] seconds. */
 export type JuiceWindow = readonly [min: number, max: number];
 
-export type JuiceRole = "flash" | "fade" | "shake" | "squash" | "effect" | "linger";
+export type JuiceRole = "flash" | "fade" | "shake" | "squash" | "settle" | "effect" | "linger";
 
 /**
  * How long each kind of feedback lasts. Short and snappy: nothing a player must wait on.
@@ -49,6 +49,7 @@ export type JuiceRole = "flash" | "fade" | "shake" | "squash" | "effect" | "ling
  * - `fade`: a flash fading out.
  * - `shake`: one camera-shake kick.
  * - `squash`: a squash / stretch recovering to rest, a HUD pip pop.
+ * - `settle`: a landing squash sinking and wobbling back, never held still (owner, soft-landing).
  * - `effect`: a pop-in effect clearing (explosion star, impact pop).
  * - `linger`: things that fly off (debris, droplets, confetti).
  */
@@ -57,6 +58,7 @@ export const JUICE_WINDOWS: Readonly<Record<JuiceRole, JuiceWindow>> = {
   fade: [0.05, 0.15],
   shake: [0.06, 0.15],
   squash: [0.1, 0.2],
+  settle: [0.3, 0.45],
   effect: [0.18, 0.32],
   linger: [0.3, 0.6],
 };
@@ -64,13 +66,14 @@ export const JUICE_WINDOWS: Readonly<Record<JuiceRole, JuiceWindow>> = {
 /**
  * Squash and stretch keep the blob's volume: body scale `sx · sy` stays inside the area band
  * (DESIGN_LANGUAGE § 6), and each axis stays in [`minScale`, `maxScale`] (the land pose is the
- * limit both ways: 1.25 × 0.75).
+ * limit both ways: 1.3 × 0.72, widened from 1.25 × 0.75 so the blob reads as soft jelly — owner,
+ * soft-landing).
  */
 export const JUICE_SQUASH = {
   minArea: 0.93,
   maxArea: 1.01,
-  minScale: 0.75,
-  maxScale: 1.25,
+  minScale: 0.72,
+  maxScale: 1.3,
 } as const;
 
 /** True when `seconds` lies in the role's window. */

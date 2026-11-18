@@ -137,9 +137,23 @@ export interface GameTunables {
     };
     /** Render-only squash and stretch (sx, sy pairs; seconds). */
     squash: {
-      land: { sx: number; sy: number; seconds: number };
+      /**
+       * Landing squash, never held still (owner, soft-landing): it sinks to (sx, sy) over
+       * `sinkSeconds` (light → full impact), then springs back over `seconds` with `wobbles`
+       * half-swings damped by `damping`.
+       */
+      land: {
+        sx: number;
+        sy: number;
+        sinkSeconds: readonly [light: number, full: number];
+        seconds: number;
+        wobbles: number;
+        damping: number;
+      };
       /** Impact speed (units / s) that gives the full landing squash; slower = proportionally less. */
       landFullImpact: number;
+      /** Squash amount of the lightest landing that squashes (1 at full impact). */
+      landMinAmount: number;
       jump: { sx: number; sy: number; seconds: number };
       wallJump: { sx: number; sy: number; seconds: number };
       /** Idle breathing: amplitude on y (fraction) and loop length (seconds). */
