@@ -17,7 +17,7 @@ The join screen before a round (GDD § 1, § 7): 1–4 players claim a slot from
 | Hooks      | `hooks/useLobbyInput.ts`        | Polls every device's `MenuInput` once per animation frame, turns new presses into `press` actions, reports per-device activity for the indicators             |
 | Components | `components/LobbyScreen.tsx`    | Composes slots, menu, device strip; carries out effects (start, open file picker); level-file drop                                                            |
 | Components | `components/PlayerSlotCard.tsx` | One slot: blob, `P1 ●`, device + live input indicator, leave key; or the join prompt. `InputIndicator`                                                        |
-| Components | `components/LobbyMenu.tsx`      | The rows; the cursor row is highlighted; steppers and buttons for the pointer                                                                                 |
+| Components | `components/LobbyMenu.tsx`      | The rows; the cursor row (and the crate cursor) carries the menu focus mark after key / pad input; steppers and buttons for the pointer                       |
 | Components | `components/LevelStrip.tsx`       | The \"Level\" row: a strip of thumbnail cards (`LevelThumbnail`), built-ins then imports, then a \"Load level\" card; the picked card lifts and scrolls into view; imported cards carry the memory chip (Saved copy / Linked / Updated / Relink / File missing) |
 | Components | `components/RememberedLevelActions.tsx` | In the \"Your level\" row for a picked import: Relink file / Find file… / Forget plus a one-line state note |
 | Components | `components/BlobBadge.tsx`      | SVG blob of a slot (colour, shade feet, helmet emblem from `shared/utils/playerEmblem`)                                                                       |
@@ -37,6 +37,7 @@ Controls: join / confirm Space or F (left keys), Enter or / (right keys), A or S
 
 Lap record: `documentation/jobs/temp_job_lobby/DECISIONS.md`.
 
+- Focus mark (owner, controller-focus D1–D2): the cursor row gets an ink ring with the sky wash (`menu-focus-row`), the crate under the crate cursor an ink ring with a gap (`menu-focus`), only while the last menu input was a key or pad press; pointer use hides them and the cursor keeps its place (`shared/services/menuFocusModality`, fed by `useLobbyInput`). The level strip's picked card keeps its own lift; in the Level row the ring is on the row, not the card.
 - Settings precedence: gravity multiplies (engine × lobby × level); a level's `matchDurationS` wins over the lobby's duration, and the menu says so (lobby D2).
 - Weapons row (owner, weapons-match-setting D5–D7; level-direction D6): one toggle per weapon, drawn as its in-game crate; on = the crate as it falls, off = greyed and faded. Any combination; all on = auto (stored as the off set, so a new weapon starts on), all off = no weapon crates. Pads: the row has its own crate cursor (left / right, wrapping), confirm toggles; the pointer clicks a crate. A level with `data-weapons` shows its weapons on the crates, locked, with "Set by the level".
 - The players' own controls drive one shared menu; a device without a slot can only join (lobby D3).
