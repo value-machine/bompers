@@ -511,3 +511,53 @@ describe("gameSim — ice blocks (ice-frozen-blobs D1–D7)", () => {
     );
   });
 });
+
+describe("gameSim — jump dive (double-jump-bash D1)", () => {
+  /** Player 1 armed with a full rocket launcher, standing; one step to settle. */
+  const armedGame = () => {
+    const state = newGame();
+    stepGame(state, keys(), dt);
+    state.combat.fighters.get("p0")!.weapon = {
+      itemId: "rocket-launcher",
+      ammo: DEFAULT_GAME_TUNABLES.combat.rocket.ammo,
+    };
+    return state;
+  };
+  /** Jumps, lets go, then presses jump again high in the air while holding `extra` keys. */
+  const jumpThenAirPress = (state: ReturnType<typeof createGameState>, ...extra: string[]) => {
+    stepFor(state, 0.05, keys("Space"));
+    stepFor(state, 0.25);
+    stepGame(state, keys("Space", ...extra), dt);
+  };
+
+  // Acceptance test of the double-jump-bash lap (BRIEF.md § Success check). Red until the build:
+  // `it.fails` records the expected failure so commits pass; loop-build turns both into `it`.
+  it.fails(
+    "should start the dive and fire no rocket when an armed player presses jump in mid-air",
+    () => {
+      const state = armedGame();
+      jumpThenAirPress(state, "KeyD");
+      stepFor(state, DEFAULT_GAME_TUNABLES.dive.windupSeconds + 2 * dt);
+      const motion = state.dive.motions.p0;
+      expect(motion?.phase).toBe("travel");
+      expect(motion?.dirX).toBeCloseTo(1);
+      expect(state.combat.fighters.get("p0")?.weapon?.ammo).toBe(
+        DEFAULT_GAME_TUNABLES.combat.rocket.ammo
+      );
+    }
+  );
+
+  it.fails("should roll on when jump is still held as the jump dive ends", () => {
+    const state = armedGame();
+    jumpThenAirPress(state, "KeyD");
+    const d = DEFAULT_GAME_TUNABLES.dive;
+    stepFor(state, d.windupSeconds + d.travelSeconds + 2 * dt, keys("Space", "KeyD"));
+    expect(state.players[0]!.rollSource).toBe("dash");
+  });
+
+  it("should not dive when the first jump press leaves the ground", () => {
+    const state = armedGame();
+    stepFor(state, 0.2, keys("Space"));
+    expect(state.dive.motions.p0?.phase ?? "idle").toBe("idle");
+  });
+});
