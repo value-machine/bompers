@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bonfire Bridge — Bompers level</title>
+    <!-- Optional preview kit: legend, labels, grid. The level works without it. -->
+    <link rel="stylesheet" href="/level-kit/v2/preview.css" />
+    <script src="/level-kit/v2/preview.js" defer></script>
+  </head>
+  <body>
+    <svg
+      id="level"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 2240 1200"
+      data-level-format="2"
+      data-level-id="bonfire-bridge"
+      data-title="Bonfire Bridge"
+      data-author="Bompers team"
+      data-agent="claude-sonnet"
+      data-description="Two stone towers joined by cardboard bridges over a pit, with an earth pillar and an ice cap in the middle. Torch the bridges, cut firebreaks with rockets, freeze planks to save them; if your bridge burns away, a foot ledge and two dive resets get you back."
+      data-cell-size="4"
+      data-gravity="1"
+      data-match-duration="180"
+      data-weapons="torch freeze-ray rocket-launcher"
+      style="display: block; width: 100%; height: auto; background: #f1d9b8"
+    >
+      <title>Bonfire Bridge</title>
+
+      <!-- Decoration (no data-role): dusk sky bands and distant ridges -->
+      <rect x="0" y="0" width="2240" height="400" fill="#f6e3c4" />
+      <rect x="0" y="800" width="2240" height="400" fill="#e3b98f" />
+      <rect x="0" y="1000" width="2240" height="200" fill="#d39c74" />
+      <rect x="520" y="1040" width="360" height="160" fill="#c98e6b" />
+      <rect x="1360" y="1040" width="360" height="160" fill="#c98e6b" />
+      <rect x="760" y="120" width="160" height="24" fill="#fff4de" />
+      <rect x="1320" y="160" width="200" height="24" fill="#fff4de" />
+
+      <!-- In-bounds area: leaving the bottom eliminates the player. -->
+      <rect data-role="bounds" x="40" y="20" width="2160" height="1160" fill="none" stroke="#d24b3a" stroke-width="3" stroke-dasharray="14 8" />
+
+      <g id="terrain">
+        <!-- Stone towers (plum) -->
+        <rect id="tower-left" data-role="terrain" data-material="stone" data-color="plum" data-label="Left tower" x="160" y="560" width="320" height="540" fill="#5a3f7a" />
+        <rect id="tower-right" data-role="terrain" data-material="stone" data-color="plum" data-label="Right tower" x="1760" y="560" width="320" height="540" fill="#5a3f7a" />
+
+        <!-- Stone steps on the inner tower sides (slate) -->
+        <rect id="step-left" data-role="terrain" data-material="stone" data-color="slate" data-label="Left step" x="480" y="700" width="120" height="32" fill="#4f6178" />
+        <rect id="step-right" data-role="terrain" data-material="stone" data-color="slate" data-label="Right step" x="1640" y="700" width="120" height="32" fill="#4f6178" />
+
+        <!-- Central pillar: stone base, earth firebreak (moss) that rockets can chew -->
+        <rect id="pillar-base" data-role="terrain" data-material="stone" data-color="slate" data-label="Pillar base" x="1080" y="720" width="80" height="380" fill="#4f6178" />
+        <rect id="pillar-earth" data-role="terrain" data-material="earth" data-color="moss" data-label="Earth firebreak" x="1080" y="320" width="80" height="400" fill="#5f8f3e" />
+        <rect id="foot-ledge" data-role="terrain" data-material="stone" data-color="slate" data-label="Foot ledge" x="900" y="900" width="440" height="40" fill="#4f6178" />
+
+        <!-- Ice cap on the pillar top -->
+        <rect id="ice-cap" data-role="terrain" data-material="ice" data-color="frost" data-label="Ice cap" x="1040" y="288" width="160" height="32" fill="#a8cfe6" />
+
+        <!-- Lower cardboard bridges -->
+        <rect id="bridge-lower-left" data-role="terrain" data-material="cardboard" data-color="cardboard" data-label="Lower bridge" x="480" y="560" width="600" height="32" fill="#c99a62" />
+        <rect id="bridge-lower-right" data-role="terrain" data-material="cardboard" data-color="cardboard" data-label="Lower bridge" x="1160" y="560" width="600" height="32" fill="#c99a62" />
+
+        <!-- Cardboard columns: fire climbs to the upper bridges -->
+        <rect id="column-left" data-role="terrain" data-material="cardboard" data-color="cardboard" x="640" y="352" width="40" height="208" fill="#c99a62" />
+        <rect id="column-right" data-role="terrain" data-material="cardboard" data-color="cardboard" x="1560" y="352" width="40" height="208" fill="#c99a62" />
+
+        <!-- Upper cardboard bridges -->
+        <rect id="bridge-upper-left" data-role="terrain" data-material="cardboard" data-color="cardboard" data-label="Upper bridge" x="640" y="320" width="440" height="32" fill="#c99a62" />
+        <rect id="bridge-upper-right" data-role="terrain" data-material="cardboard" data-color="cardboard" data-label="Upper bridge" x="1160" y="320" width="440" height="32" fill="#c99a62" />
+      </g>
+
+      <g id="spawns">
+        <circle data-role="spawn" cx="240" cy="536" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="400" cy="536" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="1840" cy="536" r="14" fill="#3f8f5f" />
+        <circle data-role="spawn" cx="2000" cy="536" r="14" fill="#3f8f5f" />
+      </g>
+
+      <g id="drops">
+        <circle data-role="drop" cx="320" cy="80" r="12" fill="#c94f7c" />
+        <circle data-role="drop" cx="1120" cy="80" r="12" fill="#c94f7c" />
+        <circle data-role="drop" cx="1920" cy="80" r="12" fill="#c94f7c" />
+      </g>
+
+      <g id="collectibles">
+        <circle data-role="collectible" data-item="point-orb" cx="1120" cy="220" r="10" fill="#e0b62c" />
+        <circle data-role="collectible" data-item="point-orb" cx="860" cy="528" r="10" fill="#e0b62c" />
+        <circle data-role="collectible" data-item="point-orb" cx="1380" cy="528" r="10" fill="#e0b62c" />
+        <circle data-role="collectible" data-item="dive-reset" cx="780" cy="780" r="12" fill="#5fe0ff" />
+        <circle data-role="collectible" data-item="dive-reset" cx="1460" cy="780" r="12" fill="#5fe0ff" />
+      </g>
+    </svg>
+  </body>
+</html>

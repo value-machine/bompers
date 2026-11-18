@@ -32,6 +32,8 @@ export interface SoundCursor {
   roundPhase: "playing" | "ended";
   world: SoundWorldSnapshot;
   marks: ElementCueMarks;
+  /** When each player's own sounds last played (sim seconds), by `bodyCueKey`. */
+  bodyCueAt: ReadonlyMap<string, number>;
 }
 
 /**
@@ -46,9 +48,14 @@ export function readSoundCues(
 ): { cursor: SoundCursor; cues: SoundCue[] } {
   const lastSeq = cursor?.lastSeq ?? 0;
   const elements = elementCues(cursor, frame.world);
+  const body = guardBodyCues(
+    cursor?.bodyCueAt ?? new Map(),
+    frame.players.flatMap((player) => playerCues(cursor?.players.get(player.slot), player)),
+    frame.world.timeSeconds
+  );
   const cues = [
     ...roundCues(cursor, frame),
-    ...frame.players.flatMap((player) => playerCues(cursor?.players.get(player.slot), player)),
+    ...body.cues,
     ...eventCues(frame, lastSeq),
     ...elements.cues,
   ];
@@ -60,8 +67,31 @@ export function readSoundCues(
       roundPhase: frame.roundPhase,
       world: frame.world,
       marks: elements.marks,
+      bodyCueAt: body.at,
     },
   };
+}
+
+const bodyCueKey = (cue: SoundCue): string => `${cue.slot ?? "-"}:${cue.soundId}`;
+
+/**
+ * The re-trigger guard per body and sound (collision-sound-jitter): a player's own sound that
+ * played less than `SOUND_MIX.bodyRetriggerSeconds` ago (sim time) is dropped, so a contact that
+ * keeps re-touching never machine-guns one blob's landing. Other blobs and other sounds are free.
+ */
+function guardBodyCues(
+  lastAt: ReadonlyMap<string, number>,
+  cues: readonly SoundCue[],
+  timeSeconds: number
+): { cues: SoundCue[]; at: ReadonlyMap<string, number> } {
+  const at = new Map(lastAt);
+  const kept = cues.filter((cue) => {
+    const key = bodyCueKey(cue);
+    if (timeSeconds - (at.get(key) ?? -Infinity) < SOUND_MIX.bodyRetriggerSeconds) return false;
+    at.set(key, timeSeconds);
+    return true;
+  });
+  return { cues: kept, at };
 }
 
 /**
@@ -155,7 +185,8 @@ const PLAYER_RULES: readonly [
   ["jump", (p, n) => n.jumpCount > p.jumpCount || n.wallJumpCount > p.wallJumpCount, () => 1],
   [
     "land",
-    (p, n) => n.landCount > p.landCount,
+    // A touchdown slower than `landingMinSpeed` is a nudge (a hop off a pushing part), not a landing.
+    (p, n) => n.landCount > p.landCount && n.lastLandingSpeed >= SOUND_MIX.landingMinSpeed,
     (n) => intensityGain(n.lastLandingSpeed, SOUND_MIX.landingFullSpeed),
   ],
   // The roll bounce keeps the `tumble-bounce` file (shared-roll D8).

@@ -1,8 +1,7 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { MOTION_LIMITS, motionPose, posePoint, unposePoint } from "@/shared/utils/levelMotion";
 import {
-  fieldDistanceAt,
-  fieldNormalAt,
+  gridDistanceAt,
   moverDistanceAt,
   type MoverBody,
   type TerrainGrid,
@@ -122,9 +121,37 @@ export interface RideOptions {
   crushGapFraction: number;
 }
 
-/** The part let go (the gap opened): the body steps back out of the terrain at full size. */
-function stepOut(terrain: TerrainGrid, body: RiderBody, overlap: number): null {
-  const out = fieldNormalAt(terrain, centerOf(body));
+/**
+ * Distance into everything solid at `p` except the part `except` (static terrain and the other
+ * parts): what a body pushed by `except` can be squeezed against.
+ */
+function obstacleDistanceAt(terrain: TerrainGrid, p: Vec2, except: MoverBody | null): number {
+  let distance = gridDistanceAt(terrain, p);
+  for (const mover of terrain.movers) {
+    if (mover !== except) distance = Math.max(distance, moverDistanceAt(mover, p));
+  }
+  return distance;
+}
+
+/** Unit normal pointing out of the obstacles at `p` (straight up where they are flat). */
+function obstacleNormal(terrain: TerrainGrid, p: Vec2, except: MoverBody | null): Vec2 {
+  const h = terrain.cellSize / 2;
+  const at = (x: number, y: number) => obstacleDistanceAt(terrain, { x, y }, except);
+  const gx = at(p.x + h, p.y) - at(p.x - h, p.y);
+  const gy = at(p.x, p.y + h) - at(p.x, p.y - h);
+  const length = Math.hypot(gx, gy);
+  return length < 1e-9 ? { x: 0, y: -1 } : { x: -gx / length, y: -gy / length };
+}
+
+/**
+ * The obstacle squeezes the body only when it faces the part: its normal points back against
+ * the part's push (within 60°). A floor under a sideways push, or a wall beside a rising lift,
+ * just holds the body, which steps out of it at full size (collision-sound-jitter).
+ */
+const SQUEEZE_FACING = 0.5;
+
+/** Steps the body `overlap` out along `out` (the gap opened, or the obstacle only holds it). */
+function stepOut(body: RiderBody, out: Vec2, overlap: number): null {
   shift(body, { x: out.x * overlap, y: out.y * overlap });
   return null;
 }
@@ -133,7 +160,9 @@ function stepOut(terrain: TerrainGrid, body: RiderBody, overlap: number): null {
  * A body still overlapping terrain after the carry and pushes is squeezed between the part that
  * pushed it and the terrain beyond (owner, lap B-2): the gap left is its width minus the overlap.
  * A gap under the lethal fraction crushes it; a wider one centres it in the gap and reports a
- * squeeze (the body shrinks to fit for its own step and recovers when the gap opens).
+ * squeeze (the body shrinks to fit for its own step and recovers when the gap opens). An overlap
+ * with terrain that does not face the part is no squeeze: the body steps out of it, so a body
+ * that sank into the floor while squeezed is never held squeezed (and glued to the part) by it.
  */
 function squeezeOf(
   terrain: TerrainGrid,
@@ -142,10 +171,12 @@ function squeezeOf(
 ): { pinned: PinnedBody } | { squeeze: Squeeze } | null {
   const center = centerOf(body);
   const radius = body.width / 2;
-  const overlap = fieldDistanceAt(terrain, center) + radius;
+  const overlap = obstacleDistanceAt(terrain, center, at.mover) + radius;
   if (overlap <= SQUEEZE_SLOP) return null;
-  if (!at.mover) return stepOut(terrain, body, overlap);
+  const out = obstacleNormal(terrain, center, at.mover);
+  if (!at.mover) return stepOut(body, out, overlap);
   const normal = moverNormal(at.mover, center);
+  if (normal.x * out.x + normal.y * out.y > -SQUEEZE_FACING) return stepOut(body, out, overlap);
   const gap = body.width - overlap;
   if (gap < body.width * at.options.crushGapFraction) {
     const mover = terrain.movers.indexOf(at.mover);

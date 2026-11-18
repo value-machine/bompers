@@ -1,5 +1,6 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE, terrainSwatch } from "@/shared/config/gamePalette";
+import { inkColor } from "@/shared/utils/debugInk";
 import { starPoints } from "@/shared/utils/shapeGeometry";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 import { DESIGN_SCALE, outlineWidth } from "@/shared/utils/outlineWidth";
@@ -43,7 +44,7 @@ export function createEffectsView(): EffectsView {
 
 const inkStroke = (width: number) => ({
   width,
-  color: GAME_PALETTE.ink,
+  color: inkColor("other"),
   join: "round" as const,
 });
 

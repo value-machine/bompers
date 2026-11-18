@@ -1,6 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import { inkColor } from "@/shared/utils/debugInk";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import {
   EMPTY_CELL,
@@ -77,7 +78,7 @@ export interface IceFrame {
 }
 
 const COLORS = GAME_PALETTE.ice;
-const INK = GAME_PALETTE.ink;
+const INK = inkColor("ice");
 /** A breath missing for longer than this has stopped (its next start grows in again). */
 const BREATH_GAP_SECONDS = 0.1;
 

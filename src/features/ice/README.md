@@ -43,6 +43,8 @@ Tests: `services/iceSim.test.ts` (the touched sample freezes at once; the same a
 - Shared: `sampleFront`, `rayFan`, `gameTunables` (`ice`, `combat.freezeRay`), `gamePalette.ice`; `pixi.js` in the renderer.
 - Consumed by `match` (state slice, step 3e, the hook, two render layers).
 
+- `src/shared/utils/debugInk.ts`: the ice ink colour (`?debugInk=1` tints it; fire-black-flash diagnosis).
+
 ## Decisions
 
 - The cold breath leaves at the knob in front of the freeze ray's dish mouth: `ICE_LOOK.breath.emitterReach` is 20 units along the aim from the helmet point and follows the shared `weaponTube` shape `dish` (weapon-visuals-embellish D1, D8).

@@ -1,5 +1,5 @@
 import { Container, Graphics } from "pixi.js";
-import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import { inkColor } from "@/shared/utils/debugInk";
 import { contactShadow, CONTACT_SHADOW_RANGE } from "@/shared/utils/contactShadow";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 
@@ -42,7 +42,7 @@ export function syncContactShadows(
   syncDisplayById(layer.sprites, layer.container, {
     list: frame.casters,
     key: (caster) => caster.key,
-    create: () => new Graphics().ellipse(0, 0, 1, 1).fill(GAME_PALETTE.ink),
+    create: () => new Graphics().ellipse(0, 0, 1, 1).fill(inkColor("other")),
     place: (sprite, caster) => {
       const span = { x: caster.x - 2, y: caster.y, w: 4, range: CONTACT_SHADOW_RANGE };
       const ground = frame.groundBelow(span);

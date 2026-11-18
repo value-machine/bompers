@@ -2,6 +2,7 @@ import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE, weaponLook } from "@/shared/config/gamePalette";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import type { WeaponItemId } from "@/shared/types/weaponItems.types";
+import { inkColor } from "@/shared/utils/debugInk";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import { weaponTubeParts } from "@/shared/utils/weaponTube";
 import {
@@ -346,7 +347,7 @@ function createBlobSprite(player: PlayerState): BlobSprite {
     pop: { lastReady: 1, startMs: Number.NEGATIVE_INFINITY },
     eyes,
     pupils,
-    shadow: new Graphics().ellipse(0, 0, 1, 1).fill(GAME_PALETTE.ink),
+    shadow: new Graphics().ellipse(0, 0, 1, 1).fill(inkColor("other")),
     anim: createBlobAnim(player),
     wobble: createHelmetWobble(),
     feetMotion: createFeetMotion(player),
