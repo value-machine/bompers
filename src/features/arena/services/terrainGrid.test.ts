@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
+import { clearCraterOnBodies } from "@/features/arena/services/terrainBodies";
 import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 import {
   burnOut,
@@ -10,6 +11,7 @@ import {
   isSolidAt,
   rectHitsSolid,
   sampleDistance,
+  setSampleFrozen,
   surfaceBelow,
   takeDirtyChunks,
 } from "@/features/arena/services/terrainGrid";
@@ -251,5 +253,81 @@ describe("terrainGrid — burnOut (fire-spread b1)", () => {
     const index = 10 * grid.widthCells + 20;
     expect(burnOut(grid, [index]).removed).toBe(1);
     expect(burnOut(grid, [index]).removed).toBe(0);
+  });
+});
+
+// The bodies module shares this file: arena/services is at its file budget.
+describe("clearCraterOnBodies (mover-materials-l4 D1: blasts break moving parts like terrain)", () => {
+  /** An earth floor at y 160 and one moving part (piece 1): a 120 × 40 slab at x 140–260, y 60–100. */
+  const scene = (materialId: string) =>
+    buildTerrainFromLevel({
+      formatVersion: 2,
+      meta: { levelId: "b", title: "B" },
+      settings: { cellSize: 4, gravity: 1 },
+      worldSize: { w: 400, h: 200 },
+      terrain: [
+        { shape: { type: "rect", x: 0, y: 160, w: 400, h: 40 }, materialId: "earth" },
+        { shape: { type: "rect", x: 140, y: 60, w: 120, h: 40 }, materialId },
+      ],
+      movers: [
+        {
+          motion: { kind: "slide", offset: { x: 0, y: -40 }, periodS: 4, phase: 0 },
+          pivot: { x: 200, y: 80 },
+          terrainIndices: [1],
+        },
+      ],
+      spawns: [],
+      drops: [],
+      collectibles: [],
+      bounds: { x: 0, y: 0, w: 400, h: 200 },
+    });
+  const blast = { reach: 20, shape: "round" as const };
+
+  it("should cut a cardboard part where the part is this step and leave the ground far below whole", () => {
+    const grid = scene("cardboard");
+    // The part has moved up 40: its middle is at y 40 now.
+    grid.movers[0]!.pose = { dx: 0, dy: -40, angle: 0 };
+    expect(isSolidAt(grid, 200, 40)).toBe(true);
+    const cleared = clearCraterOnBodies(grid, { x: 200, y: 40, ...blast });
+    expect(isSolidAt(grid, 200, 40)).toBe(false);
+    // Softer than earth: the hole is wider than the blast's reach at toughness 1.
+    expect(isSolidAt(grid, 224, 40)).toBe(false);
+    expect(isSolidAt(grid, 250, 40)).toBe(true);
+    expect(cleared.byLook.map((look) => look.materialId)).toEqual(["cardboard"]);
+    expect(isSolidAt(grid, 200, 170)).toBe(true);
+  });
+
+  it("should leave a stone part whole", () => {
+    const grid = scene("stone");
+    expect(clearCraterOnBodies(grid, { x: 200, y: 80, ...blast }).removed).toBe(0);
+    expect(isSolidAt(grid, 200, 80)).toBe(true);
+  });
+
+  it("should cut a turned part at the place the blast hits in the world", () => {
+    const grid = scene("cardboard");
+    // A quarter turn about the pivot: the slab now stands upright, x 180–220, y 20–140.
+    grid.movers[0]!.pose = { dx: 0, dy: 0, angle: Math.PI / 2 };
+    expect(isSolidAt(grid, 200, 30)).toBe(true);
+    clearCraterOnBodies(grid, { x: 200, y: 30, ...blast });
+    expect(isSolidAt(grid, 200, 30)).toBe(false);
+    expect(isSolidAt(grid, 200, 120)).toBe(true);
+  });
+
+  it("should pool what one blast removes from the ground and from a part", () => {
+    const grid = scene("cardboard");
+    // The part has moved down onto the floor's height: one blast reaches both.
+    grid.movers[0]!.pose = { dx: 0, dy: 56, angle: 0 };
+    const cleared = clearCraterOnBodies(grid, { x: 200, y: 158, ...blast });
+    expect(cleared.byLook.map((look) => look.materialId).sort()).toEqual(["cardboard", "earth"]);
+    expect(cleared.removed).toBe(cleared.byLook.reduce((sum, look) => sum + look.cells, 0));
+  });
+
+  it("should leave a frozen part whole, as frozen ground", () => {
+    const grid = scene("cardboard");
+    const field = grid.movers[0]!.field;
+    field.cells.forEach((slot, index) => {
+      if (slot !== 0) setSampleFrozen(field, index, true);
+    });
+    expect(clearCraterOnBodies(grid, { x: 200, y: 80, ...blast }).removed).toBe(0);
   });
 });

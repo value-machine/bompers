@@ -11,9 +11,15 @@ export { EMPTY_CELL } from "@/features/arena/types/arena.types";
 export {
   bodyGrids,
   bodyWorldPoint,
+  clearCraterOnBodies,
+  frozenVersionOf,
+  poolCleared,
+  terrainBodies,
+  type ClearedBodies,
+} from "@/features/arena/services/terrainBodies";
+export {
   burnOut,
   clearCrater,
-  frozenVersionOf,
   getCellInfo,
   isBreakableSlot,
   type ClearedCells,
@@ -27,7 +33,6 @@ export {
   moversDistanceAt,
   rectHitsSolid,
   surfaceBelow,
-  terrainBodies,
 } from "@/features/arena/services/terrainGrid";
 export { isFrozenSample, setSampleFrozen, thawAround } from "@/features/arena/services/terrainGrid";
 export { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";

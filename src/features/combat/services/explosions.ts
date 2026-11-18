@@ -1,6 +1,6 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { CraterShape } from "@/shared/types/craterShape.types";
-import { clearCrater, type ClearedCells } from "@/features/arena/api/arenaApi";
+import { clearCraterOnBodies, type ClearedBodies } from "@/features/arena/api/arenaApi";
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import { playerBody, reactToHit, type PlayerState } from "@/features/player/api/playerApi";
 import { bodyCenter, distanceToRect, unitBetween } from "@/features/combat/services/combatGeometry";
@@ -85,7 +85,12 @@ function hitPlayers(ctx: CombatContext, blast: Blast): void {
  */
 export function reportTerrainDestroyed(
   combat: CombatState,
-  report: { cleared: Pick<ClearedCells, "byLook">; at: Vec2; timeSeconds: number; soundId?: string }
+  report: {
+    cleared: Pick<ClearedBodies, "byLook">;
+    at: Vec2;
+    timeSeconds: number;
+    soundId?: string;
+  }
 ): void {
   const { at } = report;
   for (const { materialId, colorId, cells } of report.cleared.byLook) {
@@ -110,7 +115,12 @@ export function reportTerrainDestroyed(
 function blastTerrain(ctx: CombatContext, blast: Blast): void {
   const { at } = blast;
   const reach = craterReach(ctx.tunables, blast.power);
-  const cleared = clearCrater(ctx.terrain, { x: at.x, y: at.y, reach, shape: blast.craterShape });
+  const cleared = clearCraterOnBodies(ctx.terrain, {
+    x: at.x,
+    y: at.y,
+    reach,
+    shape: blast.craterShape,
+  });
   reportTerrainDestroyed(ctx.combat, { cleared, at, timeSeconds: ctx.timeSeconds });
 }
 
