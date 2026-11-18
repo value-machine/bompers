@@ -443,5 +443,10 @@
     "title": "Moving parts: materials, fire, ice and beams",
     "description": "Owner 2026-11-18: spray beams (torch, freeze ray) must be stopped by moving parts, and moving parts can be any material, so they catch fire or freeze when their material takes it. Owner wants approaches, each deeper than the last, for a very extensible system; design page first. L1 (beams stop on parts) merged in #77.",
     "status": "done"
+  },
+  {
+    "title": "World of bodies L2a: fire on moving parts",
+    "description": "Body list as state; fire per body; torch lights parts; burn-out cuts the part (outline, collision, drawing follow); blobs catch from a burning part; W13 + LEVEL_FORMAT 11 + prompt line. Owner 2026-11-18: a fully burnt part leaves nothing for the rest of the round (same rule as terrain). Size M.",
+    "status": "done"
   }
 ]

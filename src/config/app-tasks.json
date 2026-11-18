@@ -1,10 +1,5 @@
 [
   {
-    "title": "World of bodies L2a: fire on moving parts",
-    "description": "Body list as state; fire per body; torch lights parts; burn-out cuts the part (outline, collision, drawing follow); blobs catch from a burning part; W13 + LEVEL_FORMAT 11 + prompt line. Owner 2026-11-18: a fully burnt part leaves nothing for the rest of the round (same rule as terrain). Size M.",
-    "status": "to-do"
-  },
-  {
     "title": "World of bodies L2b: cold on moving parts",
     "description": "Freeze ray freezes parts, grip per sample on a part, frozen overlay on parts, thaw, torch thaws parts. Size S-M.",
     "status": "to-do"
