@@ -108,8 +108,13 @@ describe("levelDefinition", () => {
     expect(warnings).toHaveLength(3);
   });
 
-  it("should warn when fewer than two valid spawns remain", () => {
+  it("should warn when no valid spawn remains", () => {
+    const { warnings } = normalizeLevelDefinition({ ...base, spawns: [] });
+    expect(warnings).toEqual(["spawns: 0 valid, at least 1 expected"]);
+  });
+
+  it("should accept one shared spawn without a warning when the level names one", () => {
     const { warnings } = normalizeLevelDefinition({ ...base, spawns: [{ x: 0, y: 0 }] });
-    expect(warnings).toEqual(["spawns: 1 valid, at least 2 expected"]);
+    expect(warnings).toEqual([]);
   });
 });

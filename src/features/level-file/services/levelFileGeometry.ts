@@ -1,11 +1,15 @@
+import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
+import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { Rect, Shape2D, Vec2 } from "@/shared/types/gameGeometry.types";
-import { addError, type LevelIssueLog } from "@/features/level-file/services/levelFileIssues";
+import { shapeBounds, shapeContains } from "@/shared/utils/shapeGeometry";
+import { addWarning, type LevelIssueLog } from "@/features/level-file/services/levelFileIssues";
 import type { RoleElement } from "@/features/level-file/types/levelFile.types";
 
 /**
  * Reads geometry attributes of role elements (LEVEL_FORMAT § 4–5). 1 SVG unit = 1 world unit,
- * so plain numbers only: a unit, a non-number or a missing required attribute is E8. `x`, `y`,
- * `cx`, `cy` default to 0 like in SVG; sizes are required and must be positive.
+ * so plain numbers only: a unit, a non-number or a missing required attribute skips the
+ * element with W21 (was the error E8, forgiving-import). `x`, `y`, `cx`, `cy` default to 0 like
+ * in SVG; sizes are required and must be positive.
  */
 const NUMBER = String.raw`[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?`;
 const NUMBER_RE = new RegExp(`^${NUMBER}$`);
@@ -21,6 +25,10 @@ const describeBadNumber = (attr: string, raw: string): string =>
     ? `${attr} "${raw}" uses a unit; write plain numbers (world units)`
     : `${attr} "${raw}" is not a number`;
 
+/** W21: the element's geometry is unusable, so the element is left out. */
+const skipElement = (log: LevelIssueLog, item: RoleElement, problem: string): void =>
+  addWarning(log, "W21", `${item.name}: ${problem}; ignored.`);
+
 interface NumberSpec {
   attr: string;
   /** Size attribute: required and > 0. Position attributes default to 0. */
@@ -31,16 +39,16 @@ function readNumber(item: RoleElement, spec: NumberSpec, log: LevelIssueLog): nu
   const raw = item.el.getAttribute(spec.attr);
   if (raw === null) {
     if (!spec.size) return 0;
-    addError(log, "E8", `${item.name}: ${spec.attr} is missing.`);
+    skipElement(log, item, `${spec.attr} is missing`);
     return null;
   }
   const value = parsePlainNumber(raw);
   if (value === null) {
-    addError(log, "E8", `${item.name}: ${describeBadNumber(spec.attr, raw)}.`);
+    skipElement(log, item, describeBadNumber(spec.attr, raw));
     return null;
   }
   if (spec.size && value <= 0) {
-    addError(log, "E8", `${item.name}: ${spec.attr} must be above 0 (got ${raw}).`);
+    skipElement(log, item, `${spec.attr} must be above 0 (got ${raw})`);
     return null;
   }
   return value;
@@ -70,17 +78,17 @@ export function readRect(item: RoleElement, log: LevelIssueLog): Rect | null {
 function readPolygonPoints(item: RoleElement, log: LevelIssueLog): Vec2[] | null {
   const raw = item.el.getAttribute("points");
   if (raw === null) {
-    addError(log, "E8", `${item.name}: points is missing.`);
+    skipElement(log, item, "points is missing");
     return null;
   }
   const tokens = raw.split(/[\s,]+/).filter((t) => t !== "");
   const bad = tokens.find((t) => parsePlainNumber(t) === null);
   if (bad !== undefined) {
-    addError(log, "E8", `${item.name}: points has ${describeBadNumber("value", bad)}.`);
+    skipElement(log, item, `points has ${describeBadNumber("value", bad)}`);
     return null;
   }
   if (tokens.length % 2 !== 0 || tokens.length < MIN_POLYGON_POINTS * 2) {
-    addError(log, "E8", `${item.name}: points needs at least 3 "x,y" pairs.`);
+    skipElement(log, item, 'points needs at least 3 "x,y" pairs');
     return null;
   }
   return tokens
@@ -125,3 +133,26 @@ export const rectContainsRect = (outer: Rect, inner: Rect): boolean =>
   inner.y >= outer.y &&
   inner.x + inner.w <= outer.x + outer.w &&
   inner.y + inner.h <= outer.y + outer.h;
+
+/** Units a centred spawn sits above the surface: half a body plus a small gap (the prompt teaches it). */
+export const spawnLift = (tunables: GameTunables): number => tunables.player.height / 2 + 10;
+
+/** Most fallback spawns placed: one per player of a full round. */
+const MAX_FALLBACK_SPAWNS = 4;
+
+/**
+ * W19: spawns for a level that names none (forgiving-import). One above the top centre of each
+ * of the widest terrain shapes, a spawn-lift up, kept only inside `bounds` and out of terrain.
+ * Empty when no shape leaves room (the file is then rejected, E5).
+ */
+export function fallbackSpawns(shapes: readonly Shape2D[], bounds: Rect): Vec2[] {
+  const lift = spawnLift(DEFAULT_GAME_TUNABLES);
+  return shapes
+    .map(shapeBounds)
+    .sort((a, b) => b.w - a.w)
+    .map((box) => ({ x: box.x + box.w / 2, y: box.y - lift }))
+    .filter(
+      (at) => rectContainsPoint(bounds, at) && !shapes.some((shape) => shapeContains(shape, at))
+    )
+    .slice(0, MAX_FALLBACK_SPAWNS);
+}

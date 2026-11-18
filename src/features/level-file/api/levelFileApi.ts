@@ -8,8 +8,8 @@ export type {
   LevelIssue,
   LevelWarningCode,
 } from "@/features/level-file/types/levelFile.types";
+export { spawnLift } from "@/features/level-file/services/levelFileGeometry";
 export {
-  MIN_SPAWNS,
   RECOMMENDED_SPAWNS,
   parseLevelFile,
   type LevelImportResult,

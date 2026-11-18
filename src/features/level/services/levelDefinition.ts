@@ -26,7 +26,8 @@ export const DEFAULT_LEVEL_SETTINGS: LevelSettings = {
   gravity: CATALOG_DEFAULTS.gravity,
 };
 
-const MIN_SPAWNS = 2;
+/** Players share spawns, so one runs a round (forgiving-import: the file warns W6 below 4). */
+const MIN_SPAWNS = 1;
 
 type Warnings = string[];
 
