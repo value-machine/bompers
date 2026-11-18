@@ -15,11 +15,6 @@
     "status": "to-do"
   },
   {
-    "title": "Stains as a terrain state",
-    "description": "Owner 2026-11-18: goo splats should stain the actual objects (the samples/texels of terrain and moving parts) instead of drawing a sprite on top. Use the same per-sample state system as fire and ice (a third state with a colour per stain and fading), drawn through the region/contour mechanism, including on moving parts. Starts with an options page. After the fire and ice overlay-shape lap.",
-    "status": "to-do"
-  },
-  {
     "title": "Fire and torch sounds",
     "description": "Follow-up from fire b1 (#53): the torch start and burn-outs reuse placeholder sounds (rocket-fire, cardboard thwap). Generate real takes (torch whoosh/loop, crackle, burn-out) per DESIGN_LANGUAGE § 8 incl. 'Owner listens first' (artifact page, owner picks before wiring); credits need the owner's go. Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md. ",
     "status": "to-do"
