@@ -582,9 +582,10 @@ const maxStep = (values: number[]): number =>
   Math.max(...values.slice(1).map((value, i) => Math.abs(value - values[i]!)));
 
 describe("feet, lean and shadow on a slope that steepens into a wall", () => {
-  it("should reproduce the sim flipping its ground contact where the slope meets the wall", () => {
-    // The cause of the flicker: without it this suite proves nothing.
-    expect(flips(drawArcRun(1).map((frame) => frame.rawGrounded))).toBeGreaterThan(20);
+  it("should keep the sim's ground contact steady when resting where the slope meets the wall", () => {
+    // The flicker's old cause is fixed at the source (slope-jump D1); the hold below stays for
+    // contacts that still flip, on moving parts.
+    expect(flips(drawArcRun(1).map((frame) => frame.rawGrounded))).toBe(0);
   });
 
   it.each([1, 2])("should not flicker when drawn every %i sim steps", (stride) => {

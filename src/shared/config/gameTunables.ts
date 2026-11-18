@@ -63,6 +63,9 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       downhillGain: 0.75,
       carryDecel: 700,
       lipAngle: (80 * Math.PI) / 180,
+      // Hysteresis (slope-jump D1): a blob that walked up to the lip angle settles on contacts up
+      // to ~86° (the field around its circle); it rests there instead of flipping to the air.
+      restAngle: (88 * Math.PI) / 180,
       lipRise: 12,
       lipSpeed: 0.25,
       // Four body radii: hills and crater floors hold; ledges and rims (radius ≈ 14) can launch.
