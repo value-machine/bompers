@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelApi";
 import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 import { getCellInfo } from "@/features/arena/services/terrainGrid";
+import { fieldDistanceAt } from "@/features/arena/services/terrainField";
 
 const levelWith = (terrain: TerrainPiece[]): LevelDefinition => ({
   formatVersion: 1,
@@ -121,5 +122,34 @@ describe("terrainRaster", () => {
     ];
     const rows = filled(levelWith([{ shape: { type: "polygon", points }, materialId: "stone" }]));
     expect(rows[4]).toBe("##########");
+  });
+});
+
+describe("terrainRaster — joined slabs (slope-jump D3)", () => {
+  const rectPiece = (rect: { x: number; y: number; w: number; h: number }): TerrainPiece => ({
+    shape: { type: "rect", ...rect },
+    materialId: "stone",
+  });
+  // A slab on a post, flush left faces at x 40 (an L, like Crystal Gap's Island B).
+  const joined = (): LevelDefinition => ({
+    ...levelWith([
+      rectPiece({ x: 40, y: 20, w: 50, h: 20 }),
+      rectPiece({ x: 40, y: 40, w: 20, h: 50 }),
+    ]),
+    settings: { cellSize: 2, gravity: 1 },
+  });
+
+  it("should keep the field straight along a flush wall when two slabs meet at it", () => {
+    const grid = buildTerrainFromLevel(joined());
+    // 3 units left of the wall, above, at and below the seam (y 40): the same distance.
+    const at = (y: number): number => fieldDistanceAt(grid, { x: 37, y });
+    expect(at(40)).toBeCloseTo(at(30), 1);
+    expect(at(40)).toBeCloseTo(at(60), 1);
+  });
+
+  it("should still round a slab's open corners", () => {
+    const grid = buildTerrainFromLevel(joined());
+    // Just outside the slab's top-left corner along the diagonal: the rounding leaves it open.
+    expect(fieldDistanceAt(grid, { x: 41, y: 21 })).toBeLessThan(0);
   });
 });

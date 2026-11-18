@@ -80,6 +80,45 @@ interface PieceRaster {
   slot: number;
   breakable: boolean;
   seed: Float32Array;
+  /** Per rect corner (`cornerIndex` order): true where another piece carries on past it. */
+  joined: readonly boolean[];
+}
+
+/** How far past a corner another piece is looked for, world units. */
+const JOIN_PROBE = 1;
+
+/** Corner of a rect nearest `p`: 0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right. */
+const cornerIndex = (rect: Extract<TerrainShape, { type: "rect" }>, p: Vec2): number =>
+  (p.y >= rect.y + rect.h / 2 ? 2 : 0) + (p.x >= rect.x + rect.w / 2 ? 1 : 0);
+
+/**
+ * Which corners of a rect another piece carries on past (slope-jump D3): just beyond the corner
+ * along either edge is inside another shape, as where a pillar meets a slab. Those corners stay
+ * square, so touching slabs are one wall and floor with no rounded notch at the seam for a body
+ * to catch in; only open corners are rounded.
+ */
+function joinedCorners(shape: TerrainShape, others: readonly TerrainShape[]): boolean[] {
+  if (shape.type !== "rect") return [false, false, false, false];
+  const corners = [
+    { x: shape.x, y: shape.y, sx: -1, sy: -1 },
+    { x: shape.x + shape.w, y: shape.y, sx: 1, sy: -1 },
+    { x: shape.x, y: shape.y + shape.h, sx: -1, sy: 1 },
+    { x: shape.x + shape.w, y: shape.y + shape.h, sx: 1, sy: 1 },
+  ];
+  return corners.map(({ x, y, sx, sy }) => {
+    const beyondX = { x: x + sx * JOIN_PROBE, y: y - sy * JOIN_PROBE };
+    const beyondY = { x: x - sx * JOIN_PROBE, y: y + sy * JOIN_PROBE };
+    return others.some(
+      (other) => shapeSignedDistance(other, beyondX) > 0 || shapeSignedDistance(other, beyondY) > 0
+    );
+  });
+}
+
+/** The piece's signed distance at `p`: rect corners rounded unless another piece joins there. */
+function pieceDistance(raster: PieceRaster, p: Vec2): number {
+  const { shape } = raster;
+  const square = shape.type === "rect" && raster.joined[cornerIndex(shape, p)] === true;
+  return shapeSignedDistance(shape, p, square ? 0 : SLAB_CORNER_RADIUS);
 }
 
 /** One sample of a piece: raise its seed distance and fill it when its centre is inside. */
@@ -90,7 +129,7 @@ function rasterizeSample(raster: PieceRaster, cx: number, cy: number): void {
   const index = cy * grid.widthCells + cx;
   // The field follows the slab as drawn (rounded rect corners), and solidity follows the field,
   // so collision, fill and outline share one shape (terrain-curves D8).
-  const distance = shapeSignedDistance(raster.shape, centre, SLAB_CORNER_RADIUS);
+  const distance = pieceDistance(raster, centre);
   seed[index] = Math.max(seed[index] ?? -fieldBand(grid), distance);
   if (distance <= 0) return;
   // An unbreakable cell is never overwritten by a breakable piece (LEVEL_FORMAT § 4).
@@ -99,14 +138,19 @@ function rasterizeSample(raster: PieceRaster, cx: number, cy: number): void {
   writeSample(grid, { cx, cy, slot: raster.slot });
 }
 
-function rasterizePiece(grid: TerrainGrid, piece: TerrainPiece, seed: Float32Array): void {
+function rasterizePiece(
+  grid: TerrainGrid,
+  piece: TerrainPiece,
+  ctx: { seed: Float32Array; others: readonly TerrainShape[] }
+): void {
   const slot = slotOfPiece(grid, piece);
   const raster = {
     grid,
     shape: piece.shape,
     slot,
     breakable: isBreakableSlot(grid.slots[slot]),
-    seed,
+    seed: ctx.seed,
+    joined: joinedCorners(piece.shape, ctx.others),
   };
   const band = fieldBand(grid);
   const bounds = shapeBounds(piece.shape);
@@ -168,7 +212,10 @@ function rasterizeGrid(
     frozenFriction: FROZEN_FRICTION,
   });
   const seed = new Float32Array(grid.cells.length).fill(-fieldBand(grid));
-  for (const piece of pieces) rasterizePiece(grid, piece, seed);
+  pieces.forEach((piece, i) => {
+    const others = pieces.filter((_, j) => j !== i).map((other) => other.shape);
+    rasterizePiece(grid, piece, { seed, others });
+  });
   for (let cy = 0; cy < grid.heightCells; cy += 1) {
     for (let cx = 0; cx < grid.widthCells; cx += 1) finishSample(grid, seed, { cx, cy });
   }

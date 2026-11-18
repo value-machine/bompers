@@ -827,3 +827,36 @@ describe("playerController — slope jumps (slope-jump D2)", () => {
     expect(Math.atan2(-sim.player.vx, -sim.player.vy)).toBeCloseTo(MAX_JUMP_TILT, 1);
   });
 });
+
+// Seams (slope-jump D3): a slab on a post, flush left faces at x 400 (Crystal Gap's Island B),
+// against the same wall as one slab. Pressing into the wall and jumping must rise the same.
+const seamWorld = (shapes: Rect[]): LevelDefinition => ({
+  ...level,
+  settings: { cellSize: 4, gravity: 1 },
+  worldSize: { w: 900, h: 600 },
+  terrain: [stone({ x: 0, y: 500, w: 900, h: 60 }), ...shapes.map(stone)],
+  bounds: { x: 0, y: 0, w: 900, h: 600 },
+});
+
+/** Highest point of a held jump while pushing right into the wall at x 400. */
+const wallJumpApex = (world: LevelDefinition): number => {
+  const sim = createSim({ x: 380, y: 480 }, DEFAULT_GAME_TUNABLES, world);
+  sim.step({}, 60);
+  let minY = sim.player.y;
+  for (let i = 0; i < 150; i += 1) {
+    sim.step({ moveX: 1, jump: i < 60 });
+    minY = Math.min(minY, sim.player.y);
+  }
+  return minY;
+};
+
+describe("playerController — seams between slabs (slope-jump D3)", () => {
+  it("should rise along a wall made of two flush slabs as along one slab", () => {
+    const twoSlabs = seamWorld([
+      { x: 400, y: 200, w: 320, h: 60 },
+      { x: 400, y: 260, w: 60, h: 240 },
+    ]);
+    const oneSlab = seamWorld([{ x: 400, y: 200, w: 60, h: 300 }]);
+    expect(wallJumpApex(twoSlabs)).toBeCloseTo(wallJumpApex(oneSlab), 1);
+  });
+});
