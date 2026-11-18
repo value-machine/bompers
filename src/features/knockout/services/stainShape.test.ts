@@ -57,16 +57,23 @@ describe("stainSamples", () => {
   const onFloor = (age: number) =>
     stainSamples(grid, floor("3:d2"), { x: 200, y: 100, age, timing });
 
-  it("should colour only solid samples in a thin coat under the surface when goo lands on a floor", () => {
+  it("should dye a round patch that goes deep under the landing when goo lands on a floor", () => {
     const samples = onFloor(1);
     const { reach } = stainShape(floor("3:d2"));
-    expect(samples.length).toBeGreaterThan(4);
+    const depths = samples.map((index) => centre(index).y - 100);
+    expect(Math.max(...depths)).toBeGreaterThan(reach * (1 - STAIN_LOOK.ragged) - grid.cellSize);
     for (const index of samples) {
       const at = centre(index);
       expect(grid.cells[index]).not.toBe(0);
-      expect(at.y - 100).toBeLessThan(STAIN_LOOK.depthSamples * grid.cellSize);
       expect(Math.hypot(at.x - 200, at.y - 100)).toBeLessThan(reach);
     }
+  });
+
+  it("should give two stains of the same size different inner edges when their keys differ", () => {
+    const patch = (key: string) =>
+      stainSamples(grid, { ...floor(key), radius: 5 }, { x: 200, y: 100, age: 1, timing });
+    expect(patch("3:d2")).toEqual(patch("3:d2"));
+    expect(patch("3:d2")).not.toEqual(patch("6:d4"));
   });
 
   it("should colour nothing when goo lands away from any terrain", () => {

@@ -9,7 +9,7 @@ import {
   type MoverBody,
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
-import { stainSamples, stainStage } from "@/features/knockout/services/stainShape";
+import { STAIN_LOOK, stainSamples, stainStage } from "@/features/knockout/services/stainShape";
 import { drawLooseHelmet, drawLooseTube } from "@/features/player/api/playerApi";
 import { pieceAlpha, type KnockoutWorld } from "@/features/knockout/services/knockoutSim";
 import type {
@@ -23,7 +23,7 @@ import type {
  * Knockout layers. Goo is the victim's body colour: an effect of that player's own
  * (DESIGN_LANGUAGE § 1).
  * - Right above the terrain (`stainLayer`): goo stains. A stain is not a shape laid on top; it
- *   colours a thin coat of the terrain itself (owner, terrain-stains D1: "the same shape as
+ *   dyes a patch of the terrain itself, see-through (owner, terrain-stains D1: "the same shape as
  *   ice"): its samples are drawn with the terrain's contour, per player colour, on the arena
  *   and on each moving part's own field (in a container that follows the part). Frozen ground
  *   and fire are drawn over it. Redrawn only when a stain's stage or the terrain changes.
@@ -125,7 +125,7 @@ function stainGraphics(
   const key = `${group.id}:${group.slot}`;
   const known = view.stains.get(key);
   if (known) return known;
-  const g = new Graphics({ label: `goo-stain-${key}` });
+  const g = new Graphics({ label: `goo-stain-${key}`, alpha: STAIN_LOOK.alpha });
   view.stains.set(key, g);
   const mover = terrain.movers[group.id];
   if (mover) g.position.set(mover.origin.x, mover.origin.y);

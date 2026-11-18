@@ -2,22 +2,27 @@ import type { TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { GooSplat } from "@/features/knockout/types/knockout.types";
 
 /**
- * A goo stain (owner, terrain-stains D1: "the same shape as ice"): where goo lands it colours a
- * thin coat of the object itself, the samples just under its surface around the touch point.
- * The renderer draws those samples with the terrain's own contour, so the stain has the object's
- * shape, like frozen ground. Each stain's size is seeded by its key (owner, elimination-goo
- * Change round: "not the same stain every time"), so it keeps its size every frame and the same
- * event always stains the same way.
- * - On a wall the goo runs down along the surface for a moment.
+ * A goo stain (owner, terrain-stains D1: "the same shape as ice"; D6: "soaked into the object",
+ * "ragged inside"): where goo lands it dyes a round patch of the object itself, the solid samples
+ * around the touch point, deepest under the landing and with an uneven inner edge. The renderer
+ * draws those samples see-through with the terrain's own contour, so the stain has the object's
+ * shape at its surface, like frozen ground, and the object's colour and lip still show. Each
+ * stain's size and inner edge are seeded by its key (owner, elimination-goo Change round: "not
+ * the same stain every time"), so it keeps them every frame and the same event always stains
+ * the same way.
+ * - On a wall the goo also runs down along the surface for a moment.
  * - After the respawn it dries up: it shrinks toward where it landed until it is gone.
  */
 export const STAIN_LOOK = {
   /** Overall size range of a stain, × its droplet's radius. */
   size: { min: 1.3, max: 1.8 },
-  /** How far along the surface a stain reaches from its touch point, × size × radius. */
+  /** How far a stain reaches from its touch point, along the surface and into it, × size × radius. */
   reach: 2.2,
-  /** How deep under the surface the coat goes, in samples. */
-  depthSamples: 1.6,
+  /** The uneven inner edge: up to this share of the reach is lost, per block of this many samples. */
+  ragged: 0.4,
+  raggedBlockSamples: 2,
+  /** How solid the dye is: the object's own colour and lip show through the rest. */
+  alpha: 0.72,
   /** A wall stain's run: its length (× size × radius, varied), half-width and depth in samples. */
   run: 4,
   runVary: { min: 0.7, max: 1.3 },
@@ -25,15 +30,16 @@ export const STAIN_LOOK = {
   runDepthSamples: 1.1,
   /** Seconds a run takes to reach its full length. */
   runSeconds: 0.5,
-  /** How much of its reach and depth a stain has lost when it is fully dry. */
+  /** How much of its reach a stain has lost when it is fully dry. */
   dryReach: 0.75,
-  dryDepth: 0.5,
 } as const;
 
 /** One stain's seeded size, world units. */
 export interface StainShape {
-  /** Reach along the surface from the touch point. */
+  /** Reach from the touch point. */
   reach: number;
+  /** Seed of its uneven inner edge. */
+  seed: number;
   /** Full length of the run down a wall (0 on floors, ceilings and moving parts). */
   run: number;
 }
@@ -61,12 +67,13 @@ function seededRandom(seed: number): () => number {
 
 /** The stain's size for its surface, seeded by its key. Only a stain on a standing wall runs. */
 export function stainShape(splat: Pick<GooSplat, "key" | "ny" | "radius" | "rides">): StainShape {
-  const random = seededRandom(hashKey(splat.key));
+  const seed = hashKey(splat.key);
+  const random = seededRandom(seed);
   const { size, runVary } = STAIN_LOOK;
   const scale = (size.min + (size.max - size.min) * random()) * splat.radius;
   const vary = runVary.min + (runVary.max - runVary.min) * random();
   const onWall = splat.ny === 0 && !splat.rides;
-  return { reach: STAIN_LOOK.reach * scale, run: onWall ? STAIN_LOOK.run * scale * vary : 0 };
+  return { reach: STAIN_LOOK.reach * scale, seed, run: onWall ? STAIN_LOOK.run * scale * vary : 0 };
 }
 
 export interface StainTiming {
@@ -103,27 +110,33 @@ export interface StainAt {
 
 type StainedSplat = Pick<GooSplat, "key" | "ny" | "radius" | "rides">;
 
-/** A stain's extent now, world units: its reach and depth as dried, its run as far as it got. */
-function stainExtent(field: TerrainGrid, splat: StainedSplat, at: StainAt) {
+/** A stain's extent now, world units: its reach as dried, its run as far as it got. */
+function stainExtent(splat: StainedSplat, at: StainAt) {
   const shape = stainShape(splat);
   const dry = stainDryness(at.age, at.timing);
   const reach = shape.reach * (1 - STAIN_LOOK.dryReach * dry);
   const run = shape.run * Math.min(1, at.age / STAIN_LOOK.runSeconds) * (1 - dry);
-  return {
-    reach,
-    depth: STAIN_LOOK.depthSamples * field.cellSize * (1 - STAIN_LOOK.dryDepth * dry),
-    run,
-    runBottom: at.y + 0.6 * reach + run,
-  };
+  return { reach, run, runBottom: at.y + 0.6 * reach + run, seed: shape.seed };
+}
+
+/** 0..1 for one block of samples of one stain: how much shorter the stain reaches there. */
+function blockNoise(seed: number, cx: number, cy: number): number {
+  const block = STAIN_LOOK.raggedBlockSamples;
+  const bx = Math.floor(cx / block);
+  const by = Math.floor(cy / block);
+  let hash = seed ^ Math.imul(bx, 374761393) ^ Math.imul(by, 668265263);
+  hash = Math.imul(hash ^ (hash >>> 13), 1274126177);
+  return ((hash ^ (hash >>> 16)) >>> 0) / 4294967296;
 }
 
 /**
- * The samples of `field` a stain colours now: solid samples within the coat's depth of the
- * surface and within the stain's reach of its touch point, plus the run under a wall stain.
+ * The samples of `field` a stain colours now: the solid samples within its reach of the touch
+ * point (a round patch, deepest under the landing, its reach uneven from block to block), plus
+ * the thin run under a wall stain.
  */
 export function stainSamples(field: TerrainGrid, splat: StainedSplat, at: StainAt): number[] {
   const size = field.cellSize;
-  const { reach, depth, run, runBottom } = stainExtent(field, splat, at);
+  const { reach, run, runBottom, seed } = stainExtent(splat, at);
   const inRun = (x: number, y: number, distance: number): boolean =>
     run > 0 &&
     Math.abs(x - at.x) < STAIN_LOOK.runHalfWidthSamples * size &&
@@ -132,10 +145,11 @@ export function stainSamples(field: TerrainGrid, splat: StainedSplat, at: StainA
     distance < STAIN_LOOK.runDepthSamples * size;
   const inStain = (cx: number, cy: number): boolean => {
     const distance = field.distance[cy * field.widthCells + cx] ?? 0;
-    if (distance <= 0 || distance >= depth) return false;
+    if (distance <= 0) return false;
     const x = (cx + 0.5) * size;
     const y = (cy + 0.5) * size;
-    return Math.hypot(x - at.x, y - at.y) < reach || inRun(x, y, distance);
+    const here = reach * (1 - STAIN_LOOK.ragged * blockNoise(seed, cx, cy));
+    return Math.hypot(x - at.x, y - at.y) < here || inRun(x, y, distance);
   };
   const samples: number[] = [];
   const maxX = Math.min(field.widthCells - 1, Math.floor((at.x + reach) / size));

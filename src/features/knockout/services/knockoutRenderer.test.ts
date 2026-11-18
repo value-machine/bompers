@@ -8,6 +8,7 @@ import {
   type KnockoutFrame,
 } from "@/features/knockout/services/knockoutRenderer";
 import { createKnockoutWorld } from "@/features/knockout/services/knockoutSim";
+import { STAIN_LOOK } from "@/features/knockout/services/stainShape";
 import type { GooSplat } from "@/features/knockout/types/knockout.types";
 
 // A breakable floor (top at y 100) and one sliding bar above it (top at y 40).
@@ -71,7 +72,10 @@ describe("goo stains", () => {
     const stain = view.stains.get("-1:1")!;
     expect(shapes(stain)).toBeGreaterThan(0);
     expect(stain.bounds.minY).toBeGreaterThanOrEqual(99.5);
-    expect(stain.bounds.maxY).toBeLessThan(110);
+    // It goes into the floor: deeper than a surface coat, no deeper than its reach.
+    expect(stain.bounds.maxY).toBeGreaterThan(106);
+    expect(stain.bounds.maxY).toBeLessThan(100 + STAIN_LOOK.reach * STAIN_LOOK.size.max * 5 + 4);
+    expect(stain.alpha).toBe(STAIN_LOOK.alpha);
   });
 
   it("should draw nothing new when no stain changed stage and the terrain is the same", () => {
