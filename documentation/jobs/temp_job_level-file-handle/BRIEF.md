@@ -67,3 +67,7 @@ Today's behaviour, unchanged: the `<input>` picker, a session-only import, lost 
 - web-features (standards position): https://web-platform-dx.github.io/web-features-explorer/features/file-system-access
 - Chrome, File System Access API: https://developer.chrome.com/articles/file-system-access
 - Chrome, persistent permissions (122): https://developer.chrome.com/blog/persistent-permissions-for-the-file-system-access-api
+
+## Scope update (orchestrator, 2026-11-18)
+
+The owner asked for a browser-agnostic version. The scope is now two tiers in one lap (size M): a saved copy in IndexedDB for every browser (same level id replaces in place), and on Chrome / Edge the file link on top. Plan: `DEVELOPMENT_PLAN.md`. Options page for the lobby row: https://claude.ai/artifact/V4XSZVdpyh8Jd4ghpctD1A
