@@ -60,6 +60,11 @@ describe("useLevelLibrary", () => {
     expect(metas).toEqual([
       ["/levels/start-arena.html", "Start Arena", "Bompers team"],
       ["/levels/floating-garden.html", "Floating Garden", "Bompers team"],
+      ["/levels/bobsled-run.html", "Bobsled Run", "Bompers team"],
+      ["/levels/piston-works.html", "Piston Works", "Bompers team"],
+      ["/levels/bonfire-bridge.html", "Bonfire Bridge", "Bompers team"],
+      ["/levels/crystal-gap.html", "Crystal Gap", "Bompers team"],
+      ["/levels/slush-bowl.html", "Slush Bowl", "Bompers team"],
     ]);
   });
 });

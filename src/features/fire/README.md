@@ -37,6 +37,8 @@ Tests: `services/fireSim.test.ts` (axis arrival = distance / speed, roundness wi
 - Shared: `gameTunables` (`fire`, `fire.blob`, `combat.torch`), `gamePalette.fire`, `gameGeometry.types`, `gameInput.types`; `pixi.js` in the renderer.
 - Consumed by `match` (state slice, steps 3c and 3d, the input patch, the hook, two render layers, pose overlays, sound counters).
 
+- `src/shared/utils/debugInk.ts`: the colour of each ink pass (body ink, flame ink, spray ink, scorch). With `?debugInk=1` in the URL each one is drawn in its own colour, to tell which layer a flashing black shape belongs to (fire-black-flash diagnosis).
+
 ## Decisions
 
 - Shared with ice (ice-element D4, D6): the front itself is the shared sample front (`src/shared/utils/sampleFront.ts`; `FireState.front`, with `igniteAt` as its arrival times), the torch's ray fan is the shared `castRayFan` (`src/shared/utils/rayFan.ts`), and the fire's body is drawn by the arena's region contour, as frozen ground is (element-overlay-shape D1). A frozen sample can't burn, so a spreading fire stops at it and does not return when it thaws; a burning sample that freezes goes out and stays standing (`douseFrozen`, run when the terrain's `frozenVersion` changes). A torch ray that meets frozen terrain thaws everything within `ice.torchThawRadius` of it instead of lighting it; the next step lights it if it is fuel.

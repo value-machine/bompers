@@ -1,5 +1,6 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import { inkColor } from "@/shared/utils/debugInk";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import {
@@ -103,7 +104,7 @@ function drawDroplet(droplet: GooDroplet, width: number): Container {
   return new Graphics()
     .circle(0, 0, r)
     .fill(gooColor(droplet.slot))
-    .stroke({ width, color: GAME_PALETTE.ink })
+    .stroke({ width, color: inkColor("stains", GAME_PALETTE.ink) })
     .ellipse(-0.35 * r, -0.3 * r, 0.18 * r, 0.28 * r)
     .fill({ color: GAME_PALETTE.gloss, alpha: 0.7 });
 }
@@ -178,7 +179,10 @@ function drawStainGroup(drawing: StainDrawing, group: StainGroup): void {
   );
   const region = markedRegion(field, samples);
   if (!region) drawing.g.clear();
-  else drawContour(drawing.g, terrainContour(field, { grow: 0, region }), gooColor(group.slot));
+  else {
+    const color = inkColor("stains", gooColor(group.slot));
+    drawContour(drawing.g, terrainContour(field, { grow: 0, region }), color);
+  }
 }
 
 /** Matches the stain drawings to the landed goo, fades them and moves the parts' layers. */
