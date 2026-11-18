@@ -40,6 +40,7 @@ export const SOUND_FILES: Readonly<Record<string, readonly string[]>> = {
   "catch-fire": takes("catch-fire", 1),
   "steam-hiss": takes("steam-hiss", 1),
   "freeze-start": takes("freeze-start", 1),
+  "freeze-loop": takes("freeze-loop", 1),
   thaw: takes("thaw", 1),
 };
 
@@ -84,6 +85,11 @@ export const SOUND_MIX = {
   /** Held loops fade in and out over this long; a loop not refreshed for `loopHoldSeconds` fades. */
   loopFadeSeconds: 0.12,
   loopHoldSeconds: 0.25,
+  /**
+   * A held loop plays its file as passes that overlap this long with an equal-power crossfade
+   * (on top of the crossfade baked into the file), which also hides the mp3's silent edges.
+   */
+  loopCrossfadeSeconds: 0.1,
 } as const;
 
 /** Sounds that duck the music bus when they play. */
