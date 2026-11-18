@@ -43,6 +43,7 @@ const world = (patch: Partial<SoundWorldSnapshot> = {}): SoundWorldSnapshot => (
   burningBlobs: 0,
   thawedSamples: 0,
   frozenVersion: 0,
+  beamClashes: 0,
   ...patch,
 });
 
@@ -284,6 +285,15 @@ describe("readSoundCues — thaw and steam", () => {
     expect(idsOf(cues)).toEqual(["steam-hiss"]);
   });
 
+  it("should hiss steam at most once per element cue window when beams keep clashing", () => {
+    const step = SOUND_MIX.elementCueSeconds / 5;
+    const frames = Array.from({ length: 11 }, (_, i) =>
+      world({ timeSeconds: i * step, beamClashes: i === 0 ? 0 : 1 })
+    );
+    // Two windows of clashing: a hiss when it starts, and one per window after that.
+    expect(idsOf(cuesOver(...frames))).toEqual(["steam-hiss", "steam-hiss"]);
+  });
+
   it("should stay quiet when the freeze ray changes frozen ground", () => {
     const cues = cuesOver(world(), world({ timeSeconds: 1, freezeSlots: [0], frozenVersion: 1 }));
     expect(cues).toEqual([]);
@@ -312,13 +322,15 @@ describe("readSoundLoops", () => {
     expect(gainAt({ burningSamples: SOUND_MIX.fireFullSamples })).toBe(1);
   });
 
-  it("should play the ice placeholder when a blob freezes, cracks its block or the block breaks", () => {
+  it("should play the ice block's own sounds when a blob freezes, cracks its block or the block breaks", () => {
     const froze = snapshot({ players: [player(0, { frozenCount: 1 }), player(1)] });
-    expect(cuesAfter(froze)).toEqual([{ soundId: "clink", slot: 0, gain: 1 }]);
+    expect(cuesAfter(froze)).toEqual([{ soundId: "freeze-solid", slot: 0, gain: 1 }]);
     const cracked = snapshot({ players: [player(0, { iceCrackCount: 1 }), player(1)] });
-    expect(cuesAfter(cracked)).toEqual([{ soundId: "clink", slot: 0, gain: SOUND_MIX.crouchGain }]);
+    expect(cuesAfter(cracked)).toEqual([
+      { soundId: "ice-crack", slot: 0, gain: SOUND_MIX.crouchGain },
+    ]);
     const broke = snapshot({ players: [player(0), player(1, { iceShatterCount: 1 })] });
-    expect(cuesAfter(broke)).toEqual([{ soundId: "clink", slot: 1, gain: 1 }]);
+    expect(cuesAfter(broke)).toEqual([{ soundId: "ice-shatter", slot: 1, gain: 1 }]);
   });
 });
 

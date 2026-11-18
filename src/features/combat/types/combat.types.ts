@@ -1,5 +1,6 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { SprayWeaponItemId, WeaponItemId } from "@/shared/types/weaponItems.types";
+import type { BeamClash } from "@/shared/types/beamClash.types";
 
 /**
  * Combat slice of the game state (GDD § 3): per-player fighter state keyed by player `id`,
@@ -168,6 +169,8 @@ export interface CombatState {
   rockets: RocketState[];
   /** Recent events, oldest first; pruned after `combat.eventRetentionSeconds`. */
   events: CombatEvent[];
+  /** Held beams ending each other this step (beam-clash D1), for the steam and its sound. */
+  beamClashes: BeamClash[];
   nextSeq: number;
   nextEntityId: number;
 }

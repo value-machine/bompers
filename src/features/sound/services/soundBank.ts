@@ -42,6 +42,10 @@ export const SOUND_FILES: Readonly<Record<string, readonly string[]>> = {
   "freeze-start": takes("freeze-start", 1),
   "freeze-loop": takes("freeze-loop", 1),
   thaw: takes("thaw", 1),
+  // The frozen blob's ice block (owner picks, ice-block-sounds lap).
+  "freeze-solid": takes("freeze-solid", 1),
+  "ice-crack": takes("ice-crack", 1),
+  "ice-shatter": takes("ice-shatter", 1),
 };
 
 /** Semitone offset per player slot (P1 0, P2 +2, P3 −2, P4 +4), so four blobs never sound alike. */

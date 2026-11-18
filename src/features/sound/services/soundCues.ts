@@ -136,6 +136,7 @@ const NO_MARKS: ElementCueMarks = { thawAt: -Infinity, thawedAtCue: 0, steamAt: 
  * `SOUND_MIX.elementCueSeconds` (a thawing patch thaws a sample at a time). A thaw is as loud as
  * the samples thawed since the last thaw cue; the torch's melt is a steam hiss. A frozen-flag
  * change while a torch sprays and no freeze ray does, with no thaw of its own, is the torch's melt.
+ * Beams ending each other (beam-clash D1) hiss the same way for as long as the clash holds.
  */
 function elementCues(
   cursor: SoundCursor | null,
@@ -152,7 +153,7 @@ function elementCues(
     marks.thawAt = world.timeSeconds;
     marks.thawedAtCue = world.thawedSamples;
   }
-  if (torchMelted(previous, world) && due(marks.steamAt)) {
+  if ((torchMelted(previous, world) || world.beamClashes > 0) && due(marks.steamAt)) {
     cues.push(cue("steam-hiss", null));
     marks.steamAt = world.timeSeconds;
   }
@@ -200,11 +201,11 @@ const PLAYER_RULES: readonly [
   // A blob catching fire, and ice putting it out with steam (owner picks, element-sounds lap).
   ["catch-fire", (p, n) => n.catchFireCount > p.catchFireCount, () => 1],
   ["steam-hiss", (p, n) => n.iceDouseCount > p.iceDouseCount, () => 1],
-  // Placeholders until the ice block's own sounds exist (ice-frozen-blobs D2): a blob freezing,
-  // a jump press cracking its block (softer), the block breaking.
-  ["clink", (p, n) => n.frozenCount > p.frozenCount, () => 1],
-  ["clink", (p, n) => n.iceCrackCount > p.iceCrackCount, () => SOUND_MIX.crouchGain],
-  ["clink", (p, n) => n.iceShatterCount > p.iceShatterCount, () => 1],
+  // The ice block (owner picks, ice-block-sounds lap): a blob freezing, a jump press cracking its
+  // block (softer), the block breaking.
+  ["freeze-solid", (p, n) => n.frozenCount > p.frozenCount, () => 1],
+  ["ice-crack", (p, n) => n.iceCrackCount > p.iceCrackCount, () => SOUND_MIX.crouchGain],
+  ["ice-shatter", (p, n) => n.iceShatterCount > p.iceShatterCount, () => 1],
 ];
 
 const bonked = (previous: SoundPlayerSnapshot, now: SoundPlayerSnapshot): boolean =>

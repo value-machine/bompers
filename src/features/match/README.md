@@ -42,6 +42,7 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 ## Decisions
 
 - Only `match` knows `GameState`; other features take slices (game-engine-foundation D5).
+- Beam clash (beam-clash D1): combat works out where held beams end each other; the match only passes the `reach` of the `sprayAttack` hook on to `sprayTorch` / `sprayFreezeRay`, hands sound the clash count, and empties `combat.beamClashes` when the round ends (combat stops then).
 - Render the latest sim state without interpolation; revisit if motion stutters (game-engine-foundation D6).
 - Fixed step 120 Hz, max 8 steps per frame; the backlog after a stall is dropped (`gameTunables.sim`).
 - `applyLevelSettings`: a level's `matchDurationS` and `weaponIds` replace the lobby's `match.durationSeconds` and `match.weaponIds`; gravity multiplies (lobby D2, weapons-match-setting D1).

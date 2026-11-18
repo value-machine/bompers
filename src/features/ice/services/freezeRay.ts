@@ -23,6 +23,8 @@ export interface FreezeRayArgs {
   /** Sim time of this step, seconds. */
   now: number;
   dt: number;
+  /** How far the beam goes this step (shorter in a beam clash); the ray's length when left out. */
+  reach?: number;
   /** Blobs the beam may chill (not one in a dive or under spawn protection); all when left out. */
   canChill?: (player: PlayerState) => boolean;
 }
@@ -36,7 +38,7 @@ export function sprayFreezeRay(ice: IceState, args: FreezeRayArgs): void {
     bodies: args.players.filter((player) => player !== holder),
     origin: helmetPoint(holder),
     aim: { x: holder.aimX, y: holder.aimY },
-    shape: ray,
+    shape: { ...ray, length: args.reach ?? ray.length },
   });
   const samples = hits.rays.flatMap((hit) => (hit.sample === null ? [] : [hit.sample]));
   feedCold(ice, terrain, { slot: holder.slot, samples, now: args.now, dt: args.dt, tunables });
