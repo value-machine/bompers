@@ -203,7 +203,7 @@ function moverName(group: Element, ordinal: number): string {
   return ref ? `moving part "${ref}"` : `moving part #${ordinal}`;
 }
 
-/** W13: non-terrain roles and breakable materials inside a moving group. */
+/** W13: non-terrain roles and breakable, non-burning materials inside a moving group. */
 function warnContents(
   part: { group: Element; name: string; indices: readonly number[] },
   ctx: MoverContext
@@ -218,15 +218,17 @@ function warnContents(
       );
     }
   }
+  // A material that burns is a real choice for a part (it burns away, mover-materials D2); only
+  // a breakable material that does not burn behaves differently from what its author may expect.
   const breakable = indices.filter((i) => {
-    const toughness = resolveCatalogEntry("material", ctx.terrain[i]!.materialId).entry?.toughness;
-    return toughness !== undefined && toughness !== null;
+    const entry = resolveCatalogEntry("material", ctx.terrain[i]!.materialId).entry;
+    return !!entry && entry.toughness !== null && !entry.burns;
   });
   if (breakable.length > 0) {
     addWarning(
       ctx.log,
       "W13",
-      `${name} uses a breakable material; moving parts never break, so it acts unbreakable.`
+      `${name} uses a breakable material; blasts never break a moving part, so it acts unbreakable.`
     );
   }
 }

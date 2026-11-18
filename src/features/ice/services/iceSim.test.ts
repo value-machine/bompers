@@ -215,24 +215,24 @@ describe("ice and fire (ice-element D6)", () => {
     const f = freeze([rect([0, 100, 400, 40], "cardboard")]);
     f.run(0.5, [202, 118]);
     const fire = createFireState(f.grid);
-    ignite(fire, f.grid, { index: f.at(120, 118), time: f.time });
+    ignite(fire, f.grid, { body: 0, index: f.at(120, 118), time: f.time });
     stepBoth(f, fire, 5);
-    expect(fire.igniteAt[f.at(160, 118)]).toBeLessThan(Infinity);
-    expect(fire.igniteAt[f.at(202, 118)]).toBe(Infinity);
+    expect(fire.grounds[0]!.igniteAt[f.at(160, 118)]).toBeLessThan(Infinity);
+    expect(fire.grounds[0]!.igniteAt[f.at(202, 118)]).toBe(Infinity);
     expect(f.frozen(202, 118)).toBe(true);
   });
 
   it("should put out a burning sample when it freezes", () => {
     const f = freeze([rect([0, 100, 400, 40], "cardboard")]);
     const fire = createFireState(f.grid);
-    ignite(fire, f.grid, { index: f.at(202, 118), time: 0 });
+    ignite(fire, f.grid, { body: 0, index: f.at(202, 118), time: 0 });
     stepBoth(f, fire, 0.5);
-    expect(burningSamples(fire)).toContain(f.at(202, 118));
+    expect(burningSamples(fire.grounds[0]!)).toContain(f.at(202, 118));
     const now = f.time + dt;
     const samples = [f.at(202, 118)];
     feedCold(f.ice, f.grid, { slot: 0, samples, now, dt, tunables: TUNABLES });
     stepBoth(f, fire, dt);
-    expect(burningSamples(fire)).not.toContain(f.at(202, 118));
+    expect(burningSamples(fire.grounds[0]!)).not.toContain(f.at(202, 118));
     expect(getCellInfo(f.grid, 50, 29)).not.toBeNull();
   });
 });

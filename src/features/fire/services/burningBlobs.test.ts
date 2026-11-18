@@ -91,9 +91,9 @@ const input = (patch: Partial<PlayerInput> = {}): PlayerInput => ({
 describe("burning blobs — catching (fire-burn D6)", () => {
   it("should catch fire when the blob stands on burning cardboard", () => {
     const w = world([rect([160, FLOOR, 80, 8], "cardboard")], [blobAt(0, 200)]);
-    expect(ignite(w.fire, w.terrain, { index: sampleAt(w.terrain, 201, FLOOR + 1), time: 0 })).toBe(
-      true
-    );
+    expect(
+      ignite(w.fire, w.terrain, { body: 0, index: sampleAt(w.terrain, 201, FLOOR + 1), time: 0 })
+    ).toBe(true);
     step(w, 0);
     expect(w.fire.blobs.get(w.players[0]!.id)).toMatchObject({ since: 0, bySlot: null });
     expect(w.fire.caughtCounts[w.players[0]!.id]).toBe(1);
@@ -101,7 +101,7 @@ describe("burning blobs — catching (fire-burn D6)", () => {
 
   it("should not catch fire when the burning cardboard is out of reach", () => {
     const w = world([rect([300, FLOOR, 40, 8], "cardboard")], [blobAt(0, 200)]);
-    ignite(w.fire, w.terrain, { index: sampleAt(w.terrain, 301, FLOOR + 1), time: 0 });
+    ignite(w.fire, w.terrain, { body: 0, index: sampleAt(w.terrain, 301, FLOOR + 1), time: 0 });
     step(w, 0);
     expect(w.fire.blobs.size).toBe(0);
   });

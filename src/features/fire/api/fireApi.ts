@@ -15,6 +15,7 @@ export {
   type StepBurningBlobsArgs,
 } from "@/features/fire/services/burningBlobs";
 export {
+  burningCount,
   burningSamples,
   canBurn,
   createFireState,

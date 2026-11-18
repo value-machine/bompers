@@ -29,7 +29,7 @@ The flying and squashing blob is drawn by the player layer: each `KnockoutBody` 
 
 - The fling runs in the shared roll (orchestrator, after the shared-roll lap): no separate flight physics, so a knocked-out blob rolls exactly like a hit one until it bursts.
 - Owner picks (2026-11-16, demo rounds 1–4): goo, not a ragdoll that falls apart; the helmet stays a solid object; droplets splat on contact (no squish phase); the flight is the hit's own knockback (no separate ragdoll step); the droplets keep the blob's momentum; overkill bursts at once; the respawn delay went from 1.2 s to 2.0 s so the splat is visible.
-- Splats and pieces outlive the juice `linger` window on purpose (owner): pieces until the respawn, splats fading out by `splatSeconds` (4 s).
+- Splats and pieces outlive the juice `linger` window on purpose (owner): pieces until the respawn, splats fading out by `splatSeconds` (4 s). A stained part's layer follows the part through the arena's `createPoseLayer` / `placePoseLayer`, the one pose-following layer shared with the part's own view and fire (mover-materials-l2, code-style F2).
 - Goo is the victim's body colour: that player's own feedback (DESIGN_LANGUAGE § 1).
 - Its own feature (not `effects`): one concept (what a knockout does) with its own physics and three layers; effects stays the one-shot event pops.
 - Spreads are deterministic per event `seq` (no RNG in render), like the effects debris.

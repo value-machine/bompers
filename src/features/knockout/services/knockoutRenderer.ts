@@ -4,8 +4,10 @@ import { inkColor } from "@/shared/utils/debugInk";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import {
+  createPoseLayer,
   drawContour,
   markedRegion,
+  placePoseLayer,
   terrainContour,
   type MoverBody,
   type TerrainGrid,
@@ -126,8 +128,7 @@ function stainField(splat: GooSplat, terrain: TerrainGrid) {
 function partLayer(view: KnockoutView, mover: MoverBody, id: number): Container {
   const known = view.partLayers.get(id);
   if (known) return known;
-  const layer = new Container({ label: `goo-stains-part-${id}` });
-  layer.pivot.set(mover.pivot.x, mover.pivot.y);
+  const layer = createPoseLayer(mover, `goo-stains-part-${id}`);
   view.partLayers.set(id, layer);
   view.stainLayer.addChild(layer);
   return layer;
@@ -211,9 +212,7 @@ function syncStains(view: KnockoutView, frame: KnockoutFrame): void {
 function placePartLayers(view: KnockoutView, terrain: TerrainGrid): void {
   for (const [id, layer] of view.partLayers) {
     const mover = terrain.movers[id];
-    if (!mover) continue;
-    layer.position.set(mover.pivot.x + mover.pose.dx, mover.pivot.y + mover.pose.dy);
-    layer.rotation = mover.pose.angle;
+    if (mover) placePoseLayer(layer, mover);
   }
 }
 
