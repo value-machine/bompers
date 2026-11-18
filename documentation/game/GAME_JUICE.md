@@ -41,7 +41,7 @@ The feedback layer of the design system ([`DESIGN_LANGUAGE.md`](DESIGN_LANGUAGE.
 | `effect` — pop-in effect clearing | 180–320 ms | impact pop 220 ms, explosion star 250 ms |
 | `linger` — things flying off | 300–600 ms | elimination droplets 300 ms, debris 500 ms |
 
-Loops (idle breathing 1.6 s, respawn blink 8 Hz) are not bound by a window. Owner exceptions (elimination-goo lap): knockout pieces stay until the respawn (2 s, blinking 8 Hz for the last 0.5 s) and goo splats fade out by 4 s.
+Loops (idle breathing 1.6 s, respawn blink 8 Hz) are not bound by a window. Owner exceptions (elimination-goo lap): knockout pieces stay until the respawn (2 s, blinking 8 Hz for the last 0.5 s) and goo stains dry up and are gone by 4 s.
 
 ## 4. Squash and stretch
 
@@ -99,7 +99,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Burning blob panic (held) | — | — (the catch cue only) | drawn hop every 0.4 s, sx · sy within the band (±0.08) | — | — | — | drawn 5-unit hop; body and shadow stay on the ground | — |
 | Fire put out by ice | light | `clink` (placeholder) | — | — | — | — | white steam puffs (0.6 s) | — |
 | Moving part moves / carries | — | — by default; the author's `data-move-sound` at its fastest point and `data-end-sound` at each turning point (owner B2) | — | — | — | — | — (no motion cue, owner B1) | — |
-| Crushed by a moving part | heavy | `land`, then `elimination` (owner B2) | pancake across the squeeze, held 0.15 s (past the band, owner B3) | — (no hit of its own) | 6 px (the back-hit kick) | — | goo splats on both faces, the part's riding along; helmet and tube fly off | pops off |
+| Crushed by a moving part | heavy | `land`, then `elimination` (owner B2) | pancake across the squeeze, held 0.15 s (past the band, owner B3) | — (no hit of its own) | 6 px (the back-hit kick) | — | goo stains on both faces, the part's riding along; helmet and tube fly off | pops off |
 | Squeezed by a moving part (survivable) | — (no hit) | — (the blob makes no sound; the part may have its own) | squash across the gap to the gap width, stretch along it up to 1.6×, every frame while squeezed; springs back the frame the gap opens (past the band, owner #64 change round) | — | — | — | — | — |
 | Fire blown off by a dive | light | the dive's `dive-launch` | — | — | — | — | ember flames thrown up and out (0.6 s) | — |
 | Fire passed by a bump | light | the bump's own cue | — | — | — | — | flame ball arcing to the rival (0.3 s) | — |

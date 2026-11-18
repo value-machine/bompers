@@ -544,7 +544,7 @@ export interface GameTunables {
       piecePop: number;
       /** Pieces blink (8 Hz) for this long before they vanish at the respawn. */
       blinkSeconds: number;
-      /** Goo splats on terrain: full until the respawn, then fade out by this age. */
+      /** Goo stains on terrain: whole until the respawn, then they dry up and are gone by this age. */
       splatSeconds: number;
     };
   };
