@@ -13,7 +13,11 @@ import {
   type MotionPivotName,
 } from "@/shared/utils/levelMotion";
 import { shapeBounds, shapeOutlinePoints, shapeSignedDistance } from "@/shared/utils/shapeGeometry";
-import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
+import {
+  hasCatalogEntry,
+  resolveCatalogEntry,
+} from "@/features/content-catalog/api/contentCatalogApi";
+import { CATALOG_ID_RE } from "@/features/level-file/services/levelFileRoot";
 import type { LevelMover, TerrainPiece } from "@/features/level/api/levelApi";
 import { parsePlainNumber } from "@/features/level-file/services/levelFileGeometry";
 import { addWarning, type LevelIssueLog } from "@/features/level-file/services/levelFileIssues";
@@ -241,7 +245,36 @@ function readMover(group: Element, name: string, ctx: MoverContext): LevelMover 
     return null;
   }
   const box = piecesBounds(terrainIndices.map((i) => ctx.terrain[i]!));
-  return { motion: parsed.motion, pivot: pivotPoint(box, parsed.pivot), terrainIndices };
+  const sounds = readPartSounds(group, name, ctx.log);
+  return {
+    motion: parsed.motion,
+    pivot: pivotPoint(box, parsed.pivot),
+    terrainIndices,
+    ...(sounds && { sounds }),
+  };
+}
+
+/** Part sound attributes on a moving group (moving-parts B2): `data-<key>-sound`. */
+const PART_SOUND_ATTRS = { move: "data-move-sound", end: "data-end-sound" } as const;
+
+/**
+ * The author-declared sounds of a moving part (silent by default, owner B2): catalog sound IDs.
+ * An unknown or malformed ID warns W4 and that sound stays off.
+ */
+function readPartSounds(
+  group: Element,
+  name: string,
+  log: LevelIssueLog
+): { move?: string; end?: string } | null {
+  const sounds: { move?: string; end?: string } = {};
+  for (const key of ["move", "end"] as const) {
+    const attr = PART_SOUND_ATTRS[key];
+    const raw = group.getAttribute(attr)?.trim();
+    if (!raw) continue;
+    if (CATALOG_ID_RE.test(raw) && hasCatalogEntry("sound", raw)) sounds[key] = raw;
+    else addWarning(log, "W4", `${name}: ${attr}="${raw}" is not a known sound; left out.`);
+  }
+  return sounds.move || sounds.end ? sounds : null;
 }
 
 /** True when a `<g data-motion>` between `group` and the root encloses it. */

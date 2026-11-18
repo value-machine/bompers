@@ -37,7 +37,7 @@ Overrun rule (skill-loop D51): a diff that touches a feature area **not** in thi
 ## Size
 
 S — three feature areas, one shared mechanism, no sim change.
-Cut into laps: none. Two commits on one PR (orchestrator, 2026-11-18): the arena mechanism off main first; the fire and ice switch-over is built and kept on `claude/element-overlay-shape-on-ice` (commit 870f608, on top of PR #63) and joins this branch once #63 is on main.
+Cut into laps: none. Two commits on one PR (orchestrator, 2026-11-18): the arena mechanism off main first, then the fire and ice switch-over once the ice element (PR #63) was on main.
 
 ## Plan
 

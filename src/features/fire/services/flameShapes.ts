@@ -38,12 +38,11 @@ export const FLAME_LOOK = {
   },
   /** A fire drawn as one shape (owner fire-clusters D1: "Big flames", taller in the middle). */
   cluster: {
-    /** Body slabs: grown past their blocks and rounded, as shares of the block size. */
-    bodyGrow: 0.22,
-    bodyRadius: 0.55,
-    hotRadius: 0.5,
-    /** A block glows amber inside for this share of its burn. */
+    /** Burning ground glows amber inside for this share of its burn, this far in from its edge (blocks). */
     hotUntil: 0.6,
+    hotInset: 0.35,
+    /** How far under the surface a top-edge flame is rooted, as a share of the block size. */
+    flameRoot: 0.5,
     /** A lone flame's half-width as a share of the block size. */
     flameWidth: 0.7,
     /** Extra width and height a flame gains per neighbour flame it takes in (0 … 2 of them). */
@@ -123,10 +122,11 @@ export function flameEnvelope(age: number, burnSeconds: number): number {
   return rise * (1 - fade * Math.min(1, Math.max(0, age / burnSeconds)));
 }
 
-/** One 2 × 2 block of burning samples: its block column and row, centre, age and flicker key. */
+/** One 2 × 2 block of burning samples: its block column and row, flame root, age and flicker key. */
 export interface FlameBlock {
   bx: number;
   by: number;
+  /** Where its flame is rooted: the block's middle column, a little under the terrain's edge. */
   x: number;
   y: number;
   /** Seconds since the block's first burning sample caught. */
@@ -137,20 +137,8 @@ export interface FlameBlock {
   key: number;
 }
 
-/** A rounded slab of fire body (top-left corner, width, height). */
-export interface Slab {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-/** A fire as one shape: body slabs, the hot inside, and the flames on its top edge. */
-export interface FireCluster {
-  body: Slab[];
-  hot: Slab[];
-  flames: (Tongue & { age: number })[];
-}
+/** A flame on a fire's top edge, with the age of its block (the pale core shows on fresh ones). */
+export type ClusterFlame = Tongue & { age: number };
 
 export interface ClusterLook {
   /** Width of one block in world units. */
@@ -253,63 +241,23 @@ function clusterFlame(pass: ClusterPass, block: FlameBlock): Tongue | null {
   };
 }
 
-/** One slab per run of touching blocks on a row that pass `keep`, grown by `grow` all round. */
-function rowSlabs(pass: ClusterPass, keep: (block: FlameBlock) => boolean, grow: number): Slab[] {
-  const { size } = pass.look;
-  const rows = new Map<number, number[]>();
-  for (const block of pass.blocks.values()) {
-    if (!keep(block)) continue;
-    const row = rows.get(block.by);
-    if (row) row.push(block.bx);
-    else rows.set(block.by, [block.bx]);
-  }
-  const slabs: Slab[] = [];
-  for (const [by, columns] of rows) {
-    columns.sort((a, b) => a - b);
-    let start = 0;
-    columns.forEach((bx, i) => {
-      if (columns[i + 1] === bx + 1) return;
-      const from = columns[start]!;
-      slabs.push({
-        x: from * size - grow,
-        y: by * size - grow,
-        w: (bx - from + 1) * size + 2 * grow,
-        h: size + 2 * grow,
-      });
-      start = i + 1;
-    });
-  }
-  return slabs;
-}
-
 /**
- * A fire's burning blocks as one shape (owner fire-clusters D1–D2): a body slab per row run of
- * blocks, each overlapping the row above and below, the hot inside where a fresh block has fire
- * on both sides and below, and flames on the top edge only. Drawn in ink first and in colour on
- * top, the whole fire has one outline; blocks inside it cost no shape of their own.
+ * The flames of a fire (owner fire-clusters D1–D2): on its top edge only, pooled and taller where
+ * more burns. The fire's body is not here: the renderer draws it as the contour of the burning
+ * terrain (element-overlay-shape D1), so blocks inside a fire cost no shape of their own.
  */
 export function clusterFlames(
   blocks: ReadonlyMap<number, FlameBlock>,
   look: ClusterLook
-): FireCluster {
+): ClusterFlame[] {
   const pass: ClusterPass = { blocks, look };
-  const { bodyGrow, hotUntil } = FLAME_LOOK.cluster;
-  const flames: FireCluster["flames"] = [];
+  const flames: ClusterFlame[] = [];
   for (const block of blocks.values()) {
     if (!isTop(pass, block)) continue;
     const flame = clusterFlame(pass, block);
     if (flame) flames.push({ ...flame, age: block.age });
   }
-  const isHot = (block: FlameBlock): boolean =>
-    block.age < hotUntil * look.burnSeconds &&
-    blockAt(pass, block.bx - 1, block.by) !== undefined &&
-    blockAt(pass, block.bx + 1, block.by) !== undefined &&
-    blockAt(pass, block.bx, block.by + 1) !== undefined;
-  return {
-    body: rowSlabs(pass, () => true, bodyGrow * look.size),
-    hot: rowSlabs(pass, isHot, 0),
-    flames,
-  };
+  return flames;
 }
 
 const cubic = (p: readonly [number, number, number, number], u: number): number => {

@@ -121,15 +121,24 @@ function eventCues(frame: SoundSnapshot, lastSeq: number): SoundCue[] {
     frame.players.find((player) => player.slot === slot)?.speed ?? 0;
   return frame.events
     .filter((event) => event.seq > lastSeq)
-    .map((event) => combatEventCue(event, speedOf))
-    .filter((eventCue): eventCue is SoundCue => eventCue !== null);
+    .flatMap((event) => {
+      const main = combatEventCue(event, speedOf);
+      if (!main) return [];
+      // A crush (moving parts, owner B2): the wet splut of being squeezed, then the pop.
+      const crushed = event.type === "playerEliminated" && event.cause === "crush";
+      return crushed ? [cue("land", event.victimSlot), main] : [main];
+    });
 }
 
 /**
  * Combat event → cue. Hits and eliminations take the victim's pitch, actions the actor's. A hit is
  * as loud as the victim's knockback speed this frame (`hitFullSpeed`).
  */
+const SPRAY_START_SOUND = { torch: "rocket-fire", "freeze-ray": "clink" } as const;
+
 function combatEventCue(event: CombatEvent, speedOf: (slot: number) => number): SoundCue | null {
+  // Events that name their own sound: terrain gone (the material's), a moving part's (the author's).
+  if ("soundId" in event) return cue(event.soundId, null);
   switch (event.type) {
     case "playerHit":
       return cue(
@@ -141,16 +150,16 @@ function combatEventCue(event: CombatEvent, speedOf: (slot: number) => number): 
       return cue("elimination", event.victimSlot);
     case "rocketFired":
       return cue("rocket-fire", event.slot);
-    case "torchStarted":
-      // Placeholder until fire takes exist (fire-spread D8).
-      return cue("rocket-fire", event.slot);
+    case "sprayStarted":
+      // Placeholders until fire and ice takes exist (fire-spread D8, ice-element D2): the torch
+      // whooshes like a rocket, the freeze ray rings like ice.
+      return cue(SPRAY_START_SOUND[event.itemId], event.slot);
     case "explosion":
       return cue("explosion", null);
     case "pickupCollected":
       return cue("pickup", event.slot);
-    case "terrainDestroyed":
-      return cue(event.soundId, null);
-    case "pickupSpawned":
+    default:
+      // pickupSpawned: no sound.
       return null;
   }
 }

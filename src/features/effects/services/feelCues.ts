@@ -105,6 +105,14 @@ function noteEvents(state: FeelState, frame: FeelFrame): void {
     if (event.seq <= state.lastSeq) continue;
     state.lastSeq = event.seq;
     if (event.type === "playerHit") noteHit(state, event, frame);
+    if (event.type === "playerEliminated" && event.cause === "crush") {
+      // Heavy tier, like a back hit (a crush has no hit of its own; moving-parts B3).
+      kickCameraShake(frame.shake, {
+        px: feel.shake.hit.px * feel.shake.hardHitScale,
+        seconds: feel.shake.hit.seconds,
+        nowMs,
+      });
+    }
     if (event.type === "explosion") {
       const scale = Math.min(1.5, event.radius / frame.fullBlastRadius);
       kickCameraShake(frame.shake, {

@@ -46,6 +46,12 @@ const UNKNOWN_MATERIAL = {
   douses: false,
 } as const;
 
+/**
+ * Frozen ground grips like ice itself (ice-element D5): the ice material's friction from the
+ * catalog, so the two can never drift apart.
+ */
+const FROZEN_FRICTION = resolveCatalogEntry("material", "ice").entry?.friction ?? 1;
+
 /** What a piece fills: the material's behaviour (catalog) plus the piece's colour. */
 export function pieceCellSlot(piece: TerrainPiece): TerrainCellSlot {
   // Unknown IDs resolve to the fallback material (stone); the normaliser already warned.
@@ -161,6 +167,7 @@ function rasterizeGrid(
     cellSize,
     widthCells: Math.ceil(area.w / cellSize),
     heightCells: Math.ceil(area.h / cellSize),
+    frozenFriction: FROZEN_FRICTION,
   });
   const seed = new Float32Array(grid.cells.length).fill(-fieldBand(grid));
   for (const piece of pieces) rasterizePiece(grid, piece, seed);
@@ -220,6 +227,7 @@ function buildMoverBody(level: LevelDefinition, mover: LevelMover): MoverBody {
     reach,
     friction: frictions.reduce((sum, f) => sum + f, 0) / Math.max(1, frictions.length),
     terrainIndices: mover.terrainIndices,
+    sounds: { move: mover.sounds?.move ?? null, end: mover.sounds?.end ?? null },
   };
 }
 

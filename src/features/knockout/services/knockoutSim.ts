@@ -1,7 +1,9 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { WeaponItemId } from "@/shared/types/weaponItems.types";
 import { stepFallingBody, type FallingBody, type SolidAt } from "@/shared/utils/fallingBody";
-import type { CombatEvent } from "@/features/combat/api/combatApi";
+import { unposePoint } from "@/shared/utils/levelMotion";
+import type { MoverBody } from "@/features/arena/api/arenaApi";
+import type { CombatEvent, CrushSqueeze } from "@/features/combat/api/combatApi";
 import { reactToHit, type PlayerState } from "@/features/player/api/playerApi";
 import type {
   GooDroplet,
@@ -34,7 +36,8 @@ export interface Knockout {
   slot: number;
   /** The victim's held weapon at the knockout (its tube flies off), or null. */
   itemId: WeaponItemId | null;
-  phase: "flung" | "squash";
+  /** `pancake`: crushed flat by a moving part, held, then straight to splats (moving-parts B3). */
+  phase: "flung" | "squash" | "pancake";
   /** Seconds since the knockout started, and since the squash started. */
   age: number;
   squashAge: number;
@@ -42,7 +45,25 @@ export interface Knockout {
   body: PlayerState;
   /** Velocity the burst hands to the droplets and pieces. */
   carry: { vx: number; vy: number };
+  /** A crush's squeeze (normal out of the part toward the victim, and which part). */
+  squeeze?: CrushSqueeze;
 }
+
+/**
+ * The crush look (owner, moving-parts B3 = R2A): the blob flattens against the part far past the
+ * squash band (owner-approved) and holds 0.15 s, then turns straight into goo splats on both faces;
+ * the part's splats ride with it, the other face's stay put.
+ */
+export const CRUSH_PANCAKE = {
+  holdSeconds: 0.15,
+  /** Body scale across and along the squeezed faces, and the startled pupils. */
+  across: 0.22,
+  along: 1.6,
+  pupilScale: 1.4,
+  /** Splat offsets along each face (× R): on the part, then on the other face. */
+  partOffsets: [-0.45, 0.35],
+  wallOffsets: [-0.3, 0.5],
+} as const;
 
 /** Everything the knockout layer simulates (render-only, never read by the game rules). */
 export interface KnockoutWorld {
@@ -63,6 +84,8 @@ export interface KnockoutBody {
   player: PlayerState;
   /** 0 … 1 through the squash (0 while flying). */
   squash: number;
+  /** Set while crushed flat: the squeeze direction (the pancake lies across it). */
+  pancake?: { nx: number; ny: number };
 }
 
 export const createKnockoutWorld = (): KnockoutWorld => ({
@@ -119,7 +142,24 @@ export interface NoteKnockoutsArgs {
 
 type Eliminated = Extract<CombatEvent, { type: "playerEliminated" }>;
 
+/** A crushed blob: flat where it was squeezed, no flight. */
+function startPancake(event: Eliminated, victim: PlayerState, args: NoteKnockoutsArgs): Knockout {
+  return {
+    key: event.seq,
+    victimId: victim.id,
+    slot: victim.slot,
+    itemId: args.weaponOf(victim.id),
+    phase: "pancake",
+    age: 0,
+    squashAge: 0,
+    body: { ...victim, x: event.x, y: event.y, vx: 0, vy: 0, rollAngle: 0 },
+    carry: { vx: 0, vy: 0 },
+    ...(event.squeeze && { squeeze: event.squeeze }),
+  };
+}
+
 function startKnockout(event: Eliminated, victim: PlayerState, args: NoteKnockoutsArgs): Knockout {
+  if (event.cause === "crush") return startPancake(event, victim, args);
   const body: PlayerState = { ...victim, x: event.x, y: event.y, vx: event.vx, vy: event.vy };
   // The lethal hit's knockback is the roll's impulse: the shared roll's hit reaction.
   reactToHit(body, { impulse: { x: event.vx, y: event.vy } }, args.tunables);
@@ -158,6 +198,8 @@ export interface StepKnockoutsArgs {
    * (`terrainHitX/Y`, `terrainHitSpeedX/Y`).
    */
   roll: (body: PlayerState, dt: number) => void;
+  /** The arena's moving parts (a crush's splats stick to the part that squeezed). */
+  movers?: readonly MoverBody[];
   tunables: KnockoutTunables;
   /** The victim respawns this long after the knockout: its pieces vanish then. */
   respawnDelaySeconds: number;
@@ -274,9 +316,62 @@ function burstPieces(world: KnockoutWorld, knockout: Knockout, step: SubStep): v
   );
 }
 
+/** A splat's surface normal snapped to the axis the splat shapes know. */
+function axisNormal(nx: number, ny: number): { nx: -1 | 0 | 1; ny: -1 | 0 | 1 } {
+  if (Math.abs(nx) >= Math.abs(ny)) return { nx: nx >= 0 ? 1 : -1, ny: 0 };
+  return { nx: 0, ny: ny >= 0 ? 1 : -1 };
+}
+
+/**
+ * The crush burst: splats on both squeezed faces, no droplets. Splats on the part are stored in
+ * its rest pose and ride with it; the other face's stay where they landed.
+ */
+function burstPancake(world: KnockoutWorld, knockout: Knockout, step: SubStep): void {
+  const { x, y, radius } = centreOf(knockout);
+  const squeeze = knockout.squeeze ?? { nx: 1, ny: 0, mover: -1 };
+  const length = Math.hypot(squeeze.nx, squeeze.ny) || 1;
+  const n = { x: squeeze.nx / length, y: squeeze.ny / length };
+  const along = { x: -n.y, y: n.x };
+  const flat = CRUSH_PANCAKE.across * radius;
+  const mover = step.movers?.[squeeze.mover];
+  const splatRadius = step.tunables.droplets.maxRadius * radius;
+  const add = (side: "part" | "wall", offset: number, i: number) => {
+    const sign = side === "part" ? -1 : 1;
+    const at = {
+      x: x + n.x * sign * flat + along.x * offset * radius,
+      y: y + n.y * sign * flat + along.y * offset * radius,
+    };
+    const normal = axisNormal(n.x * -sign, n.y * -sign);
+    const onPart = side === "part" && mover;
+    const rest = onPart ? unposePoint(mover.pose, mover.pivot, at) : at;
+    world.splats.push({
+      key: `${knockout.key}:c${i}`,
+      slot: knockout.slot,
+      x: rest.x,
+      y: rest.y,
+      ...normal,
+      radius: splatRadius,
+      age: 0,
+      ...(onPart && { rides: { mover: squeeze.mover } }),
+    });
+  };
+  CRUSH_PANCAKE.partOffsets.forEach((offset, i) => add("part", offset, i));
+  CRUSH_PANCAKE.wallOffsets.forEach((offset, i) => add("wall", offset, i + 2));
+}
+
+/** A crushed blob holds flat for `holdSeconds`, then bursts into splats and pieces. */
+function stepPancake(world: KnockoutWorld, knockout: Knockout, step: SubStep): boolean {
+  knockout.squashAge += step.h;
+  if (knockout.squashAge < CRUSH_PANCAKE.holdSeconds) return true;
+  burstPancake(world, knockout, step);
+  burstPieces(world, knockout, step);
+  return false;
+}
+
 /** Advances one knockout; true while it still has a body (false once it burst). */
 function stepKnockout(world: KnockoutWorld, knockout: Knockout, step: SubStep): boolean {
   knockout.age += step.h;
+  if (knockout.phase === "pancake") return stepPancake(world, knockout, step);
   if (knockout.phase === "flung") fly(knockout, step);
   if (knockout.phase !== "squash") return true;
   knockout.squashAge += step.h;
@@ -327,11 +422,12 @@ export function stepKnockouts(world: KnockoutWorld, args: StepKnockoutsArgs): vo
 
 /** The bodies still flying or squashing, for the player renderer to draw as blobs. */
 export const knockoutBodies = (world: KnockoutWorld, tunables: KnockoutTunables): KnockoutBody[] =>
-  world.knockouts.map(({ key, victimId, phase, squashAge, body }) => ({
+  world.knockouts.map(({ key, victimId, phase, squashAge, body, squeeze }) => ({
     id: `ko-${key}`,
     victimId,
     player: body,
     squash: phase === "squash" ? Math.min(1, squashAge / tunables.squash.seconds) : 0,
+    ...(phase === "pancake" && { pancake: { nx: squeeze?.nx ?? 1, ny: squeeze?.ny ?? 0 } }),
   }));
 
 /** Pieces blink at 8 Hz (like spawn protection) for their last `blinkSeconds`. */

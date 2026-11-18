@@ -1,6 +1,7 @@
 /** Public seam of the knockout feature: the knockout simulation (render-only) and its layer. */
 export {
   createKnockoutWorld,
+  CRUSH_PANCAKE,
   knockoutBodies,
   noteKnockoutEvents,
   stepKnockouts,

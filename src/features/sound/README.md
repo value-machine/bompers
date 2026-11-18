@@ -30,7 +30,7 @@ What each cue comes from:
 | `hit`                                | `playerHit` (rocket)                                                 |
 | `elimination`                        | `playerEliminated`                                                   |
 | `rocket-fire`, `explosion`, `pickup` | `rocketFired`, `explosion`, `pickupCollected`                        |
-| `rocket-fire` (placeholder, fire-spread D8) | `torchStarted` (a torch starts spraying); fire burn-outs play the material sound through `terrainDestroyed` |
+| `rocket-fire` / `clink` (placeholders, fire-spread D8, ice-element D2) | `sprayStarted` (a torch starts spraying / a freeze ray starts); fire burn-outs play the material sound through `terrainDestroyed` |
 | material sound (`thud` stone, `crumble` earth, `thwap` cardboard, `clink` ice) | `terrainDestroyed.soundId`; and a head-on dive bonk: `land` (pitched) plus the wall's material sound (`diveBonkSoundId`, unpitched), both at the bonk's intensity |
 | `respawn`                            | a player comes back into play                                        |
 | `pickup` (headbutt reset)            | `diveRefillCount` rises (no file of its own; headbutt-reset D5)      |
@@ -60,3 +60,4 @@ Hits and eliminations take the victim's pitch; actions (jump, fire, pickup) take
 - Sounds and Music volumes plus on/off switches per channel; M stays a master mute (music D2).
 - The last 30 s of a round play a dedicated final piece, started in time with the clock (music D4).
 - Music files are `lobby.mp3`, `match.mp3` (60 s loops, 32 bars at 128 BPM) and `final.mp3` (30 s, once) in `public/audio/music/`, one take each, processed as DESIGN_LANGUAGE § 8 describes; the bank test checks each track has its file.
+- Events that name their own sound (`terrainDestroyed`, `partSound` from moving parts) play that ID. A crush (`playerEliminated`, cause `crush`) plays `land`, then `elimination` (owner, moving-parts B2).
