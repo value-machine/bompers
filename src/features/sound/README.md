@@ -33,7 +33,7 @@ What each cue comes from:
 | `torch-start` / `freeze-start` | `sprayStarted` (a torch starts spraying / a freeze ray starts) |
 | `burn-out` | a fire burn-out batch, through `terrainDestroyed` (the match names fire's sound instead of the material's) |
 | `thaw` | `world.thawedSamples` rises; at most every `SOUND_MIX.elementCueSeconds`, gain by the samples thawed since the last thaw cue |
-| `steam-hiss` | `iceDouseCount` rises (ice puts a blob out, pitched); and the torch melting frozen ground (`world.frozenVersion` changes while a torch sprays, no freeze ray does and nothing thawed by itself), rate-limited like the thaw |
+| `steam-hiss` | `iceDouseCount` rises (ice puts a blob out, pitched); and the torch melting frozen ground (`world.frozenVersion` changes while a torch sprays, no freeze ray does and nothing thawed by itself), rate-limited like the thaw; and held beams ending each other (`world.beamClashes` above 0, beam-clash D1), on the same rate limit for as long as the clash holds |
 | material sound (`thud` stone, `crumble` earth, `thwap` cardboard, `clink` ice) | `terrainDestroyed.soundId`; and a head-on dive bonk: `land` (pitched) plus the wall's material sound (`diveBonkSoundId`, unpitched), both at the bonk's intensity |
 | `respawn`                            | a player comes back into play                                        |
 | `pickup` (headbutt reset)            | `diveRefillCount` rises (no file of its own; headbutt-reset D5)      |

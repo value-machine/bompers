@@ -106,6 +106,7 @@ const NO_MARKS: ElementCueMarks = { thawAt: -Infinity, thawedAtCue: 0, steamAt: 
  * `SOUND_MIX.elementCueSeconds` (a thawing patch thaws a sample at a time). A thaw is as loud as
  * the samples thawed since the last thaw cue; the torch's melt is a steam hiss. A frozen-flag
  * change while a torch sprays and no freeze ray does, with no thaw of its own, is the torch's melt.
+ * Beams ending each other (beam-clash D1) hiss the same way for as long as the clash holds.
  */
 function elementCues(
   cursor: SoundCursor | null,
@@ -122,7 +123,7 @@ function elementCues(
     marks.thawAt = world.timeSeconds;
     marks.thawedAtCue = world.thawedSamples;
   }
-  if (torchMelted(previous, world) && due(marks.steamAt)) {
+  if ((torchMelted(previous, world) || world.beamClashes > 0) && due(marks.steamAt)) {
     cues.push(cue("steam-hiss", null));
     marks.steamAt = world.timeSeconds;
   }
