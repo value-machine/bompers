@@ -19,7 +19,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   match: {
     durationSeconds: 180,
     maxPlayers: 4,
-    respawnDelaySeconds: 1.2,
+    // Long enough to see the knockout's goo splat land (owner, elimination-goo lap: 1.2 → 2.0).
+    respawnDelaySeconds: 2.0,
     spawnProtectionSeconds: 2.5,
     restartLockSeconds: 2,
     // A kill outweighs an orb; falling off alone costs a point (match-rules D1).
@@ -118,13 +119,14 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     staggerSeconds: 0.3,
     staggerSteerScale: 0.15,
   },
-  // Fire on the field (blast-power D6, owner starting values): 40 units / s, burn 1.5 s.
+  // Fire on the field: 13 units / s, burn 7.5 s (owner tuning, fire-clusters D5: "way slower";
+  // blast-power D6 started at 40 units / s and 1.5 s). The burning band is speed × burn ≈ 98 units deep.
   // Burn-outs are applied in batches every 0.25 s (at most that late), one effect / sound per batch.
   // A blob on fire burns 2 s: a chunk at 1 s and a second at 2 s unless crouching then (owner
   // fire-burn D10); 0.5 s grace after going out.
   fire: {
-    spreadSpeed: 40,
-    burnSeconds: 1.5,
+    spreadSpeed: 13,
+    burnSeconds: 7.5,
     burnOutInterval: 0.25,
     blob: { firstTickSeconds: 1, burnSeconds: 2, graceSeconds: 0.5, momentSeconds: 0.6 },
   },
@@ -184,7 +186,15 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     // Chosen so power 50 (the rocket) keeps the pre-power blast: push 1080, reach 64, crater 34 on
     // toughness 1 (blast-power D3, D10). Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units;
     // with the recoil (1080 + 200) ≈ 585, well above a full jump (≈ 250).
-    blast: { pushPerPower: 21.6, reachPerPower: 1.28, craterPerPower: 0.68, minFalloff: 0.35 },
+    // hitPushScale: the push on hit players, lowered so a hit no longer flings a blob off the map
+    // (owner, elimination-goo Change round: 1 → 0.55); the shooter's rocket jump stays full.
+    blast: {
+      pushPerPower: 21.6,
+      reachPerPower: 1.28,
+      craterPerPower: 0.68,
+      minFalloff: 0.35,
+      hitPushScale: 0.55,
+    },
     drops: { firstDelaySeconds: 3, intervalSeconds: 7, maxActive: 2, size: 22 },
   },
   camera: {
@@ -242,13 +252,32 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       landKick: 9,
       jumpKick: 6,
       maxSplay: 0.6,
-      wallX: 0.85,
-      wallLow: 0.15,
-      wallHigh: 0.7,
-      wallBlendSeconds: 0.08,
-      wallJumpHoldSeconds: 0.12,
+      // Turns to a new surface in about a fifth of a second, with a small overshoot.
+      surface: { stiffness: 300, damping: 24 },
+      // 6 frames at 60 fps: longer than the sim's on / off flips, too short to see as a delay.
+      contactHoldSeconds: 0.1,
     },
     // About 3 frames at 60 fps.
     hitStop: { seconds: JUICE_TIERS.heavy.hitStopSeconds },
+    // Owner's pick from the knockout demo rounds (elimination-goo lap, 2026-11-16).
+    knockout: {
+      hardContactSpeed: 200,
+      flungMaxSeconds: 0.65,
+      // The land pose: the strongest squash the juice band allows.
+      squash: { sx: 1.25, sy: 0.75, seconds: 0.1 },
+      bounce: 0.3,
+      friction: 0.25,
+      droplets: {
+        count: 6,
+        minRadius: 0.28,
+        maxRadius: 0.4,
+        minSpread: 90,
+        maxSpread: 200,
+        startOffset: 0.45,
+      },
+      piecePop: 300,
+      blinkSeconds: 0.5,
+      splatSeconds: 4,
+    },
   },
 };

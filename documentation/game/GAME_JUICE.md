@@ -41,7 +41,7 @@ The feedback layer of the design system ([`DESIGN_LANGUAGE.md`](DESIGN_LANGUAGE.
 | `effect` — pop-in effect clearing | 180–320 ms | impact pop 220 ms, explosion star 250 ms |
 | `linger` — things flying off | 300–600 ms | elimination droplets 300 ms, debris 500 ms |
 
-Loops (idle breathing 1.6 s, respawn blink 8 Hz) are not bound by a window.
+Loops (idle breathing 1.6 s, respawn blink 8 Hz) are not bound by a window. Owner exceptions (elimination-goo lap): knockout pieces stay until the respawn (2 s, blinking 8 Hz for the last 0.5 s) and goo splats fade out by 4 s.
 
 ## 4. Squash and stretch
 
@@ -89,7 +89,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Torch spray (held) | light | `rocket-fire` on spray start (placeholder, fire-spread D8) | — | — | — | — | outlined flame from the nozzle: neck, rolling head, flames peeling off upward, flare at terrain; grows in over 120 ms | — |
 | Torch released | light | — (the spray's start cue covers the action) | — | — | — | — | the head lets go as one rising puff, 300 ms | — |
 | Torch held, idle | — | — (a loop, deliberately silent) | — | — | — | — | small outlined flame on the nozzle | — |
-| Fire spreading | — | — (deliberately silent per sample: a big fire would be noise) | — | — | — | — | outlined flames on burning terrain, tall at the front; cardboard darkens; scorch on earth | — |
+| Fire spreading | — | — (deliberately silent per sample: a big fire would be noise) | — | — | — | — | one outlined fire shape per cluster of burning terrain, its flames bigger with more fire around them and tallest in the middle; scorch on earth | — |
 | Fire burn-out (batch) | light | material's sound via `terrainDestroyed`, once per 0.25 s batch | — | — | — | — | debris + a white smoke puff, 450 ms | — |
 | Blob catches fire (fire-burn b2) | light | `rocket-fire` (placeholder, fire-burn D7) | — | — | — | — | amber flame pop (0.6 s linger); then helmet flames, sweat, pinprick pupils while burning | — |
 | Burning blob panic (held) | — | — (the catch cue only) | drawn hop every 0.4 s, sx · sy within the band (±0.08) | — | — | — | drawn 5-unit hop; body and shadow stay on the ground | — |
@@ -99,7 +99,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Fire passed by a bump | light | the bump's own cue | — | — | — | — | flame ball arcing to the rival (0.3 s) | — |
 | Burn tick (−1 chunk at 1 s, and at 2 s unless crouching) | medium (a `playerHit`) | `hit` via `playerHit` | as a hit | as a hit | as a hit | — | as a hit | as a hit |
 | Burning blob goes out (2 s) | — | the second tick's `hit` (none when crouching) | — | — | — | — | grey smoke puffs (0.6 s) | — |
-| Elimination | heavy | `elimination` | — | — | — | — | **gap:** droplets + confetti (DESIGN_LANGUAGE § 6) not built yet | — |
+| Elimination (knockout) | heavy | `elimination` (at the elimination, not the burst) | flies with the knockback, then squash `feel.knockout.squash` (the land pose, 100 ms) at the first hard contact; overkill squashes at once | the lethal hit's flash | the lethal hit's shake | — | goo burst: 6 droplets keep the blob's momentum and splat on contact; helmet and tube fly off as solid pieces (knockout feature) | pops off |
 | Health chunk lost (HUD) | — | — | pip pop | — | — | — | — | — |
 | Round start / end | — | `round-start` / `round-end` | — | — | — | — | banner | — |
 | Final 30 s build-up | — | music build-up for the last 30 s | — | — | — | — | timer turns orange and pulses in the last 10 s (HUD) | — |

@@ -93,6 +93,16 @@ export type CombatEventBody =
       victimSlot: number;
       byPlayerSlot: number | null;
       cause: EliminationCause;
+      /**
+       * The lethal hit dealt more damage than the health left (it would end below 0). The
+       * knockout bursts on the spot instead of flying first (knockout feature).
+       */
+      overkill: boolean;
+      /** The victim's feet point and velocity right after the lethal hit's knockback. */
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
     }
   | {
       /** A spray weapon started spraying (fire-spread b1): its start cue. */

@@ -46,7 +46,10 @@ interface BlastPush {
  */
 function pushPlayer(ctx: CombatContext, player: PlayerState, blast: Blast): BlastPush | null {
   const distance = distanceToRect(blast.at, playerBody(player));
-  const strength = blastPushAt(ctx.tunables, blast.power, distance);
+  // Everyone but the shooter takes the hit push (`hitPushScale`); the shooter keeps the full push,
+  // so rocket jumps stay as tuned (jumps-and-recoil D1).
+  const scale = player.id === blast.ownerId ? 1 : ctx.tunables.combat.blast.hitPushScale;
+  const strength = blastPushAt(ctx.tunables, blast.power, distance) * scale;
   if (strength <= 0) return null;
   const direction = unitBetween(blast.at, bodyCenter(player), UP);
   const push = { x: direction.x * strength, y: direction.y * strength };
@@ -81,7 +84,7 @@ function hitPlayers(ctx: CombatContext, blast: Blast): void {
  */
 export function reportTerrainDestroyed(
   combat: CombatState,
-  report: { cleared: ClearedCells; at: Vec2; timeSeconds: number }
+  report: { cleared: ClearedCells; at: Vec2; timeSeconds: number; silent?: boolean }
 ): void {
   const { at } = report;
   for (const { materialId, colorId, cells } of report.cleared.byLook) {
@@ -96,7 +99,7 @@ export function reportTerrainDestroyed(
         colorId,
         cells,
         effectId: material?.effect ?? "none",
-        soundId: material?.sound ?? "none",
+        soundId: report.silent ? "none" : (material?.sound ?? "none"),
       },
       report.timeSeconds
     );

@@ -29,7 +29,7 @@ Rules:
 
 - **Two cues, always.** A player is told apart by body colour **and** by the helmet emblem. The emblem is drawn in the player colour on the cream helmet, with no outline (§ 3). The same emblem appears on that player's HUD chip, so no one needs colour vision to find themselves.
 - **Colour-blind check.** Pairwise CIEDE2000 distance between the four body colours after Machado (2009) simulation at full severity: minimum 17.7 (deuteranopia, P1–P3); normal vision min 37.2; protanopia min 19.4; tritanopia min 23.7. Any change to a player colour must keep every pair ≥ 15 in all four views.
-- **Player hues are reserved.** No arena surface, background or pickup uses a player body colour. Effects may borrow them only for that player's own feedback (their rocket fins, their elimination droplets).
+- **Player hues are reserved.** No arena surface, background or pickup uses a player body colour. Effects may borrow them only for that player's own feedback (their rocket fins, their goo droplets and splats after a knockout).
 - Shade = body mixed 38 % toward ink `#2b1d3a`. Tint = body mixed 45 % toward white. Use these formulas for any new shade.
 
 ### World
@@ -77,7 +77,7 @@ Named colours a level puts on any material (`data-color`; catalog kind `color`).
 | Headbutt reset (floats on its point) | `#5fe0ff` aqua diamond crystal, ink outline, white gloss facet, ink up-chevron; while gone, an ink ghost outline at 30 % alpha |
 | Timer warning (last 10 s) | `#ff8a1f` |
 | Weapon accents (§ 9) | rocket launcher sky `#8fd6ff`; homing launcher lilac `#b08cff`; torch ember `#ff8a1f` |
-| Fire ("Sticker flames", owner fire-visuals D1) | pointed flames, ember `#ff6a1a` with an amber `#ffb21a` heart and a pale `#fff1a8` core while fresh, under one ink line (effect width, § 3): drawn in ink first, in colour on top. On terrain one flame per 2 × 2 burning samples, tall at the front and small behind it; burning cardboard darkens with scorch `#3a2418` at 30 % then 60 % alpha; scorch on earth at 40 % alpha; a white smoke puff with an ink edge per burn-out batch |
+| Fire ("Sticker flames", owner fire-visuals D1) | pointed flames, ember `#ff6a1a` with an amber `#ffb21a` heart and a pale `#fff1a8` core while fresh, under one ink line (effect width, § 3): drawn in ink first, in colour on top. On terrain a fire is one shape with one ink line (owner fire-clusters D1, "Big flames"): an ember body over the burning samples with an amber inside near the front, and flames on its top edge only; flames next to each other pool into fewer, bigger ones, taller with more fire around them and toward the middle of the cluster, each with its own fixed size; a lone flame stays small; scorch `#3a2418` on earth at 40 % alpha; a white smoke puff with an ink edge per burn-out batch |
 | Burning blob (fire-burn b2) | three ember flames with pale-yellow cores on the helmet; sweat drops sky `#8fd6ff`; pinprick pupils (45 %); a drawn panic hop; steam off ice white `#ffffff`; burn-down smoke `#6e6378` |
 
 ---
@@ -178,13 +178,13 @@ Squash and stretch keep area roughly constant (`sx × sy` between 0.93 and 1.01,
 
 - On sloped ground the whole blob (body, helmet, eyes) leans into the hill by 60 % of the slope, at most 30°, easing in on a spring; level in the air (tunables `feel.groundTilt`, slope-walking D4).
 - Feet lag the body by 2 frames (about 33 ms) and squash flatter than the body.
-- Feet move on their own (tunables `feel.feet`): running, the lifted foot swings forward in an arc and tips its toe up; in the air the feet trail the horizontal speed and droop while rising, flare while falling, with a springy lag; a landing spreads them, a jump pulls them in. While wall-sliding, and a moment after a wall-jump (`wallJumpHoldSeconds`), both feet turn their soles to the wall, the near foot higher.
+- Feet move on their own (tunables `feel.feet`): running, the lifted foot swings forward in an arc and tips its toe up; in the air the feet trail the horizontal speed and droop while rising, flare while falling, with a springy lag; a landing spreads them, a jump pulls them in. Floor, slope and wall are one pose (owner pick, 2026-11-17): the feet always sit side by side with their soles on the surface under the blob, turning around the body on a spring (`feel.feet.surface`) as a slope steepens into a wall, and they keep stepping along it, also up and down a wall. After a wall-jump they ease from the wall into the air pose.
 - The helmet sits on its own spring (it wobbles after landings and shots).
 - Rocket fire: the body recoils 4 units away from the aim, tube kicks back 3 units.
 - Muzzle ready light (§ 9): after a shot the accent dot on each muzzle drops to 15 % alpha and climbs back to full as the fire cooldown runs out; full = ready to fire.
 - **Hit:** 3 frames (50 ms) of white body fill, silhouette outline unchanged, 3 px screen shake for 80 ms.
 - **Explosion:** pops in at full size on frame 1 (no fade-in), shrinks and clears in 250 ms; 6 px screen shake for 120 ms. Debris: 5–8 cell-coloured squares with the cell grid-line colour as a thin edge, spinning outward.
-- **Elimination:** blob pops into 6 droplets of its body colour plus a small confetti burst, 300 ms.
+- **Elimination (knockout, owner 2026-11-16):** the blob flies with the lethal hit's knockback, squashes at its first hard contact and bursts into 6 goo droplets of its body colour; an overkill hit bursts it on the spot. The droplets keep its momentum and splat flat on whatever they touch (no outline; full until the respawn, faded by 4 s). The helmet and weapon tube fly off as solid pieces and blink out at the respawn. Built in `features/knockout`.
 - **Respawn protection:** body alpha blinks between 100 % and 45 % at 8 Hz, inside a dashed ink ring (radius 1.5 R); the blob is fully playable meanwhile (GDD § 6).
 - Reduced motion (OS setting): drop screen shake and idle breathing; keep squash (it carries gameplay information). Built: no shake and a half-strength hit flash; idle breathing still plays.
 - Game feel as built (tunables `feel`): back hits flash full white (front 75 %) and shake twice as hard, then hold the world view for 50 ms (hit-stop, render only); tumble bounces shake by bounce speed; live shakes add as a root of squares, capped at 12 px.

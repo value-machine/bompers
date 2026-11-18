@@ -70,6 +70,11 @@ const eliminated = (victimSlot: number, byPlayerSlot: number | null): CombatEven
   victimSlot,
   byPlayerSlot,
   cause: "out-of-bounds",
+  overkill: false,
+  x: 0,
+  y: 0,
+  vx: 0,
+  vy: 0,
   seq: 1,
   timeSeconds: 0,
 });

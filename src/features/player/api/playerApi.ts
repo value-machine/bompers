@@ -23,6 +23,7 @@ export {
 } from "@/features/player/services/roll";
 export type { RollSource } from "@/features/player/types/player.types";
 export type { BlobPoseOverlay } from "@/features/player/services/blobPose";
+export { drawLooseHelmet, drawLooseTube } from "@/features/player/services/blobShapes";
 export {
   createPlayersView,
   syncPlayersView,

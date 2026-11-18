@@ -345,6 +345,11 @@ export interface GameTunables {
       reachPerPower: number;
       craterPerPower: number;
       minFalloff: number;
+      /**
+       * Share of the push that players other than the shooter get (the hit knockback). The
+       * shooter's own push (rocket jump) stays full (owner, elimination-goo Change round).
+       */
+      hitPushScale: number;
     };
     /** Weapon pickups dropping from the level's drop points. */
     drops: {
@@ -433,11 +438,11 @@ export interface GameTunables {
     };
     /**
      * Foot motion (DESIGN_LANGUAGE § 6): run-cycle swing and toe tilt, air tilt from velocity,
-     * landing / jump splay on a damped spring, and feet turned to the wall while wall-sliding.
-     * Lengths in body radii R, angles in radians.
+     * landing / jump splay on a damped spring, and one sprung angle that turns the soles to the
+     * slope or wall under the blob. Lengths in body radii R, angles in radians.
      */
     feet: {
-      /** Spring stiffness (1/s²) and damping (1/s) for the tilt lag and the splay. */
+      /** Spring stiffness (1/s²) and damping (1/s) for the splay. */
       stiffness: number;
       damping: number;
       /** Run cycle: distance per step (R), lift and forward swing of the stepping foot (R), toe tilt. */
@@ -454,15 +459,55 @@ export interface GameTunables {
       landKick: number;
       jumpKick: number;
       maxSplay: number;
-      /** Wall pose: feet centre out from the body centre (R), heights of the low and high foot (R). */
-      wallX: number;
-      wallLow: number;
-      wallHigh: number;
-      /** Seconds to turn to / from the wall, and to keep facing it after a wall-jump. */
-      wallBlendSeconds: number;
-      wallJumpHoldSeconds: number;
+      /**
+       * Spring of the one angle the soles face (slope, wall or air tilt): how fast the feet turn
+       * when the surface changes. Stiffness 1/s², damping 1/s.
+       */
+      surface: { stiffness: number; damping: number };
+      /**
+       * Seconds the drawn blob keeps a ground or wall contact after the sim stops reporting it, so
+       * a contact that flips every step (a slope as steep as a wall) doesn't flicker the feet, the
+       * lean or the shadow. A jump lets go at once.
+       */
+      contactHoldSeconds: number;
     };
     /** Render-only freeze after a hard hit (the sim keeps running); 0 turns it off. */
     hitStop: { seconds: number };
+    /**
+     * Knockout (knockout feature, owner's goo pick): an eliminated blob flies with the lethal
+     * hit's knockback, squashes at the first hard contact (or at once on an overkill) and bursts
+     * into goo droplets that keep its momentum and splat where they touch terrain. Its helmet and
+     * tube fly off as solid pieces. Speeds in world units / s, sizes as a share of the body
+     * half-width R.
+     */
+    knockout: {
+      /** A contact this fast into a surface ends the flight. */
+      hardContactSpeed: number;
+      /** The flight ends after this long even without a hard contact. */
+      flungMaxSeconds: number;
+      /** Squash before the burst: its pose (inside the juice band) and how long it holds. */
+      squash: { sx: number; sy: number; seconds: number };
+      /** Share of the speed a flying blob or piece keeps off a soft bounce. */
+      bounce: number;
+      /** Share of the sideways speed lost per floor contact. */
+      friction: number;
+      droplets: {
+        count: number;
+        /** Droplet radius range, × R. */
+        minRadius: number;
+        maxRadius: number;
+        /** Spread speed range added to the carried momentum, in a random direction. */
+        minSpread: number;
+        maxSpread: number;
+        /** Droplets leaving within this distance of the body's surface, × R. */
+        startOffset: number;
+      };
+      /** Upward pop of the helmet and tube at the burst. */
+      piecePop: number;
+      /** Pieces blink (8 Hz) for this long before they vanish at the respawn. */
+      blinkSeconds: number;
+      /** Goo splats on terrain: full until the respawn, then fade out by this age. */
+      splatSeconds: number;
+    };
   };
 }
