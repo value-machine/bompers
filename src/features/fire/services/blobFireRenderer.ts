@@ -2,7 +2,11 @@ import type { Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { helmetPoint } from "@/features/combat/api/combatApi";
-import type { BlobPoseOverlay, PlayerState } from "@/features/player/api/playerApi";
+import {
+  PANIC_PUPIL_SCALE,
+  type BlobPoseOverlay,
+  type PlayerState,
+} from "@/features/player/api/playerApi";
 import type { BlobFireMoment, FireState } from "@/features/fire/types/fire.types";
 
 /**
@@ -15,7 +19,6 @@ import type { BlobFireMoment, FireState } from "@/features/fire/types/fire.types
 const COLORS = GAME_PALETTE.fire;
 /** Drawn panic hops: one every `period` s, `height` units, a light squash at each touch-down. */
 const HOP = { period: 0.4, height: 5, squash: 0.08 };
-const PANIC_PUPIL_SCALE = 0.45;
 
 /** 0 on the ground … 1 at the top of a drawn hop (each blob hops out of step with the others). */
 const hopPhase = (nowMs: number, slot: number): number =>
