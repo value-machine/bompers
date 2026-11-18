@@ -28,15 +28,15 @@ import {
   type CombatState,
 } from "@/features/combat/api/combatApi";
 import {
-  createFireState,
+  catchFire,
+  createBlobFireState,
   douseBlob,
   isBurning,
   panicInputs,
-  sprayTorch,
   stepBurningBlobs,
-  stepFire,
-  type FireState,
-} from "@/features/fire/api/fireApi";
+  type BlobFireState,
+} from "@/features/blob-fire/api/blobFireApi";
+import { createFireState, sprayTorch, stepFire, type FireState } from "@/features/fire/api/fireApi";
 import {
   createIceState,
   frozenInputs,
@@ -158,6 +158,8 @@ export interface GameState {
   dive: DiveState;
   /** Fire on the terrain field and this step's torch sprays. */
   fire: FireState;
+  /** Blobs on fire (their own feature; reads `fire` to catch from burning ground). */
+  blobFire: BlobFireState;
   /** Frozen ground on the terrain field and this step's freeze rays. */
   ice: IceState;
   /** Each rider's carry velocity last step: a body leaving a moving part keeps it once (movers). */
@@ -200,6 +202,7 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
     tunables: matchTunables,
     arena,
     fire: createFireState(arena.terrain),
+    blobFire: createBlobFireState(),
     ice: createIceState(arena.terrain),
     moverCarry: new Map(),
     killZone: killZoneOf(normalized.level.bounds, matchTunables),
@@ -425,7 +428,8 @@ function stepBlobsOnFire(
 ): void {
   stepFireOnTerrain(state);
   const { tunables, timeSeconds } = state;
-  const downs = stepBurningBlobs(state.fire, {
+  const downs = stepBurningBlobs(state.blobFire, {
+    fire: state.fire,
     terrain: state.arena.terrain,
     players: step.players,
     contacts: step.contacts,
@@ -445,6 +449,12 @@ function stepBlobsOnFire(
     });
     reactToHit(down.player, { impulse: { x: 0, y: 0 } }, tunables);
   }
+}
+
+/** The blobs a torch's flame reached catch fire, lit by the holder (fire-burn b2). */
+function torchBlobs(state: GameState, holder: PlayerState, reached: readonly PlayerState[]): void {
+  const lit = { now: state.timeSeconds, fromX: holder.x, bySlot: holder.slot };
+  for (const blob of reached) catchFire(state.blobFire, blob, lit);
 }
 
 /** Winding up or travelling in a dive (the previous step's phase: the dive steps later). */
@@ -467,8 +477,8 @@ const canChill = (state: GameState, player: PlayerState): boolean =>
 function cancelFireAndIce(state: GameState, players: readonly PlayerState[]): void {
   const at = { now: state.timeSeconds, tunables: state.tunables };
   for (const player of players) {
-    if (!isBurning(state.fire, player) || !isIced(state.ice, player)) continue;
-    douseBlob(state.fire, player, at);
+    if (!isBurning(state.blobFire, player) || !isIced(state.ice, player)) continue;
+    douseBlob(state.blobFire, player, at);
     releaseBlob(state.ice, player, { ...at, kind: "melt" });
   }
 }
@@ -539,7 +549,13 @@ function stepPlay(state: GameState, rawInputs: PlayerInputs, dt: number): void {
     tunables,
   });
   // A burning blob with no move input runs from the fire (fire-burn D2); combat keeps the real inputs.
-  stepPlayers({ players, inputs: panicInputs(state.fire, players, inputs), terrain, tunables, dt });
+  stepPlayers({
+    players,
+    inputs: panicInputs(state.blobFire, players, inputs),
+    terrain,
+    tunables,
+    dt,
+  });
   const contacts = resolveBodyContacts({ players, terrain, tunables });
   stepCombat({
     combat: state.combat,
@@ -553,7 +569,7 @@ function stepPlay(state: GameState, rawInputs: PlayerInputs, dt: number): void {
     unarmedAttack: ({ attacker }) => requestDive(state.dive, attacker, tunables),
     sprayAttack: ({ attacker, itemId, reach }) => {
       const spray = { terrain, players, holder: attacker, tunables, now: timeSeconds, dt, reach };
-      if (itemId !== "freeze-ray") sprayTorch(state.fire, spray);
+      if (itemId !== "freeze-ray") torchBlobs(state, attacker, sprayTorch(state.fire, spray));
       else sprayFreezeRay(state.ice, { ...spray, canChill: (blob) => canChill(state, blob) });
     },
   });

@@ -5,7 +5,7 @@ import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { mapPlayerInputs } from "@/shared/utils/gameInputMapping";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { applyHit } from "@/features/combat/api/combatApi";
-import { catchFire } from "@/features/fire/api/fireApi";
+import { catchFire } from "@/features/blob-fire/api/blobFireApi";
 import { chillBlob, isFrozen, isIced } from "@/features/ice/api/iceApi";
 import { parseLevelFile } from "@/features/level-file/api/levelFileApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
@@ -297,14 +297,14 @@ describe("gameSim — burning blobs (fire-burn b2)", () => {
     const player = state.players[0]!;
     const startX = player.x;
     // The fire came from the left (the floor ends 100 units left of the spawn: it would run off).
-    catchFire(state.fire, player, { now: state.timeSeconds, fromX: startX - 50, bySlot: 1 });
+    catchFire(state.blobFire, player, { now: state.timeSeconds, fromX: startX - 50, bySlot: 1 });
     stepFor(state, 0.3);
     expect(player.x).toBeGreaterThan(startX + 40);
     // Crouching is the player's own input: the flee stops; the mid-burn chunk still lands (not
     // halved), the end chunk is skipped (owner fire-burn D10).
     stepFor(state, DEFAULT_GAME_TUNABLES.fire.blob.burnSeconds - 0.25, keys("KeyS"));
-    expect(state.fire.blobs.size).toBe(0);
-    expect(state.fire.blobMoments.map((moment) => moment.kind)).toEqual(["smoke"]);
+    expect(state.blobFire.blobs.size).toBe(0);
+    expect(state.blobFire.blobMoments.map((moment) => moment.kind)).toEqual(["smoke"]);
     expect(state.combat.fighters.get(player.id)?.health).toBe(
       DEFAULT_GAME_TUNABLES.combat.maxHealth - 1
     );
@@ -473,7 +473,7 @@ describe("gameSim — beam clash (beam-clash D1, the steam wall)", () => {
     expect(state.combat.beamClashes).toHaveLength(1);
     // Neither beam got past: the ray holder does not burn, the torch holder gathers no chill,
     // and neither was pushed.
-    expect(state.fire.blobs.size).toBe(0);
+    expect(state.blobFire.blobs.size).toBe(0);
     expect(isIced(state.ice, a)).toBe(false);
     expect(a.x).toBeCloseTo(300, 0);
     expect(b.x).toBeCloseTo(390, 0);
@@ -483,7 +483,7 @@ describe("gameSim — beam clash (beam-clash D1, the steam wall)", () => {
     const { state, b } = sprayHeadOn("torch", "torch");
 
     expect(state.combat.beamClashes).toEqual([]);
-    expect(state.fire.caughtCounts[b.id] ?? 0).toBeGreaterThan(0);
+    expect(state.blobFire.caughtCounts[b.id] ?? 0).toBeGreaterThan(0);
   });
 });
 
@@ -533,20 +533,20 @@ describe("gameSim — ice blocks (ice-frozen-blobs D1–D7)", () => {
 
   it("should melt the block and not leave the blob burning when fire touches a frozen blob", () => {
     const { state, player } = withFrozenBlob();
-    catchFire(state.fire, player, { now: state.timeSeconds, fromX: player.x - 50, bySlot: 1 });
+    catchFire(state.blobFire, player, { now: state.timeSeconds, fromX: player.x - 50, bySlot: 1 });
     stepGame(state, keys(), dt);
     expect(isIced(state.ice, player)).toBe(false);
-    expect(state.fire.blobs.size).toBe(0);
+    expect(state.blobFire.blobs.size).toBe(0);
     expect(state.ice.blobMoments.map((moment) => moment.kind)).toContain("melt");
   });
 
   it("should put a burning blob out and keep no chill when a freeze ray reaches it", () => {
     const state = stepFor(newGame(), 3);
     const player = state.players[0]!;
-    catchFire(state.fire, player, { now: state.timeSeconds, fromX: player.x - 50, bySlot: 1 });
+    catchFire(state.blobFire, player, { now: state.timeSeconds, fromX: player.x - 50, bySlot: 1 });
     chillBlob(state.ice, player, { now: state.timeSeconds, dt, tunables: state.tunables });
     stepGame(state, keys(), dt);
-    expect(state.fire.blobs.size).toBe(0);
+    expect(state.blobFire.blobs.size).toBe(0);
     expect(isIced(state.ice, player)).toBe(false);
     expect(state.combat.fighters.get(player.id)?.health).toBe(
       DEFAULT_GAME_TUNABLES.combat.maxHealth

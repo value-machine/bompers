@@ -1,4 +1,4 @@
-import type { Graphics } from "pixi.js";
+import { Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { helmetPoint } from "@/features/combat/api/combatApi";
@@ -7,7 +7,7 @@ import {
   type BlobPoseOverlay,
   type PlayerState,
 } from "@/features/player/api/playerApi";
-import type { BlobFireMoment, FireState } from "@/features/fire/types/fire.types";
+import type { BlobFireMoment, BlobFireState } from "@/features/blob-fire/types/blobFire.types";
 
 /**
  * The burning-blob look (owner fire-burn D1, the options page's variant 2 with variant 1's
@@ -26,12 +26,12 @@ const hopPhase = (nowMs: number, slot: number): number =>
 
 /** Pose overlay per burning blob (by player id): the drawn hop and pinprick pupils. */
 export function burningBlobPoses(
-  fire: FireState,
+  blobFire: BlobFireState,
   frame: { players: readonly PlayerState[]; nowMs: number }
 ): Map<string, BlobPoseOverlay> {
   const poses = new Map<string, BlobPoseOverlay>();
   for (const player of frame.players) {
-    if (!fire.blobs.has(player.id)) continue;
+    if (!blobFire.blobs.has(player.id)) continue;
     const up = hopPhase(frame.nowMs, player.slot);
     // Squashed at the touch-down, stretched a touch at the top; the area stays in the juice band.
     const squash = HOP.squash * (1 - 2 * up);
@@ -47,7 +47,7 @@ export function burningBlobPoses(
 }
 
 export interface BlobFireFrame {
-  fire: FireState;
+  blobFire: BlobFireState;
   players: readonly PlayerState[];
   nowMs: number;
   /** Sim time, seconds (moment ages). */
@@ -112,12 +112,22 @@ function drawMoment(g: Graphics, moment: BlobFireMoment, k: number): void {
   }
 }
 
+/** The burning blobs' layer: add above the players, over the torch sprays. */
+export interface BlobFireView {
+  layer: Graphics;
+}
+
+export const createBlobFireView = (): BlobFireView => ({
+  layer: new Graphics({ label: "burning-blobs" }),
+});
+
 /** Draws the burning blobs' flames and sweat, and the recent burning-blob moments. */
-export function drawBlobFire(g: Graphics, frame: BlobFireFrame): void {
+export function syncBlobFireView(view: BlobFireView, frame: BlobFireFrame): void {
+  const g = view.layer.clear();
   for (const player of frame.players) {
-    if (frame.fire.blobs.has(player.id)) drawBurning(g, player, frame.nowMs);
+    if (frame.blobFire.blobs.has(player.id)) drawBurning(g, player, frame.nowMs);
   }
-  for (const moment of frame.fire.blobMoments) {
+  for (const moment of frame.blobFire.blobMoments) {
     const k = (frame.timeSeconds - moment.atSeconds) / frame.momentSeconds;
     if (k >= 0 && k <= 1) drawMoment(g, moment, k);
   }
