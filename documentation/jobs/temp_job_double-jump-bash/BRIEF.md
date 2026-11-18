@@ -15,6 +15,7 @@ An armed player in the air (no ground within the landing buffer, no wall contact
 - Owner pick A (D1): the exact same dive (16-way stick aim, neutral = straight up, shared charge, cooldown, reset pickup), including the dash-hold roll, which then lasts while jump is held (D5).
 - The controller reports an unused air jump press as a generic counter on `PlayerState`; the dive reads it (no dive branch in the controller, dive-headbutt D2).
 - **Roll carry (owner "definite go", 2026-11-18, via orchestrator):** a jump or a dive out of a roll keeps the roll's speed. Today a jump out of a roll loses it to air steering within ~0.3 s and a rolling blob cannot dive at all, so a roll never reaches further than a jump plus a late dive (~730 units, ability-levels lap). Rules D10–D14.
+- **Roll bugs (owner reports on the ability levels, added via orchestrator):** the roll sometimes doesn't spin (D15) and bounces too much (D16). Fixed in `roll.ts` and the `roll` tunables, not the controller.
 - README decision rows in `dive` and `player`; GAME_JUICE ledger row if the start moment differs from the fire-dive launch.
 
 ## Out of scope
