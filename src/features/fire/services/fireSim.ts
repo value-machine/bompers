@@ -25,7 +25,7 @@ import type { FireState, GroundFire } from "@/features/fire/types/fire.types";
  * the freeze ray's; ice-element D4). A lit sample lights each touching fuel sample at its own time plus the step
  * length over `fire.spreadSpeed`, so the front runs outward at the same speed every way through
  * solid fuel and never crosses air (D9: a diagonal step needs a solid sample beside it). Fuel = a
- * `burns` material; fuel with a `douses` sample among its 8 neighbours never catches, and a
+ * material whose fire reaction is `burns`; fuel with a `douses` sample among its 8 neighbours never catches, and a
  * frozen sample never does (the fire stops at it; freezing a burning sample puts it out).
  * Breakable non-fuel next to fire (earth) is scorched and stops it; stone just blocks. A lit
  * sample burns `fire.burnSeconds`, then is removed with the next batch every
@@ -61,15 +61,16 @@ export function createFireState(terrain: TerrainGrid): FireState {
 // ── Fuel ─────────────────────────────────────────────────────────────────────
 
 /**
- * Fuel that can catch: a `burns` sample that is not frozen and has no `douses` sample among its
+ * Fuel that can catch: a sample whose fire reaction is `burns` that is not frozen and has no `douses` sample among its
  * 8 neighbours (D5).
  */
 export function canBurn(grid: TerrainGrid, index: number): boolean {
   const cx = index % grid.widthCells;
   const cy = Math.floor(index / grid.widthCells);
-  if (!getCellInfo(grid, cx, cy)?.burns || isFrozenSample(grid, index)) return false;
+  if (getCellInfo(grid, cx, cy)?.reactions.fire !== "burns") return false;
+  if (isFrozenSample(grid, index)) return false;
   return SAMPLE_NEIGHBOURS.every(
-    ([dx, dy]) => getCellInfo(grid, cx + dx, cy + dy)?.douses !== true
+    ([dx, dy]) => getCellInfo(grid, cx + dx, cy + dy)?.reactions.fire !== "douses"
   );
 }
 
@@ -114,7 +115,7 @@ function spread(ground: GroundFire, grid: TerrainGrid, at: { now: number; pace: 
     },
     onBlocked: (index) => {
       const info = getCellInfo(grid, index % grid.widthCells, Math.floor(index / grid.widthCells));
-      if (info && !info.burns && info.toughness !== null) markScorched(ground, index);
+      if (info?.reactions.fire === "scorches") markScorched(ground, index);
     },
   });
 }

@@ -173,7 +173,7 @@ function douseBurning(blobFire: BlobFireState, args: StepBurningBlobsArgs): void
     const iced = someSampleNear(
       terrain,
       near,
-      (index) => terrain.slots[terrain.cells[index] ?? EMPTY_CELL]?.douses === true
+      (index) => terrain.slots[terrain.cells[index] ?? EMPTY_CELL]?.reactions.fire === "douses"
     );
     if (iced) {
       douseBlob(blobFire, player, { now, tunables });

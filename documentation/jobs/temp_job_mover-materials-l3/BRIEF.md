@@ -1,4 +1,4 @@
-# Brief — Mover materials, lap 3: reactions as data (draft, with the orchestrator)
+# Brief — Mover materials, lap 3: reactions as data
 
 Task: what happens when an element meets a material, and when two elements meet, comes from tables (owner pick, route D1: `temp_job_mover-materials/DECISIONS.md`) · Lap: temp_job_mover-materials-l3 · Harness: v0.45.0
 
@@ -46,8 +46,20 @@ M by reach (eight areas, each a small change); no new behaviour.
 
 | id | topic | status | choice / options |
 |----|-------|--------|------------------|
-| D1 | Shape of the material × element table | proposed (agent) | A row per material in the catalog with one reaction word per element, as above. Not a separate matrix file: the catalog is where a material is defined, and the kit's `catalog.json` is generated from it |
-| D2 | Element IDs | proposed (agent) | `fire` and `cold`. `cold` is the element; `ice` stays the material and the frozen look. The beam clash's `ice` becomes `cold` |
-| D3 | Pair table | proposed (agent) | One shared table keyed by element ID, one reaction today: fire × cold `cancel`. The beam clash reads it; its "steam" stays the look of a cancel between beams. The ground and blob rules (fire stops at frost, the torch thaws, a chilled burning blob goes out) stay coded in their features and are named in the table's comment as the meanings of `cancel` there |
-| D4 | The kit's `catalog.json` | open — for the orchestrator | It exports `burns` and `douses` per material today. Recommended: replace them with `reactions` (the file is generated; the kit's own preview does not read these fields; compatibility was waived for format 2). Alternative: keep exporting the two old fields beside `reactions` |
-| D5 | How much the owner must see | open — for the orchestrator | Nothing changes in play, so there is no owner test beyond "fire, frost and the beam clash work as before". Recommended: merge on green like the blob-fire split |
+| D1 | Shape of the material × element table | closed (agent; accepted by the orchestrator 2026-11-18) | A row per material in the catalog with one reaction word per element, as above. Not a separate matrix file: the catalog is where a material is defined, and the kit's `catalog.json` is generated from it |
+| D2 | Element IDs | closed (agent; accepted by the orchestrator 2026-11-18) | `fire` and `cold`. `cold` is the element; `ice` stays the material and the frozen look. The beam clash's `ice` becomes `cold` |
+| D3 | Pair table | closed (agent; accepted by the orchestrator 2026-11-18) | One shared table keyed by element ID, one reaction today: fire × cold `cancel`. The beam clash reads it; its "steam" stays the look of a cancel between beams. The ground and blob rules (fire stops at frost, the torch thaws, a chilled burning blob goes out) stay coded in their features and are named in the table's comment as the meanings of `cancel` there |
+| D4 | The kit's `catalog.json` | closed (orchestrator, 2026-11-18) | `reactions` replaces `burns` and `douses` in the generated file (the kit's preview does not read them; compatibility was waived for format 2) |
+| D5 | How much the owner must see | closed (orchestrator, 2026-11-18) | Nothing changes in play; merged on green like the blob-fire split |
+
+## Plan
+
+Conflict & compliance: architecture (types shared by features live in `src/shared/types`; no feature imports added); code-style F1/F3 (`ElementId`, `elementPairs`, `MaterialReactions` name roles; `BeamElement` and the clash's own table are removed, no alias left), F4 (READMEs updated); the ban on speculative extraction is respected: the tables hold only reactions the game has; acid, metal and tar exist as test fixtures only.
+
+1. `shared`: `element.types.ts` (element IDs, the two reaction vocabularies, the pair table type) and `elementPairs.ts` (the table and `elementPairReaction`); the beam clash reads it and takes the table as an optional argument.
+2. `content-catalog`: `reactions` on every material; `burns` / `douses` removed.
+3. `arena` slot carries `reactions`; `fire`, `ice`, `blob-fire`, `level-file` read the reaction.
+4. `combat`: a beam's element is an `ElementId` (`cold`).
+5. Kit sync (`catalog.json`), tests (fixtures renamed; a new pair clashes with only a table row; a new material burns, blocks or freezes with no sim change), READMEs.
+
+Gate: type-check, lint, arch:check, validate:structure, validate:feature-size, level-kit:check, full test run.

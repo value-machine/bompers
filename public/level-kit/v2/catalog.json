@@ -18,8 +18,10 @@
       "friction": 1,
       "bounce": 0,
       "surface": "plain",
-      "burns": false,
-      "douses": false,
+      "reactions": {
+        "fire": "blocks",
+        "cold": "freezes"
+      },
       "defaultColor": "plum",
       "effect": "none",
       "sound": "thud"
@@ -31,8 +33,10 @@
       "friction": 1,
       "bounce": 0,
       "surface": "plain",
-      "burns": false,
-      "douses": false,
+      "reactions": {
+        "fire": "scorches",
+        "cold": "freezes"
+      },
       "defaultColor": "clay",
       "effect": "dust-burst",
       "sound": "crumble"
@@ -44,8 +48,10 @@
       "friction": 1,
       "bounce": 0,
       "surface": "plain",
-      "burns": true,
-      "douses": false,
+      "reactions": {
+        "fire": "burns",
+        "cold": "freezes"
+      },
       "defaultColor": "cardboard",
       "effect": "dust-burst",
       "sound": "thwap"
@@ -57,8 +63,10 @@
       "friction": 0.12,
       "bounce": 0,
       "surface": "ice",
-      "burns": false,
-      "douses": true,
+      "reactions": {
+        "fire": "douses",
+        "cold": "blocks"
+      },
       "defaultColor": "frost",
       "effect": "none",
       "sound": "clink"

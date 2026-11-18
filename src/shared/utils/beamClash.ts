@@ -1,6 +1,8 @@
-import type { BeamClash, BeamElement, BeamReaction } from "@/shared/types/beamClash.types";
+import type { BeamClash } from "@/shared/types/beamClash.types";
+import type { ElementPairs } from "@/shared/types/element.types";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { PosedField } from "@/shared/types/sampleFront.types";
+import { ELEMENT_PAIRS, elementPairReaction } from "@/shared/utils/elementPairs";
 import { castRayFan, rayDirections, type RayFanShape } from "@/shared/utils/rayFan";
 
 /**
@@ -8,25 +10,18 @@ import { castRayFan, rayDirections, type RayFanShape } from "@/shared/utils/rayF
  * "Steam wall"): two beams whose elements react end each other where they touch, and nothing of
  * either gets past. Both reach out from their emitter at the same pace, so they end at the same
  * distance from their own emitter; a beam that would get there later ends on the other's side
- * and the other keeps its length. Which elements react is the pair table below (D2): fire and
- * ice are the first pair, a pair without a row passes through, as two beams of one element do.
+ * and the other keeps its length. Which elements react is the element pair table
+ * (`elementPairs.ts`, beam-clash D2, mover-materials D1): fire and cold are the first pair, a
+ * pair without a row passes through, as two beams of one element do.
  */
-const REACTIONS: Readonly<Record<BeamElement, Partial<Record<BeamElement, BeamReaction>>>> = {
-  fire: { ice: "steam" },
-  ice: { fire: "steam" },
-};
-
-/** The reaction of two elements' beams, or null when they pass through each other. */
-export const beamReaction = (a: BeamElement, b: BeamElement): BeamReaction | null =>
-  REACTIONS[a][b] ?? null;
-
 /** One held beam this step: its ray fan and its element. */
 export interface ClashBeam {
   origin: Vec2;
   /** Aim direction (any length). */
   aim: Vec2;
   shape: RayFanShape;
-  element: BeamElement;
+  /** The element ID the pair table knows it by (`ElementId` in the game). */
+  element: string;
 }
 
 export interface BeamClashes {
@@ -38,6 +33,8 @@ export interface BeamClashes {
 export interface BeamClashLook {
   /** How close two beams must come to count as touching, world units. */
   thickness: number;
+  /** Which element pairs react; the game's element pair table when left out. */
+  pairs?: ElementPairs;
 }
 
 /** A beam's fan, cast once: unit aim, ray directions and how far each ray is free of terrain. */
@@ -164,6 +161,7 @@ export function resolveBeamClashes(
   beams: readonly ClashBeam[],
   look: BeamClashLook
 ): BeamClashes {
+  const pairs = look.pairs ?? (ELEMENT_PAIRS as ElementPairs);
   const reach = beams.map((beam) => beam.shape.length);
   const clashes: BeamClash[] = [];
   if (beams.length < 2) return { reach, clashes };
@@ -175,7 +173,7 @@ export function resolveBeamClashes(
       const a = fans[i];
       const b = fans[j];
       if (!other || !a || !b) continue;
-      const reaction = beamReaction(beam.element, other.element);
+      const reaction = elementPairReaction(beam.element, other.element, pairs);
       const meeting = reaction && meetingOf(a, b, search);
       if (!reaction || !meeting) continue;
       reach[i] = Math.min(reach[i] ?? 0, meeting.reach);
