@@ -64,7 +64,7 @@ Root attributes:
 |---|---|---|---|
 | `bounds` | `<rect>` | exactly 1 | The play area, inside the viewBox. Falling below its **bottom** edge eliminates a player. The **side and top edges are open**: the kill lines there lie far beyond the bounds, so players can be launched out and fly back. Suggested `fill="none" stroke="#d24b3a"`. |
 | `terrain` | rect, polygon, circle | ≥ 1 | Ground. `data-material` = behaviour (default `stone`), `data-color` = looks (optional, default = the material's colour). Optional `data-effect`, `data-sound`, `data-label`, `id`. Later shapes paint over earlier ones where they overlap. |
-| `spawn` | `<circle>` | ≥ 4 (min 2) | Player start (the centre counts, `r="14"`). Inside bounds, never inside terrain, centre ~`24` above a solid surface, not over a pit. `fill="#3f8f5f"`. |
+| `spawn` | `<circle>` | ≥ 4 | Player start (the centre counts, `r="14"`). Inside bounds, never inside terrain, centre ~`24` above a solid surface, not over a pit. `fill="#3f8f5f"`. |
 | `drop` | `<circle>` | ≥ 1 | Weapon crates fall from here (`r="12"`); place high up. The game picks each crate's weapon. `fill="#c94f7c"`. |
 | `collectible` | `<circle>` | ≥ 0 | A pickup point (`r="10"`), `data-item` = one collectible item (§ 4). `point-orb`: point orbs fall from the sky onto it. `dive-reset`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns 2.5 s after use) — hang them in the air between platforms and off edges for headbutt chains. `fill="#e0b62c"`. |
 

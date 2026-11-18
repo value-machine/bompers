@@ -1,6 +1,6 @@
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/common/Button";
-import type { ClipboardCopyStatus } from "@/features/level-kit/hooks/useClipboardCopy";
+import type { ClipboardCopyStatus } from "@/shared/hooks/useClipboardCopy";
 import { useLevelPromptCopy } from "@/features/level-kit/hooks/useLevelPromptCopy";
 
 const COPY_LABEL: Record<ClipboardCopyStatus, string> = {

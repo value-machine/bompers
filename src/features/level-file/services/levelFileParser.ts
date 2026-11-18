@@ -19,6 +19,7 @@ import {
 import {
   readPoint,
   readRect,
+  fallbackSpawns,
   readShape,
   rectContainsPoint,
   rectContainsRect,
@@ -49,9 +50,7 @@ export type LevelImportResult =
   | { ok: true; level: LevelDefinition; warnings: LevelIssue[] }
   | { ok: false; errors: LevelIssue[]; warnings: LevelIssue[] };
 
-/** Fewer valid spawns than this rejects the file (E5). */
-export const MIN_SPAWNS = 2;
-/** Fewer than this warns (W6): 4-player rounds would share spawns. */
+/** Fewer than this warns (W6): 4-player rounds would share spawns. None at all: W19 / E5. */
 export const RECOMMENDED_SPAWNS = 4;
 
 const ofRole = <R extends RoleElement["role"]>(items: readonly RoleElement[], ...roles: R[]) =>
@@ -73,39 +72,55 @@ function readTerrain(
   return { pieces, els };
 }
 
-/** E4: exactly one bounds rect, inside the world. */
+/** The part of `rect` inside `world`; null when they don't overlap. */
+function clipRect(world: Rect, rect: Rect): Rect | null {
+  const x = Math.max(world.x, rect.x);
+  const y = Math.max(world.y, rect.y);
+  const w = Math.min(world.x + world.w, rect.x + rect.w) - x;
+  const h = Math.min(world.y + world.h, rect.y + rect.h) - y;
+  return w > 0 && h > 0 ? { x, y, w, h } : null;
+}
+
+/**
+ * One bounds rect inside the world. W18 (was the error E4, forgiving-import): none or none
+ * readable → the whole world; several → the first readable; sticking out → clipped to the world.
+ */
 function readBounds(
   items: readonly RoleElement[],
   world: { w: number; h: number },
   log: LevelIssueLog
-): Rect | null {
+): Rect {
+  const worldRect: Rect = { x: 0, y: 0, ...world };
   const candidates = ofRole(items, "bounds");
-  const rects = candidates.map((item) => readRect(item, log));
-  if (candidates.length !== 1) {
-    addError(
-      log,
-      "E4",
-      candidates.length === 0
-        ? 'No bounds: add exactly one <rect data-role="bounds">.'
-        : `Found ${candidates.length} bounds rects; exactly one is allowed.`
-    );
-    return null;
+  const readable = candidates.flatMap((item) => {
+    const rect = readRect(item, log);
+    return rect ? [{ item, rect }] : [];
+  });
+  const first = readable[0];
+  const worldText = `the world (0 0 ${world.w} ${world.h})`;
+  if (!first) {
+    addWarning(log, "W18", `No usable bounds rect; using ${worldText}.`);
+    return worldRect;
   }
-  const rect = rects[0];
-  if (!rect) return null;
-  if (!rectContainsRect({ x: 0, y: 0, ...world }, rect)) {
-    addError(
+  if (candidates.length > 1) {
+    addWarning(
       log,
-      "E4",
-      `${candidates[0]!.name} lies outside the viewBox (0 0 ${world.w} ${world.h}).`
+      "W18",
+      `Found ${candidates.length} bounds rects; using ${first.item.name}, the others are ignored.`
     );
-    return null;
   }
-  return rect;
+  if (rectContainsRect(worldRect, first.rect)) return first.rect;
+  const clipped = clipRect(worldRect, first.rect);
+  addWarning(
+    log,
+    "W18",
+    `${first.item.name} lies outside the viewBox; using ${clipped ? "its part inside" : worldText}.`
+  );
+  return clipped ?? worldRect;
 }
 
 interface PointContext {
-  bounds: Rect | null;
+  bounds: Rect;
   terrain: readonly TerrainPiece[];
   log: LevelIssueLog;
 }
@@ -115,7 +130,6 @@ function placedPoint(item: RoleElement, ctx: PointContext): Vec2 | null {
   const at = readPoint(item, ctx.log);
   if (!at) return null;
   checkPointBehavior(item, ctx.log);
-  if (!ctx.bounds) return at;
   if (!rectContainsPoint(ctx.bounds, at)) {
     addWarning(ctx.log, "W5", `${item.name} lies outside bounds; ignored.`);
     return null;
@@ -127,31 +141,54 @@ function placedPoint(item: RoleElement, ctx: PointContext): Vec2 | null {
   return at;
 }
 
-function readSpawns(items: readonly RoleElement[], ctx: PointContext): Vec2[] {
-  const spawns = ofRole(items, "spawn").flatMap((item) => placedPoint(item, ctx) ?? []);
-  if (spawns.length < MIN_SPAWNS) {
+/** W19: no valid spawn → spawns above the terrain; E5 only when there is no room for one. */
+function placeFallbackSpawns(ctx: PointContext): Vec2[] {
+  const spawns = fallbackSpawns(
+    ctx.terrain.map((piece) => piece.shape),
+    ctx.bounds
+  );
+  if (spawns.length === 0) {
     addError(
       ctx.log,
       "E5",
-      `Only ${spawns.length} valid spawn point(s); at least ${MIN_SPAWNS} are needed.`
+      'No valid spawn point, and no room above the terrain to place one: add <circle data-role="spawn"> points.'
     );
-  } else if (spawns.length < RECOMMENDED_SPAWNS) {
+    return spawns;
+  }
+  const where = spawns.map((p) => `(${Math.round(p.x)}, ${Math.round(p.y)})`).join(", ");
+  addWarning(
+    ctx.log,
+    "W19",
+    `No valid spawn point; placed ${spawns.length} above the widest terrain at ${where}.`
+  );
+  return spawns;
+}
+
+function readSpawns(items: readonly RoleElement[], ctx: PointContext): Vec2[] {
+  const spawns = ofRole(items, "spawn").flatMap((item) => placedPoint(item, ctx) ?? []);
+  if (spawns.length === 0) return ctx.terrain.length > 0 ? placeFallbackSpawns(ctx) : spawns;
+  if (spawns.length < RECOMMENDED_SPAWNS) {
     addWarning(
       ctx.log,
       "W6",
-      `Only ${spawns.length} spawn points; 4-player rounds will share spawns.`
+      `Only ${spawns.length} spawn point(s); ${RECOMMENDED_SPAWNS}-player rounds will share spawns.`
     );
   }
   return spawns;
 }
 
+/** W20 (was the error E7, forgiving-import): no drop point means no weapon crates. */
 function readDrops(items: readonly RoleElement[], ctx: PointContext): LevelDrop[] {
   const drops = ofRole(items, "drop").flatMap((item) => {
     const at = placedPoint(item, ctx);
     return at ? [{ at }] : [];
   });
   if (drops.length === 0) {
-    addError(ctx.log, "E7", 'No valid drop point: add at least one <circle data-role="drop">.');
+    addWarning(
+      ctx.log,
+      "W20",
+      'No valid drop point; no weapon crates fall on this level (add <circle data-role="drop"> for crates).'
+    );
   }
   return drops;
 }
@@ -198,7 +235,7 @@ function readMovers(
   return movers.map(({ mover }) => mover);
 }
 
-function readContent(args: ContentArgs): LevelContent | null {
+function readContent(args: ContentArgs): LevelContent {
   const { root, world, log } = args;
   const items = collectRoleElements(root, log);
   const terrainRead = readTerrain(items, log);
@@ -211,7 +248,6 @@ function readContent(args: ContentArgs): LevelContent | null {
   const spawns = readSpawns(items, ctx);
   const drops = readDrops(items, ctx);
   const collectibles = readCollectibles(items, ctx);
-  if (!bounds) return null;
   const movers = readMovers(args, { items, terrain: terrainRead, spawns, bounds });
   return { terrain, spawns, drops, collectibles, bounds, ...(movers.length > 0 && { movers }) };
 }
@@ -238,7 +274,7 @@ export function parseLevelFile(
   const meta = readLevelMeta(root, log);
   const settings = readLevelSettings(root, log);
   const content = readContent({ root, world: worldSize, cellSize: settings.cellSize, log });
-  if (!content || log.errors.length > 0) return rejected(log);
+  if (log.errors.length > 0) return rejected(log);
   const formatVersion = options.toVersion ?? LEVEL_FORMAT_VERSION;
   const normalized = normalizeLevelDefinition({
     formatVersion,
