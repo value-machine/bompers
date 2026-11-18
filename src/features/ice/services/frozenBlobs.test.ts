@@ -230,3 +230,50 @@ describe("ice block look", () => {
     expect(isInJuiceWindow("squash", CRACK_HOP_SECONDS)).toBe(true);
   });
 });
+
+describe("freeze ray on moving parts (mover-materials lap 1)", () => {
+  /** A cardboard part (piece 1) between the holder and a victim; raised 120 it is out of the way. */
+  const partScene = () => {
+    const terrain = buildTerrainFromLevel({
+      ...level,
+      terrain: [
+        ...level.terrain,
+        { shape: { type: "rect", x: 228, y: 100, w: 8, h: 100 }, materialId: "cardboard" },
+      ],
+      movers: [
+        {
+          motion: { kind: "slide", offset: { x: 0, y: -120 }, periodS: 4, phase: 0 },
+          pivot: { x: 232, y: 150 },
+          terrainIndices: [1],
+        },
+      ],
+    });
+    const ice = createIceState(terrain);
+    const holder = createPlayer(0, { x: 200, y: FLOOR }, TUNABLES);
+    holder.aimX = 1;
+    holder.aimY = 0;
+    const victim = createPlayer(1, { x: 260, y: FLOOR }, TUNABLES);
+    const args = { terrain, players: [holder, victim], holder, tunables: TUNABLES };
+    const spray = () => sprayFreezeRay(ice, { ...args, now: 0, dt });
+    return { terrain, part: terrain.movers[0]!, ice, victim, spray };
+  };
+
+  it("should end the ray on the part and not chill or push the blob behind it when a part is in the beam", () => {
+    const { terrain, part, ice, victim, spray } = partScene();
+    spray();
+    for (const end of ice.rays[0]!.ends) expect(end.x).toBeLessThanOrEqual(228 + 4);
+    expect(victim.vx).toBe(0);
+    expect(ice.blobs.has(victim.id)).toBe(false);
+    // Parts take no cold yet: nothing frozen on the ground or on the part.
+    expect(terrain.frozen.some((flag) => flag !== 0)).toBe(false);
+    expect(part.field.frozen.some((flag) => flag !== 0)).toBe(false);
+  });
+
+  it("should reach the blob when the part has moved out of the beam", () => {
+    const { part, ice, victim, spray } = partScene();
+    part.pose = { dx: 0, dy: -120, angle: 0 };
+    spray();
+    expect(victim.vx).toBeGreaterThan(0);
+    expect(ice.blobs.has(victim.id)).toBe(true);
+  });
+});

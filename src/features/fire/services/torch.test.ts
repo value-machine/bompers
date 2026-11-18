@@ -7,6 +7,7 @@ import {
 } from "@/features/arena/api/arenaApi";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelApi";
 import { createPlayer } from "@/features/player/api/playerApi";
+import { isBurning } from "@/features/fire/services/burningBlobs";
 import { createFireState } from "@/features/fire/services/fireSim";
 import { sprayTorch } from "@/features/fire/services/torch";
 
@@ -159,5 +160,46 @@ describe("torch on frozen terrain (ice-element D6)", () => {
     }
     expect(isFrozenSample(terrain, touched)).toBe(false);
     expect(fire.igniteAt[touched]).toBe(Infinity);
+  });
+});
+
+describe("torch on moving parts (mover-materials lap 1)", () => {
+  /** A cardboard part (piece 1) between the holder and a rival; raised 120 it is out of the way. */
+  const scene = () => {
+    const terrain = buildTerrainFromLevel({
+      ...level([rect([240, 100, 8, 100], "cardboard")]),
+      movers: [
+        {
+          motion: { kind: "slide", offset: { x: 0, y: -120 }, periodS: 4, phase: 0 },
+          pivot: { x: 244, y: 150 },
+          terrainIndices: [1],
+        },
+      ],
+    });
+    const fire = createFireState(terrain);
+    const holder = blobAt(0, 200);
+    const rival = blobAt(1, 270);
+    const args = { terrain, players: [holder, rival], holder, tunables: DEFAULT_GAME_TUNABLES };
+    const spray = () => sprayTorch(fire, { ...args, now: 0, dt: 1 / 120 });
+    return { part: terrain.movers[0]!, fire, rival, spray };
+  };
+
+  it("should end every ray on the part and leave the blob behind it alone when a part is in the cone", () => {
+    const { part, fire, rival, spray } = scene();
+    spray();
+    for (const end of fire.sprays[0]!.ends) expect(end.x).toBeLessThanOrEqual(240 + CELL);
+    expect(rival.vx).toBe(0);
+    expect(isBurning(fire, rival)).toBe(false);
+    // Parts take no fire yet: nothing lit on the static grid, nothing changed on the part.
+    expect(fire.igniteAt.every((time) => time === Infinity)).toBe(true);
+    expect(part.field.frozen.some((flag) => flag !== 0)).toBe(false);
+  });
+
+  it("should reach the blob when the part has moved out of the cone", () => {
+    const { part, fire, rival, spray } = scene();
+    part.pose = { dx: 0, dy: -120, angle: 0 };
+    spray();
+    expect(rival.vx).toBeGreaterThan(0);
+    expect(isBurning(fire, rival)).toBe(true);
   });
 });
