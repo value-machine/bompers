@@ -433,11 +433,11 @@ export interface GameTunables {
     };
     /**
      * Foot motion (DESIGN_LANGUAGE § 6): run-cycle swing and toe tilt, air tilt from velocity,
-     * landing / jump splay on a damped spring, and feet turned to the wall while wall-sliding.
-     * Lengths in body radii R, angles in radians.
+     * landing / jump splay on a damped spring, and one sprung angle that turns the soles to the
+     * slope or wall under the blob. Lengths in body radii R, angles in radians.
      */
     feet: {
-      /** Spring stiffness (1/s²) and damping (1/s) for the tilt lag and the splay. */
+      /** Spring stiffness (1/s²) and damping (1/s) for the splay. */
       stiffness: number;
       damping: number;
       /** Run cycle: distance per step (R), lift and forward swing of the stepping foot (R), toe tilt. */
@@ -454,13 +454,17 @@ export interface GameTunables {
       landKick: number;
       jumpKick: number;
       maxSplay: number;
-      /** Wall pose: feet centre out from the body centre (R), heights of the low and high foot (R). */
-      wallX: number;
-      wallLow: number;
-      wallHigh: number;
-      /** Seconds to turn to / from the wall, and to keep facing it after a wall-jump. */
-      wallBlendSeconds: number;
-      wallJumpHoldSeconds: number;
+      /**
+       * Spring of the one angle the soles face (slope, wall or air tilt): how fast the feet turn
+       * when the surface changes. Stiffness 1/s², damping 1/s.
+       */
+      surface: { stiffness: number; damping: number };
+      /**
+       * Seconds the drawn blob keeps a ground or wall contact after the sim stops reporting it, so
+       * a contact that flips every step (a slope as steep as a wall) doesn't flicker the feet, the
+       * lean or the shadow. A jump lets go at once.
+       */
+      contactHoldSeconds: number;
     };
     /** Render-only freeze after a hard hit (the sim keeps running); 0 turns it off. */
     hitStop: { seconds: number };

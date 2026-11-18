@@ -532,7 +532,7 @@ function launchesOff(
   return turn.speed * turn.speed * curvature > pressing;
 }
 
-type GroundStep = "moved" | "air" | "wall" | "lip";
+type GroundStep = "moved" | "air" | "wall" | "lip" | "rest";
 
 /** Walks against a wall: the farthest fraction of `dx` the body still rests at (bisection). */
 function walkToWall(
@@ -625,7 +625,13 @@ function pullOverLip(player: PlayerState, speed: number, args: StepPlayersArgs):
   return true;
 }
 
-/** Walks the ground; steeper than the lip angle, pulls over a lip while moving, else slides off. */
+/** Speed along ground steeper than the lip angle below which the body rests on it: units / s. */
+const STEEP_REST_SPEED = 1;
+
+/**
+ * Walks the ground. Steeper than the lip angle: pulls over a lip while climbing, rests while
+ * standing still (slope-rest D1), else slides off.
+ */
 function groundOutcome(
   player: PlayerState,
   ctx: { frame: GroundFrame; speed: number },
@@ -637,6 +643,8 @@ function groundOutcome(
     const dx = speed * frame.tangent.x * args.dt;
     return walkGround(player, { dx, speed: Math.abs(speed) }, args);
   }
+  // Steep and still: stays grounded and stopped, so pushing into it never relands.
+  if (Math.abs(speed) < STEEP_REST_SPEED) return "rest";
   // Steep and climbing (velocity points up): a lip pull; steep otherwise: slide off.
   const climbing = speed * frame.tangent.y < 0;
   if (!climbing || !lipIsFree(player, player.facing, args)) return "air";
@@ -657,7 +665,8 @@ function moveOnGround(player: PlayerState, args: StepPlayersArgs): void {
   const next = groundFrame(player, args.terrain);
   // Along the ground where the body now is (the lip pull keeps its speed toward the facing side).
   const lipSpeed = player.facing * Math.abs(speed);
-  const kept = outcome === "wall" ? 0 : outcome === "lip" ? lipSpeed : speed;
+  const stopped = outcome === "wall" || outcome === "rest";
+  const kept = stopped ? 0 : outcome === "lip" ? lipSpeed : speed;
   followGround(player, next, kept);
   // A rolling blob that runs into a wall bounces back off it.
   bounceRoll(player, args.tunables);

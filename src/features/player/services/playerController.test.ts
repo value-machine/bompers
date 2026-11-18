@@ -532,3 +532,79 @@ describe("playerController — slope walking", () => {
     expect(sim.player.groundAngle).toBeCloseTo(Math.PI / 6, 1);
   });
 });
+
+// Ground at or above the lip angle (slope-rest D1). The same quarter arc as the render suite in
+// blobPose.test.ts (second copy): a floor that curves up (radius 120, 4-unit samples) into a wall.
+const ARC_R = 120;
+const arcWorld: LevelDefinition = {
+  ...level,
+  settings: { cellSize: 4, gravity: 1 },
+  terrain: [
+    {
+      shape: {
+        type: "polygon",
+        points: [
+          { x: 0, y: 320 },
+          ...Array.from({ length: 25 }, (_, i) => {
+            const a = (i / 24) * (Math.PI / 2);
+            return { x: 500 + ARC_R * Math.sin(a), y: 320 - ARC_R * (1 - Math.cos(a)) };
+          }),
+          { x: 620, y: 0 },
+          { x: 800, y: 0 },
+          { x: 800, y: 400 },
+          { x: 0, y: 400 },
+        ],
+      },
+      materialId: "stone",
+    },
+  ],
+};
+
+/** A blob walked up the arc holding right until it has come to rest at the top. */
+const atArcTop = (): Sim => {
+  const sim = createSim({ x: 300, y: 280 }, DEFAULT_GAME_TUNABLES, arcWorld);
+  sim.step({}, 60);
+  sim.step({ moveX: 1 }, 360);
+  return sim;
+};
+
+describe("playerController — resting against ground steeper than the lip angle", () => {
+  it("should keep one ground contact and count no landings when pushing into the top of the arc", () => {
+    const sim = atArcTop();
+    const { landCount, x, y } = sim.player;
+    for (let i = 0; i < 180; i += 1) {
+      sim.step({ moveX: 1 });
+      expect(sim.player.grounded).toBe(true);
+      expect(sim.player.wallDir).toBe(0);
+    }
+    expect(sim.player.landCount).toBe(landCount);
+    expect(Math.abs(sim.player.groundAngle)).toBeGreaterThanOrEqual(P.slope.lipAngle);
+    expect(sim.player).toMatchObject({ x, y, vx: 0, vy: 0 });
+  });
+
+  it("should stay put without new landings when the push is let go at the top of the arc", () => {
+    const sim = atArcTop();
+    const { landCount, x, y } = sim.player;
+    for (let i = 0; i < 120; i += 1) {
+      sim.step();
+      expect(sim.player.grounded).toBe(true);
+    }
+    expect(sim.player).toMatchObject({ landCount, x, y });
+  });
+
+  it("should jump off the ground when jump is pressed at the top of the arc", () => {
+    const sim = atArcTop();
+    const { jumpCount, wallJumpCount } = sim.player;
+    sim.step({ moveX: 1, jump: true });
+    expect(sim.player).toMatchObject({ jumpCount: jumpCount + 1, wallJumpCount });
+    expect(sim.player.vy).toBeLessThan(0);
+    expect(sim.player.vx).toBe(0);
+  });
+
+  it("should leave the steep ground when walking away from it", () => {
+    const sim = atArcTop();
+    const { x } = sim.player;
+    sim.step({ moveX: -1 }, 60);
+    expect(sim.player.x).toBeLessThan(x - 20);
+  });
+});

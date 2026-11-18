@@ -16,8 +16,13 @@ import {
   stepFeetMotion,
   createGroundTilt,
   stepGroundTilt,
+  createContactHold,
+  stepContactHold,
 } from "@/features/player/services/blobPose";
-import { createPlayer } from "@/features/player/services/playerController";
+import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
+import { buildTerrainFromLevel } from "@/features/arena/api/arenaApi";
+import type { LevelDefinition } from "@/features/level/api/levelApi";
+import { createPlayer, stepPlayers } from "@/features/player/services/playerController";
 import type { PlayerState } from "@/features/player/types/player.types";
 
 const squash = DEFAULT_GAME_TUNABLES.player.squash;
@@ -180,14 +185,29 @@ const feetPlayer = (patch: Partial<PlayerState> = {}): PlayerState => ({
 });
 
 /** Steps the motion at 60 fps for `ms` more and returns the last pose. */
+const FOOT_CENTRE = 0.2 * R;
+/** One frame's input at `nowMs`, on a root that carries `rootLean` for the slope. */
+const feetFrame = (p: PlayerState, nowMs: number, rootLean = 0) => ({
+  player: p,
+  feet,
+  r: R,
+  bodySx: 1,
+  footCentre: FOOT_CENTRE,
+  rootLean,
+  nowMs,
+});
+
 function run(p: PlayerState, ms: number, motion = createFeetMotion(p)) {
   const start = motion.lastMs === null ? 0 : motion.lastMs + 16;
-  let pose = stepFeetMotion(motion, { player: p, feet, r: R, bodySx: 1, nowMs: start });
+  let pose = stepFeetMotion(motion, feetFrame(p, start));
   for (let t = start + 16; t <= start + ms; t += 16) {
-    pose = stepFeetMotion(motion, { player: p, feet, r: R, bodySx: 1, nowMs: t });
+    pose = stepFeetMotion(motion, feetFrame(p, t));
   }
   return { pose, motion };
 }
+
+/** How far a foot at rest sits under the body circle's centre. */
+const restDepth = (p: PlayerState): number => p.width / 2 - FOOT_CENTRE;
 
 describe("stepFeetMotion", () => {
   it("should rest both feet flat and level when standing still", () => {
@@ -217,38 +237,99 @@ describe("stepFeetMotion", () => {
     const late = at(0.25 * Math.PI * feet.stride * R);
     expect(late).toBeLessThan(early);
   });
+});
 
-  it("should turn both soles toward the wall when sliding on a right wall", () => {
-    const { pose } = run(feetPlayer({ grounded: false, wallDir: 1, vy: 120 }), 300);
+/**
+ * The right foot as the screen shows it (root frame, turned by the root's lean), frame by frame:
+ * 60 frames up an arc from flat to 80°, then 30 frames on the wall it meets.
+ */
+function sweepSlopeIntoWall() {
+  const p = feetPlayer({ vx: 200 });
+  const motion = createFeetMotion(p);
+  const tilt = createGroundTilt();
+  const tunables = DEFAULT_GAME_TUNABLES.feel.groundTilt;
+  return Array.from({ length: 90 }, (_, frame) => {
+    const onWall = frame >= 60;
+    p.grounded = !onWall;
+    p.wallDir = onWall ? 1 : 0;
+    p.groundAngle = onWall ? 0 : ((80 * Math.PI) / 180) * (frame / 59);
+    const nowMs = frame * 16;
+    const { groundAngle, grounded } = p;
+    const rootLean = stepGroundTilt(tilt, { groundAngle, grounded, nowMs, tunables });
+    const foot = stepFeetMotion(motion, feetFrame(p, nowMs, rootLean))[1];
+    return { rotation: foot.rotation + rootLean, x: foot.x, y: foot.y };
+  });
+}
+
+describe("stepFeetMotion on slopes and walls", () => {
+  it("should stand both feet side by side on the wall when touching a right wall", () => {
+    const p = feetPlayer({ grounded: false, wallDir: 1, vy: 0 });
+    const { pose } = run(p, 1000);
     for (const foot of pose) {
+      // Soles to the wall, on the wall side of the body circle.
       expect(foot.rotation).toBeCloseTo(-Math.PI / 2);
-      expect(foot.x).toBeCloseTo(feet.wallX * R);
+      expect(foot.x).toBeCloseTo(restDepth(p), 1);
     }
-    // The near (right) foot sits higher than the far one.
-    expect(pose[1].y).toBeLessThan(pose[0].y);
+    // The same spacing as on the floor, now along the wall; the right foot is the upper one.
+    expect(pose[1].y - pose[0].y).toBeCloseTo(-2 * 0.45 * R, 1);
   });
 
-  it("should keep the feet on the wall just after a wall-jump and let go after the hold", () => {
+  it("should lay the soles along the slope when standing on a hill the root leans into", () => {
+    const slope = Math.PI / 4;
+    const rootLean = -0.6 * slope;
+    const p = feetPlayer({ groundAngle: slope });
+    const motion = createFeetMotion(p);
+    let pose = stepFeetMotion(motion, feetFrame(p, 0, rootLean));
+    for (let t = 16; t <= 1000; t += 16) pose = stepFeetMotion(motion, feetFrame(p, t, rootLean));
+    // Root lean plus the feet's own turn is the whole slope.
+    expect(pose[0].rotation + rootLean).toBeCloseTo(-slope);
+    expect(pose[1].rotation + rootLean).toBeCloseTo(-slope);
+  });
+
+  it("should turn the feet without a snap when a steepening slope becomes a wall", () => {
+    const shown = sweepSlopeIntoWall();
+    const steps = shown.slice(1).map((foot, i) => ({ foot, before: shown[i]! }));
+    const turns = steps.map(({ foot, before }) => Math.abs(foot.rotation - before.rotation));
+    const moves = steps.map(({ foot, before }) => Math.hypot(foot.x - before.x, foot.y - before.y));
+    expect(Math.max(...turns)).toBeLessThan(0.12);
+    expect(Math.max(...moves)).toBeLessThan(0.35 * R);
+    expect(shown[shown.length - 1]?.rotation).toBeCloseTo(-Math.PI / 2, 1);
+  });
+
+  it("should keep stepping along the wall when moving up it", () => {
+    const p = feetPlayer({ grounded: false, wallDir: 1, vy: -300 });
+    const { motion } = run(p, 1000);
+    const start = (motion.lastMs ?? 0) + 16;
+    let nearest = Infinity;
+    for (let frame = 0; frame < 30; frame++) {
+      p.y -= 5;
+      const pose = stepFeetMotion(motion, feetFrame(p, start + frame * 16));
+      nearest = Math.min(nearest, pose[0].x, pose[1].x);
+    }
+    // A stepping foot lifts off the wall, toward the body.
+    expect(nearest).toBeLessThan(restDepth(p) - 0.5 * feet.stepLift * R);
+  });
+
+  it("should let go of the wall and trail the flight after a wall-jump", () => {
     const p = feetPlayer({ grounded: false, wallDir: -1, lastWallDir: -1 });
-    const { motion } = run(p, 300);
+    const { motion } = run(p, 1000);
     p.wallDir = 0;
     p.wallJumpCount += 1;
     p.vx = 300;
-    const t0 = 316;
-    const held = stepFeetMotion(motion, { player: p, feet, r: R, bodySx: 1, nowMs: t0 });
-    expect(held[0].rotation).toBeCloseTo(Math.PI / 2);
-    let pose = held;
-    for (let t = t0 + 16; t <= t0 + 600; t += 16) {
-      pose = stepFeetMotion(motion, { player: p, feet, r: R, bodySx: 1, nowMs: t });
-    }
-    expect(motion.wall).toBe(0);
-    expect(Math.abs(pose[0].rotation)).toBeLessThan(1);
+    const t0 = (motion.lastMs ?? 0) + 16;
+    // One frame off the wall the soles still mostly face it; the turn eases from there.
+    const first = stepFeetMotion(motion, feetFrame(p, t0));
+    expect(first[0].rotation).toBeGreaterThan(0.8 * (Math.PI / 2));
+    let pose = first;
+    for (let t = t0 + 16; t <= t0 + 1000; t += 16) pose = stepFeetMotion(motion, feetFrame(p, t));
+    expect(pose[0].rotation).toBeCloseTo(-(300 / feet.airTiltSpeed) * feet.airTilt, 1);
   });
+});
 
+describe("stepFeetMotion springs", () => {
   it("should not turn the feet when the render clock jumps back", () => {
     const { motion } = run(feetPlayer(), 200);
-    const pose = stepFeetMotion(motion, { player: feetPlayer(), feet, r: R, bodySx: 1, nowMs: 0 });
-    expect(motion.wall).toBe(0);
+    const pose = stepFeetMotion(motion, feetFrame(feetPlayer(), 0));
     expect(pose[0].rotation).toBeCloseTo(0);
   });
 
@@ -361,5 +442,146 @@ describe("stepGroundTilt", () => {
       tunables,
     });
     expect(Math.abs(first)).toBeLessThan(tunables.share * 30 * DEG * 0.5);
+  });
+});
+
+// --- Contact hold ---
+
+const HOLD_SECONDS = feet.contactHoldSeconds;
+
+describe("stepContactHold", () => {
+  it("should keep the ground contact when the sim flips it off and on every step", () => {
+    const p = feetPlayer({ groundAngle: 1.4 });
+    const hold = createContactHold(p);
+    const seen: boolean[] = [];
+    for (let i = 0; i < 60; i += 1) {
+      p.grounded = i % 2 === 0;
+      p.wallDir = p.grounded ? 0 : 1;
+      p.groundAngle = p.grounded ? 1.4 : 0;
+      const contact = stepContactHold(hold, { player: p, nowMs: i * 8, seconds: HOLD_SECONDS });
+      seen.push(contact.grounded);
+      expect(contact.groundAngle).toBe(1.4);
+    }
+    expect(seen.every(Boolean)).toBe(true);
+  });
+
+  it("should let go of the ground at once when a jump is counted", () => {
+    const p = feetPlayer();
+    const hold = createContactHold(p);
+    stepContactHold(hold, { player: p, nowMs: 0, seconds: HOLD_SECONDS });
+    p.grounded = false;
+    p.jumpCount += 1;
+    const contact = stepContactHold(hold, { player: p, nowMs: 8, seconds: HOLD_SECONDS });
+    expect(contact.grounded).toBe(false);
+  });
+
+  it("should let go of the ground when it stays gone longer than the hold time", () => {
+    const p = feetPlayer();
+    const hold = createContactHold(p);
+    stepContactHold(hold, { player: p, nowMs: 0, seconds: HOLD_SECONDS });
+    p.grounded = false;
+    const at = (ms: number) =>
+      stepContactHold(hold, { player: p, nowMs: ms, seconds: HOLD_SECONDS }).grounded;
+    expect(at(HOLD_SECONDS * 1000 - 10)).toBe(true);
+    expect(at(HOLD_SECONDS * 1000 + 10)).toBe(false);
+  });
+});
+
+// A floor that curves up through a quarter arc (radius 120, 4-unit samples) into a wall: every
+// slope angle from 0° to 90°, across many cell edges.
+const ARC_R = 120;
+const arcWorld: LevelDefinition = {
+  formatVersion: 1,
+  meta: { levelId: "arc", title: "Arc" },
+  settings: { cellSize: 4, gravity: 1 },
+  worldSize: { w: 800, h: 400 },
+  terrain: [
+    {
+      shape: {
+        type: "polygon",
+        points: [
+          { x: 0, y: 320 },
+          ...Array.from({ length: 25 }, (_, i) => {
+            const a = (i / 24) * (Math.PI / 2);
+            return { x: 500 + ARC_R * Math.sin(a), y: 320 - ARC_R * (1 - Math.cos(a)) };
+          }),
+          { x: 620, y: 0 },
+          { x: 800, y: 0 },
+          { x: 800, y: 400 },
+          { x: 0, y: 400 },
+        ],
+      },
+      materialId: "stone",
+    },
+  ],
+  spawns: [],
+  drops: [],
+  collectibles: [],
+  bounds: { x: 0, y: 0, w: 800, h: 400 },
+};
+
+/**
+ * Runs the real controller up the arc and into the wall, holding right, and draws every
+ * `stride`-th sim step (1 = 120 fps, 2 = 60 fps). Returns what the screen shows per drawn frame.
+ */
+function drawArcRun(stride: number) {
+  const terrain = buildTerrainFromLevel(arcWorld);
+  const p = createPlayer(0, { x: 300, y: 280 }, DEFAULT_GAME_TUNABLES);
+  const draw = arcDrawer(p);
+  const frames: ReturnType<typeof draw>[] = [];
+  for (let i = 0; i < 600; i += 1) {
+    const inputs = [{ ...EMPTY_PLAYER_INPUT, connected: true, moveX: i < 60 ? 0 : 1 }];
+    stepPlayers({ players: [p], inputs, terrain, tunables: DEFAULT_GAME_TUNABLES, dt: 1 / 120 });
+    if (i % stride === 0) frames.push(draw((i * 1000) / 120));
+  }
+  // From the first frame standing on the floor.
+  return frames.slice(frames.findIndex((frame) => frame.rawGrounded));
+}
+
+/** One drawn frame the way the renderer chains it: contact hold, then lean, then feet and shadow. */
+function arcDrawer(p: PlayerState) {
+  const hold = createContactHold(p);
+  const motion = createFeetMotion(p);
+  const tilt = createGroundTilt();
+  const tunables = DEFAULT_GAME_TUNABLES.feel.groundTilt;
+  return (nowMs: number) => {
+    const contact = stepContactHold(hold, { player: p, nowMs, seconds: HOLD_SECONDS });
+    const { groundAngle, grounded } = contact;
+    const lean = stepGroundTilt(tilt, { groundAngle, grounded, nowMs, tunables });
+    stepFeetMotion(motion, { ...feetFrame(p, nowMs, lean), contact });
+    return {
+      // Where the soles face on screen, without the run cycle's own toe tilt.
+      sole: motion.lastAngleTarget + motion.angle.value + lean,
+      lean,
+      shadow: blobShadow(p, contact) !== null,
+      rawGrounded: p.grounded,
+    };
+  };
+}
+
+const flips = (values: boolean[]): number =>
+  values.filter((value, i) => i > 0 && value !== values[i - 1]).length;
+
+const maxStep = (values: number[]): number =>
+  Math.max(...values.slice(1).map((value, i) => Math.abs(value - values[i]!)));
+
+describe("feet, lean and shadow on a slope that steepens into a wall", () => {
+  it("should see the sim leave the ground at most once when the slope meets the wall", () => {
+    // The sim rests there (slope-rest D1); one short hop is left where the climb runs out of ground.
+    const raw = flips(drawArcRun(1).map((frame) => frame.rawGrounded));
+    expect(raw).toBeGreaterThan(0);
+    expect(raw).toBeLessThanOrEqual(2);
+  });
+
+  it.each([1, 2])("should not flicker when drawn every %i sim steps", (stride) => {
+    const frames = drawArcRun(stride);
+    expect(frames.some((frame) => frame.shadow)).toBe(false);
+    // Radians per drawn frame: a smooth turn, never a ping-pong.
+    expect(maxStep(frames.map((frame) => frame.sole))).toBeLessThan(0.08 * stride);
+    expect(maxStep(frames.map((frame) => frame.lean))).toBeLessThan(0.05 * stride);
+    // Pushing into the wall at the end, everything stands still.
+    const tail = frames.slice(-60 / stride);
+    expect(maxStep(tail.map((frame) => frame.sole))).toBeLessThan(0.005);
+    expect(maxStep(tail.map((frame) => frame.lean))).toBeLessThan(0.005);
   });
 });

@@ -178,7 +178,7 @@ Squash and stretch keep area roughly constant (`sx × sy` between 0.93 and 1.01,
 
 - On sloped ground the whole blob (body, helmet, eyes) leans into the hill by 60 % of the slope, at most 30°, easing in on a spring; level in the air (tunables `feel.groundTilt`, slope-walking D4).
 - Feet lag the body by 2 frames (about 33 ms) and squash flatter than the body.
-- Feet move on their own (tunables `feel.feet`): running, the lifted foot swings forward in an arc and tips its toe up; in the air the feet trail the horizontal speed and droop while rising, flare while falling, with a springy lag; a landing spreads them, a jump pulls them in. While wall-sliding, and a moment after a wall-jump (`wallJumpHoldSeconds`), both feet turn their soles to the wall, the near foot higher.
+- Feet move on their own (tunables `feel.feet`): running, the lifted foot swings forward in an arc and tips its toe up; in the air the feet trail the horizontal speed and droop while rising, flare while falling, with a springy lag; a landing spreads them, a jump pulls them in. Floor, slope and wall are one pose (owner pick, 2026-11-17): the feet always sit side by side with their soles on the surface under the blob, turning around the body on a spring (`feel.feet.surface`) as a slope steepens into a wall, and they keep stepping along it, also up and down a wall. After a wall-jump they ease from the wall into the air pose.
 - The helmet sits on its own spring (it wobbles after landings and shots).
 - Rocket fire: the body recoils 4 units away from the aim, tube kicks back 3 units.
 - Muzzle ready light (§ 9): after a shot the accent dot on each muzzle drops to 15 % alpha and climbs back to full as the fire cooldown runs out; full = ready to fire.
