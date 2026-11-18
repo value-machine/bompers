@@ -465,14 +465,15 @@ describe("playerController — leaving the ground (slope-walking A1, A9)", () =>
     expect(sim.player.y).toBeLessThan(FLOOR_Y);
   });
 
-  it("should keep its horizontal speed when jumping while walking up a ramp", () => {
+  it("should keep its run speed and add the jump along the ramp's normal when jumping uphill", () => {
     const sim = createSim({ x: 40, y: RAMP.base - 30 }, DEFAULT_GAME_TUNABLES, rampWorld);
     sim.step({}, 60);
     for (let i = 0; i < 240 && sim.player.x < 450; i += 1) sim.step({ moveX: 1 });
     const before = sim.player.vx;
-    sim.step({ moveX: 1, jump: true }, 6);
+    sim.step({ moveX: 1, jump: true });
     expect(sim.player.grounded).toBe(false);
-    expect(sim.player.vx).toBeGreaterThan(before * 0.9);
+    // The 30° normal kicks back down the ramp by jumpSpeed · sin 30° (slope-jump D2).
+    expect(sim.player.vx).toBeCloseTo(before - P.jumpSpeed * Math.sin(Math.PI / 6), -1);
   });
 
   it("should stand still on a slope when there is no input", () => {
@@ -651,5 +652,178 @@ describe("playerController — roll carry (double-jump-bash D11)", () => {
     sim.step({}, 300);
     expect(sim.player.grounded).toBe(true);
     expect(sim.player.airCarrySpeed).toBe(0);
+  });
+});
+
+// Slope limit and slope jumps (slope-jump D1, D2): a 0–90° quarter arc (radius 160, polygon in 3°
+// facets, like an SVG arc) and straight ramps of any angle off a floor at y 380.
+const ARC_R = 160;
+const arcWorld: LevelDefinition = {
+  ...level,
+  settings: { cellSize: 8, gravity: 1 },
+  worldSize: { w: 900, h: 420 },
+  terrain: [
+    {
+      shape: {
+        type: "polygon",
+        points: [
+          { x: 0, y: 380 },
+          ...Array.from({ length: 31 }, (_, i) => {
+            const a = (i * 3 * Math.PI) / 180;
+            return { x: 400 + ARC_R * Math.sin(a), y: 380 - ARC_R + ARC_R * Math.cos(a) };
+          }),
+          { x: 400 + ARC_R, y: 0 },
+          { x: 900, y: 0 },
+          { x: 900, y: 420 },
+          { x: 0, y: 420 },
+        ],
+      },
+      materialId: "stone",
+    },
+  ],
+  bounds: { x: 0, y: 0, w: 900, h: 420 },
+};
+
+/** Floor at y 380 up to x 300, then a straight ramp at `deg` up to y 60, then a plateau. */
+const angledRamp = (deg: number): LevelDefinition => {
+  const topX = 300 + 320 / Math.tan((deg * Math.PI) / 180);
+  return {
+    ...level,
+    settings: { cellSize: 8, gravity: 1 },
+    worldSize: { w: 1400, h: 420 },
+    terrain: [
+      {
+        shape: {
+          type: "polygon",
+          points: [
+            { x: 0, y: 380 },
+            { x: 300, y: 380 },
+            { x: topX, y: 60 },
+            { x: 1400, y: 60 },
+            { x: 1400, y: 420 },
+            { x: 0, y: 420 },
+          ],
+        },
+        materialId: "stone",
+      },
+    ],
+    bounds: { x: 0, y: 0, w: 1400, h: 420 },
+  };
+};
+
+/** A blob standing still halfway up a straight ramp of `deg`. */
+const onRamp = (deg: number): Sim => {
+  const midX = 300 + 160 / Math.tan((deg * Math.PI) / 180);
+  const sim = createSim({ x: midX - 20, y: 150 }, DEFAULT_GAME_TUNABLES, angledRamp(deg));
+  sim.step({}, 120);
+  return sim;
+};
+
+/** Sideways tilt of a wall-jump launch: the most a slope jump leans from straight up. */
+const MAX_JUMP_TILT = Math.atan2(P.wallJumpSpeedX, P.wallJumpSpeedY);
+
+describe("playerController — slope limit (slope-jump D1)", () => {
+  it("should come to rest at the limit with no oscillation when holding into a quarter arc", () => {
+    const sim = createSim({ x: 250, y: 350 }, DEFAULT_GAME_TUNABLES, arcWorld);
+    sim.step({}, 60);
+    sim.step({ moveX: 1 }, 360);
+    const at = { x: sim.player.x, y: sim.player.y };
+    const landings = sim.player.landCount;
+    let flips = 0;
+    for (let i = 0; i < 240; i += 1) {
+      const was = sim.player.grounded;
+      sim.step({ moveX: 1 });
+      if (sim.player.grounded !== was) flips += 1;
+      expect(Math.abs(sim.player.x - at.x)).toBeLessThan(0.01);
+      expect(Math.abs(sim.player.y - at.y)).toBeLessThan(0.01);
+    }
+    expect(flips).toBe(0);
+    expect(sim.player.grounded).toBe(true);
+    expect(sim.player.landCount).toBe(landings);
+    // Up the arc, at about the walkable limit (80°), and no further.
+    const limitDeg = (sim.player.groundAngle * 180) / Math.PI;
+    expect(limitDeg).toBeGreaterThan(75);
+    expect(limitDeg).toBeLessThan(88);
+  });
+
+  it("should stay put at the limit when the stick is let go", () => {
+    const sim = createSim({ x: 250, y: 350 }, DEFAULT_GAME_TUNABLES, arcWorld);
+    sim.step({}, 60);
+    sim.step({ moveX: 1 }, 360);
+    const at = { x: sim.player.x, y: sim.player.y };
+    sim.step({}, 120);
+    expect(Math.abs(sim.player.x - at.x)).toBeLessThan(0.5);
+    expect(Math.abs(sim.player.y - at.y)).toBeLessThan(0.5);
+    expect(sim.player.grounded).toBe(true);
+  });
+
+  it("should slide down instead of landing when falling onto ground steeper than the limit", () => {
+    // Dropped against an 86° ramp: a steep fall lands on the floor at its foot.
+    const sim = createSim({ x: 300, y: 150 }, DEFAULT_GAME_TUNABLES, angledRamp(86));
+    sim.step({}, 240);
+    expect(sim.player.grounded).toBe(true);
+    // Down in the corner at the ramp's foot (the circle touches floor and ramp), landed once.
+    expect(sim.player.y).toBeGreaterThan(370);
+    expect(sim.player.x).toBeLessThan(300);
+    expect(sim.player.landCount).toBe(1);
+  });
+});
+
+describe("playerController — slope jumps (slope-jump D2)", () => {
+  it.each([30, 50, 70])(
+    "should jump along the ground normal when jumping from a %i° slope",
+    (deg) => {
+      const sim = onRamp(deg);
+      const jumps = sim.player.jumpCount;
+      sim.step({ jump: true });
+      expect(sim.player.jumpCount).toBe(jumps + 1);
+      expect(sim.player.grounded).toBe(false);
+      // Launch direction (gravity's one step taken back out): the normal, leaning back down the
+      // ramp, at most as far as a wall-jump leans.
+      const tilt = Math.atan2(-sim.player.vx, -(sim.player.vy - G * dt));
+      expect(tilt).toBeCloseTo(Math.min((deg * Math.PI) / 180, MAX_JUMP_TILT), 1);
+      expect(Math.hypot(sim.player.vx, sim.player.vy - G * dt)).toBeCloseTo(P.jumpSpeed, -1);
+    }
+  );
+
+  it("should still jump straight up on flat ground", () => {
+    const sim = grounded();
+    sim.step({ jump: true });
+    expect(sim.player.vx).toBe(0);
+  });
+
+  it("should rise at least as high as a wall-jump when jumping from a steep slope", () => {
+    const sim = onRamp(70);
+    const startY = sim.player.y;
+    let minY = startY;
+    for (let i = 0; i < 120; i += 1) {
+      sim.step({ jump: true });
+      minY = Math.min(minY, sim.player.y);
+    }
+    const wallJumpApex = P.wallJumpSpeedY ** 2 / (2 * G);
+    expect(startY - minY).toBeGreaterThan(wallJumpApex * 0.95);
+  });
+
+  it("should clear a 70° slope when jumping while walking up it", () => {
+    const sim = onRamp(70);
+    sim.step({ moveX: 1 }, 12);
+    const sin = Math.sin((70 * Math.PI) / 180);
+    const cos = Math.cos((70 * Math.PI) / 180);
+    // Distance of the feet from the ramp line, out of the slope.
+    const offSlope = (): number => (sim.player.x - 300) * -sin + (sim.player.y - 380) * -cos;
+    const start = offSlope();
+    sim.step({ moveX: 1, jump: true }, 24);
+    expect(offSlope() - start).toBeGreaterThan(P.width);
+  });
+
+  it("should jump off the arc like a wall-jump when resting at the limit", () => {
+    const sim = createSim({ x: 250, y: 350 }, DEFAULT_GAME_TUNABLES, arcWorld);
+    sim.step({}, 60);
+    sim.step({ moveX: 1 }, 360);
+    const jumps = sim.player.jumpCount;
+    sim.step({ moveX: 1, jump: true });
+    expect(sim.player.jumpCount).toBe(jumps + 1);
+    expect(sim.player.vx).toBeLessThan(0);
+    expect(Math.atan2(-sim.player.vx, -sim.player.vy)).toBeCloseTo(MAX_JUMP_TILT, 1);
   });
 });

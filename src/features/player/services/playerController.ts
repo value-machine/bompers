@@ -208,6 +208,26 @@ function slideUpSlope(player: PlayerState, dx: number, args: ContactArgs): boole
   return false;
 }
 
+/** Gap kept from the slope when a falling body steps off ground too steep to land on. */
+const STEEP_SLIDE_CLEARANCE = 0.05;
+
+/**
+ * A fall that touches ground steeper than the lip angle slides down it instead of landing
+ * (slope-jump D1): the body steps sideways off the slope by what the drop needs on that slope.
+ * Blocked (a corner, a pit), it lands as before.
+ */
+function slideDownSteep(player: PlayerState, dy: number, args: ContactArgs): boolean {
+  const normal = fieldNormalAt(args.terrain, bodyCenter(player));
+  const steep = -normal.y < Math.cos(args.slope.lipAngle) && Math.abs(normal.x) > 1e-6;
+  if (!steep) return false;
+  const startX = player.x;
+  const off = Math.abs((dy * normal.y) / normal.x) + STEEP_SLIDE_CLEARANCE;
+  player.x += Math.sign(normal.x) * off;
+  if (!bodyHitsSolid(player, args.terrain)) return true;
+  player.x = startX;
+  return false;
+}
+
 /** What a terrain contact move needs: the grid and the slope limits (to slide up slopes). */
 export interface ContactArgs {
   terrain: TerrainGrid;
@@ -216,8 +236,8 @@ export interface ContactArgs {
 
 /**
  * Moves along one axis in sub-steps of at most half a cell (no tunnelling) and stops in contact
- * with the first terrain it meets; sideways, floor-like ground is slid up instead. Returns true
- * when it hit terrain.
+ * with the first terrain it meets; sideways, floor-like ground is slid up instead, and falling,
+ * ground too steep to land on is slid down. Returns true when it hit terrain.
  */
 export function moveAxis(
   player: PlayerState,
@@ -225,7 +245,6 @@ export function moveAxis(
   args: ContactArgs
 ): boolean {
   const { axis, delta } = move;
-  const slides = axis === "x" && move.slide !== false;
   const maxStep = args.terrain.cellSize / 2;
   const steps = Math.ceil(Math.abs(delta) / maxStep);
   const stepDelta = steps > 0 ? delta / steps : 0;
@@ -233,11 +252,21 @@ export function moveAxis(
     const from = player[axis];
     player[axis] += stepDelta;
     if (!bodyHitsSolid(player, args.terrain)) continue;
-    if (slides && slideUpSlope(player, stepDelta, args)) continue;
+    if (move.slide !== false && slidesAlong(player, { axis, delta: stepDelta }, args)) continue;
     backOff(player, { axis, from }, args.terrain);
     return true;
   }
   return false;
+}
+
+/** Sideways up floor-like ground, or falling down ground too steep to land on. */
+function slidesAlong(
+  player: PlayerState,
+  step: { axis: Axis; delta: number },
+  args: ContactArgs
+): boolean {
+  if (step.axis === "x") return slideUpSlope(player, step.delta, args);
+  return step.delta > 0 && slideDownSteep(player, step.delta, args);
 }
 
 // ── Input ────────────────────────────────────────────────────────────────────
@@ -471,14 +500,20 @@ function steerRoll(player: PlayerState, input: PlayerInput, args: StepPlayersArg
 
 // ── Jump ─────────────────────────────────────────────────────────────────────
 
-function launch(player: PlayerState, vy: number, tunables: GameTunables): void {
+/**
+ * Take-off: the kick replaces the vertical speed and adds to the sideways speed, which is kept
+ * (a run carries into the jump).
+ */
+function launch(player: PlayerState, kick: Vec2, tunables: GameTunables): void {
   // Roll carry (double-jump-bash D11): a jump out of a roll keeps its sideways speed, capped.
-  const carry = isRolling(player) ? Math.min(Math.abs(player.vx), tunables.roll.jumpCarryMax) : 0;
-  player.vx = carry > 0 ? Math.sign(player.vx) * carry : player.vx;
-  player.airCarrySpeed = carry;
+  const { jumpCarryMax } = tunables.roll;
+  const rolling = isRolling(player);
+  const carry = rolling ? Math.min(Math.abs(player.vx), jumpCarryMax) : 0;
+  player.vx = (carry > 0 ? Math.sign(player.vx) * carry : player.vx) + kick.x;
+  player.airCarrySpeed = rolling ? Math.min(Math.abs(player.vx), jumpCarryMax) : 0;
   // A jump is the way out of a roll once the lock ran out (shared-roll D6).
   endRoll(player);
-  player.vy = vy;
+  player.vy = kick.y;
   player.grounded = false;
   player.crouching = false;
   player.jumpRising = true;
@@ -516,7 +551,7 @@ function countAirPress(player: PlayerState, args: StepPlayersArgs): void {
 function wallJump(player: PlayerState, tunables: GameTunables): void {
   const p = tunables.player;
   const away = player.wallDir !== 0 ? -player.wallDir : -player.lastWallDir;
-  launch(player, -p.wallJumpSpeedY, tunables);
+  launch(player, { x: 0, y: -p.wallJumpSpeedY }, tunables);
   player.vx = away * p.wallJumpSpeedX;
   player.airCarrySpeed = 0;
   player.facing = away > 0 ? 1 : -1;
@@ -524,12 +559,28 @@ function wallJump(player: PlayerState, tunables: GameTunables): void {
   player.wallJumpCount += 1;
 }
 
+/**
+ * Which way a ground jump goes (slope-jump D2): along the normal of the ground under the feet,
+ * tilted from straight up at most as far as a wall-jump launches (so the steepest slopes jump
+ * like a wall). Flat ground (under 5°) and a coyote jump, with no ground left, go straight up.
+ */
+function jumpDirection(player: PlayerState, args: StepPlayersArgs): Vec2 {
+  if (!player.grounded) return { x: 0, y: -1 };
+  const p = args.tunables.player;
+  const { normal } = groundFrame(player, args.terrain);
+  const maxTilt = Math.atan2(p.wallJumpSpeedX, p.wallJumpSpeedY);
+  const tilt = Math.max(-maxTilt, Math.min(maxTilt, Math.atan2(normal.x, -normal.y)));
+  if (Math.abs(Math.sin(tilt)) < FLAT_SLOPE_SIN) return { x: 0, y: -1 };
+  return { x: Math.sin(tilt), y: -Math.cos(tilt) };
+}
+
 /** Fires a buffered jump off the ground (or within coyote time), else off a wall. */
 function applyJump(player: PlayerState, args: StepPlayersArgs): void {
   const p = args.tunables.player;
   if (player.jumpBufferTimer <= 0 || player.jumpLocked || isRollLocked(player)) return;
   if (player.grounded || player.coyoteTimer > 0) {
-    launch(player, -p.jumpSpeed, args.tunables);
+    const dir = jumpDirection(player, args);
+    launch(player, { x: dir.x * p.jumpSpeed, y: dir.y * p.jumpSpeed }, args.tunables);
     player.jumpCount += 1;
     return;
   }
@@ -615,7 +666,8 @@ function launchesOff(
   return turn.speed * turn.speed * curvature > pressing;
 }
 
-type GroundStep = "moved" | "air" | "wall" | "lip";
+/** `rest`: standing still at the slope limit (no move, no wall hit). */
+type GroundStep = "moved" | "air" | "wall" | "lip" | "rest";
 
 /** Walks against a wall: the farthest fraction of `dx` the body still rests at (bisection). */
 function walkToWall(
@@ -708,22 +760,30 @@ function pullOverLip(player: PlayerState, speed: number, args: StepPlayersArgs):
   return true;
 }
 
-/** Walks the ground; steeper than the lip angle, pulls over a lip while moving, else slides off. */
+/**
+ * Walks the ground. Steeper than the lip angle: pulls over a lip while climbing; moving down it
+ * slides off; otherwise it rests up to the rest angle (hysteresis, slope-jump D1), so a blob that
+ * walked up to the limit stops there instead of flipping between ground and air every step.
+ */
 function groundOutcome(
   player: PlayerState,
   ctx: { frame: GroundFrame; speed: number },
   args: StepPlayersArgs
 ): GroundStep {
   const { frame, speed } = ctx;
-  const steep = Math.abs(frame.tangent.y) >= Math.sin(args.tunables.player.slope.lipAngle);
-  if (!steep) {
+  const { slope } = args.tunables.player;
+  const slopeSin = Math.abs(frame.tangent.y);
+  if (slopeSin < Math.sin(slope.lipAngle)) {
     const dx = speed * frame.tangent.x * args.dt;
     return walkGround(player, { dx, speed: Math.abs(speed) }, args);
   }
-  // Steep and climbing (velocity points up): a lip pull; steep otherwise: slide off.
   const climbing = speed * frame.tangent.y < 0;
-  if (!climbing || !lipIsFree(player, player.facing, args)) return "air";
-  return pullOverLip(player, Math.abs(speed), args) ? "lip" : "wall";
+  if (climbing && lipIsFree(player, player.facing, args)) {
+    return pullOverLip(player, Math.abs(speed), args) ? "lip" : "wall";
+  }
+  const descending = speed * frame.tangent.y > 0;
+  if (descending || slopeSin >= Math.sin(slope.restAngle)) return "air";
+  return "rest";
 }
 
 /** Grounded motion: walk along the contour, pull over a lip, stop at a wall or leave the ground. */
@@ -740,7 +800,8 @@ function moveOnGround(player: PlayerState, args: StepPlayersArgs): void {
   const next = groundFrame(player, args.terrain);
   // Along the ground where the body now is (the lip pull keeps its speed toward the facing side).
   const lipSpeed = player.facing * Math.abs(speed);
-  const kept = outcome === "wall" ? 0 : outcome === "lip" ? lipSpeed : speed;
+  const stopped = outcome === "wall" || outcome === "rest";
+  const kept = stopped ? 0 : outcome === "lip" ? lipSpeed : speed;
   followGround(player, next, kept);
   // A rolling blob that runs into a wall bounces back off it.
   bounceRoll(player, args.tunables);

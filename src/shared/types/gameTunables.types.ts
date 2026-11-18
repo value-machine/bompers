@@ -109,6 +109,12 @@ export interface GameTunables {
       carryDecel: number;
       /** Ground at least this steep (radians) is a wall, unless its top is a lip. */
       lipAngle: number;
+      /**
+       * Hysteresis above `lipAngle` (radians): ground up to this steep holds a blob that is
+       * already standing (it rests, no walking further up); an airborne blob lands only on ground
+       * gentler than `lipAngle` and slides down anything steeper.
+       */
+      restAngle: number;
       /** A lip: the wall's top is at most this far above the feet, world units. */
       lipRise: number;
       /** Pull-over speed at a lip, as a share of runSpeed. */
