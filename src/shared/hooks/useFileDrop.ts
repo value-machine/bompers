@@ -14,8 +14,14 @@ export interface FileDropTarget {
 const carriesFiles = (event: DragEvent): boolean =>
   Array.from(event.dataTransfer.types).includes("Files");
 
-/** Makes an element accept dropped files; `onFile` gets the first dropped file. */
-export function useFileDrop(onFile: (file: File) => void): FileDropTarget {
+/**
+ * Makes an element accept dropped files; `onFile` gets the first dropped file and its transfer
+ * item. The item is only readable inside the call (the browser empties the transfer after the
+ * drop), so a caller that wants more from it, such as a file handle, reads it synchronously.
+ */
+export function useFileDrop(
+  onFile: (file: File, item: DataTransferItem | undefined) => void
+): FileDropTarget {
   const [isDragging, setIsDragging] = useState(false);
   return {
     isDragging,
@@ -36,7 +42,7 @@ export function useFileDrop(onFile: (file: File) => void): FileDropTarget {
         event.preventDefault();
         setIsDragging(false);
         const file = event.dataTransfer.files[0];
-        if (file) onFile(file);
+        if (file) onFile(file, event.dataTransfer.items[0]);
       },
     },
   };
