@@ -358,5 +358,15 @@
     "title": "Stains as a terrain state",
     "description": "Owner 2026-11-18: goo splats should stain the actual objects (the samples/texels of terrain and moving parts) instead of drawing a sprite on top. Use the same per-sample state system as fire and ice (a third state with a colour per stain and fading), drawn through the region/contour mechanism, including on moving parts. Starts with an options page. After the fire and ice overlay-shape lap.",
     "status": "done"
+  },
+  {
+    "title": "Weapons as a match setting",
+    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): lobby setting like match duration; auto = every weapon the game has (old maps get new weapons); a level may state a default (e.g. only rockets, no weapons). Remove data-items from drops in format, importer, kit, prompt and built-in levels (format change; compatibility waived). Size S–M.",
+    "status": "done"
+  },
+  {
+    "title": "Ice lap 2: frozen blobs",
+    "description": "Ice element follow-up (owner pick 2026-11-18: freeze ray on the fire system, PR #63): frozen blobs and counterplay with crouch, dive and jump. Touches the player feature through overlays and the shared roll; starts with an options page. Size M.",
+    "status": "done"
   }
 ]
