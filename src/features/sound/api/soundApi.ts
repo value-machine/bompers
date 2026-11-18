@@ -3,11 +3,14 @@ export type {
   MusicTrackId,
   SoundChannel,
   SoundCue,
+  SoundLoop,
   SoundPlayerSnapshot,
   SoundSettings,
+  SoundWorldSnapshot,
 } from "@/features/sound/types/sound.types";
 export {
   readSoundCues,
+  readSoundLoops,
   type SoundCursor,
   type SoundSnapshot,
 } from "@/features/sound/services/soundCues";

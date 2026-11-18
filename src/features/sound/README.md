@@ -30,13 +30,18 @@ What each cue comes from:
 | `hit`                                | `playerHit` (rocket)                                                 |
 | `elimination`                        | `playerEliminated`                                                   |
 | `rocket-fire`, `explosion`, `pickup` | `rocketFired`, `explosion`, `pickupCollected`                        |
-| `rocket-fire` / `clink` (placeholders, fire-spread D8, ice-element D2) | `sprayStarted` (a torch starts spraying / a freeze ray starts); fire burn-outs play the material sound through `terrainDestroyed` |
+| `torch-start` / `freeze-start` | `sprayStarted` (a torch starts spraying / a freeze ray starts) |
+| `burn-out` | a fire burn-out batch, through `terrainDestroyed` (the match names fire's sound instead of the material's) |
+| `thaw` | `world.thawedSamples` rises; at most every `SOUND_MIX.elementCueSeconds`, gain by the samples thawed since the last thaw cue |
+| `steam-hiss` | `iceDouseCount` rises (ice puts a blob out, pitched); and the torch melting frozen ground (`world.frozenVersion` changes while a torch sprays, no freeze ray does and nothing thawed by itself), rate-limited like the thaw |
 | material sound (`thud` stone, `crumble` earth, `thwap` cardboard, `clink` ice) | `terrainDestroyed.soundId`; and a head-on dive bonk: `land` (pitched) plus the wall's material sound (`diveBonkSoundId`, unpitched), both at the bonk's intensity |
 | `respawn`                            | a player comes back into play                                        |
 | `pickup` (headbutt reset)            | `diveRefillCount` rises (no file of its own; headbutt-reset D5)      |
-| `rocket-fire`, `clink` (placeholders, fire-burn D7) | `catchFireCount` rises (a blob catches fire) / `iceDouseCount` rises (ice puts it out); a dive blowing it off has the dive's launch sound, burning down the `playerHit` hit sound |
-| `clink` (placeholders, ice-frozen-blobs D2) | `frozenCount` rises (a blob freezes into an ice block) / `iceCrackCount` rises (a jump press cracks it, at the crouch gain) / `iceShatterCount` rises (the block breaks); a block melted by fire has the douse `clink` above |
+| `catch-fire` | `catchFireCount` rises (a blob catches fire); a dive blowing it off has the dive's launch sound, burning down the `playerHit` hit sound |
+| `clink` (placeholders, ice-frozen-blobs D2; their own sounds are a later element-sounds round) | `frozenCount` rises (a blob freezes into an ice block) / `iceCrackCount` rises (a jump press cracks it, at the crouch gain) / `iceShatterCount` rises (the block breaks); a block melted by fire has the douse `steam-hiss` above |
 | `round-start`, `round-end`           | a fresh round's first frame; round phase turns `ended`               |
+
+Held loops (`readSoundLoops(world)` → `engine.setLoops`, every frame): `torch-loop` per player spraying a torch and `freeze-loop` per player spraying a freeze ray (pitched by the player), and one `fire-crackle` for the world while anything burns, gain by burning samples plus `fireBlobSamples` per burning blob up to `fireFullSamples`. A loop plays as passes of its file that overlap by `loopCrossfadeSeconds` with equal-power curves, scheduled a little ahead on each refresh (never `source.loop`: the mp3's silent edges would show as a seam; the files also carry a baked tail-over-head crossfade, DESIGN_LANGUAGE § 8). The engine fades a loop in and out over `loopFadeSeconds`; a loop the frame stops listing fades out, and one nobody refreshes for `loopHoldSeconds` fades by itself, so a paused or closed match goes quiet with no call of its own (Web Audio's last `stop()` wins). A round's end and the session's dispose clear them.
 
 Music: the lobby screen plays `lobby`; a round plays `match`, then `final` from 0:30 left, and fades out when the round ends (the round-end SFX plays). Leaving a screen fades its music out.
 

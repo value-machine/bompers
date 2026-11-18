@@ -49,6 +49,37 @@ export interface SoundPlayerSnapshot {
   iceShatterCount: number;
 }
 
+/**
+ * The world's element state for this frame (fire and ice), built by the match. Counts are
+ * monotonic where noted, so the reader can see what changed since the last frame.
+ */
+export interface SoundWorldSnapshot {
+  /** Sim time, seconds (rate limits for the thaw and steam cues). */
+  timeSeconds: number;
+  /** Slots spraying a torch / a freeze ray this step. */
+  torchSlots: readonly number[];
+  freezeSlots: readonly number[];
+  /** Terrain samples burning now, and blobs on fire now. */
+  burningSamples: number;
+  burningBlobs: number;
+  /** Frozen samples that have thawed by themselves over the match (monotonic). */
+  thawedSamples: number;
+  /** The terrain's frozen-flag version (changes whenever a sample freezes or thaws). */
+  frozenVersion: number;
+}
+
+/**
+ * A held sound: plays on a loop while the frame lists it, at its gain, and fades out when it is
+ * gone (`key` tells loops of the same sound apart, e.g. one torch per player).
+ */
+export interface SoundLoop {
+  key: string;
+  soundId: string;
+  /** Player slot whose pitch applies, or null for world loops. */
+  slot: number | null;
+  gain: number;
+}
+
 /** The two volume channels: sound effects and music. */
 export type SoundChannel = "sfx" | "music";
 

@@ -29,4 +29,5 @@ The in-match pause menu (FEEDBACK_ROUND_2 § 2.2): any player in the match press
 - D4 "General options" = the Music and Sounds volumes, the player preferences the lobby also shows; nothing else until a real option exists.
 - D5 Pause opens on the round-result screen too (one rule everywhere); the restart lock waits while paused.
 - D6 The opening press is consumed (pad Start is also menu confirm), the closing frame does nothing else, and jump / fire held when the menu closes are hidden from the sim per slot until released (Space confirms Resume and would jump).
+- D7 The cursor row's mark (an ink ring with the sky wash, `menu-focus-row` in `index.css`) shows only after a key or pad press and hides after pointer use, like `:focus-visible` (owner, controller-focus D1–D2). Presses report to the shared `menuFocusModality`; `PauseMenu` reads `useMenuFocusVisible`.
 - The menu-row look is a second copy of the lobby's `Row` / `Stepper` (marked in `PauseMenu.tsx`); a third such menu extracts a shared menu-row primitive.

@@ -106,7 +106,7 @@ Reference content **by ID only**; IDs are lowercase-kebab. Unknown IDs fall back
   - `ice`: never breaks, slippery; default colour `frost` (`fill="#a8cfe6"`).
 - `data-color` (looks; any colour on any material, names only, no hex) — use the hex as that shape's `fill`: `plum` `#5a3f7a`, `slate` `#4f6178`, `cardboard` `#c99a62`, `clay` `#c4673f`, `moss` `#5f8f3e`, `mint` `#3aa889`, `frost` `#a8cfe6`, `rose` `#c95a86`.
 - `data-effect`: `none`, `dust-burst`.
-- `data-sound`: `none`, `thud`, `crumble`, `thwap`, `clink`, `jump`, `land`, `tumble-bounce`, `dive-launch`, `dive-impact`, `hit`, `elimination`, `rocket-fire`, `explosion`, `pickup`, `respawn`, `round-start`, `round-end`.
+- `data-sound`: `none`, `thud`, `crumble`, `thwap`, `clink`, `jump`, `land`, `tumble-bounce`, `dive-launch`, `dive-impact`, `hit`, `elimination`, `rocket-fire`, `explosion`, `pickup`, `respawn`, `round-start`, `round-end`, `torch-start`, `torch-loop`, `fire-crackle`, `burn-out`, `catch-fire`, `steam-hiss`, `freeze-start`, `freeze-loop`, `thaw`.
 - `data-item` (collectible): `point-orb`, `dive-reset`; default `point-orb`.
 - `data-behavior`: none yet — leave it out.
 

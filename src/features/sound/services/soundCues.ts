@@ -1,7 +1,12 @@
 import { intensityGain } from "@/shared/config/gameJuice";
 import type { CombatEvent } from "@/features/combat/api/combatApi";
 import { SOUND_MIX } from "@/features/sound/services/soundBank";
-import type { SoundCue, SoundPlayerSnapshot } from "@/features/sound/types/sound.types";
+import type {
+  SoundCue,
+  SoundLoop,
+  SoundPlayerSnapshot,
+  SoundWorldSnapshot,
+} from "@/features/sound/types/sound.types";
 
 /** Everything the cue reader needs from one frame of the match. */
 export interface SoundSnapshot {
@@ -9,6 +14,15 @@ export interface SoundSnapshot {
   /** Combat's event log (read by `seq`). */
   events: readonly CombatEvent[];
   roundPhase: "playing" | "ended";
+  /** Fire and ice this frame (thaw and steam cues, the held loops). */
+  world: SoundWorldSnapshot;
+}
+
+/** When the rate-limited element cues last played, and what had thawed by then. */
+interface ElementCueMarks {
+  thawAt: number;
+  thawedAtCue: number;
+  steamAt: number;
 }
 
 /** What the reader remembers between frames. A fresh round starts from `null`. */
@@ -16,6 +30,8 @@ export interface SoundCursor {
   lastSeq: number;
   players: ReadonlyMap<number, SoundPlayerSnapshot>;
   roundPhase: "playing" | "ended";
+  world: SoundWorldSnapshot;
+  marks: ElementCueMarks;
 }
 
 /**
@@ -29,10 +45,12 @@ export function readSoundCues(
   frame: SoundSnapshot
 ): { cursor: SoundCursor; cues: SoundCue[] } {
   const lastSeq = cursor?.lastSeq ?? 0;
+  const elements = elementCues(cursor, frame.world);
   const cues = [
     ...roundCues(cursor, frame),
     ...frame.players.flatMap((player) => playerCues(cursor?.players.get(player.slot), player)),
     ...eventCues(frame, lastSeq),
+    ...elements.cues,
   ];
   return {
     cues,
@@ -40,8 +58,75 @@ export function readSoundCues(
       lastSeq: frame.events.reduce((max, event) => Math.max(max, event.seq), lastSeq),
       players: new Map(frame.players.map((player) => [player.slot, player])),
       roundPhase: frame.roundPhase,
+      world: frame.world,
+      marks: elements.marks,
     },
   };
+}
+
+/**
+ * The held sounds for this frame: a torch loop and a freeze loop per player spraying (pitched by
+ * the player), and one fire crackle for the whole world, louder the more burns (blobs on fire
+ * count as `SOUND_MIX.fireBlobSamples` samples each). Pure; the engine fades loops in and out.
+ */
+export function readSoundLoops(world: SoundWorldSnapshot): SoundLoop[] {
+  const loops: SoundLoop[] = [
+    ...world.torchSlots.map((slot) => ({
+      key: `torch-${slot}`,
+      soundId: "torch-loop",
+      slot,
+      gain: 1,
+    })),
+    ...world.freezeSlots.map((slot) => ({
+      key: `freeze-${slot}`,
+      soundId: "freeze-loop",
+      slot,
+      gain: 1,
+    })),
+  ];
+  const fire = world.burningSamples + world.burningBlobs * SOUND_MIX.fireBlobSamples;
+  if (fire > 0) {
+    const gain = intensityGain(fire, SOUND_MIX.fireFullSamples);
+    loops.push({ key: "fire", soundId: "fire-crackle", slot: null, gain });
+  }
+  return loops;
+}
+
+/** Frozen ground changed while only a torch sprays and nothing thawed by itself: the torch melted it. */
+const torchMelted = (previous: SoundWorldSnapshot, world: SoundWorldSnapshot): boolean =>
+  world.frozenVersion !== previous.frozenVersion &&
+  world.thawedSamples === previous.thawedSamples &&
+  world.torchSlots.length > 0 &&
+  world.freezeSlots.length === 0;
+
+const NO_MARKS: ElementCueMarks = { thawAt: -Infinity, thawedAtCue: 0, steamAt: -Infinity };
+
+/**
+ * Ground thawing and the torch melting frozen ground, each at most once per
+ * `SOUND_MIX.elementCueSeconds` (a thawing patch thaws a sample at a time). A thaw is as loud as
+ * the samples thawed since the last thaw cue; the torch's melt is a steam hiss. A frozen-flag
+ * change while a torch sprays and no freeze ray does, with no thaw of its own, is the torch's melt.
+ */
+function elementCues(
+  cursor: SoundCursor | null,
+  world: SoundWorldSnapshot
+): { cues: SoundCue[]; marks: ElementCueMarks } {
+  const marks = { ...(cursor?.marks ?? { ...NO_MARKS, thawedAtCue: world.thawedSamples }) };
+  const previous = cursor?.world;
+  if (!previous) return { cues: [], marks };
+  const cues: SoundCue[] = [];
+  const due = (at: number): boolean => world.timeSeconds - at >= SOUND_MIX.elementCueSeconds;
+  const thawed = world.thawedSamples - marks.thawedAtCue;
+  if (world.thawedSamples > previous.thawedSamples && due(marks.thawAt)) {
+    cues.push(cue("thaw", null, intensityGain(thawed, SOUND_MIX.thawFullSamples)));
+    marks.thawAt = world.timeSeconds;
+    marks.thawedAtCue = world.thawedSamples;
+  }
+  if (torchMelted(previous, world) && due(marks.steamAt)) {
+    cues.push(cue("steam-hiss", null));
+    marks.steamAt = world.timeSeconds;
+  }
+  return { cues, marks };
 }
 
 const cue = (soundId: string, slot: number | null, gain = 1): SoundCue => ({ soundId, slot, gain });
@@ -81,10 +166,9 @@ const PLAYER_RULES: readonly [
   ["respawn", (p, n) => n.inPlay && !p.inPlay, () => 1],
   // A headbutt reset reuses the pickup sound, pitched by the collector (headbutt-reset D5).
   ["pickup", (p, n) => n.diveRefillCount > p.diveRefillCount, () => 1],
-  // Placeholders until fire takes exist (fire-burn D7): catching whooshes like the torch start,
-  // ice hisses as its own material clink.
-  ["rocket-fire", (p, n) => n.catchFireCount > p.catchFireCount, () => 1],
-  ["clink", (p, n) => n.iceDouseCount > p.iceDouseCount, () => 1],
+  // A blob catching fire, and ice putting it out with steam (owner picks, element-sounds lap).
+  ["catch-fire", (p, n) => n.catchFireCount > p.catchFireCount, () => 1],
+  ["steam-hiss", (p, n) => n.iceDouseCount > p.iceDouseCount, () => 1],
   // Placeholders until the ice block's own sounds exist (ice-frozen-blobs D2): a blob freezing,
   // a jump press cracking its block (softer), the block breaking.
   ["clink", (p, n) => n.frozenCount > p.frozenCount, () => 1],
@@ -139,7 +223,7 @@ function eventCues(frame: SoundSnapshot, lastSeq: number): SoundCue[] {
  * Combat event → cue. Hits and eliminations take the victim's pitch, actions the actor's. A hit is
  * as loud as the victim's knockback speed this frame (`hitFullSpeed`).
  */
-const SPRAY_START_SOUND = { torch: "rocket-fire", "freeze-ray": "clink" } as const;
+const SPRAY_START_SOUND = { torch: "torch-start", "freeze-ray": "freeze-start" } as const;
 
 function combatEventCue(event: CombatEvent, speedOf: (slot: number) => number): SoundCue | null {
   // Events that name their own sound: terrain gone (the material's), a moving part's (the author's).
@@ -156,8 +240,7 @@ function combatEventCue(event: CombatEvent, speedOf: (slot: number) => number): 
     case "rocketFired":
       return cue("rocket-fire", event.slot);
     case "sprayStarted":
-      // Placeholders until fire and ice takes exist (fire-spread D8, ice-element D2): the torch
-      // whooshes like a rocket, the freeze ray rings like ice.
+      // The spray's own start; its held loop comes from `readSoundLoops`.
       return cue(SPRAY_START_SOUND[event.itemId], event.slot);
     case "explosion":
       return cue("explosion", null);

@@ -86,23 +86,23 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Back hit taken | heavy | `hit` / `dive-impact` (gain by knockback) | — | 1.0 | 6 px | 50 ms | impact pop (not on dive hits) | kick |
 | Explosion | heavy | `explosion` (ducks music) | — | — | 6 px (by radius) | — | star burst | — |
 | Terrain destroyed | light | material's sound (`thud` / `crumble` / `thwap` / `clink`) | — | — | — | — | debris | — |
-| Torch spray (held) | light | `rocket-fire` on spray start (placeholder, fire-spread D8) | — | — | — | — | outlined flame from the nozzle: neck, rolling head, flames peeling off upward, flare at terrain; grows in over 120 ms | — |
-| Torch released | light | — (the spray's start cue covers the action) | — | — | — | — | the head lets go as one rising puff, 300 ms | — |
-| Freeze ray (held) | light | `clink` on start (placeholder, ice-element D2) | — | — | — | — | outlined cold breath from the emitter: neck, rolling head where it lands, snow specks; grows in over 120 ms | — |
-| Freeze ray released | light | — (the ray's start cue covers the action) | — | — | — | — | the head lets go as three rising puffs, 300 ms | — |
-| Ground freezing | — | — (deliberately silent per sample, like fire spreading) | — | — | — | — | the frozen shape grows from where the breath lands, in the ice colours with a lip and gloss streaks | — |
-| Ground thawing | — | — (silent; a sound comes with the listening page) | — | — | — | — | the frozen shape recedes, oldest part first | — |
+| Torch spray (held) | light | `torch-start`, then the `torch-loop` held while it sprays (pitched by the holder) | — | — | — | — | outlined flame from the nozzle: neck, rolling head, flames peeling off upward, flare at terrain; grows in over 120 ms | — |
+| Torch released | light | — (the torch loop fades out over 120 ms) | — | — | — | — | the head lets go as one rising puff, 300 ms | — |
+| Freeze ray (held) | light | `freeze-start`, then the `freeze-loop` held while it sprays (pitched by the holder) | — | — | — | — | outlined cold breath from the emitter: neck, rolling head where it lands, snow specks; grows in over 120 ms | — |
+| Freeze ray released | light | — (the freeze loop fades out over 120 ms) | — | — | — | — | the head lets go as three rising puffs, 300 ms | — |
+| Ground freezing | — | — (the freeze loop covers it; silent per sample) | — | — | — | — | the frozen shape grows from where the breath lands, in the ice colours with a lip and gloss streaks | — |
+| Ground thawing | light | `thaw`, at most every 0.5 s, gain by the samples thawed since the last one (`SOUND_MIX.thawFullSamples`); the torch melting it: `steam-hiss` | — | — | — | — | the frozen shape recedes, oldest part first | — |
 | Torch held, idle | — | — (a loop, deliberately silent) | — | — | — | — | small outlined flame on the nozzle | — |
-| Fire spreading | — | — (deliberately silent per sample: a big fire would be noise) | — | — | — | — | one outlined fire shape per cluster of burning terrain, its flames bigger with more fire around them and tallest in the middle; scorch on earth | — |
-| Fire burn-out (batch) | light | material's sound via `terrainDestroyed`, once per 0.25 s batch | — | — | — | — | debris + a white smoke puff, 450 ms | — |
-| Blob catches fire (fire-burn b2) | light | `rocket-fire` (placeholder, fire-burn D7) | — | — | — | — | amber flame pop (0.6 s linger); then helmet flames, sweat, pinprick pupils while burning | — |
+| Fire spreading / burning | — | one `fire-crackle` loop for the whole world, gain by burning samples plus burning blobs (`SOUND_MIX.fireFullSamples`; silent per sample) | — | — | — | — | one outlined fire shape per cluster of burning terrain, its flames bigger with more fire around them and tallest in the middle; scorch on earth | — |
+| Fire burn-out (batch) | light | `burn-out` via `terrainDestroyed` (fire's own, not the material's), once per 0.25 s batch | — | — | — | — | debris + a white smoke puff, 450 ms | — |
+| Blob catches fire (fire-burn b2) | light | `catch-fire` (pitched by the blob) | — | — | — | — | amber flame pop (0.6 s linger); then helmet flames, sweat, pinprick pupils while burning | — |
 | Burning blob panic (held) | — | — (the catch cue only) | drawn hop every 0.4 s, sx · sy within the band (±0.08) | — | — | — | drawn 5-unit hop; body and shadow stay on the ground | — |
-| Fire put out by ice | light | `clink` (placeholder) | — | — | — | — | white steam puffs (0.6 s) | — |
+| Fire put out by ice | light | `steam-hiss` (pitched by the blob) | — | — | — | — | white steam puffs (0.6 s) | — |
 | Frost building on a blob (held ray) | — | — (the ray's start cue) | — | — | — | — | the ice block forms around the blob as the chill fills | — |
 | Blob freezes (ice-frozen-blobs) | light | `clink` (placeholder, D2; own sound pending) | — | — | — | — | white pop ring (250 ms), then the glossy block with pinprick pupils inside | — |
 | Ice block cracks (jump press) | light | `clink`, soft (placeholder, D2; own sound pending) | drawn 4-unit hop, 200 ms | — | — | — | a crack line on the block, three ice chips (500 ms) | — |
 | Ice block breaks (third press, a hit, time up) | light | `clink` (placeholder, D2; own sound pending); a hit adds its own `hit` | — | — | — | — | eight ice shards fly off (500 ms) | — |
-| Ice block melts (fire) | light | fire's douse `clink` (placeholder) | — | — | — | — | white steam puffs (500 ms) | — |
+| Ice block melts (fire) | light | fire's douse `steam-hiss` | — | — | — | — | white steam puffs (500 ms) | — |
 | Moving part moves / carries | — | — by default; the author's `data-move-sound` at its fastest point and `data-end-sound` at each turning point (owner B2) | — | — | — | — | — (no motion cue, owner B1) | — |
 | Crushed by a moving part | heavy | `land`, then `elimination` (owner B2) | pancake across the squeeze, held 0.15 s (past the band, owner B3) | — (no hit of its own) | 6 px (the back-hit kick) | — | goo stains on both faces, the part's riding along; helmet and tube fly off | pops off |
 | Squeezed by a moving part (survivable) | — (no hit) | — (the blob makes no sound; the part may have its own) | squash across the gap to the gap width, stretch along it up to 1.6×, every frame while squeezed; springs back the frame the gap opens (past the band, owner #64 change round) | — | — | — | — | — |

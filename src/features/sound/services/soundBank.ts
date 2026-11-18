@@ -32,6 +32,16 @@ export const SOUND_FILES: Readonly<Record<string, readonly string[]>> = {
   crumble: takes("crumble", 2),
   thwap: takes("thwap", 1),
   clink: takes("clink", 2),
+  // Fire and ice (owner picks, element-sounds lap). `*-loop` and `fire-crackle` are loops.
+  "torch-start": takes("torch-start", 1),
+  "torch-loop": takes("torch-loop", 1),
+  "fire-crackle": takes("fire-crackle", 1),
+  "burn-out": takes("burn-out", 1),
+  "catch-fire": takes("catch-fire", 1),
+  "steam-hiss": takes("steam-hiss", 1),
+  "freeze-start": takes("freeze-start", 1),
+  "freeze-loop": takes("freeze-loop", 1),
+  thaw: takes("thaw", 1),
 };
 
 /** Semitone offset per player slot (P1 0, P2 +2, P3 −2, P4 +4), so four blobs never sound alike. */
@@ -63,6 +73,23 @@ export const SOUND_MIX = {
   hitFullSpeed: 1000,
   /** Sinking into a crouch replays the land sound this soft. */
   crouchGain: 0.3,
+  /**
+   * Fire and ice (element-sounds lap). The fire crackle is at full volume with this many burning
+   * samples (a blob on fire counts as `fireBlobSamples`); a thaw cue at full volume with this
+   * many samples thawed since the last one; thaw and steam cues play at most this often.
+   */
+  fireFullSamples: 400,
+  fireBlobSamples: 60,
+  thawFullSamples: 60,
+  elementCueSeconds: 0.5,
+  /** Held loops fade in and out over this long; a loop not refreshed for `loopHoldSeconds` fades. */
+  loopFadeSeconds: 0.12,
+  loopHoldSeconds: 0.25,
+  /**
+   * A held loop plays its file as passes that overlap this long with an equal-power crossfade
+   * (on top of the crossfade baked into the file), which also hides the mp3's silent edges.
+   */
+  loopCrossfadeSeconds: 0.1,
 } as const;
 
 /** Sounds that duck the music bus when they play. */
