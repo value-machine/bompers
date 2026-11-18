@@ -38,6 +38,8 @@ export const ICE_LOOK = {
     lobeRadius: 6.5,
     lobeRing: 5.5,
     rollHz: 0.4,
+    /** How much wider than the neck's end the head's round heart is, world units. */
+    heartMargin: 3,
     /** The lighter inside as a share of the outer shape. */
     innerShare: 0.55,
     /** Snow specks: how many, how far they fall, their radius, falls per second. */
@@ -97,7 +99,7 @@ export interface BreathShape {
   neck: number[];
   /** The lighter inside of the neck. */
   neckInner: number[];
-  /** The head's lobes, rolling where the breath lands. */
+  /** The head: a round heart that covers the neck's end, then the lobes rolling around it. */
   lobes: Disc[];
   /** Snow specks drifting down under the breath. */
   specks: Disc[];
@@ -156,7 +158,7 @@ export function breathShape(
   const head = breathPoint(f, look.headAt, look.neckLift * look.headAt * look.headAt);
   const scale = Math.min(1, Math.max(0.2, at.grow));
   const turn = at.timeSeconds * TAU * look.rollHz + beam.slot;
-  const lobes = Array.from({ length: look.lobes }, (_, i) => {
+  const rolling = Array.from({ length: look.lobes }, (_, i) => {
     const a = turn + (i * TAU) / look.lobes;
     const pulse = 1 + 0.15 * Math.sin(at.timeSeconds * 5 + i * 2);
     return {
@@ -165,6 +167,11 @@ export function breathShape(
       r: look.lobeRadius * scale * pulse,
     };
   });
+  // A round heart behind the lobes, wider than the neck's end: the neck's square end and its
+  // corners always sit inside the cloud, whatever the lobes are doing (owner, 2026-11-18).
+  const neckEnd = look.neckStart + look.neckFlare * look.headAt * look.headAt;
+  const heart = { x: head.x, y: head.y, r: (neckEnd + look.heartMargin) * scale };
+  const lobes = [heart, ...rolling];
   const specks = Array.from({ length: look.specks }, (_, i) => {
     const fall = (at.timeSeconds * look.speckHz + i / look.specks) % 1;
     const p = breathPoint(f, 0.3 + (0.6 * i) / look.specks, 0);

@@ -37,7 +37,21 @@ describe("iceShapes — cold breath (ice-element D9)", () => {
     const shape = breathShape(beam(1), { timeSeconds: 0, grow: 1 });
     expect(shape.head.x).toBeGreaterThan(100 + 180 * 0.85);
     expect(shape.head.x).toBeLessThan(100 + 180);
-    expect(shape.lobes).toHaveLength(ICE_LOOK.breath.lobes);
+    expect(shape.lobes).toHaveLength(ICE_LOOK.breath.lobes + 1);
+  });
+
+  it("should hide the neck's end corners inside the head whatever the lobes are doing", () => {
+    for (const timeSeconds of [0, 0.37, 1.1, 2.9]) {
+      const shape = breathShape(beam(1), { timeSeconds, grow: 1 });
+      const neck = points(shape.neck);
+      const half = neck.length / 2;
+      for (const corner of [neck[half - 1]!, neck[half]!]) {
+        const covered = shape.lobes.some(
+          (lobe) => Math.hypot(corner.x - lobe.x, corner.y - lobe.y) < lobe.r
+        );
+        expect(covered).toBe(true);
+      }
+    }
   });
 
   it("should lift toward the top of the screen whichever way the ray points", () => {
