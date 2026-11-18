@@ -30,16 +30,6 @@
     "status": "to-do"
   },
   {
-    "title": "Forgiving level import",
-    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): turn each rejection the game can survive into a warning with a fallback (pass over E1–E8 in LEVEL_FORMAT § 7); reject only what the game cannot run. Size S.",
-    "status": "to-do"
-  },
-  {
-    "title": "Copy import report",
-    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): lobby button copies the remaining import errors and warnings as plain text so an authoring agent can read them. Size S.",
-    "status": "to-do"
-  },
-  {
     "title": "Objects in levels",
     "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): when the first object is wanted: object role as a plain box with a catalog ID (the box is the size, the game draws the real thing); sizes at 1.0 in catalog and prompt; fit-to-box drawing; warnings; vision line becomes \"shows the layout\"; revisit the prompt structure here. Size M.",
     "status": "to-do"
