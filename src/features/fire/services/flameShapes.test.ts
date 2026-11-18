@@ -8,7 +8,7 @@ import {
   releasePuff,
   sprayFlame,
   tonguePoints,
-  type FireCluster,
+  type ClusterFlame,
   type FlameBlock,
 } from "@/features/fire/services/flameShapes";
 
@@ -127,26 +127,16 @@ const blocksOf = (cells: readonly (readonly [number, number])[], block: { open?:
 const row = (from: number, to: number, by = 4): [number, number][] =>
   Array.from({ length: to - from + 1 }, (_, i) => [from + i, by]);
 
-const flameAt = (cluster: FireCluster, bx: number) =>
-  cluster.flames.find((flame) => flame.x === (bx + 0.5) * 8);
+const flameAt = (flames: readonly ClusterFlame[], bx: number) =>
+  flames.find((flame) => flame.x === (bx + 0.5) * 8);
 
 describe("fire clusters", () => {
-  it("should draw one body per row and flames on the top edge only when a big fire burns", () => {
+  it("should put flames on the top edge only when a big fire burns", () => {
     const band = Array.from({ length: 7 }, (_, by) => row(0, 49, by)).flat();
-    const cluster = clusterFlames(blocksOf(band), look);
-    expect(cluster.body).toHaveLength(7);
-    expect(cluster.flames.length).toBeLessThanOrEqual(50);
-    expect(cluster.flames.every((flame) => flame.y === 4)).toBe(true);
-    const shapes = cluster.body.length + cluster.hot.length + cluster.flames.length;
-    expect(shapes).toBeLessThan(band.length / 4);
-  });
-
-  it("should cover every burning block with one overlapping body when blocks touch", () => {
-    const { body } = clusterFlames(blocksOf([...row(2, 5, 4), ...row(2, 5, 5)]), look);
-    const [upper, lower] = [...body].sort((a, b) => a.y - b.y);
-    expect(upper!.x).toBeLessThan(2 * 8);
-    expect(upper!.x + upper!.w).toBeGreaterThan(6 * 8);
-    expect(upper!.y + upper!.h).toBeGreaterThan(lower!.y);
+    const flames = clusterFlames(blocksOf(band), look);
+    expect(flames.length).toBeLessThanOrEqual(50);
+    expect(flames.every((flame) => flame.y === 4)).toBe(true);
+    expect(flames.length).toBeLessThan(band.length / 4);
   });
 
   it("should grow a flame taller and wider when its neighbours burn", () => {
@@ -157,8 +147,8 @@ describe("fire clusters", () => {
   });
 
   it("should pool the flames beside a big one into it when neighbours burn", () => {
-    const cluster = clusterFlames(blocksOf(row(2, 4)), look);
-    expect(cluster.flames.map((flame) => flame.x)).toEqual([2.5 * 8, 4.5 * 8]);
+    const flames = clusterFlames(blocksOf(row(2, 4)), look);
+    expect(flames.map((flame) => flame.x)).toEqual([2.5 * 8, 4.5 * 8]);
   });
 
   it("should stand taller in the middle of a cluster than near its edge when the flame is the same", () => {
@@ -170,14 +160,9 @@ describe("fire clusters", () => {
 
   it("should give each flame its own fixed size when time passes", () => {
     const at = (timeSeconds: number, bx: number) =>
-      clusterFlames(blocksOf([[bx, 4]]), { ...look, timeSeconds }).flames[0]!;
+      clusterFlames(blocksOf([[bx, 4]]), { ...look, timeSeconds })[0]!;
     expect(at(1, 4).width).toBe(at(2.3, 4).width);
     expect(at(1, 4).width).not.toBe(at(1, 10).width);
-  });
-
-  it("should glow amber only where fire burns on both sides and below when a block is fresh", () => {
-    const { hot } = clusterFlames(blocksOf([...row(2, 4, 4), ...row(2, 4, 5)]), look);
-    expect(hot).toEqual([{ x: 3 * 8, y: 4 * 8, w: 8, h: 8 }]);
   });
 });
 
@@ -192,8 +177,8 @@ describe("terrain flames", () => {
   });
 
   it("should stand taller on a top edge than inside the slab when the age is equal", () => {
-    const inside = clusterFlames(blocksOf([[4, 4]], { open: false }), look).flames[0]!;
-    const onTop = clusterFlames(blocksOf([[4, 4]], { open: true }), look).flames[0]!;
+    const inside = clusterFlames(blocksOf([[4, 4]], { open: false }), look)[0]!;
+    const onTop = clusterFlames(blocksOf([[4, 4]], { open: true }), look)[0]!;
     expect(onTop.height).toBeGreaterThan(inside.height);
   });
 

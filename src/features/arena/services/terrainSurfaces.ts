@@ -101,11 +101,31 @@ export interface MaskShapes {
   pieces: number[][];
 }
 
-/** Which terrain a contour is of: all of it (the outline) or only breakable terrain (its fill). */
+/**
+ * A part of the terrain as a field over its samples: breakable terrain, burning terrain, frozen
+ * ground. A contour limited to a region is the terrain's own shape wherever the region reaches
+ * the terrain's edge, and the region's edge inside the terrain (element-overlay-shape D1).
+ */
+export interface SampleRegion {
+  /** Field value of a sample (row-major index), world units: positive inside the region. */
+  value: (index: number) => number;
+  /** Samples the region lies within; the contour marches only these (default: the whole grid). */
+  box?: SampleBox;
+}
+
+/** An inclusive range of samples. */
+export interface SampleBox {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+/** Which terrain a contour is of: all of it, or the part inside a region. */
 export interface ContourOptions {
-  /** Widens the region by this many world units (the outline: the terrain grown by its width). */
+  /** Widens the shape by this many world units (the outline: the terrain grown by its width). */
   grow: number;
-  breakableOnly: boolean;
+  region?: SampleRegion;
 }
 
 /** What one contour cell (between four sample centres) contributes. */
@@ -120,15 +140,100 @@ const sampleIndex = (grid: TerrainGrid, cx: number, cy: number): number =>
     ? cy * grid.widthCells + cx
     : -1;
 
+const isSolidSample = (grid: TerrainGrid, index: number): boolean =>
+  (grid.cells[index] ?? EMPTY_CELL) !== EMPTY_CELL;
+
+/** The breakable terrain as a region: every sample but the unbreakable solid ones. */
+export function breakableRegion(grid: TerrainGrid): SampleRegion {
+  const band = fieldBand(grid);
+  return {
+    value: (index) =>
+      isSolidSample(grid, index) && !isBreakableSlot(grid.slots[grid.cells[index]!]) ? -band : band,
+  };
+}
+
+/**
+ * How far inside its edge a marked sample with only marked neighbours reads, in samples. More
+ * than a sample's diagonal, so the terrain's own distance wins along the terrain's edge.
+ */
+const MARKED_DEPTH_SAMPLES = 1.5;
+
+/** Share of the solid samples around a sample (itself included) that are marked. */
+function markedShare(grid: TerrainGrid, marked: Uint8Array, index: number): number {
+  const cx = index % grid.widthCells;
+  const cy = Math.floor(index / grid.widthCells);
+  let solid = 0;
+  let hits = 0;
+  for (let dy = -1; dy <= 1; dy += 1) {
+    for (let dx = -1; dx <= 1; dx += 1) {
+      const near = sampleIndex(grid, cx + dx, cy + dy);
+      if (near < 0 || !isSolidSample(grid, near)) continue;
+      solid += 1;
+      hits += marked[near] ?? 0;
+    }
+  }
+  return solid > 0 ? hits / solid : 0;
+}
+
+function widenBox(box: SampleBox, cx: number, cy: number): void {
+  box.minX = Math.min(box.minX, cx);
+  box.maxX = Math.max(box.maxX, cx);
+  box.minY = Math.min(box.minY, cy);
+  box.maxY = Math.max(box.maxY, cy);
+}
+
+/**
+ * The region of a set of marked solid samples (the burning ones, the frozen ones). A marked
+ * sample is always inside and an unmarked solid one never is; how far depends on the share of
+ * its solid neighbours that are marked, so the region's edge inside the terrain is a curve
+ * between the samples instead of their steps. Empty samples do not limit it: there the terrain's
+ * own edge is the edge. Null when nothing solid is marked.
+ */
+export function markedRegion(grid: TerrainGrid, samples: Iterable<number>): SampleRegion | null {
+  const marked = new Uint8Array(grid.cells.length);
+  const box: SampleBox = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  for (const index of samples) {
+    if (!isSolidSample(grid, index)) continue;
+    marked[index] = 1;
+    widenBox(box, index % grid.widthCells, Math.floor(index / grid.widthCells));
+  }
+  if (box.maxX < box.minX) return null;
+  const band = fieldBand(grid);
+  const depth = MARKED_DEPTH_SAMPLES * grid.cellSize * 2;
+  const known = new Float32Array(grid.cells.length).fill(Number.NaN);
+  const value = (index: number): number => {
+    if (!isSolidSample(grid, index)) return band;
+    const seen = known[index]!;
+    if (!Number.isNaN(seen)) return seen;
+    const fresh = (((marked[index] ?? 0) + markedShare(grid, marked, index)) / 2 - 0.5) * depth;
+    known[index] = fresh;
+    return fresh;
+  };
+  return { value, box };
+}
+
+/**
+ * World y of the terrain's edge right above a solid sample: where the distance crosses zero
+ * between it and the empty sample over it (the same crossing the contour draws). Null when the
+ * sample is empty or has terrain above it.
+ */
+export function edgeAbove(grid: TerrainGrid, index: number): number | null {
+  if (!isSolidSample(grid, index)) return null;
+  const above = index - grid.widthCells;
+  const own = grid.distance[index] ?? 0;
+  const over = above >= 0 ? (grid.distance[above] ?? -fieldBand(grid)) : -fieldBand(grid);
+  if (over > 0 || own <= 0) return null;
+  const row = Math.floor(index / grid.widthCells);
+  return (row + 0.5 - own / (own - over)) * grid.cellSize;
+}
+
 /** Field value of a sample for this contour (+ grow); samples outside it read as far outside. */
 function contourValue(pass: ContourPass, cx: number, cy: number): number {
-  const { grid, grow } = pass;
+  const { grid, grow, region } = pass;
   const index = sampleIndex(grid, cx, cy);
   if (index < 0) return -fieldBand(grid);
-  const slot = grid.cells[index] ?? EMPTY_CELL;
-  const excluded = pass.breakableOnly && slot !== EMPTY_CELL && !isBreakableSlot(grid.slots[slot]);
-  if (excluded) return -fieldBand(grid);
-  return (grid.distance[index] ?? -fieldBand(grid)) + grow;
+  const own = grid.distance[index] ?? -fieldBand(grid);
+  return (region ? Math.min(own, region.value(index)) : own) + grow;
 }
 
 const CORNERS = [
@@ -172,33 +277,50 @@ function cellPiece(corners: readonly { x: number; y: number; v: number }[]): num
 }
 
 /** One row of contour cells: runs of full cells as rects, partial cells as pieces. */
-function contourRow(shapes: MaskShapes, pass: ContourPass, cy: number): void {
+function contourRow(shapes: MaskShapes, pass: ContourPass, row: { cy: number; box: SampleBox }) {
   const size = pass.grid.cellSize;
-  let from = -1;
-  for (let cx = -1; cx <= pass.grid.widthCells; cx += 1) {
-    const corners = cx < pass.grid.widthCells ? cellCorners(pass, cx, cy) : [];
+  const { cy, box } = row;
+  let from: number | null = null;
+  for (let cx = box.minX; cx <= box.maxX + 1; cx += 1) {
+    const corners = cx <= box.maxX ? cellCorners(pass, cx, cy) : [];
     const cover = corners.length > 0 ? classifyCell(corners) : "none";
-    if (cover === "full" && from < 0) from = cx;
-    if (cover !== "full" && from >= 0) {
+    if (cover === "full" && from === null) from = cx;
+    if (cover !== "full" && from !== null) {
       const y = (cy + 0.5) * size;
       shapes.rects.push({ x: (from + 0.5) * size, y, w: (cx - from) * size, h: size });
-      from = -1;
+      from = null;
     }
     if (cover === "piece") shapes.pieces.push(cellPiece(corners));
   }
 }
 
+/** Contour cells to march: every cell that touches the region's samples, grown shape included. */
+function contourCells(grid: TerrainGrid, options: ContourOptions): SampleBox {
+  const all = { minX: -1, minY: -1, maxX: grid.widthCells - 1, maxY: grid.heightCells - 1 };
+  const box = options.region?.box;
+  if (!box) return all;
+  const pad = 1 + Math.ceil(Math.max(0, options.grow) / grid.cellSize);
+  return {
+    minX: Math.max(all.minX, box.minX - pad),
+    minY: Math.max(all.minY, box.minY - pad),
+    maxX: Math.min(all.maxX, box.maxX + pad - 1),
+    maxY: Math.min(all.maxY, box.maxY + pad - 1),
+  };
+}
+
 /**
- * The one terrain shape rule (terrain-curves D8): the region where the distance field (+ `grow`)
- * is positive, read from the current terrain only. With grow 0 over breakable terrain it clips
- * the breakable fills; grown by the outline width over all terrain it is the outline, drawn in
- * ink under the fills. Untouched slabs come out as their own drawn shape (the field is seeded
- * from it), crater rims and cut faces as true curves, and empty space as nothing.
+ * The one terrain shape rule (terrain-curves D8): the shape where the distance field (+ `grow`)
+ * is positive, read from the current terrain only. Grown by the outline width over all terrain
+ * it is the outline, drawn in ink under the fills. Limited to a `region` it is that part of the
+ * terrain in the terrain's own shape: breakable terrain (the clip of the breakable fills),
+ * burning terrain, frozen ground. Untouched slabs come out as their own drawn shape (the field
+ * is seeded from it), crater rims and cut faces as true curves, and empty space as nothing.
  */
 export function terrainContour(grid: TerrainGrid, options: ContourOptions): MaskShapes {
   const pass: ContourPass = { grid, ...options };
   const shapes: MaskShapes = { rects: [], pieces: [] };
-  for (let cy = -1; cy < grid.heightCells; cy += 1) contourRow(shapes, pass, cy);
+  const box = contourCells(grid, options);
+  for (let cy = box.minY; cy <= box.maxY; cy += 1) contourRow(shapes, pass, { cy, box });
   return shapes;
 }
 

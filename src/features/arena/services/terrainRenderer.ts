@@ -6,6 +6,7 @@ import type { MoverBody, TerrainGrid } from "@/features/arena/types/arena.types"
 import { isBreakableSlot, takeDirtyChunks } from "@/features/arena/services/terrainGrid";
 import { moverPieceIndices, pieceCellSlot } from "@/features/arena/services/terrainRaster";
 import {
+  breakableRegion,
   drawContour,
   drawSlabFill,
   terrainContour,
@@ -118,20 +119,20 @@ export function syncTerrainView(view: TerrainView, grid: TerrainGrid, zoom: numb
   if (stepChanged || terrainChanged) {
     view.inkStep = outline.step;
     view.inkWidth = outline.width;
-    const outlineShape = terrainContour(grid, { grow: outline.width, breakableOnly: false });
+    const outlineShape = terrainContour(grid, { grow: outline.width });
     drawContour(view.ink, outlineShape, GAME_PALETTE.ink);
   }
   view.movers.forEach((moverView, i) => {
     const mover = grid.movers[i];
     if (!mover) return;
     if (stepChanged) {
-      const shape = terrainContour(mover.field, { grow: outline.width, breakableOnly: false });
+      const shape = terrainContour(mover.field, { grow: outline.width });
       drawContour(moverView.ink, shape, GAME_PALETTE.ink);
     }
     placeMoverView(moverView, mover);
   });
   if (terrainChanged) {
-    const standing = terrainContour(grid, { grow: 0, breakableOnly: true });
+    const standing = terrainContour(grid, { grow: 0, region: breakableRegion(grid) });
     view.breakableFill.visible = drawContour(view.breakableMask, standing, 0xffffff);
   }
 }

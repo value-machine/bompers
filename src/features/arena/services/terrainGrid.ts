@@ -77,6 +77,7 @@ export function createTerrainGrid(size: TerrainGridSize): TerrainGrid {
     chunksX,
     chunksY,
     dirtyChunks,
+    shapeVersion: 0,
     frozen: new Uint8Array(count),
     frozenVersion: 0,
     frozenFriction: size.frozenFriction ?? 1,
@@ -146,6 +147,7 @@ export function writeSample(grid: TerrainGrid, write: SampleWrite): boolean {
     grid.frozenVersion += 1;
   }
   grid.dirtyChunks.add(chunkIndexOfCell(grid, cx, cy));
+  grid.shapeVersion += 1;
   return true;
 }
 
