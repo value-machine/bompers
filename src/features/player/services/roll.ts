@@ -1,7 +1,7 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { PlayerInput } from "@/shared/types/gameInput.types";
-import type { PlayerState, RollSource } from "@/features/player/types/player.types";
+import type { PlayerState, RollHoldButton, RollSource } from "@/features/player/types/player.types";
 
 /**
  * Roll: the one rolling state of a blob, shared by every way into it (shared-roll D2).
@@ -11,7 +11,8 @@ import type { PlayerState, RollSource } from "@/features/player/types/player.typ
  *   (`roll.lockPerImpulse`, capped): 0 does nothing, a shove a short roll, a big blast a long
  *   airborne one. No threshold (shared-roll D3).
  * - **Dash:** holding fire through a dive's travel rolls on with the dive's speed (the dive
- *   feature calls `startRoll` with source `dash`); letting go of fire ends it.
+ *   feature calls `startRoll` with source `dash`); letting go of the button that started the
+ *   dive (fire, or jump for a jump dive) ends it.
  *
  * While rolling the controller runs ball physics (`steerRoll` in the controller): gravity along
  * the ground (rolls down hills), rolling friction, weak steering; terrain impacts bounce by
@@ -33,6 +34,8 @@ export interface StartRollArgs {
   impulse?: Vec2;
   /** Least lock, seconds (a back hit). */
   minLockSeconds?: number;
+  /** A dash: the button that keeps it going (default fire). */
+  holdButton?: RollHoldButton;
 }
 
 /** Lock seconds for an impulse: linear in its strength, capped (shared-roll D3). */
@@ -41,7 +44,7 @@ export const rollLockFor = (impulse: Vec2, t: RollTunables): number =>
 
 /**
  * Puts the player into the roll (or refreshes a running one: the longer lock wins, a hit
- * overrides a dash so letting go of fire no longer ends it).
+ * overrides a dash so letting go of its button no longer ends it).
  */
 export function startRoll(player: PlayerState, args: StartRollArgs, tunables: GameTunables): void {
   const lock = Math.max(
@@ -54,6 +57,7 @@ export function startRoll(player: PlayerState, args: StartRollArgs, tunables: Ga
     if (args.source === "dash") player.dashRollCount += 1;
   }
   if (player.rollSource !== "hit") player.rollSource = args.source;
+  player.rollHoldButton = player.rollSource === "dash" ? (args.holdButton ?? "fire") : null;
   player.rollLockSeconds = Math.max(player.rollLockSeconds, lock);
   player.crouching = false;
 }
@@ -61,6 +65,7 @@ export function startRoll(player: PlayerState, args: StartRollArgs, tunables: Ga
 export function endRoll(player: PlayerState): void {
   if (!isRolling(player)) return;
   player.rollSource = null;
+  player.rollHoldButton = null;
   player.rollLockSeconds = 0;
 }
 
@@ -94,9 +99,11 @@ export function reactToHit(
   return true;
 }
 
-/** A dash roll lasts while fire is held; letting go ends it. */
+/** A dash roll lasts while its hold button (fire, or jump for a jump dive) is held. */
 export function releaseRoll(player: PlayerState, input: PlayerInput): void {
-  if (player.rollSource === "dash" && !input.fire) endRoll(player);
+  if (player.rollSource !== "dash") return;
+  const held = player.rollHoldButton === "jump" ? input.jump : input.fire;
+  if (!held) endRoll(player);
 }
 
 function bounceAxis(player: PlayerState, axis: "x" | "y", t: RollTunables): void {

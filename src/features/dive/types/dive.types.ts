@@ -25,15 +25,22 @@ export interface DiveHit {
 
 export type DivePhase = "idle" | "windup" | "travel" | "recovery";
 
+/** What started a dive: a fire press, or a mid-air jump press (double-jump-bash D1). */
+export type DiveTrigger = "fire" | "jump";
+
 /** One player's dive state. Timers are seconds. */
 export interface DiveMotion {
   phase: DivePhase;
   /** Seconds spent in the current phase, and how long it lasts. */
   phaseSeconds: number;
   phaseDuration: number;
-  /** Unit dive direction, locked at the press (the aim snapped to 8 ways). */
+  /** Unit dive direction, locked at the press (the aim snapped to 16 ways). */
   dirX: number;
   dirY: number;
+  /** What started the current (or last) dive; its button keeps the dash roll going. */
+  trigger: DiveTrigger;
+  /** Launch speed of the current dive: `launchSpeed`, or more out of a roll (D13). */
+  launchSpeed: number;
   /**
    * One dive per airtime: spent at the press, back on ground contact, on a hit or from a
    * headbutt reset pickup (`refillDive`).
@@ -66,6 +73,11 @@ export interface DiveState {
    * `motions` so a respawn (`resetDive`) never makes the count go back.
    */
   refillCounts: Record<string, number>;
+  /**
+   * The controller's `airJumpPressCount` last read per player id: a rise is a jump request.
+   * Outside `motions` so a respawn never replays old presses.
+   */
+  airJumpPressesRead: Record<string, number>;
   /** Hits made on the last step (also emitted by combat as `playerHit` events). */
   hits: DiveHit[];
   recentHits: RecentHit[];

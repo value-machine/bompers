@@ -595,3 +595,178 @@ describe("gameSim — leaving a squeeze", () => {
     expect(player.x).toBeGreaterThan(1030);
   });
 });
+
+/** Player 1 armed with a full rocket launcher, standing on the floor (spawns are 120 up). */
+const armedGame = () => {
+  const state = newGame();
+  stepFor(state, 1);
+  state.combat.fighters.get("p0")!.weapon = {
+    itemId: "rocket-launcher",
+    ammo: DEFAULT_GAME_TUNABLES.combat.rocket.ammo,
+  };
+  return state;
+};
+/** Jumps, lets go, then presses jump again high in the air while holding `extra` keys. */
+const jumpThenAirPress = (state: ReturnType<typeof createGameState>, ...extra: string[]) => {
+  stepFor(state, 0.05, keys("Space"));
+  stepFor(state, 0.25);
+  stepGame(state, keys("Space", ...extra), dt);
+};
+
+describe("gameSim — jump dive (double-jump-bash D1)", () => {
+  // Acceptance test of the double-jump-bash lap (BRIEF.md § Success check).
+  it("should start the dive and fire no rocket when an armed player presses jump in mid-air", () => {
+    const state = armedGame();
+    jumpThenAirPress(state, "KeyD");
+    stepFor(state, DEFAULT_GAME_TUNABLES.dive.windupSeconds + 2 * dt);
+    const motion = state.dive.motions.p0;
+    expect(motion?.phase).toBe("travel");
+    expect(motion?.dirX).toBeCloseTo(1);
+    expect(state.combat.fighters.get("p0")?.weapon?.ammo).toBe(
+      DEFAULT_GAME_TUNABLES.combat.rocket.ammo
+    );
+  });
+
+  it("should roll on when jump is still held as the jump dive ends", () => {
+    const state = armedGame();
+    jumpThenAirPress(state, "KeyD");
+    const d = DEFAULT_GAME_TUNABLES.dive;
+    stepFor(state, d.windupSeconds + d.travelSeconds + 2 * dt, keys("Space", "KeyD"));
+    expect(state.players[0]!.rollSource).toBe("dash");
+  });
+
+  it("should not dive when the first jump press leaves the ground", () => {
+    const state = armedGame();
+    stepFor(state, 0.2, keys("Space"));
+    expect(state.dive.motions.p0?.phase ?? "idle").toBe("idle");
+  });
+});
+
+describe("gameSim — jump dive rules (double-jump-bash D2, D5, D17)", () => {
+  it("should dive straight up from a jump press with no stick, and along facing from fire", () => {
+    const jumped = armedGame();
+    jumpThenAirPress(jumped);
+    stepFor(jumped, DEFAULT_GAME_TUNABLES.dive.windupSeconds + 2 * dt);
+    expect(jumped.dive.motions.p0).toMatchObject({ phase: "travel", dirX: 0, dirY: -1 });
+
+    const fired = newGame();
+    stepFor(fired, 1);
+    stepFor(fired, 0.05, keys("Space"));
+    stepFor(fired, 0.25);
+    stepGame(fired, keys("KeyF"), dt);
+    stepFor(fired, DEFAULT_GAME_TUNABLES.dive.windupSeconds + 2 * dt);
+    expect(fired.dive.motions.p0).toMatchObject({ phase: "travel", dirX: 1, dirY: 0 });
+  });
+
+  it("should start one dive only when fire and jump are pressed on the same step", () => {
+    const state = newGame();
+    stepFor(state, 1);
+    stepFor(state, 0.05, keys("Space"));
+    stepFor(state, 0.25);
+    stepGame(state, keys("Space", "KeyF", "KeyD"), dt);
+    stepFor(state, 1);
+    // One dive spent the charge; the second press found nothing to start.
+    expect(state.dive.motions.p0?.trigger).toBe("fire");
+    expect(state.players[0]!.dashRollCount).toBe(0);
+  });
+
+  it("should not dive again with a jump press while the airtime's dive is spent", () => {
+    const state = armedGame();
+    jumpThenAirPress(state, "KeyD");
+    const d = DEFAULT_GAME_TUNABLES.dive;
+    stepFor(state, d.windupSeconds + d.travelSeconds + d.recoverySeconds + 0.05);
+    expect(state.players[0]!.grounded).toBe(false);
+    const travels = () => state.dive.motions.p0?.phase === "travel";
+    stepGame(state, keys("Space", "KeyA"), dt);
+    let dived = false;
+    for (let i = 0; i < 40; i += 1) {
+      stepGame(state, keys("Space"), dt);
+      dived ||= travels();
+    }
+    expect(dived).toBe(false);
+  });
+
+  it("should jump, not dive, when a spent air press is followed by landing", () => {
+    const state = armedGame();
+    jumpThenAirPress(state, "KeyD");
+    // Fall back to the floor with the dive spent, pressing jump just before touching down.
+    let pressed = false;
+    for (let i = 0; i < 400 && !state.players[0]!.grounded; i += 1) {
+      const near = 320 - state.players[0]!.y < 40;
+      stepGame(state, near && !pressed ? keys("Space") : keys(), dt);
+      if (near) pressed = true;
+    }
+    const jumpsBefore = state.players[0]!.jumpCount;
+    stepFor(state, 0.2);
+    expect(state.dive.motions.p0?.phase === "windup").toBe(false);
+    expect(state.players[0]!.jumpCount).toBeGreaterThanOrEqual(jumpsBefore);
+  });
+
+  it("should hit like a fire dive when a jump dive strikes a rival", () => {
+    const state = createGameState({
+      level: {
+        ...level,
+        spawns: [
+          { x: 300, y: 320 },
+          { x: 362, y: 320 },
+        ],
+      },
+      tunables: DEFAULT_GAME_TUNABLES,
+    });
+    stepFor(state, 1);
+    state.combat.fighters.get("p0")!.weapon = { itemId: "rocket-launcher", ammo: 6 };
+    stepFor(state, 0.05, keys("Space"));
+    stepFor(state, 0.03);
+    const hits = [];
+    stepGame(state, keys("Space", "KeyD", "KeyS"), dt);
+    for (let i = 0; i < 90 && hits.length === 0; i += 1) {
+      stepGame(state, keys(), dt);
+      hits.push(...state.dive.hits);
+    }
+    expect(hits).toHaveLength(1);
+    expect(hits[0]).toMatchObject({ attackerSlot: 0, victimSlot: 1, source: "dive" });
+    expect(hits[0]!.damage).toBeGreaterThan(0);
+    // The ricochet pops the attacker up with the dive ready again.
+    expect(state.players[0]!.vy).toBeLessThan(0);
+    expect(state.dive.motions.p0?.charged).toBe(true);
+  });
+});
+
+describe("gameSim — roll carry into a dive (double-jump-bash D12, D13)", () => {
+  /** Player 1 rolling along the floor at `speed` (fire held), unlocked; null = standing. */
+  const travelled = (speed: number | null): number => {
+    const state = newGame();
+    stepFor(state, 1);
+    const player = state.players[0]!;
+    if (speed !== null) {
+      player.rollSource = "dash";
+      player.rollHoldButton = "fire";
+      player.vx = speed;
+    }
+    stepGame(state, keys("KeyF", "KeyD"), dt);
+    stepFor(state, DEFAULT_GAME_TUNABLES.dive.windupSeconds);
+    const from = player.x;
+    stepFor(state, DEFAULT_GAME_TUNABLES.dive.travelSeconds - dt);
+    return player.x - from;
+  };
+
+  it("should dive clearly farther out of a fast roll than from standing", () => {
+    expect(travelled(1150)).toBeGreaterThan(travelled(null) * 1.25);
+  });
+
+  it("should cap the dive's carried speed", () => {
+    const d = DEFAULT_GAME_TUNABLES.dive;
+    expect(travelled(3000)).toBeLessThanOrEqual(d.rollCarryMax * d.travelSeconds + 1);
+  });
+
+  it("should not dive out of a roll that is still locked by a hit", () => {
+    const state = newGame();
+    stepFor(state, 1);
+    const player = state.players[0]!;
+    player.rollSource = "hit";
+    player.rollLockSeconds = 1;
+    stepGame(state, keys("KeyF", "KeyD"), dt);
+    stepFor(state, 0.1);
+    expect(state.dive.motions.p0?.phase ?? "idle").toBe("idle");
+  });
+});

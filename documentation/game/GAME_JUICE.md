@@ -77,7 +77,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Headbutt reset taken | light | `pickup` (pitched by the collector) | — | — | — | — | ring burst in the crystal colour, 220 ms; then a ghost outline until it is back | — |
 | Headbutt reset returns | — | — (deliberately silent: a world timer every 2.5 s would be noise) | crystal pop-in, back-out 150 ms | — | — | — | — | — |
 | Respawn | light | `respawn` | — | — | — | — | blink 8 Hz + ring | — |
-| Dive launch | light | `dive-launch` | dive pose | — | — | — | — | — |
+| Dive launch (fire, or a mid-air jump press: double-jump-bash D1) | light | `dive-launch` | dive pose | — | — | — | — | — |
 | Front hit taken | medium | `hit` / `dive-impact` (gain by knockback) | — | 0.75 | 3 px | — | impact pop (not on dive hits) | kick |
 | Roll bounce (hit or dash roll) | medium | `tumble-bounce` | squash wide (by speed) | — | 3 px (by speed) | — | — | kick |
 | Dash roll starts (fire held through a dive) | light | `land` soft thud (`crouchGain`) | — | — | — | — | the body spins with its ground speed (sim `rollAngle`) | — |

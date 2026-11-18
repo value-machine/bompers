@@ -317,3 +317,14 @@ describe("roundResultLabel", () => {
     expect(roundResultLabel([])).toBe("Time!");
   });
 });
+
+describe("outOfBoundsMargin and the roll carry (double-jump-bash D14)", () => {
+  it("should leave room for the farthest carried jump and a carried dive when the margin is set", () => {
+    const t = DEFAULT_GAME_TUNABLES;
+    const airtime = (2 * t.player.jumpSpeed) / t.world.gravity;
+    // Upper bounds: no bleed at all, and a whole carried dive on top.
+    const carriedJump = t.roll.jumpCarryMax * airtime;
+    const carriedDive = t.dive.rollCarryMax * t.dive.travelSeconds;
+    expect(carriedJump + carriedDive).toBeLessThan(outOfBoundsMargin(t));
+  });
+});

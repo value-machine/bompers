@@ -22,6 +22,8 @@ export interface PlayerState {
    */
   aimX: number;
   aimY: number;
+  /** The stick / keys gave an aim direction this step (false = the facing fallback above). */
+  aimHeld: boolean;
   /** Jump held on the previous step (edge detection for "pressed"). */
   prevJump: boolean;
   /** True from a jump's take-off until release or apex: releasing then cuts the rise. */
@@ -30,6 +32,14 @@ export interface PlayerState {
   coyoteTimer: number;
   /** Seconds left in which a recent jump press still fires (jump buffer). */
   jumpBufferTimer: number;
+  /** The current jump press was already counted in `airJumpPressCount` (one count per press). */
+  jumpPressCounted: boolean;
+  /**
+   * Horizontal speed a jump out of a roll carries (roll carry, double-jump-bash D11): while the
+   * stick holds along `vx`, air steering bleeds speed above run speed at `roll.airCarryDecel`
+   * down from here instead of steering it to run speed. 0 = no carry.
+   */
+  airCarrySpeed: number;
   /** Wall touching the body this step while airborne: -1 left, 1 right, 0 none. */
   wallDir: -1 | 0 | 1;
   /** Side of the last wall touched, and seconds left in which a wall-jump off it still counts. */
@@ -62,6 +72,8 @@ export interface PlayerState {
    * rest, terrain bounces.
    */
   rollSource: RollSource | null;
+  /** A dash roll lasts while this button is held (the one that started its dive); null otherwise. */
+  rollHoldButton: RollHoldButton | null;
   rollLockSeconds: number;
   rollSeconds: number;
   rollAngle: number;
@@ -79,10 +91,15 @@ export interface PlayerState {
   /** Top of the first surface below the feet within shadow range, or null (contact shadow). */
   groundBelowY: number | null;
   /**
-   * Event counters for the render layer (squash, sounds). Monotonic, so a frame that ran
-   * several sim steps still sees every event by comparing with the last value it read.
+   * Event counters (squash, sounds; the dive reads `airJumpPressCount`). Monotonic, so a reader
+   * that skipped steps still sees every event by comparing with the last value it read.
    */
   jumpCount: number;
+  /**
+   * Air jump presses the controller did not use: no ground, coyote or wall jump, and no ground
+   * near enough for the landing buffer (double-jump-bash D2, D3). The dive treats each as a request.
+   */
+  airJumpPressCount: number;
   wallJumpCount: number;
   landCount: number;
   /**
@@ -106,3 +123,6 @@ export interface PlayerState {
 
 /** Why a blob rolls: knocked by a hit (any attack) or rolling on from a held dash. */
 export type RollSource = "hit" | "dash";
+
+/** The button that keeps a dash roll going (the one that started its dive). */
+export type RollHoldButton = "fire" | "jump";

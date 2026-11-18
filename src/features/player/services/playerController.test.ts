@@ -12,6 +12,7 @@ import type { Rect } from "@/shared/types/gameGeometry.types";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { createPlayer, stepPlayers } from "@/features/player/services/playerController";
 import type { PlayerState } from "@/features/player/types/player.types";
+import { startRoll } from "@/features/player/services/roll";
 
 // Cell size 8. Floor top at y = 320 (x 300 has only the floor below and open sky above). Short wall x 480–496 (y 240–320). Tall wall x 640–656
 // (y 0–320). Ledge platform x 80–240, top y = 160.
@@ -530,5 +531,125 @@ describe("playerController — slope walking", () => {
     sim.step({}, 120);
     expect(sim.player.grounded).toBe(true);
     expect(sim.player.groundAngle).toBeCloseTo(Math.PI / 6, 1);
+  });
+});
+
+describe("playerController — air jump presses (double-jump-bash D2, D3)", () => {
+  /** Jumps from the floor, lets go, and returns once high in the air and rising. */
+  const highInTheAir = (): Sim => {
+    const sim = grounded();
+    sim.step({ jump: true }, 2);
+    sim.step({}, 30);
+    return sim;
+  };
+
+  it("should count one air press when jump is pressed high in the air", () => {
+    const sim = highInTheAir();
+    sim.step({ jump: true }, 10);
+    expect(sim.player.airJumpPressCount).toBe(1);
+    expect(sim.player.jumpCount).toBe(1);
+  });
+
+  it("should not count the press that jumps off the ground", () => {
+    const sim = grounded();
+    sim.step({ jump: true });
+    expect(sim.player.jumpCount).toBe(1);
+    expect(sim.player.airJumpPressCount).toBe(0);
+  });
+
+  it("should not count a coyote jump just after walking off a ledge", () => {
+    const sim = createSim({ x: 230, y: 120 });
+    sim.step({}, 60);
+    for (let i = 0; i < 120 && sim.player.grounded; i += 1) sim.step({ moveX: 1 });
+    sim.step({ moveX: 1, jump: true });
+    expect(sim.player.jumpCount).toBe(1);
+    expect(sim.player.airJumpPressCount).toBe(0);
+  });
+
+  it("should keep a press just above the floor for the landing jump instead of counting it", () => {
+    const sim = createSim({ x: 300, y: FLOOR_Y - 120 });
+    for (let i = 0; i < 200 && FLOOR_Y - sim.player.y > 8; i += 1) sim.step();
+    sim.step({ jump: true });
+    sim.step({ jump: true }, 20);
+    expect(sim.player.airJumpPressCount).toBe(0);
+    expect(sim.player.jumpCount).toBe(1);
+  });
+
+  it("should wall-jump instead of counting a press made while touching a wall", () => {
+    const sim = createSim({ x: 640 - P.width / 2, y: 120 });
+    sim.step({ moveX: 1 }, 14);
+    sim.step({ moveX: 1, jump: true });
+    expect(sim.player.wallJumpCount).toBe(1);
+    expect(sim.player.airJumpPressCount).toBe(0);
+  });
+
+  it("should still wall-jump from a press made just before reaching the wall", () => {
+    const sim = createSim({ x: 640 - P.width / 2 - 3, y: 120 });
+    sim.step({}, 2);
+    sim.step({ moveX: 1, jump: true });
+    expect(sim.player.wallDir).toBe(0);
+    sim.step({ moveX: 1, jump: true }, 6);
+    expect(sim.player.wallJumpCount).toBe(1);
+  });
+
+  it("should count a held jump once and a press made while locked once the lock ends", () => {
+    const sim = highInTheAir();
+    sim.player.jumpLocked = true;
+    sim.step({ jump: true }, 4);
+    expect(sim.player.airJumpPressCount).toBe(0);
+    sim.player.jumpLocked = false;
+    sim.step({ jump: true }, 10);
+    expect(sim.player.airJumpPressCount).toBe(1);
+  });
+});
+
+describe("playerController — roll carry (double-jump-bash D11)", () => {
+  const ROLL = DEFAULT_GAME_TUNABLES.roll;
+  /** Rolls along the floor at `speed` (fire held), then jumps holding right; returns the reach. */
+  const jumpReach = (speed: number | null): { reach: number; takeOffVx: number } => {
+    const sim = createSim({ x: 40, y: FLOOR_Y - 40 });
+    sim.step({}, 60);
+    if (speed !== null) {
+      startRoll(sim.player, { source: "dash" }, DEFAULT_GAME_TUNABLES);
+      sim.player.vx = speed;
+    } else sim.step({ moveX: 1 }, 60);
+    const from = sim.player.x;
+    sim.step({ moveX: 1, jump: true, fire: speed !== null });
+    const takeOffVx = sim.player.vx;
+    for (let i = 0; i < 400 && !sim.player.grounded; i += 1) sim.step({ moveX: 1, jump: true });
+    return { reach: sim.player.x - from, takeOffVx };
+  };
+
+  it("should jump clearly farther out of a fast roll than from a full run", () => {
+    const run = jumpReach(null).reach;
+    const rolled = jumpReach(ROLL.jumpCarryMax).reach;
+    expect(rolled).toBeGreaterThan(run * 1.25);
+  });
+
+  it("should cap the speed a jump keeps from a very fast roll", () => {
+    expect(jumpReach(2000).takeOffVx).toBeCloseTo(ROLL.jumpCarryMax);
+  });
+
+  it("should steer a blast's speed back down as before when the jump did not come out of a roll", () => {
+    const sim = grounded();
+    sim.step({ jump: true });
+    sim.player.vx = 900;
+    sim.step({ moveX: 1, jump: true }, 24);
+    expect(sim.player.airCarrySpeed).toBe(0);
+    expect(sim.player.vx).toBeLessThan(900 - P.airAccel * 0.15);
+  });
+
+  it("should drop the carry when the stick lets go and when it lands", () => {
+    const sim = createSim({ x: 40, y: FLOOR_Y - 40 });
+    sim.step({}, 60);
+    startRoll(sim.player, { source: "dash" }, DEFAULT_GAME_TUNABLES);
+    sim.player.vx = 500;
+    sim.step({ moveX: 1, jump: true, fire: true });
+    expect(sim.player.airCarrySpeed).toBeGreaterThan(P.runSpeed);
+    sim.step({ jump: true });
+    expect(sim.player.airCarrySpeed).toBe(0);
+    sim.step({}, 300);
+    expect(sim.player.grounded).toBe(true);
+    expect(sim.player.airCarrySpeed).toBe(0);
   });
 });

@@ -2,13 +2,15 @@ import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import {
+  endRoll,
   isRolling,
+  isRollLocked,
   reactToHit,
   startRoll,
   type BodyContact,
   type PlayerState,
 } from "@/features/player/api/playerApi";
-import type { DiveHit, DiveMotion, DiveState } from "@/features/dive/types/dive.types";
+import type { DiveHit, DiveMotion, DiveState, DiveTrigger } from "@/features/dive/types/dive.types";
 import { applyHit, type CombatState } from "@/features/combat/api/combatApi";
 
 /**
@@ -57,6 +59,7 @@ const AIM_STEP = Math.PI / 8;
 export const createDiveState = (): DiveState => ({
   motions: {},
   refillCounts: {},
+  airJumpPressesRead: {},
   hits: [],
   recentHits: [],
 });
@@ -67,6 +70,8 @@ const createDiveMotion = (): DiveMotion => ({
   phaseDuration: 0,
   dirX: 1,
   dirY: 0,
+  trigger: "fire",
+  launchSpeed: 0,
   charged: true,
   cooldown: 0,
   fireBuffer: 0,
@@ -115,8 +120,12 @@ export function resetDive(dive: DiveState, player: PlayerState): void {
 
 // ── Phase changes ────────────────────────────────────────────────────────────
 
-/** Unit dive direction: the player's aim snapped to 16 ways. */
-function diveDirection(player: PlayerState): Vec2 {
+/**
+ * Unit dive direction: the player's aim snapped to 16 ways. A jump dive with no aim input goes
+ * straight up, a bashing double jump (double-jump-bash D17); a fire dive keeps the facing fallback.
+ */
+function diveDirection(player: PlayerState, trigger: DiveTrigger): Vec2 {
+  if (trigger === "jump" && !player.aimHeld) return { x: 0, y: -1 };
   const angle = Math.round(Math.atan2(player.aimY, player.aimX) / AIM_STEP) * AIM_STEP;
   return { x: Math.cos(angle), y: Math.sin(angle) };
 }
@@ -136,10 +145,25 @@ function endDive(motion: DiveMotion, d: DiveTunables, stunSeconds = 0): void {
   motion.cooldown = motion.charged ? duration : duration + d.cooldownSeconds;
 }
 
-function startWindup(motion: DiveMotion, player: PlayerState, d: DiveTunables): void {
-  const direction = diveDirection(player);
+/**
+ * Launch speed: the dive's own, or a roll's speed along the aim when faster, capped (roll carry,
+ * double-jump-bash D13). Read before the wind-up slows the blob; falls and blasts never feed it.
+ */
+function launchSpeedFor(player: PlayerState, direction: Vec2, d: DiveTunables): number {
+  if (!isRolling(player)) return d.launchSpeed;
+  const along = player.vx * direction.x + player.vy * direction.y;
+  return Math.max(d.launchSpeed, Math.min(along, d.rollCarryMax));
+}
+
+function startWindup(motion: DiveMotion, player: PlayerState, start: DiveStart): void {
+  const { d, trigger } = start;
+  const direction = diveDirection(player, trigger);
   motion.dirX = direction.x;
   motion.dirY = direction.y;
+  motion.trigger = trigger;
+  motion.launchSpeed = launchSpeedFor(player, direction, d);
+  // A dive out of an unlocked roll ends the roll (D12).
+  endRoll(player);
   motion.charged = false;
   motion.fireBuffer = 0;
   motion.bonked = false;
@@ -150,8 +174,8 @@ function startWindup(motion: DiveMotion, player: PlayerState, d: DiveTunables): 
 }
 
 function launch(motion: DiveMotion, player: PlayerState, d: DiveTunables): void {
-  player.vx = motion.dirX * d.launchSpeed;
-  player.vy = motion.dirY * d.launchSpeed;
+  player.vx = motion.dirX * motion.launchSpeed;
+  player.vy = motion.dirY * motion.launchSpeed;
   player.grounded = false;
   enterPhase(motion, "travel", d.travelSeconds);
 }
@@ -184,10 +208,12 @@ function terrainHit(player: PlayerState, minSpeed: number): TerrainHit | null {
  * speed instead of recovering. The roll is the player feature's; the dive is idle, cooling down.
  */
 function rollOnIfHeld(motion: DiveMotion, player: PlayerState, args: StepDivesArgs): boolean {
-  if (args.inputs?.[player.slot]?.fire !== true) return false;
+  const input = args.inputs?.[player.slot];
+  const held = motion.trigger === "jump" ? input?.jump : input?.fire;
+  if (held !== true) return false;
   enterPhase(motion, "idle", 0);
   motion.cooldown = motion.charged ? 0 : args.tunables.dive.cooldownSeconds;
-  startRoll(player, { source: "dash" }, args.tunables);
+  startRoll(player, { source: "dash", holdButton: motion.trigger }, args.tunables);
   return true;
 }
 
@@ -234,8 +260,36 @@ function tickTimers(motion: DiveMotion, dt: number): void {
   motion.sinceRicochet += dt;
 }
 
-const canStartDive = (motion: DiveMotion): boolean =>
-  motion.fireBuffer > 0 && motion.cooldown <= EPSILON && motion.charged && motion.stagger <= 0;
+/** What starts a dive this step, if anything: a buffered fire press, else this step's air press. */
+interface DiveStart {
+  d: DiveTunables;
+  trigger: DiveTrigger;
+}
+
+const diveReady = (motion: DiveMotion, player: PlayerState): boolean =>
+  motion.cooldown <= EPSILON && motion.charged && motion.stagger <= 0 && !isRollLocked(player);
+
+/**
+ * The trigger that may start a dive now. A jump request is never buffered: it starts on the step
+ * it is read, in the air only, or is dropped, so a landing jump never turns into a ground dive
+ * (double-jump-bash A5). A rolling blob may dive once its roll is unlocked (D12).
+ */
+function readyTrigger(
+  motion: DiveMotion,
+  player: PlayerState,
+  jumpRequest: boolean
+): DiveTrigger | null {
+  if (!diveReady(motion, player)) return null;
+  if (motion.fireBuffer > 0) return "fire";
+  return jumpRequest && !player.grounded ? "jump" : null;
+}
+
+/** True once per new air jump press the controller counted (double-jump-bash D3). */
+function readJumpRequest(dive: DiveState, player: PlayerState): boolean {
+  const read = dive.airJumpPressesRead[player.id] ?? player.airJumpPressCount;
+  dive.airJumpPressesRead[player.id] = player.airJumpPressCount;
+  return player.airJumpPressCount > read;
+}
 
 /** A phase that ran out hands over on the same step. */
 function handOverPhase(motion: DiveMotion, player: PlayerState, d: DiveTunables): void {
@@ -249,13 +303,23 @@ function handOverPhase(motion: DiveMotion, player: PlayerState, d: DiveTunables)
 
 function stepPhase(motion: DiveMotion, player: PlayerState, args: StepDivesArgs): void {
   const d = args.tunables.dive;
+  const jumpRequest = readJumpRequest(args.dive, player);
   tickTimers(motion, args.dt);
   const active = motion.phase === "windup" || motion.phase === "travel";
   if (player.grounded && !active) motion.charged = true;
   if (motion.phase === "travel") stepTravel(motion, player, args);
   else if (motion.phase !== "idle") motion.phaseSeconds += args.dt;
-  else if (canStartDive(motion) && !isRolling(player)) startWindup(motion, player, d);
+  else startIfReady(motion, player, { d, jumpRequest });
   handOverPhase(motion, player, d);
+}
+
+function startIfReady(
+  motion: DiveMotion,
+  player: PlayerState,
+  ctx: { d: DiveTunables; jumpRequest: boolean }
+): void {
+  const trigger = readyTrigger(motion, player, ctx.jumpRequest);
+  if (trigger) startWindup(motion, player, { d: ctx.d, trigger });
 }
 
 interface MotionModifiers {
