@@ -20,6 +20,7 @@ import {
 import {
   createKnockoutView,
   createKnockoutWorld,
+  CRUSH_PANCAKE,
   knockoutBodies,
   noteKnockoutEvents,
   stepKnockouts,
@@ -71,6 +72,7 @@ import {
   syncFireView,
   type FireView,
 } from "@/features/fire/api/fireApi";
+import { createIceView, syncIceView, type IceView } from "@/features/ice/api/iceApi";
 import { playersInPlay, type GameState } from "@/features/match/services/gameSim";
 import { createHudView, syncHudView, type HudView } from "@/features/match/services/hudRenderer";
 
@@ -114,6 +116,7 @@ export interface GameRenderer {
   collectibles: CollectiblesView;
   dive: DiveView;
   fire: FireView;
+  ice: IceView;
   hud: HudView;
   camera: CameraView | null;
   feel: FeelState;
@@ -131,8 +134,11 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const collectibles = createCollectiblesView();
   const dive = createDiveView();
   const fire = createFireView();
+  const ice = createIceView();
   world.addChild(
     terrain.container,
+    // Frozen ground under the flames: a fire next to ice stays readable.
+    ice.terrainLayer,
     fire.terrainLayer,
     collectibles.shadows.container,
     combat.shadows.container,
@@ -146,6 +152,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     dive.effects,
     players.container,
     fire.sprayLayer,
+    ice.beamLayer,
     combat.overlay
   );
 
@@ -163,6 +170,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     collectibles,
     dive,
     fire,
+    ice,
     hud,
     camera: null,
     feel: createFeelState(),
@@ -209,8 +217,27 @@ const blobOverlays = (
 ): Map<string, BlobPoseOverlay> => {
   const overlays = burningBlobPoses(state.fire, { players: frame.inPlay, nowMs: frame.nowMs });
   for (const [id, pose] of diveBlobPoses(state.dive, state.tunables)) overlays.set(id, pose);
+  for (const player of frame.inPlay) {
+    if (player.squeeze && !overlays.has(player.id))
+      overlays.set(player.id, squeezePose(player.squeeze));
+  }
   return overlays;
 };
+
+/** Longest a squeezed blob stretches along the gap (it goes past the squash band, owner #64). */
+const SQUEEZE_STRETCH_MAX = 1.6;
+
+/**
+ * A blob squeezed by a moving part (owner change round on #64): narrow across the squeeze, taller
+ * along it, axis-aligned so the eyes stay upright; it springs back when the squeeze ends.
+ */
+function squeezePose(squeeze: NonNullable<PlayerState["squeeze"]>): BlobPoseOverlay {
+  const along = Math.min(SQUEEZE_STRETCH_MAX, 1 / squeeze.scale);
+  const across = squeeze.scale;
+  return Math.abs(squeeze.nx) >= Math.abs(squeeze.ny)
+    ? { rotation: 0, sx: across, sy: along }
+    : { rotation: 0, sx: along, sy: across };
+}
 
 interface LayerFrame {
   inPlay: ReturnType<typeof playersInPlay>;
@@ -244,6 +271,7 @@ function stepKnockoutLayer(renderer: GameRenderer, state: GameState, dt: number)
     gravity: tunables.world.gravity,
     solidAt: (x, y) => isSolidAt(terrain, x, y),
     roll: (body, h) => stepPlayers({ players: [body], inputs: [], terrain, tunables, dt: h }),
+    movers: terrain.movers,
     tunables: tunables.feel.knockout,
     respawnDelaySeconds: tunables.match.respawnDelaySeconds,
   });
@@ -285,6 +313,16 @@ function addKnockoutBlob(
   if (weapon) blobs.weapons.set(id, weapon);
   const hit = blobs.hits.get(victimId);
   if (hit) blobs.hits.set(id, hit);
+  if (body.pancake) {
+    // Crushed flat by a moving part (owner, moving-parts B3): thin across the squeeze.
+    blobs.overlays.set(id, {
+      rotation: Math.atan2(body.pancake.ny, body.pancake.nx),
+      sx: CRUSH_PANCAKE.across,
+      sy: CRUSH_PANCAKE.along,
+      pupilScale: CRUSH_PANCAKE.pupilScale,
+    });
+    return;
+  }
   if (body.squash <= 0) return;
   const k = body.squash;
   blobs.overlays.set(id, { rotation: 0, sx: 1 + (squash.sx - 1) * k, sy: 1 + (squash.sy - 1) * k });
@@ -296,6 +334,13 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
   stepKnockoutLayer(renderer, state, frame.dt);
   const blobs = blobFrame(renderer, state, frame);
   syncTerrainView(renderer.terrain, state.arena.terrain, zoom);
+  syncIceView(renderer.ice, {
+    ice: state.ice,
+    terrain: state.arena.terrain,
+    nowMs,
+    timeSeconds: state.timeSeconds,
+    zoom,
+  });
   syncFireView(renderer.fire, {
     fire: state.fire,
     terrain: state.arena.terrain,
@@ -314,6 +359,7 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     playerHeight: state.tunables.player.height,
     tunables: state.tunables.feel.knockout,
     respawnDelaySeconds: state.tunables.match.respawnDelaySeconds,
+    movers: state.arena.terrain.movers,
   });
   syncPlayersView(renderer.players, blobs.players, {
     nowMs,

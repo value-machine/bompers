@@ -1,8 +1,16 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
+import { cuePointsPassed, motionCuePoints } from "@/shared/utils/levelMotion";
 import { createArenaState, moversDistanceAt, type ArenaState } from "@/features/arena/api/arenaApi";
-import { rideMovers, stepMoverPoses } from "@/features/movers/api/moversApi";
+import {
+  inheritOnLeave,
+  rideMovers,
+  stepMoverPoses,
+  type CarryMemory,
+  type MovingRider,
+  type PinnedBody,
+} from "@/features/movers/api/moversApi";
 import {
   normalizeLevelDefinition,
   type LevelDefinition,
@@ -10,6 +18,8 @@ import {
 } from "@/features/level/api/levelApi";
 import {
   applyHit,
+  eliminateFighter,
+  reportPartSound,
   createCombatState,
   reportTerrainDestroyed,
   stepCombat,
@@ -24,6 +34,7 @@ import {
   stepFire,
   type FireState,
 } from "@/features/fire/api/fireApi";
+import { createIceState, sprayFreezeRay, stepIce, type IceState } from "@/features/ice/api/iceApi";
 import {
   createCollectiblesState,
   stepCollectibles,
@@ -69,8 +80,11 @@ import {
  *   2b. bodyContacts   — player feature: blob-vs-blob bounce; the contacts feed step 3b
  *   3. stepCombat      — combat feature: rockets, blasts (damage, impulse, clearCrater);
  *                        unarmed fire goes through its `unarmedAttack` hook to the dive, a held
- *                        torch through its `sprayAttack` hook to the fire feature's `sprayTorch`
- *   3c. stepFire       — fire feature: the front spreads through fuel; burnt-out samples go
+ *                        torch through its `sprayAttack` hook to the fire feature's `sprayTorch`,
+ *                        a held freeze ray to the ice feature's `sprayFreezeRay`
+ *   3e. stepIce        — ice feature: frozen samples whose time is over thaw (the ray itself
+ *                        freezes inside step 3; this runs before 3c, so freezing puts fire out)
+ *   3c. stepFire      — fire feature: the front spreads through fuel; burnt-out samples go
  *                        (batched), reported as combat `terrainDestroyed` events
  *   3d. stepBurningBlobs — fire feature: blobs catch, go out (ice, dive), pass it on (bump) or
  *                        burn down (a chunk through combat's `applyHit`). Before step 2 its
@@ -126,6 +140,10 @@ export interface GameState {
   dive: DiveState;
   /** Fire on the terrain field and this step's torch sprays. */
   fire: FireState;
+  /** Frozen ground on the terrain field and this step's freeze rays. */
+  ice: IceState;
+  /** Each rider's carry velocity last step: a body leaving a moving part keeps it once (movers). */
+  moverCarry: CarryMemory;
   /** Sky drops: point orbs falling onto the collectible points, weapon crates from the drop points. */
   collectibles: CollectiblesState;
   /** Scores and the respawn queue. */
@@ -162,6 +180,8 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
     tunables: matchTunables,
     arena,
     fire: createFireState(arena.terrain),
+    ice: createIceState(arena.terrain),
+    moverCarry: new Map(),
     killZone: killZoneOf(normalized.level.bounds, matchTunables),
     levelWarnings: normalized.warnings,
     players: [],
@@ -217,15 +237,81 @@ function stepMovingParts(state: GameState, players: PlayerState[], dt: number): 
   const { terrain } = state.arena;
   if (terrain.movers.length === 0) return;
   stepMoverPoses(terrain, state.timeSeconds + dt);
-  rideMovers(terrain, players);
+  playPartSounds(state, dt);
   const size = state.tunables.combat.drops.size;
   const crates = state.collectibles.crates.list;
-  const bodies = crates.map((crate) => ({ x: crate.x, y: crate.y, width: size, height: size }));
-  rideMovers(terrain, bodies);
-  crates.forEach((crate, i) => {
-    crate.x = bodies[i]!.x;
-    crate.y = bodies[i]!.y;
+  // Crates have no horizontal speed: what they keep on leaving a part is its vertical speed.
+  const crateBodies = crates.map((crate) => ({
+    id: `crate-${crate.id}`,
+    x: crate.x,
+    y: crate.y,
+    width: size,
+    height: size,
+    vx: 0,
+    vy: crate.vy,
+  }));
+  const bodies: MovingRider[] = [...players, ...crateBodies];
+  const ride = rideMovers(terrain, bodies, {
+    crushGapFraction: state.tunables.player.crushGapFraction,
   });
+  state.moverCarry = inheritOnLeave(state.moverCarry, bodies, { ride, dt });
+  // Squeezed but alive: the player shrinks to fit for its own step and recovers when it opens.
+  players.forEach((player, i) => {
+    player.squeeze = ride.squeezed[i] ?? null;
+  });
+  crushPinnedPlayers(state, players, ride.pinned);
+  crates.forEach((crate, i) => {
+    const body = crateBodies[i]!;
+    crate.x = body.x;
+    crate.y = body.y;
+    crate.vy = body.vy;
+  });
+}
+
+/**
+ * Author-declared part sounds (owner B2; silent by default): `move` as a part passes its fastest
+ * point, `end` at each turning point, timed from the same cycle as its pose (`motionCuePoints`).
+ */
+function playPartSounds(state: GameState, dt: number): void {
+  const span = { t0: state.timeSeconds, t1: state.timeSeconds + dt };
+  for (const mover of state.arena.terrain.movers) {
+    const { move, end } = mover.sounds;
+    if (!move && !end) continue;
+    const points = motionCuePoints(mover.motion);
+    const at = { x: mover.pivot.x + mover.pose.dx, y: mover.pivot.y + mover.pose.dy };
+    const play = (soundId: string | null, cues: number[]) => {
+      if (soundId && cuePointsPassed(mover.motion, cues, span) > 0) {
+        reportPartSound(state.combat, { soundId, at, timeSeconds: state.timeSeconds });
+      }
+    };
+    play(move, points.move);
+    play(end, points.end);
+  }
+}
+
+/**
+ * The crush rule (owner, moving-parts D13): a player a moving part squeezes against terrain or
+ * another part is eliminated, credited to the last hitter like a fall out of bounds. A pinned
+ * crate just stays where it is.
+ */
+function crushPinnedPlayers(
+  state: GameState,
+  players: readonly PlayerState[],
+  pinned: readonly PinnedBody[]
+): void {
+  const { tunables } = state;
+  for (const pin of pinned) {
+    const player = players[pin.index];
+    if (!player) continue;
+    eliminateFighter({
+      combat: state.combat,
+      player,
+      cause: "crush",
+      squeeze: { nx: pin.nx, ny: pin.ny, mover: pin.mover },
+      tunables,
+      timeSeconds: state.timeSeconds,
+    });
+  }
 }
 
 /** Steps 1 and 1b: new players join, then moving parts carry and push the players in play. */
@@ -359,16 +445,14 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
     timeSeconds,
     dt,
     unarmedAttack: ({ attacker }) => requestDive(state.dive, attacker, tunables),
-    sprayAttack: ({ attacker }) =>
-      sprayTorch(state.fire, {
-        terrain,
-        players,
-        holder: attacker,
-        tunables,
-        now: timeSeconds,
-        dt,
-      }),
+    sprayAttack: ({ attacker, itemId }) => {
+      const spray = { terrain, players, holder: attacker, tunables, now: timeSeconds, dt };
+      if (itemId === "freeze-ray") sprayFreezeRay(state.ice, spray);
+      else sprayTorch(state.fire, spray);
+    },
   });
+  // Ice before fire: a burning sample frozen this step is out before the fire spreads again.
+  stepIce(state.ice, terrain, { now: timeSeconds });
   stepBlobsOnFire(state, { players, contacts });
   stepCratePickups(state, dt);
   // The same in-play list as the contacts: a blob eliminated by a rocket this step still

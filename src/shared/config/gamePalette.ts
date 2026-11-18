@@ -55,7 +55,15 @@ export const GAME_PALETTE = {
     "homing-launcher": { accent: 0xb08cff, tube: "finned" },
     // Flame orange: no player body uses it (players are red, blue, yellow, mint).
     torch: { accent: 0xff8a1f, tube: "funnel" },
+    // Glacier blue: deeper than the sky accent and the aqua reset crystal, no player body uses it.
+    "freeze-ray": { accent: 0x6fc8e8, tube: "dish" },
   } as Readonly<Record<WeaponItemId, WeaponLook>>,
+  /**
+   * Frozen ground and the freeze ray (DESIGN_LANGUAGE § 1 Effects): the `frost` swatch's body and
+   * lip, so frozen ground and the ray's cold breath read as the ice the game already has; white
+   * for the gloss streaks and the snow specks.
+   */
+  ice: { body: 0xa8cfe6, lip: 0xdff1fa, gloss: 0xffffff },
   /** Fire on terrain and the torch spray (fire-spread b1): outer, mid, core flame colours; scorch. */
   /** Fire (DESIGN_LANGUAGE § 1 Effects); on a burning blob also sweat drops, ice steam, burnt smoke. */
   fire: {

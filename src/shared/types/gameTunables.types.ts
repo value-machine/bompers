@@ -62,6 +62,11 @@ export interface GameTunables {
     /** Collision box, world units. Position is the feet point (bottom-center). */
     width: number;
     height: number;
+    /**
+     * A moving part squeezing a blob into a gap narrower than this fraction of its width
+     * crushes it; a wider gap squashes it to fit and it recovers (owner, moving-parts lap B-2).
+     */
+    crushGapFraction: number;
     /** Top horizontal speed from input, units / s. */
     runSpeed: number;
     /** Ground acceleration toward the input speed, units / s². */
@@ -247,6 +252,18 @@ export interface GameTunables {
       momentSeconds: number;
     };
   };
+  /**
+   * Frozen ground (owner, ice-element D1–D8): a freeze ray on the ground makes
+   * `freezeAreaPerSecond` world units² of ice per second, always on the nearest unfrozen ground
+   * to where the beam touches, through touching terrain. A frozen sample behaves like ice for
+   * `frozenSeconds`, then thaws by itself. The torch's flame thaws everything within
+   * `torchThawRadius` world units of where a ray touches frozen ground.
+   */
+  ice: {
+    freezeAreaPerSecond: number;
+    frozenSeconds: number;
+    torchThawRadius: number;
+  };
   /** Health, hits, rocket launcher, explosions and weapon drops (GDD § 3). */
   combat: {
     /** Health chunks per player; 0 eliminates. */
@@ -331,6 +348,25 @@ export interface GameTunables {
       /** Rays across the cone (odd keeps one on the aim). */
       rays: number;
       /** Acceleration on a blob inside the cone, along the aim, units / s². */
+      push: number;
+    };
+    /**
+     * Freeze ray (owner, ice-element D1): held fire sends a narrow beam from the helmet along the
+     * aim, the same ray fan as the torch with other numbers. The first terrain each ray meets
+     * freezes and feeds the ice front (`ice`); blobs in the beam are pushed along the aim.
+     * `ammo` is seconds of charge; holding the ray drains it.
+     */
+    freezeRay: {
+      ammo: number;
+      fireCooldown: number;
+      recoil: number;
+      /** Beam length from the helmet, world units. */
+      length: number;
+      /** Beam half-angle from the aim, degrees. */
+      halfAngleDegrees: number;
+      /** Rays across the beam (odd keeps one on the aim). */
+      rays: number;
+      /** Acceleration on a blob inside the beam, along the aim, units / s². */
       push: number;
     };
     /**

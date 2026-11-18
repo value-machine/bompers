@@ -3,8 +3,10 @@ import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import type { SolidAt } from "@/shared/utils/fallingBody";
 import type { CombatEvent } from "@/features/combat/api/combatApi";
 import { createPlayer, type PlayerState } from "@/features/player/api/playerApi";
+import type { MoverBody } from "@/features/arena/api/arenaApi";
 import {
   createKnockoutWorld,
+  CRUSH_PANCAKE,
   knockoutBodies,
   noteKnockoutEvents,
   pieceAlpha,
@@ -168,5 +170,49 @@ describe("knockout — splats", () => {
     expect(splatAlpha(RESPAWN - 0.1, timing)).toBe(1);
     expect(splatAlpha((RESPAWN + T.splatSeconds) / 2, timing)).toBeCloseTo(0.5);
     expect(splatAlpha(T.splatSeconds, timing)).toBe(0);
+  });
+});
+
+// Ground truth: the owner's crush pick R2A (moving-parts B3): pancake 0.15 s, then splats on both
+// faces, the part's riding along.
+describe("knockout — crush", () => {
+  const crushed = eliminated({ cause: "crush", squeeze: { nx: 1, ny: 0, mover: 0 } });
+  const mover = {
+    pose: { dx: 0, dy: 0, angle: 0 },
+    pivot: { x: 0, y: 0 },
+  } as unknown as MoverBody;
+  const step = (world: KnockoutWorld, seconds: number) =>
+    stepKnockouts(world, {
+      dt: seconds,
+      gravity: GRAVITY,
+      solidAt: sky,
+      roll: rollOver(sky),
+      movers: [mover],
+      tunables: T,
+      respawnDelaySeconds: RESPAWN,
+    });
+
+  it("should hold a flat pancake across the squeeze, with no flight, when a part crushes the blob", () => {
+    const world = knockedOut(crushed);
+    step(world, 0.05);
+    const [body] = knockoutBodies(world, T);
+    expect(body?.pancake).toEqual({ nx: 1, ny: 0 });
+    expect(body?.player.x).toBe(400);
+    expect(world.splats).toHaveLength(0);
+  });
+
+  it("should turn into splats on both faces after the hold, the part's riding along", () => {
+    const world = knockedOut(crushed);
+    step(world, CRUSH_PANCAKE.holdSeconds + 0.02);
+    expect(knockoutBodies(world, T)).toHaveLength(0);
+    expect(world.droplets).toHaveLength(0);
+    const onPart = world.splats.filter((splat) => splat.rides?.mover === 0);
+    const onWall = world.splats.filter((splat) => !splat.rides);
+    expect(onPart).toHaveLength(2);
+    expect(onWall).toHaveLength(2);
+    // The part sits on the -x side (its normal points +x at the blob): its splats face +x.
+    expect(onPart.every((splat) => splat.nx === 1 && splat.x < 400)).toBe(true);
+    expect(onWall.every((splat) => splat.nx === -1 && splat.x > 400)).toBe(true);
+    expect(world.pieces.length).toBeGreaterThan(0);
   });
 });

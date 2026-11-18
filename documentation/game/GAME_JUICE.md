@@ -88,13 +88,19 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Terrain destroyed | light | material's sound (`thud` / `crumble` / `thwap` / `clink`) | — | — | — | — | debris | — |
 | Torch spray (held) | light | `rocket-fire` on spray start (placeholder, fire-spread D8) | — | — | — | — | outlined flame from the nozzle: neck, rolling head, flames peeling off upward, flare at terrain; grows in over 120 ms | — |
 | Torch released | light | — (the spray's start cue covers the action) | — | — | — | — | the head lets go as one rising puff, 300 ms | — |
+| Freeze ray (held) | light | `clink` on start (placeholder, ice-element D2) | — | — | — | — | outlined cold breath from the emitter: neck, rolling head where it lands, snow specks; grows in over 120 ms | — |
+| Freeze ray released | light | — (the ray's start cue covers the action) | — | — | — | — | the head lets go as three rising puffs, 300 ms | — |
+| Ground freezing | — | — (deliberately silent per sample, like fire spreading) | — | — | — | — | the frozen shape grows from where the breath lands, in the ice colours with a lip and gloss streaks | — |
+| Ground thawing | — | — (silent; a sound comes with the listening page) | — | — | — | — | the frozen shape recedes, oldest part first | — |
 | Torch held, idle | — | — (a loop, deliberately silent) | — | — | — | — | small outlined flame on the nozzle | — |
 | Fire spreading | — | — (deliberately silent per sample: a big fire would be noise) | — | — | — | — | one outlined fire shape per cluster of burning terrain, its flames bigger with more fire around them and tallest in the middle; scorch on earth | — |
 | Fire burn-out (batch) | light | material's sound via `terrainDestroyed`, once per 0.25 s batch | — | — | — | — | debris + a white smoke puff, 450 ms | — |
 | Blob catches fire (fire-burn b2) | light | `rocket-fire` (placeholder, fire-burn D7) | — | — | — | — | amber flame pop (0.6 s linger); then helmet flames, sweat, pinprick pupils while burning | — |
 | Burning blob panic (held) | — | — (the catch cue only) | drawn hop every 0.4 s, sx · sy within the band (±0.08) | — | — | — | drawn 5-unit hop; body and shadow stay on the ground | — |
 | Fire put out by ice | light | `clink` (placeholder) | — | — | — | — | white steam puffs (0.6 s) | — |
-| Moving part moves / carries | — | — (silent by default; author-declared part sounds come in lap B-2, owner B2) | — | — | — | — | — (no motion cue, owner B1) | — |
+| Moving part moves / carries | — | — by default; the author's `data-move-sound` at its fastest point and `data-end-sound` at each turning point (owner B2) | — | — | — | — | — (no motion cue, owner B1) | — |
+| Crushed by a moving part | heavy | `land`, then `elimination` (owner B2) | pancake across the squeeze, held 0.15 s (past the band, owner B3) | — (no hit of its own) | 6 px (the back-hit kick) | — | goo splats on both faces, the part's riding along; helmet and tube fly off | pops off |
+| Squeezed by a moving part (survivable) | — (no hit) | — (the blob makes no sound; the part may have its own) | squash across the gap to the gap width, stretch along it up to 1.6×, every frame while squeezed; springs back the frame the gap opens (past the band, owner #64 change round) | — | — | — | — | — |
 | Fire blown off by a dive | light | the dive's `dive-launch` | — | — | — | — | ember flames thrown up and out (0.6 s) | — |
 | Fire passed by a bump | light | the bump's own cue | — | — | — | — | flame ball arcing to the rival (0.3 s) | — |
 | Burn tick (−1 chunk at 1 s, and at 2 s unless crouching) | medium (a `playerHit`) | `hit` via `playerHit` | as a hit | as a hit | as a hit | — | as a hit | as a hit |

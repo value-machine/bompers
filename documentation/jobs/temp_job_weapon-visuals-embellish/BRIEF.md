@@ -20,7 +20,6 @@ A held weapon draws one tapered barrel that starts at the helmet centre in the h
 - Docs: DESIGN_LANGUAGE § 1, § 2, § 3, § 6, § 9; GAME_JUICE ledger; player and collectibles READMEs.
 
 ## Out of scope
-- Will NOT do: freeze-ray mouth — follows when #63 is on main (wide dish + knob, accent from #63).
 - Will NOT do: accent colour changes (rocket sky vs freeze ice blue closeness) — owner judges on the page.
 - Will NOT touch: sim (shot origin `combat.rocket.muzzleOffset`, recoil impulse), HUD ammo pills, projectile looks, sounds.
 
@@ -32,13 +31,14 @@ A held weapon draws one tapered barrel that starts at the helmet centre in the h
 | collectibles (weaponCrateRenderer) | cream box, accent ring, ink mark | `drawCrate` | ride |
 | knockout (loose tube piece) | `drawLooseTube` via playerApi | unchanged signature | ride |
 | fire (flame leaves the nozzle) | `FLAME_LOOK.spray.nozzleReach` 15 units from the helmet point | constant follows the new funnel mouth | ride |
+| ice (breath leaves the emitter; added when #63 landed first) | `ICE_LOOK.breath.emitterReach` 15 units from the helmet point | constant follows the freeze ray's dish mouth (wide dish + knob, accent from #63) | ride |
 | documentation/game | DESIGN_LANGUAGE, GAME_JUICE | rows updated | ride |
 
 Overrun rule (skill-loop D51): a diff that touches a feature area **not** in this table stops the lap.
 
 ## Size
 S — render-only; three feature areas ride existing hook points; one geometry module reshaped.
-Cut into laps: freeze-ray mouth (after #63).
+Cut into laps: none (the freeze-ray mouth joined this lap when #63 merged first).
 
 ## Plan
 1. Acceptance test first (`weaponTube.test.ts`): every weapon look has exactly one barrel part starting at x = 0 and at least one mouth part; the crate mark is centred on its own bounds.

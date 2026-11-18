@@ -22,6 +22,10 @@ describe("weaponLook", () => {
     expect(weaponLook("torch")).toEqual({ accent: 0xff8a1f, tube: "funnel" });
   });
 
+  it("should give the freeze ray the dish mouth and the glacier accent when looked up", () => {
+    expect(weaponLook("freeze-ray")).toEqual({ accent: 0x6fc8e8, tube: "dish" });
+  });
+
   it("should never use a player body colour as a weapon accent when any weapon is looked up", () => {
     for (const look of looks) {
       expect(GAME_PALETTE.players).not.toContain(look.accent);
@@ -59,10 +63,11 @@ describe("weaponTubeParts", () => {
   });
 
   it("should give each weapon its own mouth when the shapes are compared", () => {
-    const mouths = (["lip", "finned", "funnel"] satisfies WeaponTubeShape[]).map((shape) =>
+    const shapes = ["lip", "finned", "funnel", "dish"] satisfies WeaponTubeShape[];
+    const mouths = shapes.map((shape) =>
       JSON.stringify(weaponTubeParts(shape, 1).parts.filter((part) => part.role === "mouth"))
     );
-    expect(new Set(mouths).size).toBe(3);
+    expect(new Set(mouths).size).toBe(shapes.length);
   });
 
   it("should sweep the homing fins back toward the helmet when shape is finned", () => {

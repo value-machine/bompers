@@ -89,6 +89,13 @@ export interface PlayerState {
   lastLandingSpeed: number;
   /** Slope under the feet while grounded, radians (+ = rising to the right); 0 in the air. */
   groundAngle: number;
+  /**
+   * Squeezed by a moving part into a gap narrower than the body, but not crushed (owner,
+   * moving-parts lap B-2): the collision circle shrinks to `scale` × its radius so the blob still
+   * moves and jumps, and the renderer squashes it to fit across the squeeze direction `nx, ny`.
+   * Set by the movers step each sim step; null when free.
+   */
+  squeeze: { scale: number; nx: number; ny: number } | null;
 }
 
 /** Why a blob rolls: knocked by a hit (any attack) or rolling on from a held dash. */

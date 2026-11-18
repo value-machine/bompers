@@ -35,4 +35,9 @@ export interface GooSplat {
   /** The droplet's radius (the splat's size scales with it). */
   radius: number;
   age: number;
+  /**
+   * Stuck on a moving part (a crush, moving-parts B3): `x`, `y` are in the part's rest pose
+   * and the splat moves and turns with the part (`movers[mover]`).
+   */
+  rides?: { mover: number };
 }

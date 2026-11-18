@@ -1,7 +1,9 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import { syncDisplayById } from "@/shared/utils/displaySync";
+import { posePoint } from "@/shared/utils/levelMotion";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
+import type { MoverBody } from "@/features/arena/api/arenaApi";
 import { splatShape, type SplatShape } from "@/features/knockout/services/splatShape";
 import { drawLooseHelmet, drawLooseTube } from "@/features/player/api/playerApi";
 import {
@@ -40,6 +42,8 @@ export interface KnockoutFrame {
   playerHeight: number;
   tunables: KnockoutTunables;
   respawnDelaySeconds: number;
+  /** The arena's moving parts: splats stuck on one move and turn with it. */
+  movers?: readonly MoverBody[];
 }
 
 /** A wall splat's streak runs down to its full length (`splatShape`) over this long. */
@@ -116,6 +120,11 @@ function placeSplat(sprite: Container, splat: GooSplat, frame: KnockoutFrame): v
   });
   const streak = sprite.getChildByLabel("streak");
   if (streak) streak.scale.y = Math.min(1, splat.age / STREAK.seconds);
+  const mover = splat.rides ? frame.movers?.[splat.rides.mover] : undefined;
+  if (!mover) return;
+  const at = posePoint(mover.pose, mover.pivot, { x: splat.x, y: splat.y });
+  sprite.position.set(at.x, at.y);
+  sprite.rotation = mover.pose.angle;
 }
 
 function drawPiece(piece: KnockoutPiece, frame: KnockoutFrame, width: number): Container {

@@ -1,4 +1,5 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import { rowRunSlabs } from "@/shared/utils/blockSlabs";
 import type { TorchSpray } from "@/features/fire/types/fire.types";
 
 /**
@@ -258,31 +259,8 @@ function clusterFlame(pass: ClusterPass, block: FlameBlock): Tongue | null {
 
 /** One slab per run of touching blocks on a row that pass `keep`, grown by `grow` all round. */
 function rowSlabs(pass: ClusterPass, keep: (block: FlameBlock) => boolean, grow: number): Slab[] {
-  const { size } = pass.look;
-  const rows = new Map<number, number[]>();
-  for (const block of pass.blocks.values()) {
-    if (!keep(block)) continue;
-    const row = rows.get(block.by);
-    if (row) row.push(block.bx);
-    else rows.set(block.by, [block.bx]);
-  }
-  const slabs: Slab[] = [];
-  for (const [by, columns] of rows) {
-    columns.sort((a, b) => a - b);
-    let start = 0;
-    columns.forEach((bx, i) => {
-      if (columns[i + 1] === bx + 1) return;
-      const from = columns[start]!;
-      slabs.push({
-        x: from * size - grow,
-        y: by * size - grow,
-        w: (bx - from + 1) * size + 2 * grow,
-        h: size + 2 * grow,
-      });
-      start = i + 1;
-    });
-  }
-  return slabs;
+  const kept = [...pass.blocks.values()].filter(keep);
+  return rowRunSlabs(kept, { size: pass.look.size, grow });
 }
 
 /**

@@ -6,7 +6,7 @@
  * `shared/services/weaponTubeRenderer.ts`. A new weapon adds its shape id and mouth here and its
  * look (accent, shape id) in `gamePalette.weaponLooks`.
  */
-export type WeaponTubeShape = "lip" | "finned" | "funnel";
+export type WeaponTubeShape = "lip" | "finned" | "funnel" | "dish";
 
 /** `barrel` is filled like the helmet; `mouth` carries the weapon accent and the ready light. */
 export type TubeRole = "barrel" | "mouth";
@@ -55,6 +55,15 @@ const SHAPES: Readonly<Record<WeaponTubeShape, ShapeSpec>> = {
     barrel: { length: 30, rootHalf: 13, tipHalf: 7 },
     mouthRects: [],
     mouthPolys: [[28, -7, 44, -14, 47.5, -7, 48.5, 0, 47.5, 7, 44, 14, 28, 7]],
+  },
+  // Freeze ray: a wide flat dish with a small emitter knob in front (ice-element lap 1's emitter).
+  dish: {
+    barrel: BARREL,
+    mouthRects: [
+      [37, -14, 7, 28, 3.5],
+      [42, -4, 8, 8, 4],
+    ],
+    mouthPolys: [],
   },
 };
 

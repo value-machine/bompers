@@ -1,4 +1,5 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import type { SampleFront } from "@/shared/types/sampleFront.types";
 
 /**
  * Fire on the terrain field (fire-spread b1; blast-power D5, D6, D18): every terrain sample has
@@ -6,11 +7,15 @@ import type { Vec2 } from "@/shared/types/gameGeometry.types";
  * removed. Sample indices are the arena grid's (`cy * widthCells + cx`).
  */
 export interface FireState {
-  /** Sim seconds each sample catches (or is due to catch); `Infinity` = not reached. */
+  /** The fire front: arrival times and pending ignitions (the arena's shared sample front). */
+  front: SampleFront;
+  /**
+   * Sim seconds each sample catches (or is due to catch); `Infinity` = not reached. The same
+   * array as `front.arriveAt`, under the name it has for fire.
+   */
   igniteAt: Float32Array;
-  /** Pending ignitions: a binary min-heap by time, ties by index (deterministic). */
-  heapIndex: number[];
-  heapTime: number[];
+  /** The terrain's `frozenVersion` this fire last checked its burning samples against. */
+  frozenSeen: number;
   /** Lit samples in ignition order (constant burn time ⇒ also burn-out order). */
   lit: number[];
   /** First entry of `lit` still burning. */
