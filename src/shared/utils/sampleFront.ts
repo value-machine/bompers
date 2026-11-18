@@ -113,6 +113,11 @@ export interface FrontAdvance {
   canEnter: (index: number) => boolean;
   /** The front reached a sample. */
   onArrive: (index: number, time: number) => void;
+  /**
+   * Asked before each due arrival, nearest first: true stops the advance there and leaves that
+   * arrival pending (a front that spends a budget instead of running to a clock).
+   */
+  until?: (index: number, time: number) => boolean;
   /** A solid sample touching a reached one that the front may not enter. */
   onBlocked?: (index: number) => void;
 }
@@ -143,9 +148,10 @@ export function advanceFront(front: SampleFront, field: SampleField, advance: Fr
   while (front.heapIndex.length > 0 && front.heapTime[0]! <= advance.now) {
     const index = front.heapIndex[0]!;
     const time = front.heapTime[0]!;
+    const stale = front.arriveAt[index] !== time;
+    if (!stale && advance.until?.(index, time)) return;
     heapPop(front);
-    if (front.arriveAt[index] !== time) continue;
-    if (!advance.canEnter(index)) continue;
+    if (stale || !advance.canEnter(index)) continue;
     advance.onArrive(index, time);
     reach(front, field, { index, time, advance });
   }

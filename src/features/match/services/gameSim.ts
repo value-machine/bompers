@@ -72,8 +72,8 @@ import {
  *                        unarmed fire goes through its `unarmedAttack` hook to the dive, a held
  *                        torch through its `sprayAttack` hook to the fire feature's `sprayTorch`,
  *                        a held freeze ray to the ice feature's `sprayFreezeRay`
- *   3e. stepIce        — ice feature: the cold spreads while a ray fed it this step; frozen
- *                        samples whose time is over thaw (runs before 3c, so freezing puts fire out)
+ *   3e. stepIce        — ice feature: frozen samples whose time is over thaw (the ray itself
+ *                        freezes inside step 3; this runs before 3c, so freezing puts fire out)
  *   3c. stepFire      — fire feature: the front spreads through fuel; burnt-out samples go
  *                        (batched), reported as combat `terrainDestroyed` events
  *   3d. stepBurningBlobs — fire feature: blobs catch, go out (ice, dive), pass it on (bump) or
@@ -373,7 +373,7 @@ function stepPlay(state: GameState, inputs: PlayerInputs, dt: number): void {
     },
   });
   // Ice before fire: a burning sample frozen this step is out before the fire spreads again.
-  stepIce(state.ice, terrain, { now: timeSeconds, dt, tunables });
+  stepIce(state.ice, terrain, { now: timeSeconds });
   stepBlobsOnFire(state, { players, contacts });
   stepCratePickups(state, dt);
   // The same in-play list as the contacts: a blob eliminated by a rocket this step still

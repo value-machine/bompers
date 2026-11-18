@@ -129,10 +129,11 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     burnOutInterval: 0.25,
     blob: { firstTickSeconds: 1, burnSeconds: 2, graceSeconds: 0.5, momentSeconds: 0.6 },
   },
-  // Frozen ground (ice-element D1–D6, starting values): the cold runs 40 units / s while the ray
-  // feeds it, so a full 3 s charge held on one spot freezes about 120 units around it. Frozen
-  // ground thaws by itself after 8 s; the torch thaws a patch two samples round each ray's end.
-  ice: { spreadSpeed: 40, frozenSeconds: 8, torchThawRadius: 8 },
+  // Frozen ground (ice-element D1–D8, starting values): 3600 units² of ice per second of beam,
+  // so a full 3 s charge makes 10 800 units²: a round patch about 59 units in radius inside a
+  // big slab, or about 270 units along a 40-unit-thick platform. Frozen ground thaws by itself
+  // after 8 s; the torch thaws a patch two samples round each ray's end.
+  ice: { freezeAreaPerSecond: 3600, frozenSeconds: 8, torchThawRadius: 8 },
   combat: {
     maxHealth: 4,
     killCreditSeconds: 4,

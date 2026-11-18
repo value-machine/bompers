@@ -248,13 +248,14 @@ export interface GameTunables {
     };
   };
   /**
-   * Frozen ground (owner, ice-element D1–D6): the freeze ray's cold spreads through touching
-   * terrain at `spreadSpeed` (world units / s) the same every way, but only while a ray feeds it.
-   * A frozen sample behaves like ice for `frozenSeconds`, then thaws by itself. The torch's flame
-   * thaws everything within `torchThawRadius` world units of where a ray touches frozen ground.
+   * Frozen ground (owner, ice-element D1–D8): a freeze ray on the ground makes
+   * `freezeAreaPerSecond` world units² of ice per second, always on the nearest unfrozen ground
+   * to where the beam touches, through touching terrain. A frozen sample behaves like ice for
+   * `frozenSeconds`, then thaws by itself. The torch's flame thaws everything within
+   * `torchThawRadius` world units of where a ray touches frozen ground.
    */
   ice: {
-    spreadSpeed: number;
+    freezeAreaPerSecond: number;
     frozenSeconds: number;
     torchThawRadius: number;
   };

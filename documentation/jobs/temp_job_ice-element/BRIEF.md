@@ -6,7 +6,7 @@ Task: "What we've done for fire, I would now like to do for every element, one b
 Fire is the only element. The owner wants ice next, built on the same system as fire, so a third element later costs little.
 
 ## Success check
-A blob holding the freeze ray's fire freezes the ground the beam touches; the frozen patch grows through touching terrain at 40 units/s the same in every direction for as long as the beam is held and stops when it is let go. Frozen ground is slippery, a rocket leaves it whole, a spreading fire stops at it, and it thaws after 8 s. The torch thaws it at once and then lights it only if it is cardboard.
+A blob holding the freeze ray's fire freezes the ground the beam touches; the beam makes a fixed amount of ice per second (3600 units²), always on the nearest unfrozen ground to where it touches, for as long as it is held, and nothing grows when it is let go or anywhere the beam is not (D8, Change round). Frozen ground is slippery, a rocket leaves it whole, a spreading fire stops at it, and it thaws after 8 s. The torch thaws it at once and then lights it only if it is cardboard.
 
 ## In scope
 - The spreading front shared by fire and ice, the ray fan shared by the torch and the freeze ray, and the row-run slabs shared by both renderers (all in shared utils). Fire keeps its behaviour; its tests are the guard.
