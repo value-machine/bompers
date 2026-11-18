@@ -113,6 +113,29 @@ describe("hits — applyHit", () => {
     expect(world.combat.events[1]).toMatchObject({ victimSlot: 1, byPlayerSlot: 0, cause: "dive" });
     expect(applyHit(world, dive(1)).landed).toBe(false);
   });
+
+  it("should mark the elimination overkill with the victim's motion when the damage exceeds the health left", () => {
+    const { world, victim } = createHitWorld();
+    world.combat.fighters.get("p1")!.health = C.hitDamage.contact.back - 1;
+    victim.vx = 300;
+    victim.vy = -200;
+    applyHit(world, dive(1));
+    expect(world.combat.events[1]).toMatchObject({
+      type: "playerEliminated",
+      overkill: true,
+      x: 100,
+      y: 0,
+      vx: 300,
+      vy: -200,
+    });
+  });
+
+  it("should not mark the elimination overkill when the damage ends exactly at 0", () => {
+    const { world } = createHitWorld();
+    world.combat.fighters.get("p1")!.health = C.hitDamage.contact.back;
+    applyHit(world, dive(1));
+    expect(world.combat.events[1]).toMatchObject({ type: "playerEliminated", overkill: false });
+  });
 });
 
 describe("hits — crouch", () => {

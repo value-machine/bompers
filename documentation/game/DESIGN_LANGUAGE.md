@@ -29,7 +29,7 @@ Rules:
 
 - **Two cues, always.** A player is told apart by body colour **and** by the helmet emblem. The emblem is drawn in the player colour on the cream helmet, with no outline (§ 3). The same emblem appears on that player's HUD chip, so no one needs colour vision to find themselves.
 - **Colour-blind check.** Pairwise CIEDE2000 distance between the four body colours after Machado (2009) simulation at full severity: minimum 17.7 (deuteranopia, P1–P3); normal vision min 37.2; protanopia min 19.4; tritanopia min 23.7. Any change to a player colour must keep every pair ≥ 15 in all four views.
-- **Player hues are reserved.** No arena surface, background or pickup uses a player body colour. Effects may borrow them only for that player's own feedback (their rocket fins, their elimination droplets).
+- **Player hues are reserved.** No arena surface, background or pickup uses a player body colour. Effects may borrow them only for that player's own feedback (their rocket fins, their goo droplets and splats after a knockout).
 - Shade = body mixed 38 % toward ink `#2b1d3a`. Tint = body mixed 45 % toward white. Use these formulas for any new shade.
 
 ### World
@@ -184,7 +184,7 @@ Squash and stretch keep area roughly constant (`sx × sy` between 0.93 and 1.01,
 - Muzzle ready light (§ 9): after a shot the accent dot on each muzzle drops to 15 % alpha and climbs back to full as the fire cooldown runs out; full = ready to fire.
 - **Hit:** 3 frames (50 ms) of white body fill, silhouette outline unchanged, 3 px screen shake for 80 ms.
 - **Explosion:** pops in at full size on frame 1 (no fade-in), shrinks and clears in 250 ms; 6 px screen shake for 120 ms. Debris: 5–8 cell-coloured squares with the cell grid-line colour as a thin edge, spinning outward.
-- **Elimination:** blob pops into 6 droplets of its body colour plus a small confetti burst, 300 ms.
+- **Elimination (knockout, owner 2026-11-16):** the blob flies with the lethal hit's knockback, squashes at its first hard contact and bursts into 6 goo droplets of its body colour; an overkill hit bursts it on the spot. The droplets keep its momentum and splat flat on whatever they touch (no outline; full until the respawn, faded by 4 s). The helmet and weapon tube fly off as solid pieces and blink out at the respawn. Built in `features/knockout`.
 - **Respawn protection:** body alpha blinks between 100 % and 45 % at 8 Hz, inside a dashed ink ring (radius 1.5 R); the blob is fully playable meanwhile (GDD § 6).
 - Reduced motion (OS setting): drop screen shake and idle breathing; keep squash (it carries gameplay information). Built: no shake and a half-strength hit flash; idle breathing still plays.
 - Game feel as built (tunables `feel`): back hits flash full white (front 75 %) and shake twice as hard, then hold the world view for 50 ms (hit-stop, render only); tumble bounces shake by bounce speed; live shakes add as a root of squares, capped at 12 px.

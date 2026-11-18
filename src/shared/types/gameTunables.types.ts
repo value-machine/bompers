@@ -345,6 +345,11 @@ export interface GameTunables {
       reachPerPower: number;
       craterPerPower: number;
       minFalloff: number;
+      /**
+       * Share of the push that players other than the shooter get (the hit knockback). The
+       * shooter's own push (rocket jump) stays full (owner, elimination-goo Change round).
+       */
+      hitPushScale: number;
     };
     /** Weapon pickups dropping from the level's drop points. */
     drops: {
@@ -468,5 +473,41 @@ export interface GameTunables {
     };
     /** Render-only freeze after a hard hit (the sim keeps running); 0 turns it off. */
     hitStop: { seconds: number };
+    /**
+     * Knockout (knockout feature, owner's goo pick): an eliminated blob flies with the lethal
+     * hit's knockback, squashes at the first hard contact (or at once on an overkill) and bursts
+     * into goo droplets that keep its momentum and splat where they touch terrain. Its helmet and
+     * tube fly off as solid pieces. Speeds in world units / s, sizes as a share of the body
+     * half-width R.
+     */
+    knockout: {
+      /** A contact this fast into a surface ends the flight. */
+      hardContactSpeed: number;
+      /** The flight ends after this long even without a hard contact. */
+      flungMaxSeconds: number;
+      /** Squash before the burst: its pose (inside the juice band) and how long it holds. */
+      squash: { sx: number; sy: number; seconds: number };
+      /** Share of the speed a flying blob or piece keeps off a soft bounce. */
+      bounce: number;
+      /** Share of the sideways speed lost per floor contact. */
+      friction: number;
+      droplets: {
+        count: number;
+        /** Droplet radius range, × R. */
+        minRadius: number;
+        maxRadius: number;
+        /** Spread speed range added to the carried momentum, in a random direction. */
+        minSpread: number;
+        maxSpread: number;
+        /** Droplets leaving within this distance of the body's surface, × R. */
+        startOffset: number;
+      };
+      /** Upward pop of the helmet and tube at the burst. */
+      piecePop: number;
+      /** Pieces blink (8 Hz) for this long before they vanish at the respawn. */
+      blinkSeconds: number;
+      /** Goo splats on terrain: full until the respawn, then fade out by this age. */
+      splatSeconds: number;
+    };
   };
 }
