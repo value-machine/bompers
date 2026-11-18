@@ -1,4 +1,5 @@
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
+import type { SprayWeaponItemId } from "@/shared/types/weaponItems.types";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import {
   emitCombatEvent,
@@ -33,14 +34,16 @@ export interface UnarmedFirePress {
  */
 export type UnarmedAttackHook = (press: UnarmedFirePress) => void;
 
-/** One held step of a spray weapon: who sprays and for how long (seconds). */
+/** One held step of a spray weapon: who sprays, with which weapon and for how long (seconds). */
 export interface SprayStep extends UnarmedFirePress {
+  itemId: SprayWeaponItemId;
   dt: number;
 }
 
 /**
- * Slot for spray weapons (the fire feature's torch fills it): called on every step a
- * non-eliminated player holds fire with a spray weapon that has fuel left. Combat drains the fuel.
+ * Slot for spray weapons (match fills it with the torch and the freeze ray, by `itemId`): called
+ * on every step a non-eliminated player holds fire with a spray weapon that has fuel left.
+ * Combat drains the fuel.
  */
 export type SprayAttackHook = (step: SprayStep) => void;
 
@@ -68,17 +71,18 @@ function firePress(press: UnarmedFirePress, unarmedAttack: UnarmedAttackHook | u
 }
 
 /** A held spray weapon: spray this step and drain its fuel; emit the start cue on the first step. */
-function spray(step: SprayStep, sprayAttack: SprayAttackHook | undefined): void {
+function spray(step: Omit<SprayStep, "itemId">, sprayAttack: SprayAttackHook | undefined): void {
   const { ctx, attacker, fighter } = step;
   const weapon = fighter.weapon;
-  if (!weapon) return;
+  if (!weapon || isProjectileWeapon(weapon.itemId)) return;
+  const itemId = weapon.itemId;
   if (!fighter.spraying) {
     const at = helmetPoint(attacker);
-    const cue = { type: "torchStarted" as const, slot: attacker.slot, x: at.x, y: at.y };
+    const cue = { type: "sprayStarted" as const, itemId, slot: attacker.slot, x: at.x, y: at.y };
     emitCombatEvent(ctx.combat, cue, ctx.timeSeconds);
   }
   fighter.spraying = true;
-  sprayAttack?.(step);
+  sprayAttack?.({ ...step, itemId });
   weapon.ammo -= step.dt;
   if (weapon.ammo <= EMPTY_FUEL) fighter.weapon = null;
 }

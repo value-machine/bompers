@@ -131,6 +131,11 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     burnOutInterval: 0.25,
     blob: { firstTickSeconds: 1, burnSeconds: 2, graceSeconds: 0.5, momentSeconds: 0.6 },
   },
+  // Frozen ground (ice-element D1–D8, starting values): 3600 units² of ice per second of beam,
+  // so a full 3 s charge makes 10 800 units²: a round patch about 59 units in radius inside a
+  // big slab, or about 270 units along a 40-unit-thick platform. Frozen ground thaws by itself
+  // after 8 s; the torch thaws a patch two samples round each ray's end.
+  ice: { freezeAreaPerSecond: 3600, frozenSeconds: 8, torchThawRadius: 8 },
   combat: {
     maxHealth: 4,
     killCreditSeconds: 4,
@@ -183,6 +188,17 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       halfAngleDegrees: 18,
       rays: 7,
       push: 900,
+    },
+    // Freeze ray (ice-element D1): 3 s of charge like the torch, but a narrow beam of about six
+    // blob widths (180 units, ±3°) and a third of the torch's push: it is for the ground.
+    freezeRay: {
+      ammo: 3,
+      fireCooldown: 0,
+      recoil: 0,
+      length: 180,
+      halfAngleDegrees: 3,
+      rays: 3,
+      push: 300,
     },
     // Chosen so power 50 (the rocket) keeps the pre-power blast: push 1080, reach 64, crater 34 on
     // toughness 1 (blast-power D3, D10). Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units;

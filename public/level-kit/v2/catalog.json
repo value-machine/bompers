@@ -219,6 +219,11 @@
       "use": "drop"
     },
     {
+      "id": "freeze-ray",
+      "label": "Freeze ray",
+      "use": "drop"
+    },
+    {
       "id": "point-orb",
       "label": "Point orb",
       "use": "collectible"
