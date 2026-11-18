@@ -1,6 +1,6 @@
 /**
  * Public seam of the level-file feature: importing level files (HTML + inline SVG) into the
- * engine's `LevelDefinition`, the level library (built-in manifest + session imports), the import control, and the level-kit
+ * engine's `LevelDefinition`, the level library (built-in manifest + imports remembered in this browser), the import control, and the level-kit
  * export the sync script writes.
  */
 export type {
@@ -24,6 +24,8 @@ export {
   type LevelImportReport,
   type LevelLibrary,
   type LevelLibraryEntry,
+  type LevelLibraryOptions,
+  type LevelMemoryState,
 } from "@/features/level-file/hooks/useLevelLibrary";
 export {
   LevelImportControl,

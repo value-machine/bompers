@@ -1,4 +1,4 @@
-/** Public seam of the level feature: the level model, its defaults and normalisation. */
+/** Public seam of the level feature: the level model, its defaults, normalisation and thumbnail. */
 export type {
   LevelCollectible,
   LevelDefinition,
@@ -15,3 +15,8 @@ export {
   LEVEL_FORMAT_VERSION,
   normalizeLevelDefinition,
 } from "@/features/level/services/levelDefinition";
+export {
+  LevelThumbnail,
+  type LevelThumbnailProps,
+} from "@/features/level/components/LevelThumbnail";
+export { THUMBNAIL_ASPECT, thumbnailFrame } from "@/features/level/services/levelThumbnailFrame";

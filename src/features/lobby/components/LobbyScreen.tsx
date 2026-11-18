@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { useFileDrop } from "@/shared/hooks/useFileDrop";
 import type { LevelFilePicker, LevelLibrary } from "@/features/level-file/api/levelFileApi";
+import { droppedFileHandle } from "@/features/level-memory/api/levelMemoryApi";
 import type { MatchSetup } from "@/features/match/api/matchApi";
 import { useMusicTrack } from "@/features/sound/api/soundApi";
 import type { Lobby } from "@/features/lobby/hooks/useLobby";
@@ -39,12 +40,15 @@ export const LobbyScreen = ({ lobby, library, onStart }: LobbyScreenProps) => {
   };
   const activity = useLobbyInput(run);
 
-  const onFile = (file: File): void => {
-    void library.importFile(file).then((id) => {
+  const onFile = (file: File, handle?: FileSystemFileHandle): void => {
+    void library.importFile(file, handle).then((id) => {
       if (id) lobby.dispatch({ type: "selectLevel", levelId: id });
     });
   };
-  const { isDragging, dropHandlers } = useFileDrop(onFile);
+  // A dropped file links too where the browser hands over its handle (Chrome, Edge).
+  const { isDragging, dropHandlers } = useFileDrop((file, item) => {
+    void droppedFileHandle(item).then((handle) => onFile(file, handle ?? undefined));
+  });
 
   const { view } = lobby;
   const activityAt = (deviceIndex: number): DeviceActivity | null => activity[deviceIndex] ?? null;
@@ -75,6 +79,7 @@ export const LobbyScreen = ({ lobby, library, onStart }: LobbyScreenProps) => {
           library={library}
           pickerRef={pickerRef}
           onFile={onFile}
+          onLoad={() => pickerRef.current?.open()}
           onAction={run}
         />
         <ul
