@@ -2,11 +2,11 @@ import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { SampleFront } from "@/shared/types/sampleFront.types";
 
 /**
- * Fire on the terrain field (fire-spread b1; blast-power D5, D6, D18): every terrain sample has
- * the sim time it catches fire (its arrival time); lit samples burn for a while and are then
- * removed. Sample indices are the arena grid's (`cy * widthCells + cx`).
+ * Fire on one body's field (fire-spread b1; blast-power D5, D6, D18; mover-materials-l2 D3):
+ * every sample has the sim time it catches fire (its arrival time); lit samples burn for a while
+ * and are then removed. Sample indices are that body's grid's (`cy * widthCells + cx`).
  */
-export interface FireState {
+export interface GroundFire {
   /** The fire front: arrival times and pending ignitions (the arena's shared sample front). */
   front: SampleFront;
   /**
@@ -22,12 +22,24 @@ export interface FireState {
   litHead: number;
   /** Burnt-out samples waiting for the next batch removal. */
   dueOut: number[];
-  /** Sim time of the next batch removal. */
-  nextBurnOutAt: number;
   /** 1 where fire stopped at a breakable non-fuel sample (earth): drawn scorched. */
   scorched: Uint8Array;
   /** Bumps whenever lit, burnt or scorched samples change (the renderer redraws on change). */
   version: number;
+}
+
+/**
+ * The fire slice of the game state: the fire on every body of the arena, the torch's sprays and
+ * the blobs on fire.
+ */
+export interface FireState {
+  /**
+   * One ground fire per body, in the arena's body order (`bodyGrids`): 0 = the static terrain,
+   * then each moving part's own field (mover-materials-l2 D3).
+   */
+  grounds: GroundFire[];
+  /** Sim time of the next batch removal (one beat for all bodies). */
+  nextBurnOutAt: number;
   /** The torch sprays of the last step, for the renderer. */
   sprays: TorchSpray[];
   /** Blobs on fire, by player id (fire-burn b2). */

@@ -8,13 +8,16 @@ import {
   queueArrival,
 } from "@/shared/utils/sampleFront";
 import {
+  bodyGrids,
+  bodyWorldPoint,
   burnOut,
   getCellInfo,
   isFrozenSample,
   type ClearedCells,
+  type ClearedLook,
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
-import type { FireState } from "@/features/fire/types/fire.types";
+import type { FireState, GroundFire } from "@/features/fire/types/fire.types";
 
 /**
  * Fire on the terrain field (fire-spread b1; owner rules blast-power D5, D6, D18): fire is an
@@ -27,8 +30,12 @@ import type { FireState } from "@/features/fire/types/fire.types";
  * Breakable non-fuel next to fire (earth) is scorched and stops it; stone just blocks. A lit
  * sample burns `fire.burnSeconds`, then is removed with the next batch every
  * `fire.burnOutInterval` (one terrain write and one effect per batch).
+ *
+ * Every body of the arena has its own ground fire (mover-materials-l2 D3): the static terrain
+ * and each moving part's field, in the arena's `bodyGrids` order. A fire spreads inside its own
+ * body only; a part's fire rides with the part because it lives on the part's field.
  */
-export function createFireState(grid: TerrainGrid): FireState {
+const createGroundFire = (grid: TerrainGrid): GroundFire => {
   const count = grid.widthCells * grid.heightCells;
   const front = createSampleFront(count);
   return {
@@ -37,10 +44,16 @@ export function createFireState(grid: TerrainGrid): FireState {
     lit: [],
     litHead: 0,
     dueOut: [],
-    nextBurnOutAt: 0,
     frozenSeen: grid.frozenVersion,
     scorched: new Uint8Array(count),
     version: 0,
+  };
+};
+
+export function createFireState(terrain: TerrainGrid): FireState {
+  return {
+    grounds: bodyGrids(terrain).map(createGroundFire),
+    nextBurnOutAt: 0,
     sprays: [],
     blobs: new Map(),
     blobGraceUntil: new Map(),
@@ -65,36 +78,48 @@ export function canBurn(grid: TerrainGrid, index: number): boolean {
   );
 }
 
-/** Sets a sample to catch at `time` if that is sooner than it would; false when it can't burn. */
+/** A sample of one body: `index` in the grid of body `body` (0 = the static terrain). */
+export interface BodySample {
+  body: number;
+  index: number;
+}
+
+/**
+ * Sets a sample of a body to catch at `time` if that is sooner than it would; false when it
+ * can't burn.
+ */
 export function ignite(
   fire: FireState,
-  grid: TerrainGrid,
-  at: { index: number; time: number }
+  terrain: TerrainGrid,
+  at: BodySample & { time: number }
 ): boolean {
-  return canBurn(grid, at.index) && queueArrival(fire.front, at.index, at.time);
+  const ground = fire.grounds[at.body];
+  const grid = bodyGrids(terrain)[at.body];
+  if (!ground || !grid) return false;
+  return canBurn(grid, at.index) && queueArrival(ground.front, at.index, at.time);
 }
 
 // ── Spread ───────────────────────────────────────────────────────────────────
 
-function markScorched(fire: FireState, index: number): void {
-  if (fire.scorched[index] === 1) return;
-  fire.scorched[index] = 1;
-  fire.version += 1;
+function markScorched(ground: GroundFire, index: number): void {
+  if (ground.scorched[index] === 1) return;
+  ground.scorched[index] = 1;
+  ground.version += 1;
 }
 
 /** Lights every pending ignition due by `now`; breakable non-fuel next to fire is scorched. */
-function spread(fire: FireState, grid: TerrainGrid, at: { now: number; pace: number }): void {
-  advanceFront(fire.front, grid, {
+function spread(ground: GroundFire, grid: TerrainGrid, at: { now: number; pace: number }): void {
+  advanceFront(ground.front, grid, {
     now: at.now,
     pace: at.pace,
     canEnter: (index) => canBurn(grid, index),
     onArrive: (index) => {
-      fire.lit.push(index);
-      fire.version += 1;
+      ground.lit.push(index);
+      ground.version += 1;
     },
     onBlocked: (index) => {
       const info = getCellInfo(grid, index % grid.widthCells, Math.floor(index / grid.widthCells));
-      if (info && !info.burns && info.toughness !== null) markScorched(fire, index);
+      if (info && !info.burns && info.toughness !== null) markScorched(ground, index);
     },
   });
 }
@@ -103,45 +128,51 @@ function spread(fire: FireState, grid: TerrainGrid, at: { now: number; pace: num
  * Puts out burning samples that froze since the last step (ice-element D6): they stop burning,
  * stay standing and can catch again once thawed.
  */
-function douseFrozen(fire: FireState, grid: TerrainGrid): void {
-  if (fire.frozenSeen === grid.frozenVersion) return;
-  fire.frozenSeen = grid.frozenVersion;
+function douseFrozen(ground: GroundFire, grid: TerrainGrid): void {
+  if (ground.frozenSeen === grid.frozenVersion) return;
+  ground.frozenSeen = grid.frozenVersion;
   const stillBurns = (index: number): boolean => {
     if (!isFrozenSample(grid, index)) return true;
-    clearArrival(fire.front, index);
+    clearArrival(ground.front, index);
     return false;
   };
-  const burning = fire.lit.length - fire.litHead + fire.dueOut.length;
-  fire.lit = fire.lit.slice(fire.litHead).filter(stillBurns);
-  fire.litHead = 0;
-  fire.dueOut = fire.dueOut.filter(stillBurns);
-  if (fire.lit.length + fire.dueOut.length !== burning) fire.version += 1;
+  const burning = ground.lit.length - ground.litHead + ground.dueOut.length;
+  ground.lit = ground.lit.slice(ground.litHead).filter(stillBurns);
+  ground.litHead = 0;
+  ground.dueOut = ground.dueOut.filter(stillBurns);
+  if (ground.lit.length + ground.dueOut.length !== burning) ground.version += 1;
 }
 
 // ── Burn-out ─────────────────────────────────────────────────────────────────
 
 /** Moves samples lit at least `burnSeconds` ago to the batch waiting for removal. */
-function collectBurnt(fire: FireState, burnSeconds: number, now: number): void {
-  while (fire.litHead < fire.lit.length) {
-    const index = fire.lit[fire.litHead]!;
-    if ((fire.igniteAt[index] ?? Infinity) + burnSeconds > now) break;
-    fire.dueOut.push(index);
-    fire.litHead += 1;
+function collectBurnt(ground: GroundFire, burnSeconds: number, now: number): void {
+  while (ground.litHead < ground.lit.length) {
+    const index = ground.lit[ground.litHead]!;
+    if ((ground.igniteAt[index] ?? Infinity) + burnSeconds > now) break;
+    ground.dueOut.push(index);
+    ground.litHead += 1;
   }
-  if (fire.litHead > 1024 && fire.litHead * 2 > fire.lit.length) {
-    fire.lit = fire.lit.slice(fire.litHead);
-    fire.litHead = 0;
+  if (ground.litHead > 1024 && ground.litHead * 2 > ground.lit.length) {
+    ground.lit = ground.lit.slice(ground.litHead);
+    ground.litHead = 0;
   }
 }
 
-/** Samples still burning (lit, not yet removed), for the renderer. */
-export function burningSamples(fire: FireState): number[] {
-  return [...fire.lit.slice(fire.litHead), ...fire.dueOut];
+/** Samples of one body still burning (lit, not yet removed), for the renderer. */
+export function burningSamples(ground: GroundFire): number[] {
+  return [...ground.lit.slice(ground.litHead), ...ground.dueOut];
 }
+
+/** How many samples are lit and not yet burnt out, over all bodies (the fire's sound). */
+export const burningCount = (fire: FireState): number =>
+  fire.grounds.reduce((sum, ground) => sum + ground.lit.length - ground.litHead, 0);
 
 /** A burnt-out batch: what was removed, and a few places in it for the debris to fly from. */
-export interface BurnOutBatch extends ClearedCells {
-  /** Centres of up to `MAX_BURN_OUT_SPOTS` of the batch's samples, spread over the batch. */
+export interface BurnOutBatch {
+  removed: number;
+  byLook: ClearedLook[];
+  /** World centres of up to `MAX_BURN_OUT_SPOTS` of the batch's samples, spread over the batch. */
   spots: Vec2[];
 }
 
@@ -151,7 +182,7 @@ const SAMPLES_PER_SPOT = 16;
 
 /**
  * Where a batch shows its debris: a fire burns out along a front, not round one centre, so the
- * spots are samples of the batch itself, picked evenly through it.
+ * spots are samples of the batch itself, picked evenly through it (in the body's own grid).
  */
 function burnOutSpots(grid: TerrainGrid, samples: readonly number[]): Vec2[] {
   const count = Math.min(MAX_BURN_OUT_SPOTS, Math.ceil(samples.length / SAMPLES_PER_SPOT));
@@ -164,26 +195,56 @@ function burnOutSpots(grid: TerrainGrid, samples: readonly number[]): Vec2[] {
   });
 }
 
+/** Adds one body's removed samples to the batch, pooling looks that are the same. */
+function addCleared(batch: BurnOutBatch, cleared: ClearedCells): void {
+  batch.removed += cleared.removed;
+  for (const look of cleared.byLook) {
+    const same = batch.byLook.find(
+      (known) => known.materialId === look.materialId && known.colorId === look.colorId
+    );
+    if (same) same.cells += look.cells;
+    else batch.byLook.push({ ...look });
+  }
+}
+
+/** Removes what has burnt out on every body; the batch of all of them, or null when nothing went. */
+function burnOutBodies(fire: FireState, terrain: TerrainGrid): BurnOutBatch | null {
+  const batch: BurnOutBatch = { removed: 0, byLook: [], spots: [] };
+  bodyGrids(terrain).forEach((grid, body) => {
+    const ground = fire.grounds[body];
+    if (!ground || ground.dueOut.length === 0) return;
+    const spots = burnOutSpots(grid, ground.dueOut).map((at) => bodyWorldPoint(terrain, body, at));
+    addCleared(batch, burnOut(grid, ground.dueOut));
+    batch.spots.push(...spots);
+    ground.dueOut = [];
+    ground.version += 1;
+  });
+  batch.spots = batch.spots.slice(0, MAX_BURN_OUT_SPOTS);
+  return batch.removed > 0 ? batch : null;
+}
+
 /**
- * Advances fire to sim time `now`: lights what the front has reached, then, on the batch beat,
- * removes what has burnt out. Returns what was removed this step (for effects / sound), or null.
+ * Advances fire to sim time `now` on every body: lights what each front has reached, then, on
+ * the batch beat, removes what has burnt out. Returns what was removed this step (for effects /
+ * sound), or null.
  */
 export function stepFire(
   fire: FireState,
-  grid: TerrainGrid,
+  terrain: TerrainGrid,
   frame: { now: number; tunables: GameTunables }
 ): BurnOutBatch | null {
   const { spreadSpeed, burnSeconds, burnOutInterval } = frame.tunables.fire;
   // Sprays not renewed this step have stopped (the torch sprays before this step runs).
   fire.sprays = fire.sprays.filter((spray) => spray.atSeconds >= frame.now);
-  douseFrozen(fire, grid);
-  spread(fire, grid, { now: frame.now, pace: 1 / spreadSpeed });
-  collectBurnt(fire, burnSeconds, frame.now);
-  if (frame.now < fire.nextBurnOutAt || fire.dueOut.length === 0) return null;
+  bodyGrids(terrain).forEach((grid, body) => {
+    const ground = fire.grounds[body];
+    if (!ground) return;
+    douseFrozen(ground, grid);
+    spread(ground, grid, { now: frame.now, pace: 1 / spreadSpeed });
+    collectBurnt(ground, burnSeconds, frame.now);
+  });
+  const due = fire.grounds.some((ground) => ground.dueOut.length > 0);
+  if (frame.now < fire.nextBurnOutAt || !due) return null;
   fire.nextBurnOutAt = frame.now + burnOutInterval;
-  const spots = burnOutSpots(grid, fire.dueOut);
-  const cleared = burnOut(grid, fire.dueOut);
-  fire.dueOut = [];
-  fire.version += 1;
-  return cleared.removed > 0 ? { ...cleared, spots } : null;
+  return burnOutBodies(fire, terrain);
 }

@@ -9,6 +9,8 @@ import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 export type { MoverBody, TerrainCellSlot, TerrainGrid } from "@/features/arena/types/arena.types";
 export { EMPTY_CELL } from "@/features/arena/types/arena.types";
 export {
+  bodyGrids,
+  bodyWorldPoint,
   burnOut,
   clearCrater,
   getCellInfo,
@@ -45,7 +47,9 @@ export {
   type SampleRegion,
 } from "@/features/arena/services/terrainSurfaces";
 export {
+  createPoseLayer,
   createTerrainView,
+  placePoseLayer,
   syncTerrainView,
   type TerrainView,
 } from "@/features/arena/services/terrainRenderer";

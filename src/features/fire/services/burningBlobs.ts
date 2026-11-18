@@ -1,7 +1,13 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
-import { EMPTY_CELL, type TerrainGrid } from "@/features/arena/api/arenaApi";
+import {
+  EMPTY_CELL,
+  bodyGrids,
+  bodyWorldPoint,
+  terrainBodies,
+  type TerrainGrid,
+} from "@/features/arena/api/arenaApi";
 import type { BodyContact, PlayerState } from "@/features/player/api/playerApi";
 import type { BlobFireMoment, FireState } from "@/features/fire/types/fire.types";
 
@@ -93,13 +99,16 @@ export function douseBlob(
   return true;
 }
 
-/** Calls `visit` for every solid sample within `reach` of the body centre until it returns true. */
+/**
+ * Calls `visit` for every solid sample of `grid` within `reach` of `center` (a point in the
+ * grid's own coordinates) until it returns true.
+ */
 function someSampleNear(
   grid: TerrainGrid,
-  near: { player: PlayerState; reach: number },
+  near: { center: Vec2; reach: number },
   visit: (index: number, center: Vec2) => boolean
 ): boolean {
-  const c = bodyCenter(near.player);
+  const c = near.center;
   const size = grid.cellSize;
   const minX = Math.max(0, Math.floor((c.x - near.reach) / size));
   const maxX = Math.min(grid.widthCells - 1, Math.floor((c.x + near.reach) / size));
@@ -144,7 +153,7 @@ function douseBurning(fire: FireState, args: StepBurningBlobsArgs): void {
   const { terrain, now, tunables } = args;
   for (const player of args.players) {
     if (!fire.blobs.has(player.id)) continue;
-    const near = { player, reach: reachOf(terrain, player) };
+    const near = { center: bodyCenter(player), reach: reachOf(terrain, player) };
     const iced = someSampleNear(
       terrain,
       near,
@@ -158,15 +167,27 @@ function douseBurning(fire: FireState, args: StepBurningBlobsArgs): void {
   }
 }
 
-/** A blob touching a burning terrain sample catches; the fire came from that sample. */
+/**
+ * A blob touching a burning sample of any body (the ground or a moving part) catches; the fire
+ * came from that sample. A part is searched in its own frame, around the blob's centre there.
+ */
 function catchFromTerrain(fire: FireState, args: StepBurningBlobsArgs): void {
   const { terrain, now } = args;
+  const bodies = terrainBodies(terrain);
+  const grids = bodyGrids(terrain);
   for (const player of args.players) {
-    if (fire.blobs.has(player.id)) continue;
-    const near = { player, reach: reachOf(terrain, player) };
-    someSampleNear(terrain, near, (index, center) => {
-      if ((fire.igniteAt[index] ?? Infinity) > now) return false;
-      return catchFire(fire, player, { now, fromX: center.x, bySlot: null });
+    const world = bodyCenter(player);
+    const reach = reachOf(terrain, player);
+    bodies.some(({ toLocal }, body) => {
+      const ground = fire.grounds[body];
+      const grid = grids[body];
+      const center = toLocal ? toLocal(world) : world;
+      if (!ground || !grid || !center || fire.blobs.has(player.id)) return false;
+      return someSampleNear(grid, { center, reach }, (index, at) => {
+        if ((ground.igniteAt[index] ?? Infinity) > now) return false;
+        const fromX = bodyWorldPoint(terrain, body, at).x;
+        return catchFire(fire, player, { now, fromX, bySlot: null });
+      });
     });
   }
 }

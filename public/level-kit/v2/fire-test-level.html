@@ -53,6 +53,14 @@
         <rect id="step-right" data-role="terrain" data-material="cardboard" x="1208" y="472" width="96" height="16" fill="#c99a62" />
       </g>
 
+      <!-- Moving parts made of cardboard: they burn away like the slabs (the flames ride along). -->
+      <g id="burning-lift" data-motion="slide 0,-240 6s">
+        <rect data-role="terrain" data-material="cardboard" data-label="Cardboard lift" x="1344" y="560" width="96" height="24" fill="#c99a62" />
+      </g>
+      <g id="burning-spinner" data-motion="spin 8s">
+        <rect data-role="terrain" data-material="cardboard" data-label="Cardboard spinner" x="96" y="392" width="160" height="16" fill="#c99a62" />
+      </g>
+
       <g id="spawns">
         <circle data-role="spawn" cx="360" cy="592" r="14" fill="#3f8f5f" />
         <circle data-role="spawn" cx="600" cy="592" r="14" fill="#3f8f5f" />
