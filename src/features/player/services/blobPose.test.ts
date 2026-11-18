@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { isJuiceSquash } from "@/shared/config/gameJuice";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import {
+  barrelPopScale,
   blobPose,
   blobShadow,
   createBlobAnim,
@@ -581,5 +583,31 @@ describe("feet, lean and shadow on a slope that steepens into a wall", () => {
     const tail = frames.slice(-60 / stride);
     expect(maxStep(tail.map((frame) => frame.sole))).toBeLessThan(0.005);
     expect(maxStep(tail.map((frame) => frame.lean))).toBeLessThan(0.005);
+  });
+});
+
+describe("barrelPopScale", () => {
+  const pop = DEFAULT_GAME_TUNABLES.feel.barrelPop;
+
+  it("should be the pop pose when the shot has just happened", () => {
+    expect(barrelPopScale(0, pop)).toEqual({ sx: pop.sx, sy: pop.sy });
+  });
+
+  it("should rest at full size when no shot happened or the pop is over", () => {
+    expect(barrelPopScale(Number.POSITIVE_INFINITY, pop)).toEqual({ sx: 1, sy: 1 });
+    expect(barrelPopScale(pop.seconds * 1000, pop)).toEqual({ sx: 1, sy: 1 });
+    expect(barrelPopScale(-5, pop)).toEqual({ sx: 1, sy: 1 });
+  });
+
+  it("should spring past rest before settling when recovering", () => {
+    const late = barrelPopScale(pop.seconds * 1000 * 0.6, pop);
+    expect(late.sx).toBeGreaterThan(1);
+    expect(late.sy).toBeLessThan(1);
+  });
+
+  it("should stay inside the juice squash band when sampled through the whole pop", () => {
+    for (let ms = 0; ms <= pop.seconds * 1000; ms += 10) {
+      expect(isJuiceSquash(barrelPopScale(ms, pop))).toBe(true);
+    }
   });
 });

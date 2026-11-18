@@ -1,49 +1,118 @@
 import { describe, expect, it } from "vitest";
 import { GAME_PALETTE, weaponLook } from "@/shared/config/gamePalette";
-import { weaponTubeParts, weaponTubeSpan } from "@/shared/utils/weaponTube";
+import {
+  weaponTubeBounds,
+  weaponTubeMark,
+  weaponTubeParts,
+  type WeaponTubeShape,
+} from "@/shared/utils/weaponTube";
+
+const looks = Object.values(GAME_PALETTE.weaponLooks);
 
 describe("weaponLook", () => {
-  it("should give the rocket launcher the capped tube and the sky accent when looked up", () => {
-    expect(weaponLook("rocket-launcher")).toEqual({ accent: 0x8fd6ff, tube: "capped" });
+  it("should give the rocket launcher the lip mouth and the sky accent when looked up", () => {
+    expect(weaponLook("rocket-launcher")).toEqual({ accent: 0x8fd6ff, tube: "lip" });
   });
 
-  it("should give the homing launcher the twin pod and the lilac accent when looked up", () => {
-    expect(weaponLook("homing-launcher")).toEqual({ accent: 0xb08cff, tube: "twin-pod" });
+  it("should give the homing launcher the finned mouth and the lilac accent when looked up", () => {
+    expect(weaponLook("homing-launcher")).toEqual({ accent: 0xb08cff, tube: "finned" });
+  });
+
+  it("should give the torch the funnel mouth and the ember accent when looked up", () => {
+    expect(weaponLook("torch")).toEqual({ accent: 0xff8a1f, tube: "funnel" });
+  });
+
+  it("should give the freeze ray the dish mouth and the glacier accent when looked up", () => {
+    expect(weaponLook("freeze-ray")).toEqual({ accent: 0x6fc8e8, tube: "dish" });
   });
 
   it("should never use a player body colour as a weapon accent when any weapon is looked up", () => {
-    for (const look of Object.values(GAME_PALETTE.weaponLooks)) {
+    for (const look of looks) {
       expect(GAME_PALETTE.players).not.toContain(look.accent);
     }
   });
 });
 
 describe("weaponTubeParts", () => {
-  it("should scale the capped tube with u when built at two sizes", () => {
-    const one = weaponTubeParts("capped", 1);
-    const two = weaponTubeParts("capped", 2);
-    expect(two.parts.map((p) => p.width)).toEqual(one.parts.map((p) => p.width * 2));
-    expect(two.muzzles[0]?.x).toBe((one.muzzles[0]?.x ?? 0) * 2);
+  // Ground truth: the owner's picks (weapon-visuals-embellish D1, D3, D6, D7).
+  it("should give every weapon exactly one barrel that starts at the helmet centre when built", () => {
+    for (const { tube } of looks) {
+      const barrels = weaponTubeParts(tube, 1).parts.filter((part) => part.role === "barrel");
+      expect(barrels).toHaveLength(1);
+      expect(weaponTubeBounds(barrels).left).toBe(0);
+    }
   });
 
-  it("should keep the rocket tube geometry of the blob renderer when shape is capped", () => {
-    // Ground truth: the shipped rocket tube (DESIGN_LANGUAGE § 2; tube 26 × 14 from x −3, cap 8 × 16 from x 17).
-    const { parts, muzzles } = weaponTubeParts("capped", 1);
-    expect(parts).toEqual([
-      { x: -3, y: -7, width: 26, height: 14, radius: 6 },
-      { x: 17, y: -8, width: 8, height: 16, radius: 3.5 },
-    ]);
-    expect(muzzles).toEqual([{ x: 21, y: 0 }]);
+  it("should taper the barrel from the helmet to the mouth when built", () => {
+    for (const { tube } of looks) {
+      const [barrel] = weaponTubeParts(tube, 1).parts;
+      if (barrel?.kind !== "poly") throw new Error("the barrel is a polygon");
+      const [, rootY, , tipY] = barrel.points;
+      expect(Math.abs(rootY ?? 0)).toBeGreaterThan(Math.abs(tipY ?? 0));
+    }
   });
 
-  it("should put one muzzle light on each pod when shape is twin-pod", () => {
-    expect(weaponTubeParts("twin-pod", 1).muzzles).toEqual([
-      { x: 18, y: -6 },
-      { x: 18, y: 6 },
-    ]);
+  it("should give every weapon a mouth beyond the barrel when built", () => {
+    for (const { tube } of looks) {
+      const { parts } = weaponTubeParts(tube, 1);
+      const mouth = parts.filter((part) => part.role === "mouth");
+      expect(mouth.length).toBeGreaterThan(0);
+      const barrel = parts.filter((part) => part.role === "barrel");
+      expect(weaponTubeBounds(mouth).right).toBeGreaterThan(weaponTubeBounds(barrel).right);
+    }
   });
 
-  it("should centre a mark on the tube's span when the twin pod is measured", () => {
-    expect(weaponTubeSpan(weaponTubeParts("twin-pod", 1))).toEqual({ left: -3, right: 23 });
+  it("should give each weapon its own mouth when the shapes are compared", () => {
+    const shapes = ["lip", "finned", "funnel", "dish"] satisfies WeaponTubeShape[];
+    const mouths = shapes.map((shape) =>
+      JSON.stringify(weaponTubeParts(shape, 1).parts.filter((part) => part.role === "mouth"))
+    );
+    expect(new Set(mouths).size).toBe(shapes.length);
+  });
+
+  it("should sweep the homing fins back toward the helmet when shape is finned", () => {
+    const fins = weaponTubeParts("finned", 1).parts.filter(
+      (part) => part.role === "mouth" && part.kind === "poly"
+    );
+    expect(fins).toHaveLength(2);
+    for (const fin of fins) {
+      if (fin.kind !== "poly") continue;
+      // The outer edge (furthest from the axis) lies behind the fin's root at the lip.
+      const xs = fin.points.filter((_, i) => i % 2 === 0);
+      const ys = fin.points.filter((_, i) => i % 2 === 1).map(Math.abs);
+      const outerX = xs[ys.indexOf(Math.max(...ys))] ?? 0;
+      expect(outerX).toBeLessThan(Math.max(...xs));
+    }
+  });
+
+  it("should scale every part with u when built at two sizes", () => {
+    const one = weaponTubeBounds(weaponTubeParts("finned", 1).parts);
+    const two = weaponTubeBounds(weaponTubeParts("finned", 2).parts);
+    expect(two).toEqual({
+      left: one.left * 2,
+      right: one.right * 2,
+      top: one.top * 2,
+      bottom: one.bottom * 2,
+    });
+  });
+});
+
+describe("weaponTubeMark", () => {
+  it("should show only the mouth end of the barrel when built for a crate", () => {
+    for (const { tube } of looks) {
+      const mark = weaponTubeBounds(weaponTubeMark(tube, 1).parts);
+      expect(mark.left).toBeGreaterThan(0);
+      expect(mark.right).toBe(weaponTubeBounds(weaponTubeParts(tube, 1).parts).right);
+    }
+  });
+
+  it("should report the centre of its own bounds when built, so the crate can centre it", () => {
+    for (const { tube } of looks) {
+      const mark = weaponTubeMark(tube, 2);
+      const { left, right, top, bottom } = weaponTubeBounds(mark.parts);
+      expect(mark.centre.x).toBeCloseTo((left + right) / 2);
+      expect(mark.centre.y).toBeCloseTo((top + bottom) / 2);
+      expect(mark.centre.y).toBeCloseTo(0);
+    }
   });
 });
