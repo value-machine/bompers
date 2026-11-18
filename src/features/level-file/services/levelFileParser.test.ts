@@ -23,7 +23,15 @@ const EXAMPLE = readRepoFile("public/level-kit/v2/example-level.html");
 const FIRE_TEST = readRepoFile("public/level-kit/v2/fire-test-level.html");
 const CRUSHER_TEST = readRepoFile("public/level-kit/v2/crusher-test-level.html");
 const FORGIVING_TEST = readRepoFile("public/level-kit/v2/forgiving-test-level.html");
-const BUILT_INS = ["start-arena", "floating-garden"].map((id) => ({
+const BUILT_INS = [
+  "start-arena",
+  "floating-garden",
+  "bobsled-run",
+  "piston-works",
+  "bonfire-bridge",
+  "crystal-gap",
+  "slush-bowl",
+].map((id) => ({
   id,
   text: readRepoFile(`public/levels/${id}.html`),
 }));

@@ -2,6 +2,7 @@ import { Container, FillGradient, Graphics } from "pixi.js";
 import { GAME_PALETTE, weaponLook } from "@/shared/config/gamePalette";
 import { traceEmblem } from "@/shared/services/emblemRenderer";
 import { traceWeaponTube } from "@/shared/services/weaponTubeRenderer";
+import { inkColor } from "@/shared/utils/debugInk";
 import { playerEmblemShape } from "@/shared/utils/playerEmblem";
 import { weaponTubeParts, type WeaponTubeParts } from "@/shared/utils/weaponTube";
 import type { WeaponItemId } from "@/shared/types/weaponItems.types";
@@ -103,7 +104,7 @@ export const helmetCentreY = (m: BlobMetrics): number =>
 
 const inkStroke = (width: number) => ({
   width: width * 2,
-  color: GAME_PALETTE.ink,
+  color: inkColor("blobs"),
   join: "round" as const,
 });
 

@@ -123,6 +123,10 @@ export const CONTENT_CATALOG: ContentCatalog = {
     "freeze-start": { id: "freeze-start", label: "Freeze start" },
     "freeze-loop": { id: "freeze-loop", label: "Freeze ray (loop)" },
     thaw: { id: "thaw", label: "Thaw" },
+    // The frozen blob's ice block (owner picks, ice-block-sounds lap).
+    "freeze-solid": { id: "freeze-solid", label: "Freeze solid" },
+    "ice-crack": { id: "ice-crack", label: "Ice crack" },
+    "ice-shatter": { id: "ice-shatter", label: "Ice shatter" },
   },
   behavior: {},
   item: {

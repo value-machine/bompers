@@ -1,5 +1,6 @@
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { SprayWeaponItemId } from "@/shared/types/weaponItems.types";
+import { resolveBeamClashes } from "@/shared/utils/beamClash";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import {
   emitCombatEvent,
@@ -11,6 +12,7 @@ import { fireRocket } from "@/features/combat/services/rockets";
 import {
   isProjectileWeapon,
   rocketKindOf,
+  sprayBeamOf,
   weaponTunables,
 } from "@/features/combat/services/weapons";
 import type { FighterState } from "@/features/combat/types/combat.types";
@@ -38,6 +40,11 @@ export type UnarmedAttackHook = (press: UnarmedFirePress) => void;
 export interface SprayStep extends UnarmedFirePress {
   itemId: SprayWeaponItemId;
   dt: number;
+  /**
+   * How far the beam goes this step, world units: the weapon's own length, or less when a beam
+   * of a reacting element ends it (beam-clash D1). The hook must not act past it.
+   */
+  reach: number;
 }
 
 /**
@@ -71,18 +78,22 @@ function firePress(press: UnarmedFirePress, unarmedAttack: UnarmedAttackHook | u
 }
 
 /** A held spray weapon: spray this step and drain its fuel; emit the start cue on the first step. */
-function spray(step: Omit<SprayStep, "itemId">, sprayAttack: SprayAttackHook | undefined): void {
+function spray(
+  step: Omit<SprayStep, "itemId" | "reach"> & { reach: number | undefined },
+  sprayAttack: SprayAttackHook | undefined
+): void {
   const { ctx, attacker, fighter } = step;
   const weapon = fighter.weapon;
   if (!weapon || isProjectileWeapon(weapon.itemId)) return;
   const itemId = weapon.itemId;
+  const reach = step.reach ?? sprayBeamOf(ctx.tunables, itemId).shape.length;
   if (!fighter.spraying) {
     const at = helmetPoint(attacker);
     const cue = { type: "sprayStarted" as const, itemId, slot: attacker.slot, x: at.x, y: at.y };
     emitCombatEvent(ctx.combat, cue, ctx.timeSeconds);
   }
   fighter.spraying = true;
-  sprayAttack?.({ ...step, itemId });
+  sprayAttack?.({ ...step, itemId, reach });
   weapon.ammo -= step.dt;
   if (weapon.ammo <= EMPTY_FUEL) fighter.weapon = null;
 }
@@ -90,15 +101,52 @@ function spray(step: Omit<SprayStep, "itemId">, sprayAttack: SprayAttackHook | u
 const holdsSprayWeapon = (fighter: FighterState): boolean =>
   fighter.weapon !== null && !isProjectileWeapon(fighter.weapon.itemId);
 
+/** Whether this fighter sprays this step: fire held with a spray weapon, and still in play. */
+const spraysNow = (fighter: FighterState, pressed: boolean): boolean =>
+  pressed && !fighter.eliminated && holdsSprayWeapon(fighter);
+
+interface AttackTurn extends UnarmedFirePress {
+  pressed: boolean;
+}
+
+/**
+ * Where this step's held beams end each other (beam-clash D1, `shared/utils/beamClash`): worked
+ * out for all sprayers before any of them sprays, so who comes first in the player list does not
+ * matter. Returns each sprayer's reach by slot and records the clashes on the combat state.
+ */
+function clashBeams(ctx: CombatContext, turns: readonly AttackTurn[]): Map<number, number> {
+  const sprayers = turns.flatMap(({ attacker, fighter, pressed }) => {
+    const itemId = fighter.weapon?.itemId;
+    if (!itemId || isProjectileWeapon(itemId) || !spraysNow(fighter, pressed)) return [];
+    const beam = sprayBeamOf(ctx.tunables, itemId);
+    const aim = { x: attacker.aimX, y: attacker.aimY };
+    return [{ slot: attacker.slot, beam: { ...beam, origin: helmetPoint(attacker), aim } }];
+  });
+  const { reach, clashes } = resolveBeamClashes(
+    ctx.terrain,
+    sprayers.map((sprayer) => sprayer.beam),
+    ctx.tunables.combat.beamClash
+  );
+  ctx.combat.beamClashes = clashes;
+  return new Map(sprayers.map((sprayer, i) => [sprayer.slot, reach[i] ?? 0]));
+}
+
+interface AttackFrame {
+  pressed: boolean;
+  options: StepAttacksOptions;
+  /** This attacker's beam reach this step, when it sprays. */
+  reach: number | undefined;
+}
+
 /** One attacker's fire button this step: a held spray weapon sprays, else a new press fires. */
-function attack(press: UnarmedFirePress, frame: { pressed: boolean; options: StepAttacksOptions }) {
+function attack(press: UnarmedFirePress, frame: AttackFrame): void {
   const { fighter } = press;
   const { pressed, options } = frame;
   const isNewPress = pressed && !fighter.prevFire;
   fighter.prevFire = pressed;
   fighter.attackCooldown = Math.max(0, fighter.attackCooldown - options.dt);
-  const sprays = pressed && !fighter.eliminated && holdsSprayWeapon(fighter);
-  if (sprays) spray({ ...press, dt: options.dt }, options.sprayAttack);
+  const sprays = spraysNow(fighter, pressed);
+  if (sprays) spray({ ...press, dt: options.dt, reach: frame.reach }, options.sprayAttack);
   fighter.spraying = sprays && fighter.weapon !== null;
   if (sprays || !isNewPress || fighter.eliminated || fighter.attackCooldown > 0) return;
   firePress(press, options.unarmedAttack);
@@ -109,9 +157,14 @@ export function stepAttacks(
   inputs: PlayerInputs,
   options: StepAttacksOptions
 ): void {
-  for (const attacker of ctx.players) {
-    const fighter = fighterFor(ctx.combat, attacker, ctx.tunables);
-    const pressed = inputs[attacker.slot]?.fire === true;
-    attack({ ctx, attacker, fighter }, { pressed, options });
+  const turns = ctx.players.map((attacker) => ({
+    ctx,
+    attacker,
+    fighter: fighterFor(ctx.combat, attacker, ctx.tunables),
+    pressed: inputs[attacker.slot]?.fire === true,
+  }));
+  const reach = clashBeams(ctx, turns);
+  for (const { pressed, ...press } of turns) {
+    attack(press, { pressed, options, reach: reach.get(press.attacker.slot) });
   }
 }

@@ -245,6 +245,8 @@ function roundTimer(state: GameState, dt: number): void {
   if (round.remainingSeconds > 0) return;
   round.phase = "ended";
   round.endedAt = state.timeSeconds + dt;
+  // Combat stops with the round, so a clash held at the buzzer would steam and hiss on.
+  state.combat.beamClashes = [];
   const slots = state.players.map((player) => player.slot);
   round.winners = roundWinners(state.rules.scores, slots);
 }
@@ -549,8 +551,8 @@ function stepPlay(state: GameState, rawInputs: PlayerInputs, dt: number): void {
     timeSeconds,
     dt,
     unarmedAttack: ({ attacker }) => requestDive(state.dive, attacker, tunables),
-    sprayAttack: ({ attacker, itemId }) => {
-      const spray = { terrain, players, holder: attacker, tunables, now: timeSeconds, dt };
+    sprayAttack: ({ attacker, itemId, reach }) => {
+      const spray = { terrain, players, holder: attacker, tunables, now: timeSeconds, dt, reach };
       if (itemId !== "freeze-ray") sprayTorch(state.fire, spray);
       else sprayFreezeRay(state.ice, { ...spray, canChill: (blob) => canChill(state, blob) });
     },

@@ -98,10 +98,11 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Blob catches fire (fire-burn b2) | light | `catch-fire` (pitched by the blob) | — | — | — | — | amber flame pop (0.6 s linger); then helmet flames, sweat, pinprick pupils while burning | — |
 | Burning blob panic (held) | — | — (the catch cue only) | drawn hop every 0.4 s, sx · sy within the band (±0.08) | — | — | — | drawn 5-unit hop; body and shadow stay on the ground | — |
 | Fire put out by ice | light | `steam-hiss` (pitched by the blob) | — | — | — | — | white steam puffs (0.6 s) | — |
+| Beam clash (torch flame meets freeze ray, held) | light | `steam-hiss` when it starts, then at most every 0.5 s while it holds | — | — | — | — | both beams end at the meeting point; white steam puffs with an ink edge keep rising from it (0.6 s each) | — |
 | Frost building on a blob (held ray) | — | — (the ray's start cue) | — | — | — | — | the ice block forms around the blob as the chill fills | — |
-| Blob freezes (ice-frozen-blobs) | light | `clink` (placeholder, D2; own sound pending) | — | — | — | — | white pop ring (250 ms), then the glossy block with pinprick pupils inside | — |
-| Ice block cracks (jump press) | light | `clink`, soft (placeholder, D2; own sound pending) | drawn 4-unit hop, 200 ms | — | — | — | a crack line on the block, three ice chips (500 ms) | — |
-| Ice block breaks (third press, a hit, time up) | light | `clink` (placeholder, D2; own sound pending); a hit adds its own `hit` | — | — | — | — | eight ice shards fly off (500 ms) | — |
+| Blob freezes (ice-frozen-blobs) | light | `freeze-solid` (pitched by the blob) | — | — | — | — | white pop ring (250 ms), then the glossy block with pinprick pupils inside | — |
+| Ice block cracks (jump press) | light | `ice-crack`, soft (crouch gain, pitched by the blob) | drawn 4-unit hop, 200 ms | — | — | — | a crack line on the block, three ice chips (500 ms) | — |
+| Ice block breaks (third press, a hit, time up) | light | `ice-shatter` (pitched by the blob); a hit adds its own `hit` | — | — | — | — | eight ice shards fly off (500 ms) | — |
 | Ice block melts (fire) | light | fire's douse `steam-hiss` | — | — | — | — | white steam puffs (500 ms) | — |
 | Moving part moves / carries | — | — by default; the author's `data-move-sound` at its fastest point and `data-end-sound` at each turning point (owner B2) | — | — | — | — | — (no motion cue, owner B1) | — |
 | Crushed by a moving part | heavy | `land`, then `elimination` (owner B2) | pancake across the squeeze, held 0.15 s (past the band, owner B3); the eyes keep their size and show the panic pupils (owner, squish-eyes) | — (no hit of its own) | 6 px (the back-hit kick) | — | goo stains on both faces, the part's riding along; helmet and tube fly off | pops off |
