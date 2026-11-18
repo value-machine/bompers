@@ -37,6 +37,8 @@ Seams for later work:
 - `pixi.js` (renderer only), `gameTunables`, `gamePalette`, shared geometry / input types.
 - Consumed by `match` (state slice, step 3, step 4 hooks, render layers).
 
+- `src/shared/utils/debugInk.ts`: the rocket ink colour (`?debugInk=1` tints it; fire-black-flash diagnosis).
+
 ## Decisions
 
 - Combat state is a `GameState.combat` slice keyed by player id; `PlayerState` only carries motion (combat D1).

@@ -5,6 +5,7 @@ import {
   syncContactShadows,
   type ContactShadowLayer,
 } from "@/shared/utils/contactShadowLayer";
+import { inkColor } from "@/shared/utils/debugInk";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 import { DESIGN_SCALE, outlineWidth } from "@/shared/utils/outlineWidth";
 import { surfaceBelow, type TerrainGrid } from "@/features/arena/api/arenaApi";
@@ -38,7 +39,7 @@ const ROCKET_LENGTH = 32 * S;
 /** Smoke puffs behind a rocket: one more appears every this many seconds of flight. */
 const PUFF_SECONDS = 0.012;
 
-const ink = (width: number) => ({ width, color: GAME_PALETTE.ink, join: "round" as const });
+const ink = (width: number) => ({ width, color: inkColor("other"), join: "round" as const });
 const slotColor = (slot: number): number =>
   GAME_PALETTE.players[slot % GAME_PALETTE.players.length] ?? GAME_PALETTE.ink;
 
