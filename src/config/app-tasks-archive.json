@@ -468,5 +468,10 @@
     "title": "World of bodies L5: fire crosses where bodies touch",
     "description": "Fire spreads between a moving part and terrain where they touch (ask the owner first). Size S-M.",
     "status": "done"
+  },
+  {
+    "title": "World of bodies L3: reactions as data",
+    "description": "Material x element and element x element tables in the catalog replace burns/douses/frozen special cases; beam-clash pair rule moves in. Size M.",
+    "status": "done"
   }
 ]
