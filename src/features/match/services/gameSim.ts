@@ -374,7 +374,7 @@ function stepHeadbuttResets(state: GameState, dt: number): void {
 /**
  * Step 3c: fire spreads and burns out. A burnt batch throws debris from a few places in the
  * batch itself (a fire burns out along a front, so one centre would sit where nothing burns),
- * and sounds once however many places it shows.
+ * and sounds once however many places it shows: fire's own burn-out, not the material's sound.
  */
 function stepFireOnTerrain(state: GameState): void {
   const batch = stepFire(state.fire, state.arena.terrain, {
@@ -387,7 +387,7 @@ function stepFireOnTerrain(state: GameState): void {
       cleared: batch,
       at,
       timeSeconds: state.timeSeconds,
-      silent: i > 0,
+      soundId: i > 0 ? "none" : "burn-out",
     });
   });
 }

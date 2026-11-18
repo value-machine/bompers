@@ -68,6 +68,15 @@ Link the preview kit in `<head>` (works offline without it):
 | sound | `respawn` | Respawn |  |
 | sound | `round-start` | Round start |  |
 | sound | `round-end` | Round end |  |
+| sound | `torch-start` | Torch start |  |
+| sound | `torch-loop` | Torch spraying (loop) |  |
+| sound | `fire-crackle` | Fire crackle (loop) |  |
+| sound | `burn-out` | Burn-out |  |
+| sound | `catch-fire` | Catch fire |  |
+| sound | `steam-hiss` | Steam hiss |  |
+| sound | `freeze-start` | Freeze start |  |
+| sound | `freeze-loop` | Freeze ray (loop) |  |
+| sound | `thaw` | Thaw |  |
 | behavior | — | none yet; leave it out | |
 | item | `rocket-launcher` | Rocket launcher | use: drop, default for drop |
 | item | `homing-launcher` | Homing launcher | use: drop |

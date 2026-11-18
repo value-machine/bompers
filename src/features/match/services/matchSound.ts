@@ -2,9 +2,11 @@ import {
   FINAL_MUSIC_SECONDS,
   musicTrackFor,
   readSoundCues,
+  readSoundLoops,
   type AudioEngine,
   type SoundCursor,
   type SoundSnapshot,
+  type SoundWorldSnapshot,
 } from "@/features/sound/api/soundApi";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { getCellInfo, type TerrainGrid } from "@/features/arena/api/arenaApi";
@@ -49,6 +51,23 @@ export function bonkedMaterialSound(terrain: TerrainGrid, player: PlayerState, d
 }
 
 /**
+ * Fire and ice as sound hears them: who sprays what this step, how much burns, how much has
+ * thawed by itself (the ice FIFO's head only moves forward) and the frozen-flag version.
+ */
+export function soundWorldOf(state: GameState): SoundWorldSnapshot {
+  const { fire, ice } = state;
+  return {
+    timeSeconds: state.timeSeconds,
+    torchSlots: fire.sprays.map((spray) => spray.slot),
+    freezeSlots: ice.rays.map((ray) => ray.slot),
+    burningSamples: fire.lit.length - fire.litHead,
+    burningBlobs: fire.blobs.size,
+    thawedSamples: ice.frozenHead,
+    frozenVersion: state.arena.terrain.frozenVersion,
+  };
+}
+
+/**
  * What the sound feature reads from one frame of the match. Only the match knows `GameState`,
  * so it hands sound a flat snapshot of the slices it needs (players, dive, combat events, round).
  */
@@ -81,6 +100,7 @@ export function soundSnapshotOf(state: GameState): SoundSnapshot {
     }),
     events: state.combat.events,
     roundPhase: state.round.phase,
+    world: soundWorldOf(state),
   };
 }
 
@@ -99,9 +119,12 @@ export function createMatchSound(engine: AudioEngine): MatchSound {
   let cursor: SoundCursor | null = null;
   return {
     hear: (state) => {
-      const heard = readSoundCues(cursor, soundSnapshotOf(state));
+      const frame = soundSnapshotOf(state);
+      const heard = readSoundCues(cursor, frame);
       cursor = heard.cursor;
       heard.cues.forEach(engine.playCue);
+      // Held sounds stop with the round; unrefreshed (paused, closed) they fade by themselves.
+      engine.setLoops(state.round.phase === "ended" ? [] : readSoundLoops(frame.world));
       const { round } = state;
       // The final piece starts in time with the clock, so it lands on the round end.
       const offset = Math.max(0, FINAL_MUSIC_SECONDS - round.remainingSeconds);
@@ -110,6 +133,9 @@ export function createMatchSound(engine: AudioEngine): MatchSound {
     newRound: () => {
       cursor = null;
     },
-    dispose: () => engine.playMusic(null),
+    dispose: () => {
+      engine.playMusic(null);
+      engine.setLoops([]);
+    },
   };
 }

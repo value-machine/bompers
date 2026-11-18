@@ -113,6 +113,16 @@ export const CONTENT_CATALOG: ContentCatalog = {
     respawn: { id: "respawn", label: "Respawn" },
     "round-start": { id: "round-start", label: "Round start" },
     "round-end": { id: "round-end", label: "Round end" },
+    // Fire and ice sounds (owner picks, element-sounds lap); loops are held while their source lasts.
+    "torch-start": { id: "torch-start", label: "Torch start" },
+    "torch-loop": { id: "torch-loop", label: "Torch spraying (loop)" },
+    "fire-crackle": { id: "fire-crackle", label: "Fire crackle (loop)" },
+    "burn-out": { id: "burn-out", label: "Burn-out" },
+    "catch-fire": { id: "catch-fire", label: "Catch fire" },
+    "steam-hiss": { id: "steam-hiss", label: "Steam hiss" },
+    "freeze-start": { id: "freeze-start", label: "Freeze start" },
+    "freeze-loop": { id: "freeze-loop", label: "Freeze ray (loop)" },
+    thaw: { id: "thaw", label: "Thaw" },
   },
   behavior: {},
   item: {

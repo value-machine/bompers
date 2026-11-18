@@ -43,5 +43,5 @@ Tests: `services/iceSim.test.ts` (the touched sample freezes at once; the same a
 - Frozen behaves like ice and thaws by itself after 8 s (D5, derived from "the same system as fire": a burning piece burns out, a frozen one thaws).
 - Fire and ice (owner, D6): spreading fire stops at frozen ground; the torch always thaws it and burns it only if it would have burned anyway.
 - Ray look (owner, D9, 2026-11-18, options page): "Cold breath", over a snow stream, a pulse beam and an ice lance, and over the thin tapering beam of the first build ("spray design needs work").
-- Sounds are placeholders until a listening page (D2): the ray's start plays `clink`.
+- Sounds (owner picks, element-sounds D5; were placeholders under D2): the ray's start `freeze-start` and a held `freeze-loop`, thawing ground `thaw` (read from `frozenHead`, rate-limited), the torch melting it `steam-hiss`.
 - Starting values (D7, D8): `ice.freezeAreaPerSecond` 3600 units² (a 3 s crate makes a round patch of about 59 units radius inside a slab), `ice.frozenSeconds` 8, beam 180 units long and ±3°, push 300.

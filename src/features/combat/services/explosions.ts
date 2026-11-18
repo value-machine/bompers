@@ -80,11 +80,12 @@ function hitPlayers(ctx: CombatContext, blast: Blast): void {
 
 /**
  * Logs terrain that went away (a crater, a fire burn-out) as one `terrainDestroyed` event per
- * material + colour at `at`, with the material's catalog effect and sound.
+ * material + colour at `at`, with the material's catalog effect and sound. `soundId` replaces the
+ * material's sound when what destroyed it has its own (a fire burn-out; `"none"` = silent).
  */
 export function reportTerrainDestroyed(
   combat: CombatState,
-  report: { cleared: ClearedCells; at: Vec2; timeSeconds: number; silent?: boolean }
+  report: { cleared: ClearedCells; at: Vec2; timeSeconds: number; soundId?: string }
 ): void {
   const { at } = report;
   for (const { materialId, colorId, cells } of report.cleared.byLook) {
@@ -99,7 +100,7 @@ export function reportTerrainDestroyed(
         colorId,
         cells,
         effectId: material?.effect ?? "none",
-        soundId: report.silent ? "none" : (material?.sound ?? "none"),
+        soundId: report.soundId ?? material?.sound ?? "none",
       },
       report.timeSeconds
     );

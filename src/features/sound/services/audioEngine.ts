@@ -12,7 +12,12 @@ import {
   readSoundSettings,
   writeSoundSettings,
 } from "@/features/sound/services/soundSettings";
-import type { MusicTrackId, SoundCue, SoundSettings } from "@/features/sound/types/sound.types";
+import type {
+  MusicTrackId,
+  SoundCue,
+  SoundLoop,
+  SoundSettings,
+} from "@/features/sound/types/sound.types";
 
 /** Key that toggles mute in game (not used by any keyboard layout). */
 export const MUTE_KEY_CODE = "KeyM";
@@ -25,6 +30,12 @@ const MUTE_STORAGE_KEY = "bompers.sound.muted";
  */
 export interface AudioEngine {
   playCue(cue: SoundCue): void;
+  /**
+   * The held loops wanted this frame: new ones fade in, gone ones fade out, gains follow. Call it
+   * every frame; a loop not refreshed for `SOUND_MIX.loopHoldSeconds` fades out by itself (a
+   * paused or closed match goes quiet without telling the engine).
+   */
+  setLoops(loops: readonly SoundLoop[]): void;
   /** Switches the music (null = fade out); asking for the playing track does nothing. */
   playMusic(track: MusicTrackId | null, offsetSeconds?: number): void;
   /** Holds the music at its position (game paused) or continues it; a new track ends the hold. */
@@ -95,6 +106,7 @@ function silentEngine(host: SoundHost): AudioEngine {
   let muted = false;
   return {
     playCue: () => undefined,
+    setLoops: () => undefined,
     playMusic: () => undefined,
     setMusicPaused: () => undefined,
     settings: store.get,
@@ -191,6 +203,77 @@ function startVoice(
   source.start();
 }
 
+interface LoopVoice {
+  soundId: string;
+  /** Null while the file is still loading. */
+  source: AudioBufferSourceNode | null;
+  gain: GainNode;
+}
+
+/**
+ * Keeps the frame's loops sounding (one voice per loop key). Each refresh holds a voice for
+ * `loopHoldSeconds` and schedules its fade and stop after that, so a voice nobody refreshes ends
+ * by itself; a later `stop()` call replaces the earlier one (Web Audio), which moves the end out.
+ */
+function createLoopVoices(
+  { context, mixer }: { context: AudioContext; mixer: Mixer },
+  load: (url: string) => Promise<AudioBuffer | null>
+): (loops: readonly SoundLoop[]) => void {
+  const voices = new Map<string, LoopVoice>();
+  const { loopFadeSeconds: fade, loopHoldSeconds: hold } = SOUND_MIX;
+
+  const schedule = (voice: LoopVoice, target: number, holdFor: number): void => {
+    const now = context.currentTime;
+    const gain = voice.gain.gain;
+    gain.cancelScheduledValues(now);
+    gain.setValueAtTime(gain.value, now);
+    gain.linearRampToValueAtTime(target, now + Math.min(fade, holdFor || fade));
+    if (holdFor > 0) gain.setValueAtTime(target, now + holdFor);
+    gain.linearRampToValueAtTime(0, now + holdFor + fade);
+    voice.source?.stop(now + holdFor + fade);
+  };
+
+  const start = (key: string, loop: SoundLoop): void => {
+    const url = SOUND_FILES[loop.soundId]?.[0];
+    if (!url || context.state === "closed") return;
+    const gain = context.createGain();
+    gain.gain.value = 0;
+    gain.connect(mixer.sfxBus);
+    const voice: LoopVoice = { soundId: loop.soundId, source: null, gain };
+    voices.set(key, voice);
+    void load(url).then((buffer) => {
+      if (!buffer || voices.get(key) !== voice || context.state === "closed") return;
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.playbackRate.value = playbackRateFor(loop.slot);
+      source.connect(gain);
+      source.onended = () => {
+        if (voices.get(key) === voice) voices.delete(key);
+        gain.disconnect();
+      };
+      voice.source = source;
+      source.start();
+      schedule(voice, loop.gain, hold);
+    });
+  };
+
+  return (loops) => {
+    const wanted = new Set<string>();
+    for (const loop of loops) {
+      wanted.add(loop.key);
+      const voice = voices.get(loop.key);
+      if (!voice || voice.soundId !== loop.soundId) start(loop.key, loop);
+      else schedule(voice, loop.gain, hold);
+    }
+    for (const [key, voice] of voices) {
+      if (wanted.has(key)) continue;
+      schedule(voice, 0, 0);
+      voices.delete(key);
+    }
+  };
+}
+
 /** Picks the take for a cue (random, no immediate repeat), or null to skip a too-fast retrigger. */
 function createTakePicker(context: AudioContext): (cue: SoundCue) => string | null {
   const lastTake = new Map<string, number>();
@@ -264,6 +347,7 @@ export function createAudioEngine(host: SoundHost): AudioEngine {
       if (DUCKING_SOUNDS.has(cue.soundId)) duckMusic(context, mixer.musicDuck);
       void load(url).then((buffer) => buffer && startVoice({ context, mixer }, buffer, cue));
     },
+    setLoops: createLoopVoices({ context, mixer }, load),
     playMusic: music.play,
     setMusicPaused: music.setPaused,
     settings: store.get,

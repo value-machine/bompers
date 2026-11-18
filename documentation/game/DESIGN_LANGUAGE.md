@@ -272,6 +272,8 @@ Every SFX prompt is built from one template: **material + action + palette words
 
 **Material sounds** (owner, 2026-11-16, material-sounds lap): stone `thud` take 4; earth `crumble` take 3 + dive-impact spare 1; cardboard `thwap` take 4; ice `clink` take 2 + dive-impact spare 4. One sound per material, played when it is blasted and, layered over the blob's splut, when a dive bonks into it. The owner's A/B: a wall bonk's blob part is the landing splut; landings keep it. Volume follows intensity: landings by fall speed, hits and bonks by impact speed (GAME_JUICE § 5).
 
+**Fire and ice sounds** (owner, 2026-11-18, element-sounds lap; prompts in the lap's BRIEF, generated with `eleven_text_to_sound_v2`, shorts 0.5 s, loops with the generator's loop option): torch start take 4, torch loop take 3, fire crackle loop take 1, burn-out take 1 (over cardboard's thwap), catch fire take 2, steam hiss take 3, freeze start take 3, thaw take 2. The freeze-ray loop is a re-take after the owner's note: "a continuous mix of leaf blower and whistling wind". Loops are processed whole with 10 ms edge fades and one fixed gain, and the game holds them while their source lasts (GAME_JUICE § 6).
+
 ### Music (the music lap, 2026-11-16)
 
 Three tracks, all instrumental, 128 BPM, major key, ukulele + marimba + slap bass + hand claps, generated with `eleven_music_v2_5` (prompts describe the sound only; "no intro or outro so it loops seamlessly" for loops).
