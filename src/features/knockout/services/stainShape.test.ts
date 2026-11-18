@@ -3,7 +3,7 @@ import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { buildTerrainFromLevel } from "@/features/arena/api/arenaApi";
 import {
   STAIN_LOOK,
-  stainDryness,
+  stainFade,
   stainSamples,
   stainShape,
   stainStage,
@@ -54,8 +54,7 @@ describe("stainSamples", () => {
     x: ((index % grid.widthCells) + 0.5) * grid.cellSize,
     y: (Math.floor(index / grid.widthCells) + 0.5) * grid.cellSize,
   });
-  const onFloor = (age: number) =>
-    stainSamples(grid, floor("3:d2"), { x: 200, y: 100, age, timing });
+  const onFloor = (age: number) => stainSamples(grid, floor("3:d2"), { x: 200, y: 100, age });
 
   it("should dye a round patch that goes deep under the landing when goo lands on a floor", () => {
     const samples = onFloor(1);
@@ -71,43 +70,38 @@ describe("stainSamples", () => {
 
   it("should give two stains of the same size different inner edges when their keys differ", () => {
     const patch = (key: string) =>
-      stainSamples(grid, { ...floor(key), radius: 5 }, { x: 200, y: 100, age: 1, timing });
+      stainSamples(grid, { ...floor(key), radius: 5 }, { x: 200, y: 100, age: 1 });
     expect(patch("3:d2")).toEqual(patch("3:d2"));
     expect(patch("3:d2")).not.toEqual(patch("6:d4"));
   });
 
   it("should colour nothing when goo lands away from any terrain", () => {
-    expect(stainSamples(grid, floor("3:d2"), { x: 200, y: 20, age: 1, timing })).toEqual([]);
+    expect(stainSamples(grid, floor("3:d2"), { x: 200, y: 20, age: 1 })).toEqual([]);
   });
 
   it("should run down the wall over the run time when goo lands on a wall", () => {
-    const at = (age: number) => stainSamples(grid, wall("4:d1"), { x: 48, y: 120, age, timing });
+    const at = (age: number) => stainSamples(grid, wall("4:d1"), { x: 48, y: 120, age });
     const lowest = (samples: number[]) => Math.max(...samples.map((index) => centre(index).y));
     expect(lowest(at(STAIN_LOOK.runSeconds))).toBeGreaterThan(lowest(at(0.05)) + 8);
     expect(at(1)).toEqual(at(STAIN_LOOK.runSeconds));
   });
 
-  it("should stay whole until the respawn and shrink toward its touch point as it dries", () => {
-    const wet = onFloor(2);
-    const drying = onFloor(3);
-    const nearlyDry = onFloor(3.9);
-    expect(onFloor(1)).toEqual(wet);
-    expect(drying.length).toBeLessThan(wet.length);
-    expect(nearlyDry.length).toBeLessThan(drying.length);
-    for (const index of nearlyDry) expect(wet).toContain(index);
+  it("should keep its shape for its whole life when it has stopped running", () => {
+    expect(onFloor(0)).toEqual(onFloor(1));
+    expect(onFloor(3.9)).toEqual(onFloor(1));
   });
 });
 
 describe("stain timing", () => {
-  it("should be wet until the respawn and fully dry at splatSeconds", () => {
-    expect(stainDryness(1.9, timing)).toBe(0);
-    expect(stainDryness(3, timing)).toBeCloseTo(0.5);
-    expect(stainDryness(4, timing)).toBe(1);
+  it("should be full until the respawn and fully faded at splatSeconds", () => {
+    expect(stainFade(1.9, timing)).toBe(0);
+    expect(stainFade(3, timing)).toBeCloseTo(0.5);
+    expect(stainFade(4, timing)).toBe(1);
   });
 
-  it("should change stage while running and drying and hold still in between", () => {
-    expect(stainStage(0.1, timing)).not.toBe(stainStage(0.3, timing));
-    expect(stainStage(0.8, timing)).toBe(stainStage(1.9, timing));
-    expect(stainStage(2.5, timing)).not.toBe(stainStage(3, timing));
+  it("should change stage only while a wall stain runs", () => {
+    expect(stainStage(wall("4:d1"), 0.1)).not.toBe(stainStage(wall("4:d1"), 0.3));
+    expect(stainStage(wall("4:d1"), 0.8)).toBe(stainStage(wall("4:d1"), 3.5));
+    expect(stainStage(floor("3:d2"), 0.1)).toBe(stainStage(floor("3:d2"), 3.5));
   });
 });

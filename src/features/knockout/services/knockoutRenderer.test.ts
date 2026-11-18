@@ -67,9 +67,9 @@ const shapes = (g: { context: { instructions: unknown[] } } | undefined): number
   g?.context.instructions.length ?? 0;
 
 describe("goo stains", () => {
-  it("should colour the floor itself, inside its top edge, when goo landed on it", () => {
+  it("should dye the floor itself, inside its top edge and into it, when goo landed on it", () => {
     const { view } = scene([splat({})]);
-    const stain = view.stains.get("-1:1")!;
+    const stain = view.stains.get("-1:7")!.g;
     expect(shapes(stain)).toBeGreaterThan(0);
     expect(stain.bounds.minY).toBeGreaterThanOrEqual(99.5);
     // It goes into the floor: deeper than a surface coat, no deeper than its reach.
@@ -78,44 +78,67 @@ describe("goo stains", () => {
     expect(stain.alpha).toBe(STAIN_LOOK.alpha);
   });
 
-  it("should draw nothing new when no stain changed stage and the terrain is the same", () => {
+  it("should fade evenly after the respawn without redrawing when the stain ages", () => {
     const { view, frame, world } = scene([splat({})]);
-    const before = view.stainKey;
-    world.splats[0]!.age = 1.5;
+    const drawing = view.stains.get("-1:7")!;
+    const drawn = drawing.drawn;
+    const box = { ...drawing.g.bounds };
+    const respawn = frame.respawnDelaySeconds;
+    world.splats[0]!.age = (respawn + frame.tunables.splatSeconds) / 2;
     syncKnockoutView(view, frame);
-    expect(view.stainKey).toBe(before);
-    world.splats[0]!.age = 3;
+    expect(drawing.drawn).toBe(drawn);
+    expect(drawing.g.bounds.maxY).toBe(box.maxY);
+    expect(drawing.g.alpha).toBeCloseTo(STAIN_LOOK.alpha / 2);
+  });
+
+  it("should draw one burst's goo as one shape and fade it as one when its droplets land together", () => {
+    const { view, frame, world } = scene([splat({}), splat({ key: "7:d1", x: 212, age: 0.6 })]);
+    expect(view.stains.size).toBe(1);
+    const drawing = view.stains.get("-1:7")!;
+    // The first landing is gone from the world; the burst keeps fading by it.
+    world.splats = [splat({ key: "7:d1", x: 212, age: frame.tunables.splatSeconds - 0.4 })];
+    drawing.age = frame.tunables.splatSeconds;
     syncKnockoutView(view, frame);
-    expect(view.stainKey).not.toBe(before);
+    expect(drawing.g.alpha).toBe(0);
+  });
+
+  it("should lay a later burst over an earlier one, each in its own colour, when two stack", () => {
+    const { view } = scene([splat({}), splat({ key: "9:d1", slot: 2, x: 206 })]);
+    const [first, second] = [view.stains.get("-1:7")!.g, view.stains.get("-1:9")!.g];
+    expect(shapes(first)).toBeGreaterThan(0);
+    expect(shapes(second)).toBeGreaterThan(0);
+    expect(view.stainLayer.getChildIndex(second)).toBeGreaterThan(
+      view.stainLayer.getChildIndex(first)
+    );
+    expect(second.bounds.minX).toBeLessThan(first.bounds.maxX);
   });
 
   it("should go with the ground when a blast takes the stained ground away", () => {
     const { view, frame, terrain } = scene([splat({})]);
     clearCrater(terrain, { x: 200, y: 100, reach: 40, shape: "round" });
     syncKnockoutView(view, frame);
-    expect(shapes(view.stains.get("-1:1"))).toBe(0);
+    expect(shapes(view.stains.get("-1:7")!.g)).toBe(0);
+  });
+
+  it("should drop a burst's drawing when its last stain is gone", () => {
+    const { view, frame, world } = scene([splat({})]);
+    world.splats = [];
+    syncKnockoutView(view, frame);
+    expect(view.stains.size).toBe(0);
+    expect(view.stainLayer.children).toHaveLength(0);
   });
 
   it("should stain a moving part in its own layer and follow the part when it moves", () => {
     const { view, frame, terrain } = scene([
       splat({ key: "8:c0", slot: 0, x: 140, y: 40, rides: { mover: 0 } }),
     ]);
-    expect(shapes(view.stains.get("0:0"))).toBeGreaterThan(0);
-    expect(view.stains.has("-1:0")).toBe(false);
+    expect(shapes(view.stains.get("0:8")!.g)).toBeGreaterThan(0);
+    expect(view.stains.has("-1:8")).toBe(false);
     const mover = terrain.movers[0]!;
     mover.pose = { dx: 30, dy: 0, angle: 0.5 };
     syncKnockoutView(view, frame);
     const layer = view.partLayers.get(0)!;
     expect(layer.position.x).toBe(mover.pivot.x + 30);
     expect(layer.rotation).toBe(0.5);
-  });
-
-  it("should keep one drawing per player colour when two players' goo lands side by side", () => {
-    const { view } = scene([splat({}), splat({ key: "9:d1", slot: 2, x: 260 })]);
-    expect(shapes(view.stains.get("-1:1"))).toBeGreaterThan(0);
-    expect(shapes(view.stains.get("-1:2"))).toBeGreaterThan(0);
-    expect(view.stains.get("-1:2")!.bounds.minX).toBeGreaterThan(
-      view.stains.get("-1:1")!.bounds.maxX
-    );
   });
 });

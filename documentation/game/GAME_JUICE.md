@@ -41,7 +41,7 @@ The feedback layer of the design system ([`DESIGN_LANGUAGE.md`](DESIGN_LANGUAGE.
 | `effect` — pop-in effect clearing | 180–320 ms | impact pop 220 ms, explosion star 250 ms |
 | `linger` — things flying off | 300–600 ms | elimination droplets 300 ms, debris 500 ms |
 
-Loops (idle breathing 1.6 s, respawn blink 8 Hz) are not bound by a window. Owner exceptions (elimination-goo lap): knockout pieces stay until the respawn (2 s, blinking 8 Hz for the last 0.5 s) and goo stains dry up and are gone by 4 s.
+Loops (idle breathing 1.6 s, respawn blink 8 Hz) are not bound by a window. Owner exceptions (elimination-goo lap): knockout pieces stay until the respawn (2 s, blinking 8 Hz for the last 0.5 s) and goo stains fade out by 4 s.
 
 ## 4. Squash and stretch
 

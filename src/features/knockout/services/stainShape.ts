@@ -11,7 +11,8 @@ import type { GooSplat } from "@/features/knockout/types/knockout.types";
  * the same stain every time"), so it keeps them every frame and the same event always stains
  * the same way.
  * - On a wall the goo also runs down along the surface for a moment.
- * - After the respawn it dries up: it shrinks toward where it landed until it is gone.
+ * - After the respawn it fades out evenly until it is gone (owner, terrain-stains D7); its shape
+ *   does not change, so fading costs no redraw.
  */
 export const STAIN_LOOK = {
   /** Overall size range of a stain, × its droplet's radius. */
@@ -30,8 +31,6 @@ export const STAIN_LOOK = {
   runDepthSamples: 1.1,
   /** Seconds a run takes to reach its full length. */
   runSeconds: 0.5,
-  /** How much of its reach a stain has lost when it is fully dry. */
-  dryReach: 0.75,
 } as const;
 
 /** One stain's seeded size, world units. */
@@ -82,22 +81,23 @@ export interface StainTiming {
   splatSeconds: number;
 }
 
-/** How dry a stain is, 0 → 1: wet until the respawn, then drying until it is gone. */
-export function stainDryness(age: number, timing: StainTiming): number {
+/** How far a stain has faded, 0 → 1: full until the respawn, then fading until it is gone. */
+export function stainFade(age: number, timing: StainTiming): number {
   const { respawnDelaySeconds, splatSeconds } = timing;
   if (age <= respawnDelaySeconds) return 0;
   return Math.min(1, (age - respawnDelaySeconds) / (splatSeconds - respawnDelaySeconds));
 }
 
+type StainedSplat = Pick<GooSplat, "key" | "ny" | "radius" | "rides">;
+
 /**
- * What a stain looks like now: it changes while it runs and while it dries, and holds still in
- * between. The renderer redraws stains only when a stage changes.
+ * What a stain's shape is now: it changes only while a wall stain runs, and is set after that.
+ * The renderer redraws a stain only when its stage changes.
  */
-export function stainStage(age: number, timing: StainTiming): string {
+export function stainStage(splat: StainedSplat, age: number): string {
   const step = 0.05;
-  if (age < STAIN_LOOK.runSeconds) return `r${Math.floor(age / step)}`;
-  if (age <= timing.respawnDelaySeconds) return "wet";
-  return `d${Math.floor((age - timing.respawnDelaySeconds) / step)}`;
+  const running = stainShape(splat).run > 0 && age < STAIN_LOOK.runSeconds;
+  return running ? `r${Math.floor(age / step)}` : "set";
 }
 
 export interface StainAt {
@@ -105,18 +105,13 @@ export interface StainAt {
   x: number;
   y: number;
   age: number;
-  timing: StainTiming;
 }
 
-type StainedSplat = Pick<GooSplat, "key" | "ny" | "radius" | "rides">;
-
-/** A stain's extent now, world units: its reach as dried, its run as far as it got. */
+/** A stain's extent now, world units: its reach, and its run as far as it got. */
 function stainExtent(splat: StainedSplat, at: StainAt) {
-  const shape = stainShape(splat);
-  const dry = stainDryness(at.age, at.timing);
-  const reach = shape.reach * (1 - STAIN_LOOK.dryReach * dry);
-  const run = shape.run * Math.min(1, at.age / STAIN_LOOK.runSeconds) * (1 - dry);
-  return { reach, run, runBottom: at.y + 0.6 * reach + run, seed: shape.seed };
+  const { reach, run: fullRun, seed } = stainShape(splat);
+  const run = fullRun * Math.min(1, at.age / STAIN_LOOK.runSeconds);
+  return { reach, run, runBottom: at.y + 0.6 * reach + run, seed };
 }
 
 /** 0..1 for one block of samples of one stain: how much shorter the stain reaches there. */
