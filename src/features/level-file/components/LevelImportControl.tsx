@@ -1,7 +1,11 @@
 import { useCallback, useImperativeHandle, useRef, type ChangeEvent, type Ref } from "react";
+import { Check, Copy } from "lucide-react";
 import { Alert } from "@/components/common/Alert";
+import { Button } from "@/components/common/Button";
+import type { ClipboardCopyStatus } from "@/shared/hooks/useClipboardCopy";
 import { canLinkFiles, pickLinkedFile } from "@/features/level-memory/api/levelMemoryApi";
-import type { LevelImportReport } from "@/features/level-file/hooks/useLevelLibrary";
+import { useImportReportCopy } from "@/features/level-file/hooks/useImportReportCopy";
+import type { LevelImportReport } from "@/features/level-file/types/levelFile.types";
 
 /** Level files are HTML; a bare .svg with the same root works too. */
 const LEVEL_FILE_ACCEPT = ".html,.htm,.svg,text/html,image/svg+xml";
@@ -19,6 +23,33 @@ export interface LevelImportControlProps {
   /** Opens the picker from code (the control has no button of its own). */
   pickerRef: Ref<LevelFilePicker>;
 }
+
+const COPY_REPORT_LABEL: Record<ClipboardCopyStatus, string> = {
+  idle: "Copy report",
+  copied: "Report copied",
+  failed: "Copy failed",
+};
+
+/**
+ * Copies the report as plain text for the author's AI (level-direction D3). Second copy of the
+ * ghost copy button: level-kit's `CopyLevelPromptButton` is the first (code-style F2).
+ */
+const CopyReportButton = ({ report }: { report: LevelImportReport }) => {
+  const { status, copy } = useImportReportCopy(report);
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="mt-1 -ml-2"
+      onClick={copy}
+      title="Paste into the AI that wrote the level so it can fix the file"
+      data-testid="copy-import-report"
+    >
+      {status === "copied" ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+      <span aria-live="polite">{COPY_REPORT_LABEL[status]}</span>
+    </Button>
+  );
+};
 
 const ReportBody = ({ report }: { report: LevelImportReport }) => {
   const issues = report.ok ? report.warnings : report.errors;
@@ -38,6 +69,7 @@ const ReportBody = ({ report }: { report: LevelImportReport }) => {
           ))}
         </ul>
       )}
+      {issues.length > 0 && <CopyReportButton report={report} />}
     </>
   );
 };
