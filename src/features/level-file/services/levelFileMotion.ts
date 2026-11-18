@@ -13,10 +13,7 @@ import {
   type MotionPivotName,
 } from "@/shared/utils/levelMotion";
 import { shapeBounds, shapeOutlinePoints, shapeSignedDistance } from "@/shared/utils/shapeGeometry";
-import {
-  hasCatalogEntry,
-  resolveCatalogEntry,
-} from "@/features/content-catalog/api/contentCatalogApi";
+import { hasCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import { CATALOG_ID_RE } from "@/features/level-file/services/levelFileRoot";
 import type { LevelMover, TerrainPiece } from "@/features/level/api/levelApi";
 import { parsePlainNumber } from "@/features/level-file/services/levelFileGeometry";
@@ -203,12 +200,12 @@ function moverName(group: Element, ordinal: number): string {
   return ref ? `moving part "${ref}"` : `moving part #${ordinal}`;
 }
 
-/** W13: non-terrain roles and breakable, non-burning materials inside a moving group. */
+/** W13: non-terrain roles inside a moving group (a part may be any material, mover-materials D1). */
 function warnContents(
   part: { group: Element; name: string; indices: readonly number[] },
   ctx: MoverContext
 ): void {
-  const { group, name, indices } = part;
+  const { group, name } = part;
   for (const item of ctx.items) {
     if (item.role !== "terrain" && group.contains(item.el)) {
       addWarning(
@@ -217,19 +214,6 @@ function warnContents(
         `${item.name} is inside ${name}; only terrain moves, it stays still.`
       );
     }
-  }
-  // A material that burns is a real choice for a part (it burns away, mover-materials D2); only
-  // a breakable material that does not burn behaves differently from what its author may expect.
-  const breakable = indices.filter((i) => {
-    const entry = resolveCatalogEntry("material", ctx.terrain[i]!.materialId).entry;
-    return !!entry && entry.toughness !== null && entry.reactions.fire !== "burns";
-  });
-  if (breakable.length > 0) {
-    addWarning(
-      ctx.log,
-      "W13",
-      `${name} uses a breakable material; blasts never break a moving part, so it acts unbreakable.`
-    );
   }
 }
 

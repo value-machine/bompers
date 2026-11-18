@@ -13,8 +13,8 @@ import {
   burnOut,
   getCellInfo,
   isFrozenSample,
-  type ClearedCells,
-  type ClearedLook,
+  poolCleared,
+  type ClearedBodies,
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
 import type { FireState, GroundFire } from "@/features/fire/types/fire.types";
@@ -165,9 +165,7 @@ export const burningCount = (fire: FireState): number =>
   fire.grounds.reduce((sum, ground) => sum + ground.lit.length - ground.litHead, 0);
 
 /** A burnt-out batch: what was removed, and a few places in it for the debris to fly from. */
-export interface BurnOutBatch {
-  removed: number;
-  byLook: ClearedLook[];
+export interface BurnOutBatch extends ClearedBodies {
   /** World centres of up to `MAX_BURN_OUT_SPOTS` of the batch's samples, spread over the batch. */
   spots: Vec2[];
 }
@@ -191,18 +189,6 @@ function burnOutSpots(grid: TerrainGrid, samples: readonly number[]): Vec2[] {
   });
 }
 
-/** Adds one body's removed samples to the batch, pooling looks that are the same. */
-function addCleared(batch: BurnOutBatch, cleared: ClearedCells): void {
-  batch.removed += cleared.removed;
-  for (const look of cleared.byLook) {
-    const same = batch.byLook.find(
-      (known) => known.materialId === look.materialId && known.colorId === look.colorId
-    );
-    if (same) same.cells += look.cells;
-    else batch.byLook.push({ ...look });
-  }
-}
-
 /** Removes what has burnt out on every body; the batch of all of them, or null when nothing went. */
 function burnOutBodies(fire: FireState, terrain: TerrainGrid): BurnOutBatch | null {
   const batch: BurnOutBatch = { removed: 0, byLook: [], spots: [] };
@@ -210,7 +196,7 @@ function burnOutBodies(fire: FireState, terrain: TerrainGrid): BurnOutBatch | nu
     const ground = fire.grounds[body];
     if (!ground || ground.dueOut.length === 0) return;
     const spots = burnOutSpots(grid, ground.dueOut).map((at) => bodyWorldPoint(terrain, body, at));
-    addCleared(batch, burnOut(grid, ground.dueOut));
+    poolCleared(batch, burnOut(grid, ground.dueOut));
     batch.spots.push(...spots);
     ground.dueOut = [];
     ground.version += 1;

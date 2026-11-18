@@ -1,9 +1,8 @@
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
 import type { CraterShape } from "@/shared/types/craterShape.types";
 import type { MotionPose } from "@/shared/types/levelMotion.types";
-import type { PosedField } from "@/shared/types/sampleFront.types";
 import { craterShapeDistance } from "@/shared/utils/craterShape";
-import { posePoint, unposePoint } from "@/shared/utils/levelMotion";
+import { unposePoint } from "@/shared/utils/levelMotion";
 import {
   EMPTY_CELL,
   type MoverBody,
@@ -227,46 +226,18 @@ export function moverDistanceAt(mover: MoverBody, p: Vec2, pose: MotionPose = mo
   return gridDistanceAt(mover.field, { x: rest.x - mover.origin.x, y: rest.y - mover.origin.y });
 }
 
-/**
- * The fields a ray can meet, each placed in the world (mover-materials D4): the static terrain
- * first, then every moving part in its pose this step. A point beyond a part's reach is out of
- * its field.
- */
-export function terrainBodies(grid: TerrainGrid): PosedField[] {
-  const parts = grid.movers.map(
-    (mover): PosedField => ({ field: mover.field, toLocal: (p) => partLocalPoint(mover, p) })
-  );
-  return [{ field: grid }, ...parts];
-}
-
 /** World point `p` in a part's own grid in its pose this step; null beyond the part's reach. */
-function partLocalPoint(mover: MoverBody, p: Vec2): Vec2 | null {
+export function partLocalPoint(mover: MoverBody, p: Vec2): Vec2 | null {
   const dx = p.x - mover.pivot.x - mover.pose.dx;
   const dy = p.y - mover.pivot.y - mover.pose.dy;
   if (dx * dx + dy * dy > mover.reach * mover.reach) return null;
-  const rest = unposePoint(mover.pose, mover.pivot, p);
-  return { x: rest.x - mover.origin.x, y: rest.y - mover.origin.y };
+  return partGridPoint(mover, p);
 }
 
-/**
- * Every body's own grid, in the order of `terrainBodies`: the static terrain, then each moving
- * part's field. State kept per body (fire, mover-materials-l2 D3) is indexed the same way.
- */
-export const bodyGrids = (grid: TerrainGrid): TerrainGrid[] => [
-  grid,
-  ...grid.movers.map((mover) => mover.field),
-];
-
-/** One number that changes whenever a frozen flag changes on any body (sound, redraw keys). */
-export const frozenVersionOf = (grid: TerrainGrid): number =>
-  bodyGrids(grid).reduce((sum, body) => sum + body.frozenVersion, 0);
-
-/** The world point of a point in body `body`'s own grid (the inverse of its `toLocal`). */
-export function bodyWorldPoint(grid: TerrainGrid, body: number, local: Vec2): Vec2 {
-  const mover = grid.movers[body - 1];
-  if (!mover) return local;
-  const rest = { x: local.x + mover.origin.x, y: local.y + mover.origin.y };
-  return posePoint(mover.pose, mover.pivot, rest);
+/** World point `p` in a part's own grid in its pose this step, however far from the part. */
+export function partGridPoint(mover: MoverBody, p: Vec2): Vec2 {
+  const rest = unposePoint(mover.pose, mover.pivot, p);
+  return { x: rest.x - mover.origin.x, y: rest.y - mover.origin.y };
 }
 
 /** The moving part deepest at a world point and its distance; null when the grid has none. */
