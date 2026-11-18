@@ -221,6 +221,7 @@ Served from the game's own site under `/level-kit/v2/`:
 | `LEVEL_PROMPT.md` | The copyable AI prompt (the lobby's "Copy AI prompt" copies the same text), generated whole from the format, catalog and game tunables by `pnpm level-kit:sync`. |
 | `example-level.html` | A complete level using relative kit links (works served or opened from the repo). |
 | `fire-test-level.html` | A level for testing fire: two big cardboard slabs, thin cardboard platforms and small blocks on a stone floor, with a torch in every drop (owner, fire-clusters, 2026-11-17). Import it in the lobby. |
+| `crusher-test-level.html` | A level for testing moving parts: a block that slides into a wall and thuds at each end (stand in the gap to be crushed), a spinning bar to ride, and a fast lift to jump off, each a short walk from a spawn (orchestrator, moving-parts lap B-2). Import it in the lobby. |
 
 Agent-written levels link the kit with absolute URLs on `https://bompers.tom-fab.workers.dev`, the game's production origin. Without network access the links fail silently and the file is still a correct picture.
 
