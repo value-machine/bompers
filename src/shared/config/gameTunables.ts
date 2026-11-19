@@ -116,6 +116,9 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     // and bleeds 150 / s while the stick holds that way: ≈ 610 units of jump reach vs ≈ 410.
     jumpCarryMax: 600,
     airCarryDecel: 150,
+    // Spin-fire (D2): 1.25 turns / s ≈ 3.75° per 1/120 s step, under the freeze ray's 6° fan. The
+    // body spins at speed / 14 (a 400 roll ≈ 4.5 turns / s), far too fast to sweep a beam at.
+    sweepTurnsPerSecond: 1.25,
   },
   dive: {
     minHitSpeed: 150,

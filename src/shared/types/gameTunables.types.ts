@@ -210,6 +210,12 @@ export interface GameTunables {
     jumpCarryMax: number;
     /** How fast carried speed above run speed bleeds in the air while the stick holds that way. */
     airCarryDecel: number;
+    /**
+     * Most turns per second a held weapon sweeps round with the spin while rolling (spin-fire D2):
+     * the weapon follows the body's spin up to this rate, so a beam moves less than its own
+     * width per step and the sweep stays readable.
+     */
+    sweepTurnsPerSecond: number;
   };
   /**
    * Unarmed attack: the dive headbutt ("bomp", GDD § 3). A committed straight missile that

@@ -1,6 +1,6 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { isSolidAt } from "@/features/arena/api/arenaApi";
-import { playerBody, type PlayerState } from "@/features/player/api/playerApi";
+import { playerBody, weaponAim, type PlayerState } from "@/features/player/api/playerApi";
 import { bodyCenter, helmetPoint, rectContains } from "@/features/combat/services/combatGeometry";
 import { emitCombatEvent, type CombatContext } from "@/features/combat/services/combatState";
 import { explode } from "@/features/combat/services/explosions";
@@ -8,7 +8,7 @@ import { flightTunables } from "@/features/combat/services/weapons";
 import type { RocketKind, RocketState } from "@/features/combat/types/combat.types";
 
 /**
- * Rockets (every kind, homing-missiles D1): leave the helmet along the unit aim at their kind's
+ * Rockets (every kind, homing-missiles D1): leave the helmet along the weapon aim (`weaponAim`) at their kind's
  * speed, fly straight (a homing missile first steers, § Homing guidance below), and explode on
  * the first contact with terrain, another player or the edge of `ctx.bounds` (the match's kill
  * zone, far outside the level bounds except at the bottom), or at their kind's lifetime. Motion
@@ -17,23 +17,24 @@ import type { RocketKind, RocketState } from "@/features/combat/types/combat.typ
  */
 export function fireRocket(ctx: CombatContext, shooter: PlayerState, kind: RocketKind): void {
   const helmet = helmetPoint(shooter);
+  const aim = weaponAim(shooter);
   const offset = ctx.tunables.combat.rocket.muzzleOffset;
-  const muzzle = { x: helmet.x + shooter.aimX * offset, y: helmet.y + shooter.aimY * offset };
+  const muzzle = { x: helmet.x + aim.x * offset, y: helmet.y + aim.y * offset };
   const rocket: RocketState = {
     id: ctx.combat.nextEntityId,
     kind,
-    targetId: kind === "homing" ? pickHomingTarget(ctx, shooter, muzzle) : null,
+    targetId: kind === "homing" ? pickHomingTarget(ctx, aim, { shooter, from: muzzle }) : null,
     ownerSlot: shooter.slot,
     ownerId: shooter.id,
     x: muzzle.x,
     y: muzzle.y,
-    dirX: shooter.aimX,
-    dirY: shooter.aimY,
+    dirX: aim.x,
+    dirY: aim.y,
     age: 0,
   };
   ctx.combat.nextEntityId += 1;
   ctx.combat.rockets.push(rocket);
-  kickShooter(shooter, flightTunables(ctx.tunables, kind).recoil);
+  kickShooter(shooter, aim, flightTunables(ctx.tunables, kind).recoil);
   emitCombatEvent(
     ctx.combat,
     {
@@ -102,11 +103,11 @@ export function stepRockets(ctx: CombatContext, dt: number): void {
   ctx.combat.rockets = flying;
 }
 
-/** Recoil: pushes the shooter opposite the aim; an upward kick leaves the ground. */
-function kickShooter(shooter: PlayerState, recoil: number): void {
-  shooter.vx -= shooter.aimX * recoil;
-  shooter.vy -= shooter.aimY * recoil;
-  if (shooter.aimY > 0) shooter.grounded = false;
+/** Recoil: pushes the shooter opposite the shot; an upward kick leaves the ground. */
+function kickShooter(shooter: PlayerState, aim: Vec2, recoil: number): void {
+  shooter.vx -= aim.x * recoil;
+  shooter.vy -= aim.y * recoil;
+  if (aim.y > 0) shooter.grounded = false;
 }
 
 /*
@@ -122,8 +123,12 @@ function kickShooter(shooter: PlayerState, recoil: number): void {
 const isLive = (ctx: CombatContext, player: PlayerState): boolean =>
   ctx.combat.fighters.get(player.id)?.eliminated !== true;
 
-/** The opponent a missile fired from `from` along the shooter's unit aim locks on, or null. */
-function pickHomingTarget(ctx: CombatContext, shooter: PlayerState, from: Vec2): string | null {
+/** The opponent a missile fired from `from` along the unit `aim` locks on, or null. */
+function pickHomingTarget(
+  ctx: CombatContext,
+  aim: Vec2,
+  { shooter, from }: { shooter: PlayerState; from: Vec2 }
+): string | null {
   const coneCos = Math.cos((ctx.tunables.combat.homing.lockConeDegrees * Math.PI) / 180);
   let best: { id: string; distance: number } | null = null;
   for (const player of ctx.players) {
@@ -132,7 +137,7 @@ function pickHomingTarget(ctx: CombatContext, shooter: PlayerState, from: Vec2):
     const dx = centre.x - from.x;
     const dy = centre.y - from.y;
     const distance = Math.hypot(dx, dy);
-    const inCone = distance === 0 || (dx * shooter.aimX + dy * shooter.aimY) / distance >= coneCos;
+    const inCone = distance === 0 || (dx * aim.x + dy * aim.y) / distance >= coneCos;
     if (inCone && (!best || distance < best.distance)) best = { id: player.id, distance };
   }
   return best?.id ?? null;

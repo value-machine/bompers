@@ -5,7 +5,13 @@ import type { PlayerInput } from "@/shared/types/gameInput.types";
 import type { WeaponItemId } from "@/shared/types/weaponItems.types";
 import { buildTerrainFromLevel, getCellInfo } from "@/features/arena/api/arenaApi";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
-import { createPlayer, stepPlayers, type PlayerState } from "@/features/player/api/playerApi";
+import {
+  createPlayer,
+  startRoll,
+  stepPlayers,
+  weaponAim,
+  type PlayerState,
+} from "@/features/player/api/playerApi";
 import { stepCombat } from "@/features/combat/services/combatSim";
 import {
   applyHit,
@@ -295,6 +301,21 @@ describe("combat — rocket recoil", () => {
     world.step([{ aimX: 1, aimY: 0, fire: true }]);
     expect(eventsOf(world, "rocketFired")).toHaveLength(1);
     expect(world.players[0]!.vx).toBeCloseTo(-C.rocket.recoil, 6);
+  });
+
+  it("should fire a rocket along the swept weapon aim when the shooter rolls", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    arm(world, 0);
+    const shooter = world.players[0]!;
+    startRoll(shooter, { source: "hit", minLockSeconds: 1 }, DEFAULT_GAME_TUNABLES);
+    shooter.vx = 600;
+    world.step([{ aimX: 1, aimY: 0 }], 24);
+    world.step([{ aimX: 1, aimY: 0, fire: true }]);
+    const aim = weaponAim(shooter);
+    expect(aim.y).toBeGreaterThan(0.5);
+    const rocket = world.combat.rockets[0]!;
+    expect(rocket.dirX).toBeCloseTo(aim.x, 6);
+    expect(rocket.dirY).toBeCloseTo(aim.y, 6);
   });
 
   it("should lift the shooter off the ground when firing straight down", () => {
