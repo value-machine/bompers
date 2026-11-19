@@ -17,7 +17,7 @@ import {
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
 import { helmetPoint } from "@/features/combat/api/combatApi";
-import type { PlayerState } from "@/features/player/api/playerApi";
+import { weaponAim, type PlayerState } from "@/features/player/api/playerApi";
 import { burningSamples } from "@/features/fire/services/fireSim";
 import {
   FLAME_LOOK,
@@ -447,12 +447,9 @@ function drawPilots(view: FireView, frame: FireFrame, look: { ink: number; on: S
   const { nozzleReach } = FLAME_LOOK.spray;
   for (const player of frame.players) {
     if (!frame.torchHolderIds.has(player.id) || look.on.has(player.slot)) continue;
-    const aim = Math.hypot(player.aimX, player.aimY) || 1;
+    const aim = weaponAim(player);
     const from = helmetPoint(player);
-    const nozzle = {
-      x: from.x + (player.aimX / aim) * nozzleReach,
-      y: from.y + (player.aimY / aim) * nozzleReach,
-    };
+    const nozzle = { x: from.x + aim.x * nozzleReach, y: from.y + aim.y * nozzleReach };
     const flame = pilotTongue(nozzle, { timeSeconds: frame.nowMs / 1000, seed: player.slot });
     g.poly(tonguePoints(flame, look.ink)).fill(INK);
     g.poly(tonguePoints(flame)).fill(COLORS.outer);

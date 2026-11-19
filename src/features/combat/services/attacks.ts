@@ -2,7 +2,7 @@ import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { SprayWeaponItemId } from "@/shared/types/weaponItems.types";
 import { resolveBeamClashes } from "@/shared/utils/beamClash";
 import { terrainBodies } from "@/features/arena/api/arenaApi";
-import type { PlayerState } from "@/features/player/api/playerApi";
+import { weaponAim, type PlayerState } from "@/features/player/api/playerApi";
 import {
   emitCombatEvent,
   fighterFor,
@@ -120,7 +120,7 @@ function clashBeams(ctx: CombatContext, turns: readonly AttackTurn[]): Map<numbe
     const itemId = fighter.weapon?.itemId;
     if (!itemId || isProjectileWeapon(itemId) || !spraysNow(fighter, pressed)) return [];
     const beam = sprayBeamOf(ctx.tunables, itemId);
-    const aim = { x: attacker.aimX, y: attacker.aimY };
+    const aim = weaponAim(attacker);
     return [{ slot: attacker.slot, beam: { ...beam, origin: helmetPoint(attacker), aim } }];
   });
   const { reach, clashes } = resolveBeamClashes(

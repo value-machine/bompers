@@ -5,7 +5,13 @@ import type { PlayerInput } from "@/shared/types/gameInput.types";
 import { buildTerrainFromLevel } from "@/features/arena/api/arenaApi";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { createPlayer, stepPlayers } from "@/features/player/services/playerController";
-import { isRolling, reactToHit, rollLockFor, startRoll } from "@/features/player/services/roll";
+import {
+  isRolling,
+  reactToHit,
+  rollLockFor,
+  startRoll,
+  weaponAim,
+} from "@/features/player/services/roll";
 
 const T = DEFAULT_GAME_TUNABLES;
 const ROLL = T.roll;
@@ -220,6 +226,31 @@ describe("roll exits", () => {
     expect(sim.player.rollAngle).not.toBe(0);
     sim.step({}, 60);
     expect(sim.player.rollAngle).toBe(0);
+  });
+
+  it("should sweep the weapon aim round with the spin, capped at the sweep rate, when it rolls fast", () => {
+    const sim = createSim({ x: 100, y: FLOOR_Y });
+    sim.step({}, 10);
+    startRoll(sim.player, { source: "dash" }, T);
+    sim.player.vx = 600;
+    const steps = 24;
+    sim.step({ fire: true }, steps);
+    // Rolling right spins clockwise (y down): the aim (1, 0) turns towards (0, 1).
+    const swept = steps * dt * ROLL.sweepTurnsPerSecond * 2 * Math.PI;
+    const aim = weaponAim(sim.player);
+    expect(aim.x).toBeCloseTo(Math.cos(swept), 6);
+    expect(aim.y).toBeCloseTo(Math.sin(swept), 6);
+  });
+
+  it("should fire along the stick aim again when the roll ends", () => {
+    const sim = createSim({ x: 100, y: FLOOR_Y });
+    sim.step({}, 10);
+    startRoll(sim.player, { source: "dash" }, T);
+    sim.player.vx = 600;
+    sim.step({ fire: true }, 20);
+    expect(weaponAim(sim.player).y).toBeGreaterThan(0.5);
+    sim.step({ aimX: 0, aimY: -1 }, 1);
+    expect(weaponAim(sim.player)).toEqual({ x: 0, y: -1 });
   });
 
   it("should end by time when a roll never comes to rest", () => {

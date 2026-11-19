@@ -69,7 +69,8 @@ export interface PlayerState {
    * of lock left (no jump-out, weak steering) and seconds rolled. `rollAngle` is the body's spin
    * (radians, eases back upright after a roll) and `rollSpin` its rate. Counters and the bounce
    * speed are render events (squash, shake, sound): dash-roll starts, hit rolls that came to
-   * rest, terrain bounces.
+   * rest, terrain bounces. `weaponSweep` is how far held weapons have swept round from the aim
+   * with the spin (radians, clockwise; 0 when not rolling; spin-fire D1, D2).
    */
   rollSource: RollSource | null;
   /** A dash roll lasts while this button is held (the one that started its dive); null otherwise. */
@@ -78,6 +79,7 @@ export interface PlayerState {
   rollSeconds: number;
   rollAngle: number;
   rollSpin: number;
+  weaponSweep: number;
   dashRollCount: number;
   rollRestCount: number;
   rollBounceCount: number;
