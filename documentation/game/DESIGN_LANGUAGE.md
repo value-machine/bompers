@@ -93,7 +93,7 @@ Named colours a level puts on any material (`data-color`; catalog kind `color`).
 - **Blob:** a soft egg, not a perfect circle.
   - Body: half-width R and height 1.94 R (the reference size; R = 30 world units in the style mockup). The widest point sits slightly below the middle, so the bottom is a little fuller and flatter than the top. Build it from four cubic curves (top, two sides, bottom), so squash and stretch deform one smooth shape.
   - Feet: two ellipses 0.4 R × 0.25 R, centred 0.45 R left and right of centre. The body overlaps the top half of each foot, so the feet look tucked under. Fill them with the body shade. Helmet: a dome over the top 45 % of the body, 4 units wider than the body, cream with a white gloss stroke and the emblem in the middle. Weapon barrel: one tapered barrel per weapon (§ 9) that starts at the helmet centre, under the emblem, and pivots there toward the aim through the full circle; 40 units long, 26 wide at the helmet, 15 at the mouth (R = 30). Its start is never visible: barrel and helmet share one flat cream and one outline. It is drawn over the eyes, which stay where they are. Eyes sit under the helmet rim and look toward the aim direction.
-- **Terrain:** every piece, whatever its material, is a big rounded slab (corner radius 14 units) with a lighter lip on top, in its colour swatch. A blast cuts a smoothly curved crater out of a breakable slab (the terrain distance field's contour, terrain-curves D1); a slab no blast has touched keeps its drawn shape. A softer material (lower toughness, e.g. cardboard) opens a wider crater from the same blast.
+- **Terrain:** every piece, whatever its material, is a big rounded slab (corner radius 14 units) with a lighter lip on top, in its colour swatch. Slabs of one colour that touch read as one shape: one fill with no notch or line at the seam, and a lip only on each stretch of top edge that is open to the air, set in from both ends, so none where another shape sits on top (owner, outline-system D6–D7, 2026-11-19). A blast cuts a smoothly curved crater out of a breakable slab (the terrain distance field's contour, terrain-curves D1); a slab no blast has touched keeps its drawn shape. A softer material (lower toughness, e.g. cardboard) opens a wider crater from the same blast.
 - **Props and pickups:** chunky and short; nothing thinner than 0.2 R.
 
 ### Material behaviour: the rule (owner, material-system D1; terrain-curves D5)
@@ -156,7 +156,7 @@ Back to front:
 
 1. Sky gradient, sun
 2. Far hills, clouds, near hills (parallax)
-3. Terrain: ink (a line along the standing terrain's edge), slab fills (breakable slabs clipped to the standing terrain, curved along crater rims)
+3. Terrain: ink (a line along the standing terrain's edge), slab fills (each colour in the standing terrain's own shape, curved along crater rims; touching slabs of one colour are one fill), lips on the top edges open to the air
 4. Contact shadows
 5. Pickups and collectibles
 6. **Effects:** smoke, rocket trails, explosions, debris

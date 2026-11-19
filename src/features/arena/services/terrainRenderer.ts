@@ -4,40 +4,54 @@ import { inkColor } from "@/shared/utils/debugInk";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelApi";
 import type { MoverBody, TerrainGrid } from "@/features/arena/types/arena.types";
-import { isBreakableSlot, takeDirtyChunks } from "@/features/arena/services/terrainGrid";
-import { moverPieceIndices, pieceCellSlot } from "@/features/arena/services/terrainRaster";
 import {
-  breakableRegion,
+  FIELD_BAND_SAMPLES,
+  findSlot,
+  takeDirtyChunks,
+} from "@/features/arena/services/terrainGrid";
+import {
+  moverPieceIndices,
+  pieceCellSlot,
+  shiftShape,
+} from "@/features/arena/services/terrainRaster";
+import {
   drawContour,
   drawOutline,
-  drawSlabFill,
+  drawSlabDetails,
+  drawSlabLips,
+  slabLips,
+  slotLayerBoxes,
+  slotLayerRegion,
   terrainContour,
   terrainRings,
   type OutlineRing,
+  type SampleBox,
   type SlabPiece,
 } from "@/features/arena/services/terrainSurfaces";
 
 /**
  * Terrain layer (DESIGN_LANGUAGE § 2–3, § 5 step 3). Every material draws as the same solid
  * rounded slab with a top lip in its piece's colour swatch; breakable terrain looks exactly like
- * unbreakable terrain, only its colour differs (owner, terrain-curves D5). One rule shapes both
- * the outline and the cut (owner, terrain-curves D8): the contour of the terrain distance field,
- * read from the current terrain only. Back to front:
+ * unbreakable terrain, only its colour differs (owner, terrain-curves D5). One rule shapes the
+ * outline, the fills and the cut (owner, terrain-curves D8): the contour of the terrain distance
+ * field, read from the current terrain only. Back to front, per body:
  * - **Ink:** a line along the terrain's edge (outline-system D1): the contour's rings stroked at
  *   twice the zoom-clamped outline width, so one outline of the same width shows around every
  *   visible edge, authored or blasted, and none where terrain is gone. The fills hide its inner
  *   half; it is never a shape under them, so a fill that is late or missing leaves no ink shape.
- * - **Fills:** unbreakable slabs (with lip and ice gloss) drawn once; breakable slabs clipped by
- *   the contour of the breakable terrain still standing.
- * Rings and clip are rebuilt when the sim marks terrain dirty; an outline step only restrokes
- * the rings it has.
+ * - **Fills:** one layer per material + colour slot, painted in slot order (outline-system D6):
+ *   the field's contour of that slot and every later one, so the first layer is the whole
+ *   terrain, touching slabs of one colour are one fill with no seam, two colours meet without a
+ *   gap, and a crater or a burn-out cuts them all. No clip mask.
+ * - **Lips:** a lighter pill along every top edge open to the air (`slabLips`), then ice cues.
+ * Rings, fills and lips are rebuilt when the sim changes the terrain (a slot's fill only when
+ * the change is near it); an outline step only restrokes the rings it has.
  */
 export interface TerrainView {
   container: Container;
   ink: Graphics;
-  solidFill: Graphics;
-  breakableFill: Graphics;
-  breakableMask: Graphics;
+  /** The static terrain's fills, lips and ice cues. */
+  slabs: SlabLayers;
   /** Outline step the ink was drawn at (null before the first draw). */
   inkStep: number | null;
   /** Outline width the ink was drawn at. */
@@ -48,37 +62,89 @@ export interface TerrainView {
   movers: MoverView[];
 }
 
-const slabOf = (piece: TerrainPiece): SlabPiece => {
-  const slot = pieceCellSlot(piece);
-  return { shape: piece.shape, swatch: terrainSwatch(slot.colorId), surface: slot.surface };
-};
+/** One body's slab drawing over its ink, in the body's own grid coordinates. */
+interface SlabLayers {
+  layer: Container;
+  /** One fill layer per slot, in paint order, with the box of samples the layer covers. */
+  fills: Map<number, { g: Graphics; box: SampleBox; color: number }>;
+  lips: Graphics;
+  pieces: SlabPiece[];
+}
 
-/** Static slabs by breakability (moving parts are drawn by their own views). */
-function slabPieces(level: LevelDefinition): { solids: SlabPiece[]; breakables: SlabPiece[] } {
-  const solids: SlabPiece[] = [];
-  const breakables: SlabPiece[] = [];
-  const moving = moverPieceIndices(level);
-  level.terrain.forEach((piece, i) => {
-    if (moving.has(i)) return;
-    (isBreakableSlot(pieceCellSlot(piece)) ? breakables : solids).push(slabOf(piece));
+/** A body's pieces in its own grid coordinates (`origin` is where its grid starts). */
+function slabPieces(
+  grid: TerrainGrid,
+  pieces: readonly TerrainPiece[],
+  origin = { x: 0, y: 0 }
+): SlabPiece[] {
+  return pieces.map((piece) => {
+    const info = pieceCellSlot(piece);
+    return {
+      shape: shiftShape(piece.shape, origin),
+      swatch: terrainSwatch(info.colorId),
+      surface: info.surface,
+      slot: findSlot(grid, info),
+    };
   });
-  return { solids, breakables };
+}
+
+function createSlabLayers(grid: TerrainGrid, pieces: SlabPiece[]): SlabLayers {
+  const layer = new Container({ label: "slabs" });
+  const fills: SlabLayers["fills"] = new Map();
+  for (const [slot, box] of slotLayerBoxes(grid)) {
+    const g = new Graphics({ label: `slab-fill-${slot}` });
+    const info = grid.slots[slot];
+    fills.set(slot, { g, box, color: terrainSwatch(info?.colorId ?? "").fill });
+    layer.addChild(g);
+  }
+  const lips = new Graphics({ label: "slab-lips" });
+  const details = new Graphics({ label: "slab-details" });
+  drawSlabDetails(details, pieces);
+  layer.addChild(lips, details);
+  return { layer, fills, lips, pieces };
+}
+
+/** The box of samples the dirty chunks cover, grown by how far a change moves distances. */
+function dirtyBox(grid: TerrainGrid, chunks: readonly number[]): SampleBox {
+  const box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  const pad = FIELD_BAND_SAMPLES + 1;
+  for (const chunk of chunks) {
+    const cx = (chunk % grid.chunksX) * grid.chunkCells;
+    const cy = Math.floor(chunk / grid.chunksX) * grid.chunkCells;
+    box.minX = Math.min(box.minX, cx - pad);
+    box.minY = Math.min(box.minY, cy - pad);
+    box.maxX = Math.max(box.maxX, cx + grid.chunkCells - 1 + pad);
+    box.maxY = Math.max(box.maxY, cy + grid.chunkCells - 1 + pad);
+  }
+  return box;
+}
+
+const boxesMeet = (a: SampleBox, b: SampleBox): boolean =>
+  a.minX <= b.maxX && b.minX <= a.maxX && a.minY <= b.maxY && b.minY <= a.maxY;
+
+/** Redraws the fills of the slots a change reached (all of them without `changed`), and the lips. */
+function syncSlabLayers(slabs: SlabLayers, grid: TerrainGrid, changed?: SampleBox): void {
+  for (const [slot, fill] of slabs.fills) {
+    if (changed && !boxesMeet(fill.box, changed)) continue;
+    const region = slotLayerRegion(grid, slot, fill.box);
+    const shape = terrainContour(grid, { grow: 0, region });
+    drawContour(fill.g, shape, fill.color);
+  }
+  drawSlabLips(slabs.lips, slabLips(grid, slabs.pieces));
 }
 
 /**
- * One moving part's view (moving-parts D16): its slabs in rest-pose world coordinates over an
- * ink line along its own local field's edge (the same one-rule outline as static terrain), in a
- * container turned about the pivot and shifted by the pose each frame. No motion cue (B1).
- * Breakable slabs are clipped by the part's breakable field still standing, like static terrain,
- * so a part that burns away is cut where it burnt (mover-materials-l2).
+ * One moving part's view (moving-parts D16): its slabs over an ink line along its own local
+ * field's edge (the same one-rule outline and fills as static terrain), drawn in the part's own
+ * grid in the rest pose, in a container turned about the pivot and shifted by the pose each
+ * frame. No motion cue (B1). A part that burns away or is blasted is cut where its field is
+ * (mover-materials-l2, -l4).
  */
 interface MoverView {
   container: Container;
   ink: Graphics;
-  /** Clip of the part's breakable slabs: the breakable part of its field still standing. */
-  breakableFill: Graphics;
-  breakableMask: Graphics;
-  /** The field's `shapeVersion` the rings and clip were drawn at (-1 before the first draw). */
+  slabs: SlabLayers;
+  /** The field's `shapeVersion` the rings and slabs were drawn at (-1 before the first draw). */
   shapeSeen: number;
   /** The part's edge its ink line follows. */
   rings: OutlineRing[];
@@ -105,20 +171,14 @@ export function placePoseLayer(layer: Container, mover: MoverBody): void {
 
 function createMoverView(level: LevelDefinition, mover: MoverBody): MoverView {
   const container = createPoseLayer(mover, "moving-part");
+  // A part's field starts at its origin in the rest pose; everything is drawn from the field.
   const ink = new Graphics({ label: "moving-part-ink" });
   ink.position.set(mover.origin.x, mover.origin.y);
-  // A part's field starts at its origin in the rest pose; ink and clip are drawn from the field.
-  const breakableMask = new Graphics({ label: "moving-part-breakable-mask" });
-  breakableMask.position.set(mover.origin.x, mover.origin.y);
   const pieces = mover.terrainIndices.flatMap((i) => level.terrain[i] ?? []);
-  const isBreakable = (piece: TerrainPiece): boolean => isBreakableSlot(pieceCellSlot(piece));
-  const solidFill = new Graphics({ label: "moving-part-fill" });
-  drawSlabFill(solidFill, pieces.filter((piece) => !isBreakable(piece)).map(slabOf));
-  const breakableFill = new Graphics({ label: "moving-part-breakable-fill" });
-  drawSlabFill(breakableFill, pieces.filter(isBreakable).map(slabOf));
-  breakableFill.mask = breakableMask;
-  container.addChild(ink, solidFill, breakableFill, breakableMask);
-  return { container, ink, breakableFill, breakableMask, shapeSeen: -1, rings: [] };
+  const slabs = createSlabLayers(mover.field, slabPieces(mover.field, pieces, mover.origin));
+  slabs.layer.position.set(mover.origin.x, mover.origin.y);
+  container.addChild(ink, slabs.layer);
+  return { container, ink, slabs, shapeSeen: -1, rings: [] };
 }
 
 export function createTerrainView(arena: {
@@ -127,35 +187,25 @@ export function createTerrainView(arena: {
 }): TerrainView {
   const container = new Container({ label: "terrain" });
   const ink = new Graphics({ label: "terrain-ink" });
-  const solidFill = new Graphics({ label: "solid-fill" });
-  const breakableFill = new Graphics({ label: "breakable-fill" });
-  const breakableMask = new Graphics({ label: "breakable-mask" });
-  breakableFill.mask = breakableMask;
-  container.addChild(ink, solidFill, breakableFill, breakableMask);
-  const { solids, breakables } = slabPieces(arena.level);
-  drawSlabFill(solidFill, solids);
-  drawSlabFill(breakableFill, breakables);
+  const moving = moverPieceIndices(arena.level);
+  const pieces = arena.level.terrain.filter((_, i) => !moving.has(i));
+  const slabs = createSlabLayers(arena.terrain, slabPieces(arena.terrain, pieces));
+  container.addChild(ink, slabs.layer);
   const movers = arena.terrain.movers.map((mover) => createMoverView(arena.level, mover));
   for (const mover of movers) container.addChild(mover.container);
-  return {
-    container,
-    ink,
-    solidFill,
-    breakableFill,
-    breakableMask,
-    inkStep: null,
-    inkWidth: 0,
-    rings: [],
-    movers,
-  };
+  return { container, ink, slabs, inkStep: null, inkWidth: 0, rings: [], movers };
 }
 
-/** Redraws the ink and the breakable clip when terrain changed or the outline width stepped. */
+/** Redraws what the terrain's change or the outline's width step asks for. */
 export function syncTerrainView(view: TerrainView, grid: TerrainGrid, zoom: number): void {
   const outline = outlineWidth("terrain", zoom);
   const stepChanged = outline.step !== view.inkStep;
-  const terrainChanged = takeDirtyChunks(grid).length > 0;
-  if (terrainChanged) view.rings = terrainRings(grid, { grow: 0 });
+  const dirty = takeDirtyChunks(grid);
+  const terrainChanged = dirty.length > 0;
+  if (terrainChanged) {
+    view.rings = terrainRings(grid, { grow: 0 });
+    syncSlabLayers(view.slabs, grid, dirtyBox(grid, dirty));
+  }
   if (stepChanged || terrainChanged) {
     view.inkStep = outline.step;
     view.inkWidth = outline.width;
@@ -164,23 +214,17 @@ export function syncTerrainView(view: TerrainView, grid: TerrainGrid, zoom: numb
   view.movers.forEach((moverView, i) => {
     const mover = grid.movers[i];
     if (!mover) return;
-    // A part's field changes when it burns away (mover-materials-l2): outline and clip follow.
+    // A part's field changes when it burns away or is blasted: outline, fills and lips follow.
     const shapeChanged = mover.field.shapeVersion !== moverView.shapeSeen;
-    if (shapeChanged) moverView.rings = terrainRings(mover.field, { grow: 0 });
+    if (shapeChanged) {
+      moverView.shapeSeen = mover.field.shapeVersion;
+      moverView.rings = terrainRings(mover.field, { grow: 0 });
+      syncSlabLayers(moverView.slabs, mover.field);
+    }
     if (stepChanged || shapeChanged) {
       const line = { width: outline.width, color: inkColor("moverOutline") };
       drawOutline(moverView.ink, moverView.rings, line);
     }
-    if (shapeChanged) {
-      moverView.shapeSeen = mover.field.shapeVersion;
-      const region = breakableRegion(mover.field);
-      const standing = terrainContour(mover.field, { grow: 0, region });
-      moverView.breakableFill.visible = drawContour(moverView.breakableMask, standing, 0xffffff);
-    }
     placePoseLayer(moverView.container, mover);
   });
-  if (terrainChanged) {
-    const standing = terrainContour(grid, { grow: 0, region: breakableRegion(grid) });
-    view.breakableFill.visible = drawContour(view.breakableMask, standing, 0xffffff);
-  }
 }

@@ -5,19 +5,22 @@ import { DESIGN_SCALE } from "@/shared/utils/outlineWidth";
 import type { MaterialSurface } from "@/shared/types/terrainSurface.types";
 import type { TerrainShape } from "@/features/level/api/levelApi";
 import { EMPTY_CELL, type TerrainGrid } from "@/features/arena/types/arena.types";
-import { fieldBand, isBreakableSlot } from "@/features/arena/services/terrainGrid";
+import { fieldBand, gridDistanceAt } from "@/features/arena/services/terrainGrid";
 
 /**
- * Terrain slab drawing shared by every material (DESIGN_LANGUAGE § 2): one rounded slab with a
- * lighter lip on top, in the piece's colour swatch. Ice gets gloss streaks and a white inner rim;
- * breakable pieces are plain slabs like stone (owner, terrain-curves D5). The outline and the
- * clip of breakable fills both come from one rule: the contour of the terrain distance field
- * (terrain-curves D8).
+ * Terrain slab drawing shared by every material (DESIGN_LANGUAGE § 2): each colour's fill is the
+ * terrain's own shape, so touching slabs of one colour are one wall (outline-system D6), with a
+ * lighter lip along every top edge open to the air. Ice gets gloss streaks and a white inner rim;
+ * breakable pieces are plain slabs like stone (owner, terrain-curves D5). Outline, fills and lips
+ * all come from one rule: the contour of the terrain distance field (terrain-curves D8).
  */
 export interface SlabPiece {
+  /** The piece's shape in its body's own grid coordinates. */
   shape: TerrainShape;
   swatch: TerrainSwatch;
   surface: MaterialSurface;
+  /** The piece's material + colour slot in its body's grid. */
+  slot: number;
 }
 
 /** Mockup numbers at the reference blob, scaled to the game (visual-pass D1). */
@@ -33,7 +36,7 @@ const STREAKS = [
   { fx: 0.2, fy: 0.3, len: 0.3 },
 ] as const;
 
-export function slabPath(g: Graphics, shape: TerrainShape): Graphics {
+function slabPath(g: Graphics, shape: TerrainShape): Graphics {
   if (shape.type === "rect") {
     const radius = Math.min(SLAB.radius, shape.w / 2, shape.h / 2);
     return g.roundRect(shape.x, shape.y, shape.w, shape.h, radius);
@@ -78,21 +81,99 @@ function drawIceGloss(g: Graphics, shape: TerrainShape): void {
   });
 }
 
-/** Fills, then the lip along the top of rect slabs tall enough to carry one, then ice cues. */
-export function drawSlabFill(g: Graphics, pieces: readonly SlabPiece[]): void {
+/** The ice cues of every ice piece (gloss streaks, white inner rim), drawn over the fills. */
+export function drawSlabDetails(g: Graphics, pieces: readonly SlabPiece[]): void {
   g.clear();
-  for (const { shape, swatch } of pieces) slabPath(g, shape).fill(swatch.fill);
-  for (const { shape, swatch } of pieces) {
-    if (shape.type !== "rect" || shape.h < LIP_HEIGHT * 2) continue;
-    g.roundRect(
-      shape.x + SLAB.lipInset,
-      shape.y + SLAB.lipTop,
-      shape.w - SLAB.lipInset * 2,
-      LIP_HEIGHT,
-      LIP_HEIGHT / 2
-    ).fill(swatch.lip);
-  }
   for (const { shape, surface } of pieces) if (surface === "ice") drawIceGloss(g, shape);
+}
+
+/** One lip: a pill along a stretch of top edge, in its body's grid coordinates. */
+export interface SlabLip {
+  x: number;
+  y: number;
+  w: number;
+  color: number;
+}
+
+/** A stretch of top edge shared by touching rect slabs of one slot. */
+interface TopLine {
+  slot: number;
+  y: number;
+  from: number;
+  to: number;
+  color: number;
+}
+
+/** The top edges of the rect slabs tall enough for a lip, joined where slabs of one slot meet. */
+function topLines(pieces: readonly SlabPiece[]): TopLine[] {
+  const lines = pieces
+    .flatMap(({ shape, slot, swatch }) =>
+      shape.type === "rect" && shape.h >= LIP_HEIGHT * 2
+        ? [{ slot, y: shape.y, from: shape.x, to: shape.x + shape.w, color: swatch.lip }]
+        : []
+    )
+    .sort((a, b) => a.slot - b.slot || a.y - b.y || a.from - b.from);
+  const joined: TopLine[] = [];
+  for (const line of lines) {
+    const last = joined[joined.length - 1];
+    if (last && last.slot === line.slot && last.y === line.y && line.from <= last.to) {
+      last.to = Math.max(last.to, line.to);
+    } else joined.push({ ...line });
+  }
+  return joined;
+}
+
+/** Spacing of the checks along a top edge, and how far above it air is looked for, world units. */
+const LIP_STEP = 1;
+const LIP_AIR_PROBE = 2;
+
+/**
+ * Whether a lip may pass x on a top line (outline-system D6, owner pick "lips on open tops"):
+ * the lip's middle lies in standing terrain of the line's own slot, deep enough to hold the
+ * lip, and air is above the edge, here and one inset to either side, so a lip ends set in from
+ * a slab's end, a wall that rises from it, another colour and a crater's rim alike.
+ */
+function lipFits(grid: TerrainGrid, line: TopLine, x: number): boolean {
+  const middle = line.y + SLAB.lipTop + LIP_HEIGHT / 2;
+  if (gridDistanceAt(grid, { x, y: middle }) < LIP_HEIGHT / 2 - 0.25) return false;
+  const row = Math.floor(middle / grid.cellSize);
+  for (const dx of [-SLAB.lipInset, 0, SLAB.lipInset]) {
+    const index = sampleIndex(grid, Math.floor((x + dx) / grid.cellSize), row);
+    if (index < 0 || grid.cells[index] !== line.slot) return false;
+    if (gridDistanceAt(grid, { x: x + dx, y: line.y - LIP_AIR_PROBE }) > 0) return false;
+  }
+  return true;
+}
+
+/**
+ * The lips of a body's slabs as the terrain stands: one pill per stretch of top edge that is
+ * open to the air, over touching slabs of one colour as one. A crater or a burn-out that takes
+ * the edge takes the lip with it.
+ */
+export function slabLips(grid: TerrainGrid, pieces: readonly SlabPiece[]): SlabLip[] {
+  const lips: SlabLip[] = [];
+  for (const line of topLines(pieces)) {
+    let start: number | null = null;
+    for (let x = line.from; x <= line.to + LIP_STEP; x += LIP_STEP) {
+      const fits = x <= line.to && lipFits(grid, line, x);
+      if (fits && start === null) start = x;
+      if (fits || start === null) continue;
+      const end = x - LIP_STEP;
+      if (end - start >= LIP_HEIGHT) {
+        lips.push({ x: start, y: line.y + SLAB.lipTop, w: end - start, color: line.color });
+      }
+      start = null;
+    }
+  }
+  return lips;
+}
+
+/** Draws lips as pills in their colours. */
+export function drawSlabLips(g: Graphics, lips: readonly SlabLip[]): void {
+  g.clear();
+  for (const lip of lips) {
+    g.roundRect(lip.x, lip.y, lip.w, LIP_HEIGHT, LIP_HEIGHT / 2).fill(lip.color);
+  }
 }
 
 /** World-space contour geometry: plain rects plus contour pieces (flat [x, y, …] polygons). */
@@ -143,13 +224,54 @@ const sampleIndex = (grid: TerrainGrid, cx: number, cy: number): number =>
 const isSolidSample = (grid: TerrainGrid, index: number): boolean =>
   (grid.cells[index] ?? EMPTY_CELL) !== EMPTY_CELL;
 
-/** The breakable terrain as a region: every sample but the unbreakable solid ones. */
-export function breakableRegion(grid: TerrainGrid): SampleRegion {
+/**
+ * The terrain of slot `slot` and every later slot as a region (outline-system D6). Fills are
+ * painted slot by slot, each over the earlier ones: the first is the whole terrain, so its edge
+ * is the outline's own and no gap can open where two colours meet at the terrain's edge; a later
+ * slot ends where it meets an earlier one, on the line between their samples.
+ */
+export function slotLayerRegion(grid: TerrainGrid, slot: number, box?: SampleBox): SampleRegion {
   const band = fieldBand(grid);
   return {
-    value: (index) =>
-      isSolidSample(grid, index) && !isBreakableSlot(grid.slots[grid.cells[index]!]) ? -band : band,
+    box,
+    value: (index) => {
+      const at = grid.cells[index] ?? EMPTY_CELL;
+      return at !== EMPTY_CELL && at < slot ? -(grid.distance[index] ?? band) : band;
+    },
   };
+}
+
+/** The box of samples each slot's layer covers (the slot and every later one), by slot index. */
+export function slotLayerBoxes(grid: TerrainGrid): Map<number, SampleBox> {
+  const own = new Map<number, SampleBox>();
+  grid.cells.forEach((slot, index) => {
+    if (slot === EMPTY_CELL) return;
+    const cx = index % grid.widthCells;
+    const cy = Math.floor(index / grid.widthCells);
+    const box = own.get(slot) ?? { minX: cx, minY: cy, maxX: cx, maxY: cy };
+    own.set(slot, {
+      minX: Math.min(box.minX, cx),
+      minY: Math.min(box.minY, cy),
+      maxX: Math.max(box.maxX, cx),
+      maxY: Math.max(box.maxY, cy),
+    });
+  });
+  const layers = new Map<number, SampleBox>();
+  let cover: SampleBox | null = null;
+  for (const slot of [...own.keys()].sort((a, b) => b - a)) {
+    const box: SampleBox = own.get(slot)!;
+    cover = cover
+      ? {
+          minX: Math.min(cover.minX, box.minX),
+          minY: Math.min(cover.minY, box.minY),
+          maxX: Math.max(cover.maxX, box.maxX),
+          maxY: Math.max(cover.maxY, box.maxY),
+        }
+      : box;
+    layers.set(slot, cover);
+  }
+  // Painted in slot order: the first layer is the whole terrain.
+  return new Map([...layers].sort((a, b) => a[0] - b[0]));
 }
 
 /**
