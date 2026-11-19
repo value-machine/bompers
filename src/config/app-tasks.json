@@ -1,10 +1,5 @@
 [
   {
-    "title": "Soft landing sound repeats chasing a moving block",
-    "description": "Owner report: while chasing a moving block, one soft landing sound plays about every 4 s. Not root-caused after the contact fixes (#90 era). Debug with spec-debug-runtime. Size S.",
-    "status": "to-do"
-  },
-  {
     "title": "Ice lap 4: look polish",
     "description": "Ice element follow-up, optional: polish the frozen ground look after the owner has played it. The ray look was settled in #63 (owner pick D9, cold breath). Size S.",
     "status": "to-do"
@@ -37,11 +32,6 @@
   {
     "title": "Per-drop weapon choice",
     "description": "Proposed by ability-levels: let a drop name one weapon (data-item) within the match weapons setting, so a level can place e.g. a torch crate at a bridge. Revisits the level-direction drop decision (#61): owner decides.",
-    "status": "to-do"
-  },
-  {
-    "title": "Level prompt: remaining ability numbers",
-    "description": "From PR #79 author feedback: LEVEL_PROMPT still lacks the roll, slope speeds, ice grip, freeze ray numbers, mover jump-off speed and headbutt details. Generate them from the tunables (touch the prompt only for things authors place or set, per #61, but movement numbers help authors size gaps). Size S.",
     "status": "to-do"
   },
   {
