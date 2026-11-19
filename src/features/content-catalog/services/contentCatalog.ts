@@ -64,7 +64,9 @@ export const CONTENT_CATALOG: ContentCatalog = {
       id: "ice",
       label: "Ice",
       toughness: null,
-      friction: 0.12,
+      // Way more slippery (ice-slippery lap): a run slides ~3× as far as at 0.12 and takes ~4.6 s
+      // to turn round; frozen ground reads this same value (ice-element D5).
+      friction: 0.04,
       bounce: 0,
       surface: "ice",
       // Fuel touching ice never catches (blast-power D5); cold has nothing to freeze in it.

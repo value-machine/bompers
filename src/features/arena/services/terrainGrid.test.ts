@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { clearCraterOnBodies } from "@/features/arena/services/terrainBodies";
 import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
+import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import {
   burnOut,
   clearCrater,
@@ -100,9 +101,24 @@ describe("terrainGrid", () => {
         { shape: { type: "rect", x: 200, y: 100, w: 200, h: 10 }, materialId: "stone" },
       ],
     });
-    expect(groundFrictionBelow(grid, { x: 40, y: 100, w: 20 })).toBeCloseTo(0.12);
+    const iceFriction = resolveCatalogEntry("material", "ice").entry?.friction;
+    expect(iceFriction).toBeLessThan(1);
+    expect(groundFrictionBelow(grid, { x: 40, y: 100, w: 20 })).toBeCloseTo(iceFriction!);
     expect(groundFrictionBelow(grid, { x: 240, y: 100, w: 20 })).toBe(1);
     expect(groundFrictionBelow(grid, { x: 40, y: 60, w: 20 })).toBe(1);
+  });
+
+  it("should read the ice under the feet when the ice top lies between sample rows", () => {
+    // Top at y 100 on 8-unit samples: the row holding y 100 (96–104) has no solid centre, so
+    // feet resting there must read the row below (the slopes, curves and round frozen craters case).
+    const grid = buildTerrainFromLevel({
+      ...level,
+      settings: { cellSize: 8, gravity: 1 },
+      terrain: [{ shape: { type: "rect", x: 0, y: 100, w: 200, h: 20 }, materialId: "ice" }],
+    });
+    const iceFriction = resolveCatalogEntry("material", "ice").entry?.friction;
+    expect(groundFrictionBelow(grid, { x: 40, y: 100, w: 20 })).toBeCloseTo(iceFriction!);
+    expect(groundFrictionBelow(grid, { x: 40, y: 103, w: 20 })).toBeCloseTo(iceFriction!);
   });
 
   it("should mark only the touched chunks dirty when a circle is blasted", () => {
