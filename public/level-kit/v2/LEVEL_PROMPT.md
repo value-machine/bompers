@@ -127,6 +127,7 @@ With another gravity multiplier `k`, heights and jump gaps scale by about `1 / k
 - A headbutt that hits a player pops the diver up ~`118` units; a glancing hit on terrain just ends the dive.
 - `rocket-launcher`: 6 shots, blast power `50` → reach `64`, push `1080` units/s at the centre, crater `34` at toughness 1 (crater = this ÷ toughness), recoil `200`.
 - `homing-launcher`: 3 shots, blast power `50` → reach `64`, push `1080` units/s at the centre, crater `34` at toughness 1 (crater = this ÷ toughness), recoil `120`.
+- A hit player gets `20`% of that push (`216` units/s at the centre): a clear shove, not a launch. Blobs go off the map from a hit only when they stand near an edge or a pit, so ledges next to drops are where knock-offs happen.
 - Rocket jump (no self-damage): a point-blank blast under a standing player lifts ~`417` units, ~`585` with the shot's recoil.
 - Homing missiles fly `480` units/s and turn slowly: open spaces make them dodgeable, tight corridors make them deadly.
 - `torch`: `3` s of flame held on fire, a `84`-unit cone that lights cardboard and lightly pushes players; no blast, no crater. Fire spreads through touching cardboard at `13` units/s, each bit burns `7.5` s and is gone; it never crosses air, flows around stone, stops at earth, and cardboard touching ice never catches. Cardboard bridges and towers become timed hazards with a torch in the drop list.
