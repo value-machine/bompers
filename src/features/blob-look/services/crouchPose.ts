@@ -6,8 +6,8 @@ import {
   type GlossSpot,
   type BlobMetrics,
   type ShapePoint,
-} from "@/features/player/services/blobShapes";
-import type { PlayerState } from "@/features/player/types/player.types";
+} from "@/features/blob-look/services/blobShapes";
+import type { PlayerState } from "@/features/player/api/playerApi";
 
 /**
  * Render-only crouch pose, "sink + settle, low" (owner, crouch-sink D1–D3). The helmet keeps its

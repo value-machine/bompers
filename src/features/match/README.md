@@ -35,7 +35,7 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 
 ## Dependencies
 
-- `level`, `arena`, `player`, `camera`, `combat`, `dive`, `collectibles`, `sound`, `pause` through their `api/` files (the level arrives in `MatchSetup` from the lobby).
+- `level`, `arena`, `player`, `blob-look` (the players layer), `camera`, `combat`, `dive`, `collectibles`, `sound`, `pause` through their `api/` files (the level arrives in `MatchSetup` from the lobby).
 - Shared engine: `gameLoop`, `gameInputService`, `usePixiApp`, `gameTunables`, `gamePalette`, `gameInput.types`.
 - Mounted by `src/pages/GamePage.tsx` at `/` once the lobby starts a round.
 
@@ -60,6 +60,6 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 - Built-in level routes are checked in the real sim (`gameSim.test.ts` § level routes): Bobsled Run's last gap (810) misses with a running jump + any dive (740) and is made by rolling down the ice chute and jumping out of the roll (owner, bobsled-run-roll).
 - Headbutt vs direct rocket is checked on every shipped level's spawns (`gameSim.test.ts` § headbutt vs direct rocket): one headbutt and one rocket into a standing blob's middle knock it off from the same spawns and slide it as far (owner, bash-matches-rocket lap; both read `directHitPush` in `shared/utils/blastPower.ts`).
 - Test levels list terrain as `{ shape, materialId }` only: terrain has no role since level format 2 (material-system D5).
-- The renderer hands the players view the barrel's shot pop (`feel.barrelPop`) next to the helmet spring; the pop itself is the player feature's (weapon-visuals-embellish D5).
+- The renderer hands the players view the barrel's shot pop (`feel.barrelPop`) next to the helmet spring; the pop itself is blob-look's (weapon-visuals-embellish D5).
 - The player card shows the held weapon's ammo as a row of pills under the health chunks, in the weapon accent (the colour also names the weapon), hidden when unarmed; max ammo comes from one accessor (`maxAmmoFor`) so per-weapon ammo moves in one place (weapon-visuals D3).
 - Pickup juice (pickup-juice D1–D5): step 3a passes `state.collectibles.bursts` to `stepWeaponCrates` (a taken crate leaves a render burst, a taken orb leaves one in step 4); the renderer passes `feel.pickup` to the collectibles view and adds its `bursts` layer over the orbs; the HUD score pops 1.35 → 1 over 150 ms whenever it rises (an orb or a kill); the sound world snapshot carries `crateLandings` (`collectibles.crates.landCount`), and each player snapshot `orbCount` (`collectibles.orbCounts[slot]`, the orb chime, D8).

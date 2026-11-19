@@ -13,13 +13,7 @@ module.exports = {
     maxFilesPerFeature: 25,
   },
   /** Per-feature waivers — `reason` is required (non-empty). */
-  overrides: {
-    player: {
-      maxFilesPerLayer: 12,
-      reason:
-        "Crouch-sink lap: the crouch pose needs its own services module (+ test) next to the blob's movement sim and drawing; owner chose a waiver now and a follow-up task to move the blob drawing (blobPose, blobShapes, crouchPose, playerRenderer) into its own feature (crouch-sink D7).",
-    },
-  },
+  overrides: {},
   /**
    * Grandfathered snapshots for features that exceeded defaults at baseline time.
    * Regenerate: pnpm validate:feature-size:baseline

@@ -18,7 +18,7 @@ import {
   stainSamples,
   stainStage,
 } from "@/features/knockout/services/stainShape";
-import { drawLooseHelmet, drawLooseTube } from "@/features/player/api/playerApi";
+import { drawLooseHelmet, drawLooseTube } from "@/features/blob-look/api/blobLookApi";
 import { pieceAlpha, type KnockoutWorld } from "@/features/knockout/services/knockoutSim";
 import type {
   GooDroplet,

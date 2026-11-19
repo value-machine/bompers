@@ -1,7 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import type { GameTunables } from "@/shared/types/gameTunables.types";
-import type { BlobPoseOverlay } from "@/features/player/api/playerApi";
+import type { BlobPoseOverlay } from "@/features/blob-look/api/blobLookApi";
 import type { DiveState, RecentHit } from "@/features/dive/types/dive.types";
 import { RECENT_HIT_SECONDS } from "@/features/dive/services/diveSim";
 import { diveBlobPose } from "@/features/dive/services/divePose";

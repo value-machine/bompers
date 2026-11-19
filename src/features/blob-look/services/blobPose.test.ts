@@ -18,13 +18,12 @@ import {
   stepGroundTilt,
   createContactHold,
   stepContactHold,
-} from "@/features/player/services/blobPose";
-import { noteCrouch, STANDING_SINK } from "@/features/player/services/crouchPose";
+} from "@/features/blob-look/services/blobPose";
+import { noteCrouch, STANDING_SINK } from "@/features/blob-look/services/crouchPose";
 import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import { buildTerrainFromLevel } from "@/features/arena/api/arenaApi";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
-import { createPlayer, stepPlayers } from "@/features/player/services/playerController";
-import type { PlayerState } from "@/features/player/types/player.types";
+import { createPlayer, stepPlayers, type PlayerState } from "@/features/player/api/playerApi";
 
 const squash = DEFAULT_GAME_TUNABLES.player.squash;
 

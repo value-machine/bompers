@@ -9,7 +9,8 @@ import {
 import { unposePoint } from "@/shared/utils/levelMotion";
 import { moverDistanceAt, type MoverBody } from "@/features/arena/api/arenaApi";
 import type { CombatEvent, CrushSqueeze } from "@/features/combat/api/combatApi";
-import { PANIC_PUPIL_SCALE, reactToHit, type PlayerState } from "@/features/player/api/playerApi";
+import { PANIC_PUPIL_SCALE } from "@/features/blob-look/api/blobLookApi";
+import { reactToHit, type PlayerState } from "@/features/player/api/playerApi";
 import type {
   GooDroplet,
   GooSplat,
