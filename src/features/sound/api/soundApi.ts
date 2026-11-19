@@ -1,6 +1,7 @@
 /** Public seam of the sound feature: frame → cues, the app's audio engine, music and settings. */
 export type {
   MusicTrackId,
+  SoundBurst,
   SoundChannel,
   SoundCue,
   SoundLoop,

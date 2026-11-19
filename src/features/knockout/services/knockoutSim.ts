@@ -26,7 +26,8 @@ import type {
  *   - overkill (the hit would have gone below 0) → it squashes on the spot, carrying the knockback.
  * After the squash it bursts: goo droplets leave with the blob's momentum plus a small spread and
  * become splats the instant they touch terrain; the helmet and the weapon tube fly off as solid
- * pieces until the victim respawns. Falling off the arena makes no knockout (it is off screen).
+ * pieces until the victim respawns. Each burst is logged (`bursts`): the death sound plays on it.
+ * Falling off the arena makes no knockout (it is off screen).
  * Droplets and pieces: `shared/utils/fallingBody`. Spreads are deterministic per event seq.
  */
 
@@ -70,6 +71,18 @@ export const CRUSH_PANCAKE = {
   wallOffsets: [-0.3, 0.5],
 } as const;
 
+/**
+ * One blob bursting into goo: the splat moment the death sound plays on (death-splat-sound lap).
+ * `n` counts the world's bursts from 1, in the order they happened.
+ */
+export interface KnockoutBurst {
+  n: number;
+  slot: number;
+}
+
+/** Bursts kept in the log: far more than can happen between two rendered frames. */
+const BURST_LOG_SIZE = 16;
+
 /** Everything the knockout layer simulates (render-only, never read by the game rules). */
 export interface KnockoutWorld {
   /** Newest combat event seq already read. */
@@ -78,6 +91,8 @@ export interface KnockoutWorld {
   droplets: GooDroplet[];
   pieces: KnockoutPiece[];
   splats: GooSplat[];
+  /** The newest bursts, oldest first (the sound reads them by `n`). */
+  bursts: KnockoutBurst[];
 }
 
 /** A flying or squashing blob, for the player renderer to draw under its own id. */
@@ -99,7 +114,14 @@ export const createKnockoutWorld = (): KnockoutWorld => ({
   droplets: [],
   pieces: [],
   splats: [],
+  bursts: [],
 });
+
+/** Logs a knockout's burst, trimming the log to `BURST_LOG_SIZE`. */
+function logBurst(world: KnockoutWorld, knockout: Knockout): void {
+  const n = (world.bursts[world.bursts.length - 1]?.n ?? 0) + 1;
+  world.bursts = [...world.bursts, { n, slot: knockout.slot }].slice(-BURST_LOG_SIZE);
+}
 
 /** Body half-width R from the collision height (blobShapes' `blobMetrics`). */
 const bodyRadius = (height: number): number => height / 2.3;
@@ -373,6 +395,7 @@ function stepPancake(world: KnockoutWorld, knockout: Knockout, step: SubStep): b
   if (knockout.squashAge < CRUSH_PANCAKE.holdSeconds) return true;
   burstPancake(world, knockout, step);
   burstPieces(world, knockout, step);
+  logBurst(world, knockout);
   return false;
 }
 
@@ -386,6 +409,7 @@ function stepKnockout(world: KnockoutWorld, knockout: Knockout, step: SubStep): 
   if (knockout.squashAge < step.tunables.squash.seconds) return true;
   burstDroplets(world, knockout, step.tunables);
   burstPieces(world, knockout, step);
+  logBurst(world, knockout);
   return false;
 }
 

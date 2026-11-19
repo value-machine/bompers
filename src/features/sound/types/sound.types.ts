@@ -4,6 +4,12 @@
  */
 
 /** One sound to play now. */
+/** A knocked-out blob bursting into goo (the knockout layer's log, read by `n`). */
+export interface SoundBurst {
+  n: number;
+  slot: number;
+}
+
 export interface SoundCue {
   /** Content-catalog sound ID (`jump`, `explosion`, a material's sound …). */
   soundId: string;

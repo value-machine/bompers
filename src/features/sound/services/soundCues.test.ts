@@ -52,6 +52,7 @@ const snapshot = (patch: Partial<SoundSnapshot> = {}): SoundSnapshot => ({
   events: [],
   roundPhase: "playing",
   world: world(),
+  bursts: [],
   ...patch,
 });
 
@@ -130,18 +131,31 @@ describe("readSoundCues", () => {
       ["explosion", null],
       ["hit", 0],
       ["dive-impact", 1],
-      ["elimination", 0],
       ["pickup", 1],
       ["crumble", null],
     ]);
   });
 
-  it("should play the land splut then the elimination pop when a moving part crushes a player", () => {
+  it("should play the land splut, and no pop yet, when a moving part crushes a player", () => {
     const events = [event({ type: "playerEliminated", victimSlot: 2, cause: "crush" })];
     const cues = cuesAfter(snapshot({ events }));
-    expect(cues.map((cue) => [cue.soundId, cue.slot])).toEqual([
-      ["land", 2],
-      ["elimination", 2],
+    expect(cues.map((cue) => [cue.soundId, cue.slot])).toEqual([["land", 2]]);
+  });
+
+  it("should play the elimination pop on the frame the knocked-out blob bursts into goo", () => {
+    const events = [event({ type: "playerEliminated", victimSlot: 1, cause: "dive" })];
+    const hit = readSoundCues(readSoundCues(null, snapshot()).cursor, snapshot({ events }));
+    expect(idsOf(hit.cues)).not.toContain("elimination");
+    const burst = readSoundCues(hit.cursor, snapshot({ events, bursts: [{ n: 1, slot: 1 }] }));
+    expect(burst.cues.map((cue) => [cue.soundId, cue.slot])).toEqual([["elimination", 1]]);
+    const after = readSoundCues(burst.cursor, snapshot({ events, bursts: [{ n: 1, slot: 1 }] }));
+    expect(after.cues).toEqual([]);
+  });
+
+  it("should play the elimination pop at once when a player falls out of the arena", () => {
+    const events = [event({ type: "playerEliminated", victimSlot: 0, cause: "out-of-bounds" })];
+    expect(cuesAfter(snapshot({ events })).map((cue) => [cue.soundId, cue.slot])).toEqual([
+      ["elimination", 0],
     ]);
   });
 
