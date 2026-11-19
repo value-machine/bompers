@@ -6,6 +6,7 @@ import {
   clearCrater,
   getCellInfo,
   isSolidAt,
+  setSampleFrozen,
   terrainBodies,
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
@@ -148,6 +149,21 @@ describe("fireSim — spread (blast-power D5, D6)", () => {
     b.run(spreadFor(80));
     expect(b.fire.grounds[0]!.igniteAt[b.at(138, 110)]).toBe(Infinity);
     expect(b.fire.grounds[0]!.igniteAt[b.at(130, 110)]).toBeLessThan(Infinity);
+  });
+
+  it("should not count a sample as burning when it froze while waiting to catch (fire-ice seam)", () => {
+    const b = burn([rect([100, 100, 40, 40], "cardboard")]);
+    b.light(110, 110);
+    b.run(dt);
+    // The next sample over is queued to catch; ice reaches it first.
+    const seam = b.at(114, 110);
+    const ground = b.fire.grounds[0]!;
+    expect(ground.igniteAt[seam]).toBeGreaterThan(b.time);
+    setSampleFrozen(b.grid, seam, true);
+    b.run(spreadFor(12));
+    // One state: what blob damage reads (`igniteAt` due) is what the renderer draws (burning).
+    expect(burningSamples(ground)).not.toContain(seam);
+    expect(ground.igniteAt[seam]).toBe(Infinity);
   });
 
   it("should light samples that catch at the same moment in index order when two are lit together", () => {
