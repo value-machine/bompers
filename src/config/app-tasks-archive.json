@@ -488,5 +488,15 @@
     "title": "Outline system lap 3: elements and widths",
     "description": "Option B lap 3. Fire body, frost and stains through the terrainRings builder (fire ink as a line), cap on the grow, one width and join source for props, blobs and effects. Size M. After lap 2.",
     "status": "done"
+  },
+  {
+    "title": "Level prompt: remaining ability numbers",
+    "description": "From PR #79 author feedback: LEVEL_PROMPT still lacks the roll, slope speeds, ice grip, freeze ray numbers, mover jump-off speed and headbutt details. Generate them from the tunables (touch the prompt only for things authors place or set, per #61, but movement numbers help authors size gaps). Size S.",
+    "status": "done"
+  },
+  {
+    "title": "Soft landing sound repeats chasing a moving block",
+    "description": "Owner report: while chasing a moving block, one soft landing sound plays about every 4 s. Not root-caused after the contact fixes (#90 era). Debug with spec-debug-runtime. Size S.",
+    "status": "done"
   }
 ]
