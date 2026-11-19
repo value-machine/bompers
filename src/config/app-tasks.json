@@ -5,11 +5,6 @@
     "status": "to-do"
   },
   {
-    "title": "Loose terrain falls",
-    "description": "Owner idea 2026-11-16 (future, not scheduled): terrain cut off from its support by a blast or burnt-out fuel breaks loose and falls. On the distance field: flood-fill the touched region for islands not connected to anchored material or the level edge, lift each island out as a contour polygon into a falling body (simple custom body or a physics library — a new dependency is an owner choice), and stamp it back into the field when it settles; falling chunks can hit players. Precedent: Noita (pixel islands become rigid bodies). Waits on the distance field (a2) and collision on the field (a3). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. Note from the distance-field lap (#45): only unbreakable samples and the bottom row are anchored, so all-breakable floating platforms have no anchor — this lap needs its own rule for which piece stays put. ",
-    "status": "to-do"
-  },
-  {
     "title": "Owner checks in Cursor",
     "description": "One-time owner verification of the Cursor hooks from #20 and #24: in Cursor Agent chat on a non-main branch, (1) `git push origin HEAD:main --dry-run` must be blocked; (2) `git status` runs as usual; (3) writing a .ts file with a lint error returns the ESLint errors to the agent. Report any step that behaves differently.",
     "status": "to-do"
@@ -17,11 +12,6 @@
   {
     "title": "Weekend: token-spend pass over skills",
     "description": "Weekend only (agent-behavior rule § Token budget); the owner starts it. Measure which skills and loop stages spend the most tokens per lap (loop-check: one subagent per rule, plan-compliance subagent, component lens, size-M parallel lenses; loop-plan review fan-out; browser checks; full-suite runs; large generations) using real session usage where available, then propose cuts with meta-audit-harness (context-cost lens extended to runtime spend). Proposals only; protected-file changes need the owner's yes.",
-    "status": "to-do"
-  },
-  {
-    "title": "Level gallery",
-    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): later, unshaped. No remix feature.",
     "status": "to-do"
   },
   {
