@@ -301,7 +301,8 @@ describe("stepDives hits", () => {
     expect(sim.healthOf(victim)).toBe(T.combat.maxHealth - CONTACT.front);
     expect(sim.healthOf(attacker)).toBe(T.combat.maxHealth);
     expect(sim.hits[0]!.impulse.x).toBeGreaterThan(0);
-    expect(victim.x).toBeGreaterThan(150 + 100);
+    // A shove of a couple of blob widths (dive-push lap: the victim keeps `hitPushScale` of it).
+    expect(victim.x).toBeGreaterThan(150 + 2 * T.player.width);
   });
 
   it("should deal the back damage when the victim looks away from the attacker", () => {
@@ -332,7 +333,7 @@ describe("stepDives hits", () => {
     const victim = sim.players[1]!;
     sim.step([RIGHT]);
     while (sim.hits.length === 0) sim.step();
-    expect(victim.vy).toBeLessThanOrEqual(-D.strikeLift + 1);
+    expect(victim.vy).toBeLessThanOrEqual(-D.strikeLift * D.hitPushScale + 1);
     expect(victim.steerScale).toBe(D.staggerSteerScale);
     sim.step([], frames(D.staggerSeconds) + 1);
     expect(victim.steerScale).toBe(1);
@@ -456,7 +457,7 @@ describe("stepDives dash-hold roll", () => {
     expect(player.rollSource).toBe("dash");
     expect(sim.phaseOf(player)).toBe("idle");
     expect(player.vx).toBeGreaterThan(D.launchSpeed * D.exitSpeedScale);
-    expect(player.dashRollCount).toBe(1);
+    expect(player.moveRollCount).toBe(1);
   });
 
   it("should recover as before when fire is let go before the travel ends", () => {

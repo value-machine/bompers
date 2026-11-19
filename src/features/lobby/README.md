@@ -45,3 +45,4 @@ Lap record: `documentation/jobs/temp_job_lobby/DECISIONS.md`.
 - Round end: jump = rematch, back = lobby with players and settings kept (lobby D5).
 - Volume rows sit below Start and emit a `volume` effect; the volumes live in the sound feature, not in `LobbyState` (music D3).
 - Level row = thumbnail strip (owner pick, variant 1, 2026-11-18; options page round 2): built-in and imported levels share it; left / right still cycle the pick through the reducer, a card click selects. The strip's "Load level" card replaces the separate button; the "Your level" row keeps the controller action (open the picker), the import report, Relink / Forget and the prompt button. Relink / Forget are pointer buttons (Relink needs a click for the browser's permission prompt).
+- Strip overflow: only the strip scrolls sideways; `contain-inline-size` keeps the cards from sizing the strip, so a long library never widens the lobby (owner report, 2026-11-19).

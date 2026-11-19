@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildLevelPrompt } from "@/features/level-kit/services/levelPrompt";
 import {
   brakeSlide,
+  diveHitPush,
   freezePatchRadius,
   iceGrip,
   liftJumpApex,
@@ -28,6 +29,7 @@ describe("level prompt ability numbers", () => {
       n(T.roll.jumpCarryMax),
       n(T.roll.sweepTurnsPerSecond),
       n(T.dive.rollCarryMax),
+      n(Math.round(diveHitPush(T))),
       n(iceGrip()),
       n(freezeRay.length),
       `±${freezeRay.halfAngleDegrees}°`,
@@ -53,11 +55,12 @@ describe("level prompt ability numbers", () => {
   it("should follow the tunables when they change", () => {
     const changed = buildLevelPrompt({
       ...T,
-      roll: { ...T.roll, sweepTurnsPerSecond: 2.5, rollingDecel: 400 },
+      roll: { ...T.roll, sweepTurnsPerSecond: 2.5, rollingDecel: 400, crouchRollDelay: 1.3 },
       player: { ...T.player, groundDecel: 6000 },
       combat: { ...T.combat, freezeRay: { ...T.combat.freezeRay, length: 240 } },
     });
     expect(changed).toContain(n(2.5));
+    expect(changed).toContain(`${n(1.3)} s without firing`);
     expect(changed).toContain(`${n(240)} units long`);
     const changedT = { ...T, roll: { ...T.roll, rollingDecel: 400 } };
     expect(changed).toContain(`coasts ~${n(Math.round(rollCoast(changedT, T.dive.launchSpeed)))}`);

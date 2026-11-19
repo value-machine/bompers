@@ -1,22 +1,25 @@
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
-import type { PlayerState } from "@/features/player/api/playerApi";
+import { hurtHeight, type PlayerState } from "@/features/player/api/playerApi";
 
 /** Geometry helpers shared by the combat systems. World units, y down. */
 
+/** Centre of what hits see (the hurt box): lower while crouched (crouch-sink D4). */
 export const bodyCenter = (player: PlayerState): Vec2 => ({
   x: player.x,
-  y: player.y - player.height / 2,
+  y: player.y - hurtHeight(player) / 2,
 });
 
 /**
  * Helmet centre: where weapons fire from (GDD § 1). It sits 0.28 of the height above the body
- * centre and turns round it with the roll's spin, as drawn (spin-fire D3).
+ * centre and turns round it with the roll's spin, as drawn (spin-fire D3). A crouched blob's helmet
+ * sinks with its hurt box (crouch-sink D4).
  */
 export const helmetPoint = (player: PlayerState): Vec2 => {
   const rise = player.height * 0.28;
+  const sunk = player.height - hurtHeight(player);
   return {
     x: player.x + rise * Math.sin(player.rollAngle),
-    y: player.y - player.height / 2 - rise * Math.cos(player.rollAngle),
+    y: player.y - player.height / 2 - rise * Math.cos(player.rollAngle) + sunk,
   };
 };
 

@@ -60,7 +60,7 @@
       "id": "ice",
       "label": "Ice",
       "toughness": null,
-      "friction": 0.12,
+      "friction": 0.04,
       "bounce": 0,
       "surface": "ice",
       "reactions": {

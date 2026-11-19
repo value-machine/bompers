@@ -7,6 +7,14 @@ import {
 } from "@/shared/utils/dampedSpring";
 import type { PlayerState } from "@/features/player/types/player.types";
 import { easeOutQuad, springBackPose } from "@/shared/utils/easing";
+import {
+  createCrouchClock,
+  crouchSink,
+  STANDING_SINK,
+  type CrouchClock,
+  type CrouchSink,
+  type CrouchTunables,
+} from "@/features/player/services/crouchPose";
 
 /**
  * Render-only blob pose (DESIGN_LANGUAGE § 4, § 6): squash / stretch, foot deform and motion,
@@ -26,9 +34,8 @@ export interface BlobAnim {
   seenRollBounces: number;
   /** `impact` (0 … 1) sets a landing's sink time; jumps use 1. */
   active: { kind: SquashKind; startMs: number; amount: number; impact: number } | null;
-  /** Crouch pose progress 0 (standing) … 1 (sunk), and the render clock it was stepped at. */
-  crouchBlend: number;
-  crouchAtMs: number | null;
+  /** Render clock of the crouch's press / release (`crouchPose.ts`). */
+  crouch: CrouchClock;
 }
 
 export interface BlobShadow {
@@ -47,8 +54,11 @@ export interface BlobPose {
   feetSx: number;
   feetSy: number;
   shadow: BlobShadow | null;
-  /** Helmet / eye offsets of the crouch (all zero when standing). */
-  face: CrouchFace;
+  /**
+   * The crouch (`crouchPose.ts`): helmet sink, drop, bulge and feet. It reshapes the body instead
+   * of scaling it, so the helmet keeps its shape (owner, crouch-sink D1).
+   */
+  crouch: CrouchSink;
 }
 
 /**
@@ -90,55 +100,8 @@ export const createBlobAnim = (player: PlayerState): BlobAnim => ({
   seenLandings: player.landCount,
   seenRollBounces: player.rollBounceCount,
   active: null,
-  crouchBlend: player.crouching ? 1 : 0,
-  crouchAtMs: null,
+  crouch: createCrouchClock(player),
 });
-
-export type CrouchTunables = GameTunables["player"]["crouch"];
-
-/**
- * Moves the crouch blend toward the sim's `crouching` over `easeSeconds` of render time
- * (frame-rate independent). Call once per frame before `blobPose`.
- */
-export function stepCrouchBlend(
-  anim: BlobAnim,
-  frame: { player: PlayerState; crouch: CrouchTunables; nowMs: number }
-): void {
-  const { player, crouch, nowMs } = frame;
-  const elapsed = anim.crouchAtMs === null ? 0 : Math.max(0, nowMs - anim.crouchAtMs) / 1000;
-  anim.crouchAtMs = nowMs;
-  const target = player.crouching ? 1 : 0;
-  const step = crouch.easeSeconds > 0 ? elapsed / crouch.easeSeconds : 1;
-  anim.crouchBlend =
-    target > anim.crouchBlend
-      ? Math.min(target, anim.crouchBlend + step)
-      : Math.max(target, anim.crouchBlend - step);
-}
-
-/** Crouch pose factors at the anim's blend: body (sx, sy); 1 when standing. The feet stay as they are. */
-function crouchScale(anim: BlobAnim, crouch: CrouchTunables | undefined) {
-  const k = crouch ? smoothstep(anim.crouchBlend) : 0;
-  const lerp = (to: number): number => 1 + (to - 1) * k;
-  return crouch ? { sx: lerp(crouch.bodySx), sy: lerp(crouch.bodySy) } : { sx: 1, sy: 1 };
-}
-
-/** The face while crouching: how far the helmet sinks and the eyes rise (mockup units). */
-export interface CrouchFace {
-  helmetDrop: number;
-  eyeLift: number;
-  /** Eyes drawn under the helmet dome, so its rim covers them (only while crouching). */
-  eyesUnderHelmet: boolean;
-}
-
-/** Crouch face at the anim's blend; zero offsets and eyes over the dome when standing. */
-export function crouchFace(anim: BlobAnim, crouch: CrouchTunables | undefined): CrouchFace {
-  const k = crouch ? smoothstep(anim.crouchBlend) : 0;
-  return {
-    helmetDrop: (crouch?.helmetDrop ?? 0) * k,
-    eyeLift: (crouch?.eyeLift ?? 0) * k,
-    eyesUnderHelmet: k > 0,
-  };
-}
 
 export type BarrelPopTunables = GameTunables["feel"]["barrelPop"];
 
@@ -324,8 +287,8 @@ export function blobShadow(
 }
 
 /**
- * The pose to draw this frame. Call `noteBlobEvents` (and `stepCrouchBlend` when `crouch` is
- * given) first. The crouch sinks the body (head included); the feet keep their pose.
+ * The pose to draw this frame. Call `noteBlobEvents` (and `noteCrouch` when `crouch` is given)
+ * first. The crouch never scales the body: it comes back as `crouch` for the renderer to reshape.
  */
 export function blobPose(
   anim: BlobAnim,
@@ -342,14 +305,13 @@ export function blobPose(
   const body = eventSquash(anim, { squash, atMs: nowMs });
   const feet = eventSquash(anim, { squash, atMs: nowMs - FEET_LAG_MS });
   const stretch = motionStretch(player, frame);
-  const crouched = crouchScale(anim, frame.crouch);
   return {
-    bodySx: (body.sx / stretch) * crouched.sx,
-    bodySy: body.sy * stretch * crouched.sy,
+    bodySx: body.sx / stretch,
+    bodySy: body.sy * stretch,
     feetSx: 1 + (feet.sx - 1) * FEET_SQUASH_GAIN,
     feetSy: Math.max(0.3, 1 + (feet.sy - 1) * FEET_SQUASH_GAIN),
     shadow: blobShadow(player, frame.contact),
-    face: crouchFace(anim, frame.crouch),
+    crouch: frame.crouch ? crouchSink(anim.crouch, frame.crouch, nowMs) : STANDING_SINK,
   };
 }
 
@@ -481,8 +443,6 @@ export const createFeetMotion = (player: PlayerState): FeetMotion => ({
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
-
-const smoothstep = (t: number): number => t * t * (3 - 2 * t);
 
 interface FeetFrame {
   player: PlayerState;

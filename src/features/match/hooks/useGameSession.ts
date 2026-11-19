@@ -115,8 +115,9 @@ function startSession({ app, engine, exitRef, pause }: SessionDeps, setup: Match
     previousInputs = inputs;
     if (restarted) return;
     for (let i = 0; i < advance.steps; i += 1) stepGame(round.state, inputs, stepSeconds);
-    sound.hear(round.state);
     renderGame(round.renderer, { state: round.state, app, dt: frameSeconds });
+    // After the render: the knockouts step there, so a splat is heard on the frame it shows.
+    sound.hear(round.state, round.renderer.knockout.bursts);
   };
 
   app.ticker.add(onFrame);

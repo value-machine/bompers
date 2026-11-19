@@ -4,6 +4,7 @@ import {
   readSoundCues,
   readSoundLoops,
   type AudioEngine,
+  type SoundBurst,
   type SoundCursor,
   type SoundSnapshot,
   type SoundWorldSnapshot,
@@ -82,7 +83,10 @@ export function soundWorldOf(state: GameState): SoundWorldSnapshot {
  * What the sound feature reads from one frame of the match. Only the match knows `GameState`,
  * so it hands sound a flat snapshot of the slices it needs (players, dive, combat events, round).
  */
-export function soundSnapshotOf(state: GameState): SoundSnapshot {
+export function soundSnapshotOf(
+  state: GameState,
+  bursts: readonly SoundBurst[] = []
+): SoundSnapshot {
   return {
     players: state.players.map((player) => {
       const dive = state.dive.motions[player.id];
@@ -93,7 +97,7 @@ export function soundSnapshotOf(state: GameState): SoundSnapshot {
         landCount: player.landCount,
         lastLandingSpeed: player.lastLandingSpeed,
         rollBounceCount: player.rollBounceCount,
-        dashRollCount: player.dashRollCount,
+        moveRollCount: player.moveRollCount,
         rollRestCount: player.rollRestCount,
         crouchCount: player.crouchCount,
         inPlay: isInPlay(state.rules, player),
@@ -114,6 +118,7 @@ export function soundSnapshotOf(state: GameState): SoundSnapshot {
     events: state.combat.events,
     roundPhase: state.round.phase,
     world: soundWorldOf(state),
+    bursts,
   };
 }
 
@@ -123,7 +128,8 @@ export function soundSnapshotOf(state: GameState): SoundSnapshot {
  * frame cue the round start. Dispose fades the music out; the engine itself lives on.
  */
 export interface MatchSound {
-  hear(state: GameState): void;
+  /** `bursts`: the knockout layer's burst log after this frame's render step (the splats). */
+  hear(state: GameState, bursts: readonly SoundBurst[]): void;
   newRound(): void;
   dispose(): void;
 }
@@ -131,8 +137,8 @@ export interface MatchSound {
 export function createMatchSound(engine: AudioEngine): MatchSound {
   let cursor: SoundCursor | null = null;
   return {
-    hear: (state) => {
-      const frame = soundSnapshotOf(state);
+    hear: (state, bursts) => {
+      const frame = soundSnapshotOf(state, bursts);
       const heard = readSoundCues(cursor, frame);
       cursor = heard.cursor;
       heard.cues.forEach(engine.playCue);

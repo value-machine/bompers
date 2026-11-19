@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
@@ -205,7 +205,8 @@ describe("gameSim — dive headbutt", () => {
       DEFAULT_GAME_TUNABLES.combat.maxHealth - DEFAULT_GAME_TUNABLES.combat.hitDamage.contact.back
     );
     expect(hits[0]!.impulse.x).toBeGreaterThan(0);
-    expect(victimFarthestX).toBeGreaterThan(360 + 100);
+    // Knocked a couple of blob widths away (dive-push lap: `dive.hitPushScale`).
+    expect(victimFarthestX).toBeGreaterThan(360 + 2 * DEFAULT_GAME_TUNABLES.player.width);
   });
 
   const closeSpawns = () => {
@@ -667,7 +668,7 @@ describe("gameSim — jump dive rules (double-jump-bash D2, D5, D17)", () => {
     stepFor(state, 1);
     // One dive spent the charge; the second press found nothing to start.
     expect(state.dive.motions.p0?.trigger).toBe("fire");
-    expect(state.players[0]!.dashRollCount).toBe(0);
+    expect(state.players[0]!.moveRollCount).toBe(0);
   });
 
   it("should not dive again with a jump press while the airtime's dive is spent", () => {
@@ -839,5 +840,109 @@ describe("level routes — Bobsled Run needs the roll", () => {
       stepGame(game, keys("KeyF", "KeyD"), dt);
     expect(p.rollSource).toBe("dash");
     expect(jumpAndDiveFromEdge(game, { diveAt: 1.0, extra: ["KeyF"] })).toBe(true);
+  });
+});
+
+/**
+ * Dive knockback on the shipped levels (owner, dive-push lap: a headbutt hit flung blobs off the
+ * map). A blob stands on each spawn; player 1 headbutts it from 70 units on the level's middle
+ * side, so the hit pushes it toward the near edge.
+ */
+type KnockGame = ReturnType<typeof createGameState>;
+const SHIPPED_LEVELS = readdirSync("public/levels").map(loadLevel);
+const BLOB_WIDTH = DEFAULT_GAME_TUNABLES.player.width;
+/** Fire held this long starts the dive (a grounded headbutt: wind-up, then travel). */
+const DIVE_HOLD_STEPS = 30;
+
+/** The level with player 2 settled on spawn `index`, player 1 parked in a corner. */
+const standOnSpawn = (level: LevelDefinition, index: number): KnockGame | null => {
+  const game = createGameState({ level, tunables: DEFAULT_GAME_TUNABLES });
+  stepGame(game, keys(), dt);
+  Object.assign(game.players[1]!, { ...level.spawns[index]!, vx: 0, vy: 0 });
+  const corner = { x: level.bounds.x + 10, y: level.bounds.y + 10, vx: 0, vy: 0 };
+  for (let i = 0; i < 90; i += 1) {
+    Object.assign(game.players[0]!, corner);
+    stepGame(game, keys(), dt);
+  }
+  return game.players[1]!.grounded ? game : null;
+};
+
+/** Side the victim stands on (+1 right of the level's middle): the headbutt pushes that way. */
+const edgeSide = (game: KnockGame): number => {
+  const { bounds } = game.arena.level;
+  return Math.sign(game.players[1]!.x - (bounds.x + bounds.w / 2)) || 1;
+};
+
+/** Puts the attacker 70 units on the middle side, level with the victim, facing it. */
+const lineUpHeadbutt = (game: KnockGame, side: number): void => {
+  const victim = game.players[1]!;
+  Object.assign(game.players[0]!, { x: victim.x - side * 70, y: victim.y, vx: 0, vy: 0 });
+};
+
+const headbuttKeys = (side: number) => keys(side > 0 ? "KeyD" : "KeyA", "KeyF");
+
+const victimEliminatedBy = (game: KnockGame): string | null => {
+  const event = game.combat.events.find((e) => e.type === "playerEliminated" && e.victimSlot === 1);
+  return event?.type === "playerEliminated" ? event.cause : null;
+};
+
+/** Furthest the victim got sideways in 3.5 s after one headbutt, or null when it left the map. */
+function carryOfOneHeadbutt(game: KnockGame): number | null {
+  const side = edgeSide(game);
+  const startX = game.players[1]!.x;
+  lineUpHeadbutt(game, side);
+  let carry = 0;
+  for (let i = 0; i < 3.5 / dt; i += 1) {
+    stepGame(game, i < DIVE_HOLD_STEPS ? headbuttKeys(side) : keys(), dt);
+    if (victimEliminatedBy(game)) return null;
+    carry = Math.max(carry, Math.abs(game.players[1]!.x - startX));
+  }
+  return carry;
+}
+
+/** A headbutt every 0.8 s from the middle side until the victim is eliminated (16 s at most). */
+function headbuttUntilEliminated(game: KnockGame): string | null {
+  const side = edgeSide(game);
+  const period = Math.round(0.8 / dt);
+  for (let i = 0; i < 16 / dt; i += 1) {
+    if (i % period === 0) lineUpHeadbutt(game, side);
+    stepGame(game, i % period < DIVE_HOLD_STEPS ? headbuttKeys(side) : keys(), dt);
+    const cause = victimEliminatedBy(game);
+    if (cause) return cause;
+  }
+  return null;
+}
+
+const everySpawn = (): { level: LevelDefinition; index: number }[] =>
+  SHIPPED_LEVELS.flatMap((level) => level.spawns.map((_, index) => ({ level, index })));
+
+describe("gameSim — dive knockback on the shipped levels (dive-push lap)", () => {
+  it("should shove a standing blob a couple of blob widths, never off the map, when a headbutt hits it", () => {
+    const carries: number[] = [];
+    let offMap = 0;
+    for (const { level, index } of everySpawn()) {
+      const game = standOnSpawn(level, index);
+      if (!game) continue;
+      const carry = carryOfOneHeadbutt(game);
+      if (carry === null) offMap += 1;
+      else carries.push(carry);
+    }
+    const average = carries.reduce((sum, c) => sum + c, 0) / carries.length;
+    // Before (hitPushScale 1): ≈ 860 units (43 % of a level width), 19 of 28 spawns off the map.
+    expect(offMap).toBe(0);
+    expect(average).toBeGreaterThan(BLOB_WIDTH * 1.5);
+    expect(average).toBeLessThan(BLOB_WIDTH * 3.5);
+  });
+
+  it("should eliminate most blobs by damage, not by flying off, when repeated headbutts push them toward the edge", () => {
+    const causes = everySpawn()
+      .map(({ level, index }) => standOnSpawn(level, index))
+      .filter((game): game is KnockGame => game !== null)
+      .map(headbuttUntilEliminated);
+    const byDamage = causes.filter((cause) => cause === "dive").length;
+    // Before: 8 of 28 by damage, the other 20 off the map, 19 of them after the first hit.
+    expect(byDamage).toBeGreaterThan(causes.length * 0.7);
+    // A blob near a drop can still be knocked off.
+    expect(causes).toContain("out-of-bounds");
   });
 });

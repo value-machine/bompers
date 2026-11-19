@@ -18,6 +18,7 @@ import {
   isRollLocked,
   releaseRoll,
   resetRoll,
+  startRoll,
   tickRoll,
 } from "@/features/player/services/roll";
 
@@ -51,6 +52,7 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     vy: 0,
     width: tunables.player.width,
     height: tunables.player.height,
+    crouchHeight: tunables.player.height * tunables.player.crouch.hurtHeightScale,
     grounded: false,
     facing: 1,
     aimX: 1,
@@ -80,12 +82,13 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     rollAngle: 0,
     rollSpin: 0,
     weaponSweep: 0,
-    dashRollCount: 0,
+    moveRollCount: 0,
     rollRestCount: 0,
     rollBounceCount: 0,
     lastRollBounceSpeed: 0,
     crouching: false,
     crouchCount: 0,
+    crouchRollSeconds: 0,
     groundBelowY: null,
     jumpCount: 0,
     airJumpPressCount: 0,
@@ -126,6 +129,7 @@ function resetStance(player: PlayerState): void {
   player.gravityScale = 1;
   player.jumpLocked = false;
   player.crouching = false;
+  player.crouchRollSeconds = 0;
 }
 
 export const playerBody = (player: PlayerState): Rect => ({
@@ -134,6 +138,19 @@ export const playerBody = (player: PlayerState): Rect => ({
   w: player.width,
   h: player.height,
 });
+
+/** Height hits see: the full height, or the lower `crouchHeight` while crouched (crouch-sink D4). */
+export const hurtHeight = (player: PlayerState): number =>
+  player.crouching ? player.crouchHeight : player.height;
+
+/**
+ * What weapons, blasts and beams hit: the body box from the feet up `hurtHeight`. Terrain and
+ * blob-to-blob collision keep the full `playerBody`.
+ */
+export const hurtBox = (player: PlayerState): Rect => {
+  const h = hurtHeight(player);
+  return { ...playerBody(player), y: player.y - h, h };
+};
 
 // ── Collision ────────────────────────────────────────────────────────────────
 
@@ -308,6 +325,39 @@ function updateCrouch(player: PlayerState, input: PlayerInput): void {
   const crouching = input.crouch && player.grounded && !isRolling(player) && player.steerScale >= 1;
   if (crouching && !player.crouching) player.crouchCount += 1;
   player.crouching = crouching;
+}
+
+/** Timer comparisons tolerate float drift so a delay lands on a whole step. */
+const TIMER_EPSILON = 1e-9;
+
+/**
+ * Crouch roll (crouch-roll R1, R1a, R7): crouched with one direction held and no fire, the wind-up
+ * runs; at `roll.crouchRollDelay` the roll starts that way. Anything else breaks the hold and
+ * resets it: no crouch (ground, roll and abilities are in `crouching`), no direction, a flip, fire.
+ * `facing` is still last step's, so a flip shows as a direction against it.
+ */
+function updateCrouchRoll(player: PlayerState, input: PlayerInput, args: StepPlayersArgs): void {
+  const direction = Math.sign(input.moveX);
+  if (!player.crouching || direction === 0 || input.fire) {
+    player.crouchRollSeconds = 0;
+    return;
+  }
+  if (direction !== player.facing) player.crouchRollSeconds = 0;
+  player.crouchRollSeconds += args.dt;
+  if (player.crouchRollSeconds < args.tunables.roll.crouchRollDelay - TIMER_EPSILON) return;
+  player.crouchRollSeconds = 0;
+  startCrouchRoll(player, direction, args);
+}
+
+/** Rolls along the ground toward `direction` from at least `roll.crouchStartSpeed` (R2, R5). */
+function startCrouchRoll(player: PlayerState, direction: number, args: StepPlayersArgs): void {
+  const frame = groundFrame(player, args.terrain);
+  const along = groundSpeed(player, frame) * direction;
+  const speed = Math.max(along, args.tunables.roll.crouchStartSpeed) * direction;
+  player.vx = speed * frame.tangent.x;
+  player.vy = speed * frame.tangent.y;
+  player.facing = direction > 0 ? 1 : -1;
+  startRoll(player, { source: "crouch" }, args.tunables);
 }
 
 // ── Horizontal ───────────────────────────────────────────────────────────────
@@ -932,6 +982,7 @@ export function stepPlayers(args: StepPlayersArgs): void {
     readJumpButton(player, input, p);
     releaseRoll(player, input);
     updateCrouch(player, input);
+    updateCrouchRoll(player, input, args);
     applyHorizontal(player, input, args);
     updateAim(player, input);
     applyJump(player, args);

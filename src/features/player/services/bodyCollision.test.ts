@@ -100,7 +100,7 @@ describe("resolveBodyContacts", () => {
     const a = blob(0, 100, { vx: -300 });
     const b = blob(1, 120, { vx: 300 });
     const [contact] = resolve([a, b]);
-    expect(contact?.impulse).toBe(0);
+    expect(contact).toMatchObject({ aImpulse: 0, bImpulse: 0 });
     expect(contact?.aApproachSpeed).toBeCloseTo(-300);
     expect(a.vx).toBe(-300);
     expect(b.vx).toBe(300);

@@ -25,7 +25,7 @@ Tests: `services/burningBlobs.test.ts` (catch from burning cardboard and not out
 
 - `fire` via `api/fireApi.ts` (`FireState`, type only).
 - `arena` via `api/arenaApi.ts` (`TerrainGrid`, `EMPTY_CELL`, `bodyGrids`, `terrainBodies`, `bodyWorldPoint`).
-- `combat` via `api/combatApi.ts` (`helmetPoint`), `player` via `api/playerApi.ts` (`PlayerState`, `BodyContact`, `BlobPoseOverlay`, `PANIC_PUPIL_SCALE`).
+- `combat` via `api/combatApi.ts` (`helmetPoint`), `player` via `api/playerApi.ts` (`PlayerState`, `BodyContact` (read for who touched whom; its per-blob `aImpulse` / `bImpulse` are unused here), `BlobPoseOverlay`, `PANIC_PUPIL_SCALE`).
 - Shared: `gameTunables` (`fire.blob`), `gamePalette.fire`, `gameInput.types`; `pixi.js` in the renderer.
 - Consumed by `match` (state slice, step 3d, the input patch, the torch's reached blobs, one render layer, pose overlays, sound counters).
 

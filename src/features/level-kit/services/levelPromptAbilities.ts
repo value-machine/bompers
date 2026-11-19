@@ -60,12 +60,25 @@ export const freezePatchRadius = (t: GameTunables): number =>
   Math.sqrt((t.ice.freezeAreaPerSecond * t.combat.freezeRay.ammo) / Math.PI);
 
 /** Slopes and the roll: what decides ramps, hills and run-ups. */
+/**
+ * Speed a full-speed headbutt gives a standing blob it hits: the body collision's handover
+ * (`(1 + e) / 2` of the dive speed, capped) plus the strike along the hit and the lift, scaled by
+ * the share the victim keeps (`dive.hitPushScale`).
+ */
+export function diveHitPush(t: GameTunables): number {
+  const { restitution, maxImpulse } = t.bodyCollision;
+  const exchange = Math.min(((1 + restitution) / 2) * t.dive.launchSpeed, maxImpulse);
+  const along = (exchange + t.dive.strikeImpulse) * t.dive.hitPushScale;
+  return Math.hypot(along, t.dive.strikeLift * t.dive.hitPushScale);
+}
+
 export function slopeAndRollLines(t: GameTunables): string[] {
   const { slope, runSpeed } = t.player;
   const { roll, dive } = t;
   return [
     `- Slopes: ground up to \`${degrees(slope.lipAngle)}°\` is walked; steeper is a wall (wall slide and wall jump), except a ledge whose top is within \`${slope.lipRise}\` units, which the blob pulls itself over at \`${round(slope.lipSpeed * runSpeed)}\` units/s. A blob already on a curve keeps its footing up to \`${degrees(slope.restAngle)}°\`, so round tops can be walked over. Walking speed: \`${round(slopeWalkSpeed(t, 30))}\` up a 30° slope, \`${round(slopeWalkSpeed(t, 45))}\` up 45°, \`${round(slopeWalkSpeed(t, -30))}\` down 30° (run \`${runSpeed}\`).`,
     `- Roll: holding fire through a headbutt rolls on at the dive's \`${dive.launchSpeed}\` units/s; a roll from \`${dive.launchSpeed}\` coasts ~\`${round(rollCoast(t, dive.launchSpeed))}\` units on the flat, lasts at most \`${roll.maxSeconds}\` s, keeps rolling down slopes steeper than ~\`${round(rollMinSlope(t))}°\` (~\`${round(rollSlopeSpeed(t, 20))}\` units/s down 20°, ~\`${round(rollSlopeSpeed(t, 30))}\` down 30°) and bounces off terrain. A headbutt out of a fast roll launches at up to \`${dive.rollCarryMax}\` units/s (~\`${round(dive.rollCarryMax * dive.travelSeconds)}\` units of dive). Weapons fired while rolling aim round with the spin, at up to \`${roll.sweepTurnsPerSecond}\` turns/s.`,
+    `- Crouch roll: crouched on the ground, holding one direction for \`${roll.crouchRollDelay}\` s without firing rolls that way at \`${roll.crouchStartSpeed}\` units/s (~\`${round(rollCoast(t, roll.crouchStartSpeed))}\` units of coast on the flat); a shorter hold only turns and aims.`,
   ];
 }
 
@@ -77,7 +90,7 @@ export function groundAndPartLines(t: GameTunables): string[] {
   return [
     `- Ice grip \`${grip}\` (1 = stone): from a run a blob slides ~\`${round(brakeSlide(t, grip))}\` units to a stop on ice (~\`${round(brakeSlide(t, 1))}\` on stone), and a roll from \`${t.dive.launchSpeed}\` coasts ~\`${round(rollCoast(t, t.dive.launchSpeed, grip))}\` on flat ice before its \`${t.roll.maxSeconds}\` s run out, and keeps rolling down any slope over ~\`${Math.max(1, round(rollMinSlope(t, grip)))}°\`. Frozen ground grips like ice.`,
     `- Leaving a moving part (jump, headbutt or walk off) keeps its velocity, up to \`${leave}\` units/s: a jump off a lift rising at full speed peaks ~\`${round(liftJumpApex(t))}\` units up instead of ~\`${round(t.player.jumpSpeed ** 2 / (2 * t.world.gravity))}\`.`,
-    `- A headbutt that hits a player pops the diver up ~\`${round(pop)}\` units; a glancing hit on terrain just ends the dive.`,
+    `- A headbutt that hits a player shoves it at ~\`${round(diveHitPush(t))}\` units/s and pops the diver up ~\`${round(pop)}\` units; a glancing hit on terrain just ends the dive.`,
   ];
 }
 

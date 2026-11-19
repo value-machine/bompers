@@ -29,8 +29,10 @@ export interface BodyContact {
   /** Each blob's speed toward the other before the response, units / s (negative = moving away). */
   aApproachSpeed: number;
   bApproachSpeed: number;
-  /** Velocity change the response gave each blob along the normal (0 when not closing). */
-  impulse: number;
+  /** Velocity change the response gave a along the normal (0 when not closing or blocked). */
+  aImpulse: number;
+  /** … and b. A dive hit reads its victim's share (the dive owns its knockback). */
+  bImpulse: number;
 }
 
 export interface ResolveBodyContactsArgs {
@@ -67,11 +69,11 @@ function separate(contact: BodyContact, overlap: number, terrain: ContactArgs): 
   moveAxis(b, { axis: "y", delta: normal.y * overlap * bShare }, terrain);
 }
 
-/** Applies the equal-mass response; returns the velocity change along the normal. */
-function respond(contact: BodyContact, tunables: GameTunables["bodyCollision"]): number {
+/** Applies the equal-mass response and records each blob's velocity change along the normal. */
+function respond(contact: BodyContact, tunables: GameTunables["bodyCollision"]): void {
   const { a, b, normal } = contact;
   const closing = contact.aApproachSpeed + contact.bApproachSpeed;
-  if (closing <= 0) return 0;
+  if (closing <= 0) return;
   const restitution = closing < tunables.restingSpeed ? 0 : tunables.restitution;
   const aBlocked = isBlocked(a, { x: -normal.x, y: -normal.y });
   const bBlocked = isBlocked(b, normal);
@@ -84,7 +86,7 @@ function respond(contact: BodyContact, tunables: GameTunables["bodyCollision"]):
   a.vy -= normal.y * aChange;
   b.vx += normal.x * bChange;
   b.vy += normal.y * bChange;
-  return Math.max(aChange, bChange);
+  Object.assign(contact, { aImpulse: aChange, bImpulse: bChange });
 }
 
 /** The contact between two blobs this step, or null when they do not touch. */
@@ -103,7 +105,8 @@ function contactBetween(
     at: { x: a.x + normal.x * reach, y: centerY(a) + normal.y * reach },
     aApproachSpeed: a.vx * normal.x + a.vy * normal.y,
     bApproachSpeed: -(b.vx * normal.x + b.vy * normal.y),
-    impulse: 0,
+    aImpulse: 0,
+    bImpulse: 0,
     overlap,
   };
 }
@@ -120,7 +123,7 @@ export function resolveBodyContacts(args: ResolveBodyContactsArgs): BodyContact[
       const found = contactBetween(players[i]!, players[k]!);
       if (!found) continue;
       const { overlap, ...contact } = found;
-      contact.impulse = respond(contact, tunables.bodyCollision);
+      respond(contact, tunables.bodyCollision);
       separate(contact, overlap, { terrain, slope: tunables.player.slope });
       contacts.push(contact);
     }

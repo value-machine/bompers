@@ -16,6 +16,7 @@ export {
 } from "@/features/knockout/services/knockoutRenderer";
 export type {
   Knockout,
+  KnockoutBurst,
   KnockoutBody,
   KnockoutWorld,
 } from "@/features/knockout/services/knockoutSim";

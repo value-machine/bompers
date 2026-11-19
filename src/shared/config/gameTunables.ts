@@ -71,9 +71,24 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       // Four body radii: hills and crater floors hold; ledges and rims (radius ≈ 14) can launch.
       stickRadius: 56,
     },
-    // Defensive crouch (feedback round 2 § 2.4): sink fast, stand up a touch slower.
-    // Helmet down 4 u and eyes up 2 u: the rim lands on about the middle of the eyes (crouch D7).
-    crouch: { bodySx: 1.18, bodySy: 0.68, easeSeconds: 0.07, helmetDrop: 4, eyeLift: 2 },
+    // Defensive crouch, "sink + settle, low" (owner, crouch-sink D1): sink in 100 ms (squash
+    // window), settle 350 ms (settle window), stand up 150 ms with a 3 u helmet hop. The helmet ends
+    // 27 u (12 + 15) under its standing place, so the hurt box keeps 1 − 27 / 69 ≈ 0.6 of the height.
+    crouch: {
+      sinkSeconds: 0.1,
+      settleSeconds: 0.35,
+      settleHz: 2.4,
+      riseSeconds: 0.15,
+      hopSeconds: 0.2,
+      helmetSink: 12,
+      drop: 15,
+      overshoot: 2,
+      hop: 3,
+      breathe: 0.6,
+      breatheHz: 0.8,
+      areaKeep: 0.94,
+      hurtHeightScale: 0.6,
+    },
     squash: {
       // Soft jelly landing (owner pick M2, soft-landing lap): sinks, then one wobble back.
       land: {
@@ -119,6 +134,10 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     // Spin-fire (D2): 1.25 turns / s ≈ 3.75° per 1/120 s step, under the freeze ray's 6° fan. The
     // body spins at speed / 14 (a 400 roll ≈ 4.5 turns / s), far too fast to sweep a beam at.
     sweepTurnsPerSecond: 1.25,
+    // Crouch roll (owner, crouch-roll R7): 0.8 s of crouch + one direction with no fire reads as
+    // "roll", shorter as aiming. Starts at 500 (run 340, jump carry cap 600, dive dash 900).
+    crouchRollDelay: 0.8,
+    crouchStartSpeed: 500,
   },
   dive: {
     minHitSpeed: 150,
@@ -141,6 +160,12 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     bonkMinAlignment: 0.8,
     bonkRebound: 0.25,
     strikeImpulse: 160,
+    // The victim keeps this share of the hit's push (owner, dive-push lap: 1 → 0.2, the feel picked
+    // for blasts in #114). Measured on the 7 shipped levels from every spawn (gameSim.test.ts § dive
+    // knockback): one dive hit carried a standing blob ≈ 860 units (43 % of a level width) and off
+    // the map from 19 of 28 spawns; now ≈ 65 units (≈ 2 blob widths) and none, and repeated dives
+    // toward the near edge eliminate by damage in 22 of 28 (was 8). Blobs near a drop still go off.
+    hitPushScale: 0.2,
     strikeLift: 256,
     attackerPop: 576,
     staggerSeconds: 0.3,
@@ -248,7 +273,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     // toughness 1 (blast-power D3, D10). Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units;
     // with the recoil (1080 + 200) ≈ 585, well above a full jump (≈ 250).
     // hitPushScale: the push on hit players, lowered so a hit no longer flings a blob off the map
-    // (owner, elimination-goo Change round: 1 → 0.55); the shooter's rocket jump stays full.
+    // (owner, elimination-goo Change round: 1 → 0.55); the shooter's rocket jump stays full. The
+    // owner keeps it there (dive-push lap: #114's cut to 0.2 was meant for the dive hit).
     blast: {
       pushPerPower: 21.6,
       reachPerPower: 1.28,

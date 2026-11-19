@@ -10,7 +10,13 @@ import {
 } from "@/features/arena/api/arenaApi";
 import type { Rect } from "@/shared/types/gameGeometry.types";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
-import { createPlayer, stepPlayers } from "@/features/player/services/playerController";
+import {
+  createPlayer,
+  hurtBox,
+  hurtHeight,
+  playerBody,
+  stepPlayers,
+} from "@/features/player/services/playerController";
 import type { PlayerState } from "@/features/player/types/player.types";
 import { startRoll } from "@/features/player/services/roll";
 
@@ -343,6 +349,94 @@ describe("playerController — crouch", () => {
     sim.step({ crouch: true, jump: true }, 1);
     expect(sim.player.crouching).toBe(false);
     expect(sim.player.vy).toBeLessThan(0);
+  });
+});
+
+describe("playerController — crouch roll (crouch-roll R1–R3)", () => {
+  const ROLL = DEFAULT_GAME_TUNABLES.roll;
+  /** Whole steps in the wind-up delay. */
+  const DELAY_STEPS = Math.round(ROLL.crouchRollDelay / dt);
+
+  it("should only turn and aim when crouch and a direction are held for less than the delay", () => {
+    const sim = grounded();
+    sim.step({ crouch: true, moveX: 1 }, DELAY_STEPS - 1);
+    expect(sim.player.crouching).toBe(true);
+    expect(sim.player.rollSource).toBeNull();
+    expect(sim.player.facing).toBe(1);
+  });
+
+  it("should roll toward the held side from the crouch start speed when the delay runs out", () => {
+    const sim = grounded();
+    sim.step({ crouch: true, moveX: 1 }, DELAY_STEPS);
+    expect(sim.player.rollSource).toBe("crouch");
+    expect(sim.player.crouching).toBe(false);
+    expect(sim.player.moveRollCount).toBe(1);
+    expect(sim.player.vx).toBeGreaterThan(ROLL.crouchStartSpeed * 0.95);
+    sim.step({ crouch: true, moveX: 1 }, 30);
+    expect(sim.player.x).toBeGreaterThan(330);
+  });
+
+  it("should roll left when left is the held side", () => {
+    const sim = grounded();
+    sim.step({ crouch: true, moveX: -1 }, DELAY_STEPS);
+    expect(sim.player.rollSource).toBe("crouch");
+    expect(sim.player.vx).toBeLessThan(-ROLL.crouchStartSpeed * 0.95);
+  });
+
+  it("should not roll while fire is held and should restart the wait when fire is let go", () => {
+    const sim = grounded();
+    sim.step({ crouch: true, moveX: 1, fire: true }, DELAY_STEPS + 20);
+    expect(sim.player.rollSource).toBeNull();
+    sim.step({ crouch: true, moveX: 1 }, DELAY_STEPS - 1);
+    expect(sim.player.rollSource).toBeNull();
+    sim.step({ crouch: true, moveX: 1 }, 1);
+    expect(sim.player.rollSource).toBe("crouch");
+  });
+
+  it("should restart the wait when the direction flips or is let go", () => {
+    const sim = grounded();
+    sim.step({ crouch: true, moveX: 1 }, DELAY_STEPS - 10);
+    sim.step({ crouch: true, moveX: -1 }, DELAY_STEPS - 10);
+    sim.step({ crouch: true }, 1);
+    sim.step({ crouch: true, moveX: -1 }, DELAY_STEPS - 10);
+    expect(sim.player.rollSource).toBeNull();
+    expect(sim.player.crouching).toBe(true);
+  });
+
+  it("should end the roll and stand when crouch is let go", () => {
+    const sim = grounded();
+    sim.step({ crouch: true, moveX: 1 }, DELAY_STEPS);
+    sim.step({ moveX: 1 }, 1);
+    expect(sim.player.rollSource).toBeNull();
+    expect(sim.player.crouching).toBe(false);
+  });
+
+  it("should come to rest back in the crouch when crouch stays held without a direction", () => {
+    const sim = grounded();
+    sim.step({ crouch: true, moveX: 1 }, DELAY_STEPS);
+    sim.step({ crouch: true }, 240);
+    expect(sim.player.rollSource).toBeNull();
+    expect(sim.player.rollRestCount).toBe(1);
+    expect(sim.player.crouching).toBe(true);
+  });
+
+  it("should carry the roll's speed into a jump", () => {
+    const sim = grounded(200);
+    sim.step({ crouch: true, moveX: 1 }, DELAY_STEPS);
+    sim.step({ moveX: 1, crouch: true, jump: true }, 1);
+    expect(sim.player.rollSource).toBeNull();
+    expect(sim.player.vy).toBeLessThan(0);
+    expect(sim.player.vx).toBeGreaterThan(P.runSpeed);
+  });
+
+  it("should not wind up in the air or while an ability steers the blob", () => {
+    const air = createSim({ x: 300, y: 100 });
+    air.step({ crouch: true, moveX: 1 }, 20);
+    expect(air.player.crouchRollSeconds).toBe(0);
+    const steered = grounded();
+    steered.player.steerScale = 0.5;
+    steered.step({ crouch: true, moveX: 1 }, DELAY_STEPS + 5);
+    expect(steered.player.rollSource).toBeNull();
   });
 });
 
@@ -858,5 +952,19 @@ describe("playerController — seams between slabs (slope-jump D3)", () => {
     ]);
     const oneSlab = seamWorld([{ x: 400, y: 200, w: 60, h: 300 }]);
     expect(wallJumpApex(twoSlabs)).toBeCloseTo(wallJumpApex(oneSlab), 1);
+  });
+});
+
+describe("hurt box (crouch-sink D4)", () => {
+  it("should lower the hurt box to the crouch height when crouching and restore it when standing", () => {
+    const player = createPlayer(0, { x: 50, y: 100 }, DEFAULT_GAME_TUNABLES);
+    const scale = DEFAULT_GAME_TUNABLES.player.crouch.hurtHeightScale;
+    expect(hurtBox(player)).toEqual(playerBody(player));
+    player.crouching = true;
+    expect(hurtHeight(player)).toBeCloseTo(player.height * scale, 6);
+    expect(hurtBox(player).y + hurtBox(player).h).toBe(player.y);
+    expect(playerBody(player).h).toBe(player.height);
+    player.crouching = false;
+    expect(hurtHeight(player)).toBe(player.height);
   });
 });

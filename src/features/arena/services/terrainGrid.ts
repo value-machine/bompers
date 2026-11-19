@@ -544,15 +544,18 @@ export function burnOut(grid: TerrainGrid, samples: readonly number[]): ClearedC
 }
 
 /**
- * Friction of the ground directly under a span (the row of cells just below `y`): the average
- * over the solid cells there, 1 when there are none. Ice under the feet makes the blob slide,
- * and so does frozen ground of any material.
+ * Friction of the ground directly under a span: the average over the solid samples of the first
+ * sample row whose centres lie below `y` (the row holding `y + cellSize / 2`, as for moving
+ * parts), 1 when there are none. Feet resting between sample centres (slopes, curves, round
+ * frozen craters) read the ground they stand on, not the empty row they are in. Ice under the
+ * feet makes the blob slide, and so does frozen ground of any material.
  */
 export function groundFrictionBelow(
   grid: TerrainGrid,
   span: { x: number; y: number; w: number }
 ): number {
-  const range = cellRangeOf(grid, { x: span.x, y: span.y, w: span.w, h: 1 });
+  const rowY = span.y + grid.cellSize / 2;
+  const range = cellRangeOf(grid, { x: span.x, y: rowY, w: span.w, h: 1 });
   let sum = 0;
   let count = 0;
   for (let cx = range.minX; cx <= range.maxX; cx += 1) {
