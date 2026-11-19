@@ -26,6 +26,7 @@ For every frame of a crouch (enter, hold, exit), no point of the drawn body outl
 | combat (geometry, rockets, explosions) | `playerBody` / `bodyCenter` / `helmetPoint` use full height | swap to the hurt box | ride |
 | shared rayFan | body circle at mid height, radius width / 2 | circle from the hurt height | ride |
 | shared tunables + types | `player.crouch` render numbers | new sink/settle numbers + `hurtHeightScale` | ride |
+| fire / ice (absorbed in build) | torch / freeze ray cast rays at full height | `hitHeight: hurtHeight` on `castRayFan`; ice test aim | ride |
 | docs (GAME_JUICE ledger, player README) | crouch row missing / squash note | rows + README lines | ride |
 
 Overrun rule (skill-loop D51): a diff that touches a feature area **not** in this table stops the lap.

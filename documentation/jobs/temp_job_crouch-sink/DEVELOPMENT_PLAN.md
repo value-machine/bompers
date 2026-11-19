@@ -14,10 +14,10 @@
 
 | Phase | Goal | Gate | Status |
 |-------|------|------|--------|
-| 1 | Pure crouch pose: timeline, fit table, bulge table, outline, gloss spot | `crouchPose.test.ts` green; type-check | Pending |
-| 2 | Renderer: rigid helmet, redrawn body outline while crouched, eyes, gloss, feet vanish; helmet glint reshape | type-check, lint, player tests; one headless smoke (console + logged pose) | Pending |
-| 3 | Sim hurt box: `hurtHeight`, `hurtBox`, combat geometry, rockets, explosions, rayFan | controller / combat / rayFan tests incl. acceptance | Pending |
-| 4 | Tunables, juice ledger, README / docs fold, cleanup of the old crouch scale | full tooling gate (rule-audit § Tooling pass) | Pending |
+| 1 | Pure crouch pose: timeline, fit table, bulge table, outline, gloss spot | `crouchPose.test.ts` green; type-check | Done |
+| 2 | Renderer: rigid helmet, redrawn body outline while crouched, eyes, gloss, feet vanish; helmet glint reshape | type-check, lint, player tests; one headless smoke (console + logged pose) | Done |
+| 3 | Sim hurt box: `hurtHeight`, `hurtBox`, combat geometry, rockets, explosions, rayFan | controller / combat / rayFan tests incl. acceptance | Done |
+| 4 | Tunables, juice ledger, README / docs fold, cleanup of the old crouch scale | full tooling gate (rule-audit § Tooling pass) | Done |
 
 ## Conflict & compliance
 
@@ -109,7 +109,17 @@
 
 ## Notes during development
 
+- Edges absorbed (small, inside size M): `fire/services/torch.ts` and `ice/services/freezeRay.ts` pass `hitHeight: hurtHeight` to `castRayFan` (simplify / altitude: the shared ray fan stays free of crouch vocabulary); `ice/services/frozenBlobs.test.ts` aims at the crouched victim (its scene aimed at standing chest height — test wrong, not code: D4 lowers the hurt box); `combat/api` exports `bodyCenter`; ice README line.
+- Test authority: `frozenBlobs.test` "twice as long when crouching" failed — verdict test wrong (its ray passed over the crouched hurt box per owner D4); fixed the aim, not the chill rule.
+- Plan review was lean (2 combined lenses) and loop-check lean: no per-rule subagent fan-out (weekday token budget); the four `/simplify` lenses (reuse, simplification, efficiency, altitude) ran on the diff instead.
+- Skipped simplify findings (outside the brief or low value): one shared easing module for the four local copies (blobPose, crouchPose, divePose); `domeHalfWidth` via `bisect`/`cubicAt`; collapsing `CrouchClock` to one time; one hurt shape for rects and rays (rockets / blasts use the box, rays a pill of the same box).
+- Follow-ups: move the blob drawing into its own feature (D7); sky-drop pickups on the hurt box (D6); blob-fire's private `bodyCenter` (burn chunks) still at full height.
+- Not verified: the look in the game (headless smoke run: 1-player match, crouch held and crouch-fired, no console errors; no screenshots, weekday budget); the gradient on the reshaped body; slopes.
+
 ## Decisions made
 
 | # | Topic | Choice | Precedent? |
 |---|-------|--------|------------|
+| B1 | Hurt height storage | `crouchHeight` fixed per player at `createPlayer`, `hurtHeight(player)` derives from `crouching` (no sync) | like `width` / `height` |
+| B2 | Ray hit shape | rounded box (w × hit height, full corner radius) via `shapeSignedDistance`; equals the old circle standing | — |
+| B3 | Redraw cost | body redrawn only when the crouch pose changes by ≥ 1/20 u; fit tables solved when a sprite is created | — |

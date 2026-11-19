@@ -8,7 +8,7 @@ import {
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
 import { helmetPoint } from "@/features/combat/api/combatApi";
-import { weaponAim, type PlayerState } from "@/features/player/api/playerApi";
+import { hurtHeight, weaponAim, type PlayerState } from "@/features/player/api/playerApi";
 import { ignite } from "@/features/fire/services/fireSim";
 import type { FireState } from "@/features/fire/types/fire.types";
 
@@ -46,6 +46,7 @@ export function sprayTorch(fire: FireState, args: TorchSprayArgs): PlayerState[]
   const hits = castRayFan({
     fields: terrainBodies(terrain),
     bodies: args.players.filter((player) => player !== holder),
+    hitHeight: hurtHeight,
     origin: helmetPoint(holder),
     aim: weaponAim(holder),
     shape: { ...torch, length: args.reach ?? torch.length },

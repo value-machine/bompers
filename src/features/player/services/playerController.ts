@@ -146,7 +146,7 @@ export const hurtHeight = (player: PlayerState): number =>
  */
 export const hurtBox = (player: PlayerState): Rect => {
   const h = hurtHeight(player);
-  return { x: player.x - player.width / 2, y: player.y - h, w: player.width, h };
+  return { ...playerBody(player), y: player.y - h, h };
 };
 
 // ── Collision ────────────────────────────────────────────────────────────────

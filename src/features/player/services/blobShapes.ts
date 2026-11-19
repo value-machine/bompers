@@ -198,13 +198,28 @@ export const drawBodyFlash = (
 export const drawHelmetFill = (m: BlobMetrics): Graphics =>
   helmetPath(new Graphics(), m).fill(GAME_PALETTE.helmet);
 
-/** Gloss oval on the body (0.13 R × 0.22 R, tilted 18°), as its own shape so it can rotate. */
+/** Where a gloss sits and how it turns (torso space). */
+export interface GlossSpot {
+  x: number;
+  y: number;
+  rotation: number;
+}
+
+/** The body gloss standing: upper left, tilted 18° (the crouch slides it from here). */
+export const bodyGlossSpot = (m: BlobMetrics): GlossSpot => ({
+  x: -0.4 * m.r,
+  y: 0.08 * m.r,
+  rotation: (18 * Math.PI) / 180,
+});
+
+/** Gloss oval on the body (0.13 R × 0.22 R), as its own shape so it can move and rotate. */
 export function drawBodyGloss(m: BlobMetrics): Graphics {
   const gloss = new Graphics()
     .ellipse(0, 0, 0.13 * m.r, 0.22 * m.r)
     .fill({ color: GAME_PALETTE.gloss, alpha: 0.7 });
-  gloss.position.set(-0.4 * m.r, 0.08 * m.r);
-  gloss.rotation = (18 * Math.PI) / 180;
+  const spot = bodyGlossSpot(m);
+  gloss.position.set(spot.x, spot.y);
+  gloss.rotation = spot.rotation;
   return gloss;
 }
 

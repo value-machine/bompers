@@ -60,6 +60,7 @@ import {
   crouchOutline,
   eyesUnderHelmet,
   noteCrouch,
+  warmCrouchFit,
   type CrouchSink,
   type CrouchTunables,
 } from "@/features/player/services/crouchPose";
@@ -121,8 +122,8 @@ interface BlobSprite {
   bodyFill: Graphics;
   gloss: Graphics;
   slot: number;
-  /** Whether the body is drawn in a crouch outline (false: the plain egg). */
-  crouchDrawn: boolean;
+  /** The crouch pose the body is drawn in (`crouchShapeKey`), or null for the plain egg. */
+  shapeKey: string | null;
   inks: { body: Graphics; helmet: Graphics; feet: [Graphics, Graphics]; tube: Graphics };
   /** Barrel fill and its mouth light, redrawn when the weapon or outline step changes. */
   tubeFill: Graphics;
@@ -359,7 +360,7 @@ function createBlobSprite(player: PlayerState): BlobSprite {
     bodyFill,
     gloss,
     slot: player.slot,
-    crouchDrawn: false,
+    shapeKey: null,
     inks,
     tubeFill,
     muzzle,
@@ -389,7 +390,8 @@ function syncInk(sprite: BlobSprite, zoom: number): void {
   inks.feet.forEach((foot) => drawFootInk(foot, m, outline.width));
   sprite.inkStep = outline.step;
   sprite.inkWidth = outline.width;
-  sprite.crouchDrawn = false;
+  // The ink was just drawn as the egg: a crouched body redraws its outline this frame.
+  if (sprite.shapeKey !== null) sprite.shapeKey = "";
 }
 
 /**
@@ -398,14 +400,20 @@ function syncInk(sprite: BlobSprite, zoom: number): void {
  */
 function syncBodyShape(sprite: BlobSprite, frame: { sink: CrouchSink; crouch: CrouchTunables }) {
   const { metrics: m } = sprite;
-  const outline = crouchOutline(m, frame) ?? undefined;
-  if (!outline && !sprite.crouchDrawn) return outline;
-  drawBodyFill(sprite.bodyFill, m, { slot: sprite.slot, outline });
-  drawBodyFlash(sprite.flash, m, outline);
-  drawBodyInk(sprite.inks.body, m, { width: sprite.inkWidth, outline });
-  sprite.crouchDrawn = outline !== undefined;
+  const outline = crouchOutline(m, frame);
+  const key = outline ? crouchShapeKey(frame.sink) : null;
+  if (key === sprite.shapeKey) return outline;
+  const shape = outline ?? undefined;
+  drawBodyFill(sprite.bodyFill, m, { slot: sprite.slot, outline: shape });
+  drawBodyFlash(sprite.flash, m, shape);
+  drawBodyInk(sprite.inks.body, m, { width: sprite.inkWidth, outline: shape });
+  sprite.shapeKey = key;
   return outline;
 }
+
+/** The crouch pose rounded to what shows (a twentieth of a mockup unit), so a still hold skips redraws. */
+const crouchShapeKey = ({ helmetSink, drop, bulge }: CrouchSink): string =>
+  `${Math.round(helmetSink * 20)}:${Math.round(drop * 20)}:${Math.round(bulge * 100)}`;
 
 /** Mouth light alpha while a shot recharges (faded, never fully gone) … ready (full). */
 const MUZZLE_MIN_ALPHA = 0.15;
@@ -583,7 +591,7 @@ function applyPose(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
   placeBlob(sprite, player, frame);
   placeFeet(sprite, player, frame);
   const outline = syncBodyShape(sprite, { sink: pose.crouch, crouch: frame.crouch });
-  const gloss = crouchGloss(sprite.metrics, { sink: pose.crouch, outline: outline ?? null });
+  const gloss = crouchGloss(sprite.metrics, { sink: pose.crouch, outline });
   sprite.gloss.position.set(gloss.x, gloss.y);
   sprite.gloss.rotation = gloss.rotation;
   placeEyes(sprite, player, {
@@ -641,10 +649,11 @@ function applyFeel(sprite: BlobSprite, player: PlayerState, frame: FeelFrame): v
 }
 
 /** The sprite for this player, created and added to the layer on first sight. */
-function spriteFor(view: PlayersView, player: PlayerState): BlobSprite {
+function spriteFor(view: PlayersView, player: PlayerState, crouch: CrouchTunables): BlobSprite {
   const existing = view.sprites.get(player.id);
   if (existing) return existing;
   const sprite = createBlobSprite(player);
+  warmCrouchFit(sprite.metrics, crouch);
   view.sprites.set(player.id, sprite);
   view.container.addChild(sprite.root);
   view.shadows.addChild(sprite.shadow);
@@ -679,7 +688,7 @@ export function syncPlayersView(
   const { helmet } = options;
   const zoom = options.zoom ?? 1;
   for (const player of players) {
-    const sprite = spriteFor(view, player);
+    const sprite = spriteFor(view, player, crouch);
     const moment = noteBlobEvents(sprite.anim, { player, squash, nowMs });
     noteCrouch(sprite.anim.crouch, { player, crouch, nowMs });
     // Steadied first: the shadow, the lean and the feet all read it this frame.

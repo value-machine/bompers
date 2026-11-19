@@ -1,18 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { isInJuiceWindow, JUICE_SQUASH } from "@/shared/config/gameJuice";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
-import { blobMetrics, helmetDome, helmetGlint } from "@/features/player/services/blobShapes";
+import { blobMetrics, bodyGlossSpot, helmetGlint } from "@/features/player/services/blobShapes";
 import {
   createCrouchClock,
   crouchEyeY,
   crouchGloss,
   crouchHelmetDrop,
   crouchOutline,
+  crouchRimY,
   crouchSink,
   domeHalfWidth,
+  fitsHelmet,
   noteCrouch,
   outlineArea,
-  standingGloss,
   STANDING_SINK,
   type CrouchClock,
 } from "@/features/player/services/crouchPose";
@@ -37,16 +38,11 @@ function crouchClock(releaseMs?: number): CrouchClock {
   return clock;
 }
 
-/** Outline points at or above the helmet's rim line that lie outside the dome. */
-function spilledPoints(clock: CrouchClock, nowMs: number): number {
+/** Whether the crouch outline at `nowMs` stays inside the helmet above its rim line. */
+function fitsAt(clock: CrouchClock, nowMs: number): boolean {
   const sink = crouchSink(clock, crouch, nowMs);
   const outline = crouchOutline(m, { sink, crouch });
-  if (!outline) return 0;
-  const helmetY = crouchHelmetDrop(m, sink);
-  return outline.filter(([x, y]) => {
-    const width = domeHalfWidth(m, y, helmetY);
-    return width !== null && Math.abs(x) > width + 0.3 * m.u + 1e-9;
-  }).length;
+  return !outline || fitsHelmet(outline, m, crouchHelmetDrop(m, sink));
 }
 
 const standingArea = (): number => {
@@ -58,11 +54,11 @@ const standingArea = (): number => {
 describe("crouch pose (crouch-sink acceptance)", () => {
   it("should keep the body inside the helmet on every frame of a crouch when sinking, holding and standing up", () => {
     const pressed = crouchClock();
-    for (let ms = 0; ms <= 1500; ms += 4) expect(spilledPoints(pressed, ms)).toBe(0);
+    for (let ms = 0; ms <= 1500; ms += 4) expect(fitsAt(pressed, ms)).toBe(true);
     for (const releaseAt of [40, 120, 800]) {
       const released = crouchClock(releaseAt);
       for (let ms = releaseAt; ms <= releaseAt + 300; ms += 4) {
-        expect(spilledPoints(released, ms)).toBe(0);
+        expect(fitsAt(released, ms)).toBe(true);
       }
     }
   });
@@ -148,13 +144,13 @@ describe("crouch pose (crouch-sink acceptance)", () => {
   it("should tuck the eyes under the rim and slide the gloss onto the left arc when sunk", () => {
     const sink = crouchSink(crouchClock(), crouch, 900);
     const outline = crouchOutline(m, { sink, crouch });
-    const rimY = helmetDome(m)[0][1] + crouchHelmetDrop(m, sink);
+    const rimY = crouchRimY(m, sink);
     expect(crouchEyeY(m, sink)).toBeCloseTo(rimY + 3 * m.u, 6);
     expect(crouchEyeY(m, STANDING_SINK)).toBeCloseTo(0.12 * m.r, 6);
     const gloss = crouchGloss(m, { sink, outline });
-    expect(gloss.x).toBeLessThan(standingGloss(m).x);
+    expect(gloss.x).toBeLessThan(bodyGlossSpot(m).x);
     expect(gloss.y).toBeGreaterThan(rimY);
-    expect(crouchGloss(m, { sink: STANDING_SINK, outline: null })).toEqual(standingGloss(m));
+    expect(crouchGloss(m, { sink: STANDING_SINK, outline: null })).toEqual(bodyGlossSpot(m));
   });
 });
 

@@ -1,7 +1,9 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import {
   eggSegments,
+  bodyGlossSpot,
   helmetDome,
+  type GlossSpot,
   type BlobMetrics,
   type ShapePoint,
 } from "@/features/player/services/blobShapes";
@@ -39,6 +41,10 @@ export const STANDING_SINK: Readonly<CrouchSink> = {
   bulge: 0,
   feetScale: 1,
 };
+
+/** True for the plain standing pose (nothing sunk, dropped or bent). */
+const isStanding = (sink: CrouchSink): boolean =>
+  sink.k === 0 && sink.helmetSink === 0 && sink.drop === 0;
 
 /** Render clock of the last crouch press / release, kept per blob by the renderer. */
 export interface CrouchClock {
@@ -121,13 +127,12 @@ function exitSink(t: number, c: CrouchTunables, from: CrouchSink): CrouchSink {
   };
 }
 
-const mixSink = (a: CrouchSink, b: CrouchSink, t: number): CrouchSink => ({
-  k: lerp(a.k, b.k, t),
-  helmetSink: lerp(a.helmetSink, b.helmetSink, t),
-  drop: lerp(a.drop, b.drop, t),
-  bulge: lerp(a.bulge, b.bulge, t),
-  feetScale: lerp(a.feetScale, b.feetScale, t),
-});
+const SINK_KEYS = Object.keys(STANDING_SINK) as (keyof CrouchSink)[];
+
+const mixSink = (a: CrouchSink, b: CrouchSink, t: number): CrouchSink =>
+  Object.fromEntries(
+    SINK_KEYS.map((key) => [key, lerp(a[key], b[key], t)])
+  ) as unknown as CrouchSink;
 
 /** Sinking in; a press during the stand-up eases from that pose instead of snapping. */
 function pressedSink(t: number, c: CrouchTunables, from: CrouchSink): CrouchSink {
@@ -152,7 +157,7 @@ export function noteCrouch(
   const { player, crouch, nowMs } = frame;
   if (player.crouching === clock.crouching) return;
   const now = crouchSink(clock, crouch, nowMs);
-  clock.from = now.k > 0 || now.helmetSink !== 0 ? now : STANDING_SINK;
+  clock.from = isStanding(now) ? STANDING_SINK : now;
   if (player.crouching) {
     clock.pressMs = nowMs;
     clock.releaseMs = null;
@@ -180,7 +185,12 @@ const GROUND_SPREAD = 0.9;
 const cubicAt = ([a, b, c, d]: readonly [number, number, number, number], t: number): number =>
   (1 - t) ** 3 * a + 3 * t * (1 - t) ** 2 * b + 3 * t * t * (1 - t) * c + t ** 3 * d;
 
-function eggPoints(r: number): ShapePoint[] {
+const eggCache = new Map<number, readonly ShapePoint[]>();
+
+/** The egg outline sampled once per body size (it only depends on r). */
+function eggPoints(r: number): readonly ShapePoint[] {
+  const cached = eggCache.get(r);
+  if (cached) return cached;
   const points: ShapePoint[] = [];
   for (const [p0, p1, p2, p3] of eggSegments(r)) {
     for (let i = 0; i < SAMPLES_PER_CURVE; i += 1) {
@@ -191,6 +201,7 @@ function eggPoints(r: number): ShapePoint[] {
       ]);
     }
   }
+  eggCache.set(r, points);
   return points;
 }
 
@@ -267,10 +278,13 @@ function bisect(test: (value: number) => boolean, range: { lo: number; hi: numbe
   return lo;
 }
 
-function solveStep(m: BlobMetrics, sinkUnits: number, areaKeep: number) {
+function solveStep(
+  m: BlobMetrics,
+  step: { sinkUnits: number; areaKeep: number; standing: number }
+) {
+  const { sinkUnits, areaKeep, standing } = step;
   const rimY = m.helmet.rim + sinkUnits * m.u;
   const sink = sinkUnits * m.u;
-  const standing = outlineArea(eggPoints(m.r));
   const fitsAt = (topScale: number): boolean =>
     fitsHelmet(shapedBody(m, { topScale, bulge: 0, rimY }), m, sink);
   const topScale = fitsAt(1) ? 1 : bisect(fitsAt, { lo: 0.1, hi: 1 });
@@ -287,14 +301,20 @@ function crouchFit(m: BlobMetrics, crouch: CrouchTunables): CrouchFit {
   const cached = fitCache.get(key);
   if (cached) return cached;
   const fit: CrouchFit = { topScale: [], bulge: [] };
+  const standing = outlineArea(eggPoints(m.r));
   for (let i = 0; i * TABLE_STEP <= deepest; i += 1) {
-    const step = solveStep(m, i * TABLE_STEP, crouch.areaKeep);
+    const step = solveStep(m, { sinkUnits: i * TABLE_STEP, areaKeep: crouch.areaKeep, standing });
     fit.topScale.push(step.topScale);
     fit.bulge.push(step.bulge);
   }
   fitCache.set(key, fit);
   return fit;
 }
+
+/** Solves the crouch tables for this body size ahead of the first crouch (no stutter then). */
+export const warmCrouchFit = (m: BlobMetrics, crouch: CrouchTunables): void => {
+  crouchFit(m, crouch);
+};
 
 /** Table value at `sinkUnits`, taking the safer neighbour (`pick` = Math.min or Math.max). */
 function tableAt(
@@ -309,7 +329,8 @@ function tableAt(
 /** Presses the outline's bottom onto the ground line, spreading the jelly over it. */
 function pressOnGround(points: ShapePoint[], m: BlobMetrics): ShapePoint[] {
   const ground = m.bodyLift;
-  const deepest = Math.max(...points.map(([, y]) => y));
+  let deepest = -Infinity;
+  for (const [, y] of points) deepest = Math.max(deepest, y);
   const press = deepest - ground;
   if (press <= 0) return points;
   const zone = 3 * press;
@@ -321,9 +342,6 @@ function pressOnGround(points: ShapePoint[], m: BlobMetrics): ShapePoint[] {
         : [x, y]
   );
 }
-
-const isStanding = (sink: CrouchSink): boolean =>
-  sink.k === 0 && sink.helmetSink === 0 && sink.drop === 0;
 
 /** The crouched body outline in torso space, or null while standing (draw the plain egg). */
 export function crouchOutline(
@@ -349,24 +367,15 @@ export function crouchOutline(
 export const crouchHelmetDrop = (m: BlobMetrics, sink: CrouchSink): number =>
   (sink.helmetSink + sink.drop) * m.u;
 
+/** The helmet's rim line this frame (torso space). */
+export const crouchRimY = (m: BlobMetrics, sink: CrouchSink): number =>
+  m.helmet.rim + crouchHelmetDrop(m, sink);
+
 /** Eye centre height (torso space, before the aim offset): the rim covers the top half when sunk. */
 export const crouchEyeY = (m: BlobMetrics, sink: CrouchSink): number =>
-  m.helmet.rim + crouchHelmetDrop(m, sink) + lerp(9, 3, sink.k) * m.u;
+  crouchRimY(m, sink) + lerp(9, 3, sink.k) * m.u;
 
 export const eyesUnderHelmet = (sink: CrouchSink): boolean => sink.k > EYES_UNDER_AT;
-
-export interface GlossSpot {
-  x: number;
-  y: number;
-  rotation: number;
-}
-
-/** The body gloss standing: upper left, tilted 18° (`drawBodyGloss`). */
-export const standingGloss = (m: BlobMetrics): GlossSpot => ({
-  x: -0.4 * m.r,
-  y: 0.08 * m.r,
-  rotation: (18 * Math.PI) / 180,
-});
 
 /**
  * The body gloss while crouched (owner, crouch-sink D3): it slides onto the bulge's upper-left
@@ -377,10 +386,10 @@ export function crouchGloss(
   m: BlobMetrics,
   frame: { sink: CrouchSink; outline: readonly ShapePoint[] | null }
 ): GlossSpot {
-  const standing = standingGloss(m);
+  const standing = bodyGlossSpot(m);
   const { sink, outline } = frame;
   if (!outline || sink.k <= 0) return standing;
-  const targetY = m.helmet.rim + crouchHelmetDrop(m, sink) + 8 * m.u;
+  const targetY = crouchRimY(m, sink) + 8 * m.u;
   let best = 0;
   outline.forEach(([x, y], i) => {
     if (x < 0 && Math.abs(y - targetY) < Math.abs(outline[best]![1] - targetY)) best = i;

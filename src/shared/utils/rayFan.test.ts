@@ -57,29 +57,23 @@ describe("ray fan over placed fields (mover-materials D4)", () => {
 
 describe("ray fan bodies (crouch-sink D4)", () => {
   const empty = (): PosedField[] => [{ field: field(100, 50, () => false) }];
-  const body = (crouching: boolean) => ({
-    x: 200,
-    y: 150,
-    width: 28,
-    height: 28,
-    crouching,
-    crouchHeight: 16.8,
-  });
-  const hits = (b: ReturnType<typeof body>, originY: number): boolean =>
+  const body = { x: 200, y: 150, width: 28, height: 28 };
+  const hits = (originY: number, hitHeight?: number): boolean =>
     castRayFan({
       fields: empty(),
-      bodies: [b],
+      bodies: [body],
+      hitHeight: hitHeight === undefined ? undefined : () => hitHeight,
       origin: { x: 100, y: originY },
       aim: { x: 1, y: 0 },
       shape: { length: 200, halfAngleDegrees: 0, rays: 1 },
-    }).bodies.has(b);
+    }).bodies.has(body);
 
-  it("should hit a standing body high up and miss it crouched when the ray passes above the crouch", () => {
-    expect(hits(body(false), 150 - 22)).toBe(true);
-    expect(hits(body(true), 150 - 22)).toBe(false);
+  it("should hit a body high up and miss it when its hit height is lowered below the ray", () => {
+    expect(hits(150 - 22)).toBe(true);
+    expect(hits(150 - 22, 16.8)).toBe(false);
   });
 
-  it("should still hit a crouched body low down when the ray runs along its lower half", () => {
-    expect(hits(body(true), 150 - 6)).toBe(true);
+  it("should still hit a lowered body when the ray runs along its lower half", () => {
+    expect(hits(150 - 6, 16.8)).toBe(true);
   });
 });
