@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { buildLevelPrompt } from "@/features/level-kit/services/levelPrompt";
 import {
   brakeSlide,
-  diveHitPush,
   freezePatchRadius,
   iceGrip,
   liftJumpApex,
@@ -10,6 +9,7 @@ import {
   rollSlopeSpeed,
 } from "@/features/level-kit/services/levelPromptAbilities";
 import { DEFAULT_GAME_TUNABLES as T } from "@/shared/config/gameTunables";
+import { directHitPush } from "@/shared/utils/blastPower";
 import { MOTION_LIMITS } from "@/shared/utils/levelMotion";
 
 const n = (value: number): string => `\`${value}\``;
@@ -29,7 +29,7 @@ describe("level prompt ability numbers", () => {
       n(T.roll.jumpCarryMax),
       n(T.roll.sweepTurnsPerSecond),
       n(T.dive.rollCarryMax),
-      n(Math.round(diveHitPush(T))),
+      n(Math.round(directHitPush(T))),
       n(iceGrip()),
       n(freezeRay.length),
       `±${freezeRay.halfAngleDegrees}°`,

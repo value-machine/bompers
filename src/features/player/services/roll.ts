@@ -93,23 +93,19 @@ export function resetRoll(player: PlayerState): void {
 export interface HitReactionArgs {
   /** Velocity change the hit gave the player (already applied by the attack), units / s. */
   impulse: Vec2;
-  /** A hit in the back: at least `roll.hardLockSeconds` out of control, whatever the impulse. */
-  hard?: boolean;
 }
 
 /**
  * The one call for attacks: rolls the player as hard as the hit pushed it. An impulse of 0
- * (and not `hard`) changes nothing. Returns whether the player is rolling from this hit.
+ * changes nothing. Returns whether the player is rolling from this hit.
  */
 export function reactToHit(
   player: PlayerState,
   hit: HitReactionArgs,
   tunables: GameTunables
 ): boolean {
-  const hard = hit.hard === true;
-  if (!hard && Math.hypot(hit.impulse.x, hit.impulse.y) <= 0) return false;
-  const minLockSeconds = hard ? tunables.roll.hardLockSeconds : 0;
-  startRoll(player, { source: "hit", impulse: hit.impulse, minLockSeconds }, tunables);
+  if (Math.hypot(hit.impulse.x, hit.impulse.y) <= 0) return false;
+  startRoll(player, { source: "hit", impulse: hit.impulse }, tunables);
   return true;
 }
 

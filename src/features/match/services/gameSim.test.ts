@@ -8,6 +8,7 @@ import { applyHit } from "@/features/combat/api/combatApi";
 import { catchFire } from "@/features/blob-fire/api/blobFireApi";
 import { chillBlob, isFrozen, isIced } from "@/features/ice/api/iceApi";
 import { parseLevelFile } from "@/features/level-file/api/levelFileApi";
+import { hurtHeight } from "@/features/player/api/playerApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
 
 const level: LevelDefinition = {
@@ -205,7 +206,7 @@ describe("gameSim — dive headbutt", () => {
       DEFAULT_GAME_TUNABLES.combat.maxHealth - DEFAULT_GAME_TUNABLES.combat.hitDamage.contact.back
     );
     expect(hits[0]!.impulse.x).toBeGreaterThan(0);
-    // Knocked a couple of blob widths away (dive-push lap: `dive.hitPushScale`).
+    // Knocked away like a direct rocket hit (bash-matches-rocket lap).
     expect(victimFarthestX).toBeGreaterThan(360 + 2 * DEFAULT_GAME_TUNABLES.player.width);
   });
 
@@ -844,13 +845,13 @@ describe("level routes — Bobsled Run needs the roll", () => {
 });
 
 /**
- * Dive knockback on the shipped levels (owner, dive-push lap: a headbutt hit flung blobs off the
- * map). A blob stands on each spawn; player 1 headbutts it from 70 units on the level's middle
- * side, so the hit pushes it toward the near edge.
+ * Headbutt vs direct rocket on the shipped levels (owner, bash-matches-rocket lap: a direct bash
+ * pushes exactly like a direct rocket hit). A blob stands on each spawn and is hit from the level's
+ * middle side, pushing it toward the near edge: by a headbutt from 70 units, or by a rocket flying
+ * level into its middle. Player 1 is the attacker (parked in a corner for the rocket).
  */
 type KnockGame = ReturnType<typeof createGameState>;
 const SHIPPED_LEVELS = readdirSync("public/levels").map(loadLevel);
-const BLOB_WIDTH = DEFAULT_GAME_TUNABLES.player.width;
 /** Fire held this long starts the dive (a grounded headbutt: wind-up, then travel). */
 const DIVE_HOLD_STEPS = 30;
 
@@ -886,63 +887,69 @@ const victimEliminatedBy = (game: KnockGame): string | null => {
   return event?.type === "playerEliminated" ? event.cause : null;
 };
 
-/** Furthest the victim got sideways in 3.5 s after one headbutt, or null when it left the map. */
-function carryOfOneHeadbutt(game: KnockGame): number | null {
-  const side = edgeSide(game);
+/** Furthest the victim got sideways in 3.5 s, or null when it left the map. */
+function carryAfter(game: KnockGame, attack: (step: number) => void): number | null {
   const startX = game.players[1]!.x;
-  lineUpHeadbutt(game, side);
   let carry = 0;
   for (let i = 0; i < 3.5 / dt; i += 1) {
-    stepGame(game, i < DIVE_HOLD_STEPS ? headbuttKeys(side) : keys(), dt);
+    attack(i);
     if (victimEliminatedBy(game)) return null;
     carry = Math.max(carry, Math.abs(game.players[1]!.x - startX));
   }
   return carry;
 }
 
-/** A headbutt every 0.8 s from the middle side until the victim is eliminated (16 s at most). */
-function headbuttUntilEliminated(game: KnockGame): string | null {
+function carryOfOneHeadbutt(game: KnockGame): number | null {
   const side = edgeSide(game);
-  const period = Math.round(0.8 / dt);
-  for (let i = 0; i < 16 / dt; i += 1) {
-    if (i % period === 0) lineUpHeadbutt(game, side);
-    stepGame(game, i % period < DIVE_HOLD_STEPS ? headbuttKeys(side) : keys(), dt);
-    const cause = victimEliminatedBy(game);
-    if (cause) return cause;
-  }
-  return null;
+  lineUpHeadbutt(game, side);
+  return carryAfter(game, (i) =>
+    stepGame(game, i < DIVE_HOLD_STEPS ? headbuttKeys(side) : keys(), dt)
+  );
+}
+
+/** A rocket from player 1 flying level into the victim's middle, 40 units out. */
+function carryOfOneDirectRocket(game: KnockGame): number | null {
+  const side = edgeSide(game);
+  const victim = game.players[1]!;
+  game.combat.rockets.push({
+    id: game.combat.nextEntityId++,
+    kind: "rocket",
+    targetId: null,
+    ownerSlot: 0,
+    ownerId: "p0",
+    x: victim.x - side * 40,
+    y: victim.y - hurtHeight(victim) / 2,
+    dirX: side,
+    dirY: 0,
+    age: 0,
+  });
+  const { bounds } = game.arena.level;
+  return carryAfter(game, () => {
+    Object.assign(game.players[0]!, { x: bounds.x + 10, y: bounds.y + 10, vx: 0, vy: 0 });
+    stepGame(game, keys(), dt);
+  });
 }
 
 const everySpawn = (): { level: LevelDefinition; index: number }[] =>
   SHIPPED_LEVELS.flatMap((level) => level.spawns.map((_, index) => ({ level, index })));
 
-describe("gameSim — dive knockback on the shipped levels (dive-push lap)", () => {
-  it("should shove a standing blob a couple of blob widths, never off the map, when a headbutt hits it", () => {
-    const carries: number[] = [];
-    let offMap = 0;
-    for (const { level, index } of everySpawn()) {
-      const game = standOnSpawn(level, index);
-      if (!game) continue;
-      const carry = carryOfOneHeadbutt(game);
-      if (carry === null) offMap += 1;
-      else carries.push(carry);
-    }
-    const average = carries.reduce((sum, c) => sum + c, 0) / carries.length;
-    // Before (hitPushScale 1): ≈ 860 units (43 % of a level width), 19 of 28 spawns off the map.
-    expect(offMap).toBe(0);
-    expect(average).toBeGreaterThan(BLOB_WIDTH * 1.5);
-    expect(average).toBeLessThan(BLOB_WIDTH * 3.5);
-  });
-
-  it("should eliminate most blobs by damage, not by flying off, when repeated headbutts push them toward the edge", () => {
-    const causes = everySpawn()
-      .map(({ level, index }) => standOnSpawn(level, index))
-      .filter((game): game is KnockGame => game !== null)
-      .map(headbuttUntilEliminated);
-    const byDamage = causes.filter((cause) => cause === "dive").length;
-    // Before: 8 of 28 by damage, the other 20 off the map, 19 of them after the first hit.
-    expect(byDamage).toBeGreaterThan(causes.length * 0.7);
-    // A blob near a drop can still be knocked off.
-    expect(causes).toContain("out-of-bounds");
+describe("gameSim — headbutt vs direct rocket on the shipped levels (bash-matches-rocket lap)", () => {
+  it("should push a standing blob as far as a direct rocket hit does when a headbutt hits it", () => {
+    const outcomes = everySpawn().flatMap(({ level, index }) => {
+      const bashed = standOnSpawn(level, index);
+      const shot = standOnSpawn(level, index);
+      if (!bashed || !shot) return [];
+      return [{ bash: carryOfOneHeadbutt(bashed), rocket: carryOfOneDirectRocket(shot) }];
+    });
+    const offMap = (pick: "bash" | "rocket"): number =>
+      outcomes.filter((o) => o[pick] === null).length;
+    const onMap = outcomes.filter((o) => o.bash !== null && o.rocket !== null);
+    const average = (pick: "bash" | "rocket"): number =>
+      onMap.reduce((sum, o) => sum + (o[pick] ?? 0), 0) / onMap.length;
+    // Same spawns off the map, same slide (before: the bash ≈ 65 units at dive.hitPushScale 0.2).
+    expect(outcomes.map((o) => o.bash === null)).toEqual(outcomes.map((o) => o.rocket === null));
+    expect(offMap("bash")).toBe(offMap("rocket"));
+    expect(average("bash")).toBeGreaterThan(average("rocket") * 0.95);
+    expect(average("bash")).toBeLessThan(average("rocket") * 1.05);
   });
 });

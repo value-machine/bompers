@@ -4,7 +4,7 @@ import { clearCraterOnBodies, type ClearedBodies } from "@/features/arena/api/ar
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import { hurtBox, reactToHit, type PlayerState } from "@/features/player/api/playerApi";
 import { bodyCenter, distanceToRect, unitBetween } from "@/features/combat/services/combatGeometry";
-import { blastPushAt, blastReach, craterReach } from "@/shared/utils/blastPower";
+import { blastHitPushAt, blastPushAt, blastReach, craterReach } from "@/shared/utils/blastPower";
 import {
   applyHit,
   emitCombatEvent,
@@ -46,10 +46,12 @@ interface BlastPush {
  */
 function pushPlayer(ctx: CombatContext, player: PlayerState, blast: Blast): BlastPush | null {
   const distance = distanceToRect(blast.at, hurtBox(player));
-  // Everyone but the shooter takes the hit push (`hitPushScale`); the shooter keeps the full push,
-  // so rocket jumps stay as tuned (jumps-and-recoil D1).
-  const scale = player.id === blast.ownerId ? 1 : ctx.tunables.combat.blast.hitPushScale;
-  const strength = blastPushAt(ctx.tunables, blast.power, distance) * scale;
+  // Everyone but the shooter takes the hit push; the shooter keeps the full push, so rocket jumps
+  // stay as tuned (jumps-and-recoil D1).
+  const strength =
+    player.id === blast.ownerId
+      ? blastPushAt(ctx.tunables, blast.power, distance)
+      : blastHitPushAt(ctx.tunables, blast.power, distance);
   if (strength <= 0) return null;
   const direction = unitBetween(blast.at, bodyCenter(player), UP);
   const push = { x: direction.x * strength, y: direction.y * strength };

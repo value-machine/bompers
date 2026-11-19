@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES, type GameTunables } from "@/shared/config/gameTunables";
+import { directHitPush } from "@/shared/utils/blastPower";
 import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import type { PlayerInput } from "@/shared/types/gameInput.types";
 import type { Rect } from "@/shared/types/gameGeometry.types";
@@ -328,12 +329,14 @@ describe("stepDives hits", () => {
     expect(sim.phaseOf(attacker)).toBe("windup");
   });
 
-  it("should pop the victim up and stagger its steering when it is hit", () => {
+  it("should push the victim away like a direct rocket hit and stagger its steering when it is hit", () => {
     const sim = createSim([100, 150]);
     const victim = sim.players[1]!;
     sim.step([RIGHT]);
     while (sim.hits.length === 0) sim.step();
-    expect(victim.vy).toBeLessThanOrEqual(-D.strikeLift * D.hitPushScale + 1);
+    // Level with the attacker: straight along the hit, as fast as a rocket exploding on it.
+    expect(victim.vx).toBeCloseTo(directHitPush(T), 0);
+    expect(victim.vy).toBeCloseTo(0, 0);
     expect(victim.steerScale).toBe(D.staggerSteerScale);
     sim.step([], frames(D.staggerSeconds) + 1);
     expect(victim.steerScale).toBe(1);
@@ -428,17 +431,6 @@ describe("stepDives hurt reaction", () => {
     expect(victim.rollLockSeconds).toBeCloseTo(rollLockFor(impulse, T.roll), 5);
     sim.step([{}, { fire: true, aimX: -1 }], 2);
     expect(sim.phaseOf(victim)).toBe("idle");
-  });
-
-  it("should roll the victim at least the hard lock on any back hit", () => {
-    const soft: GameTunables = { ...T, roll: { ...T.roll, lockPerImpulse: 0 } };
-    const sim = createSim([100, 150], soft);
-    const victim = sim.players[1]!;
-    victim.facing = 1;
-    sim.step([RIGHT]);
-    while (sim.hits.length === 0) sim.step();
-    expect(sim.hits[0]!.zone).toBe("back");
-    expect(victim.rollLockSeconds).toBeGreaterThan(T.roll.hardLockSeconds - 2 * dt);
   });
 
   it("should never bounce the attacker off terrain when it misses and lets go of fire", () => {

@@ -22,6 +22,24 @@ export function blastPushAt(tunables: GameTunables, power: number, distance: num
   return power * pushPerPower * Math.max(minFalloff, 1 - distance / reach);
 }
 
+/**
+ * Push a blast gives a player it hits (not the shooter, whose rocket jump keeps the full push):
+ * `combat.blast.hitPushScale` of the push at that distance.
+ */
+export function blastHitPushAt(tunables: GameTunables, power: number, distance: number): number {
+  return blastPushAt(tunables, power, distance) * tunables.combat.blast.hitPushScale;
+}
+
+/**
+ * The direct-hit push: a rocket exploding on the victim, which it does on touching within its
+ * `radius` of the body. Every direct hit pushes this hard (owner, bash-matches-rocket lap): a
+ * headbutt that lands reads it too, so the two stay one number.
+ */
+export function directHitPush(tunables: GameTunables): number {
+  const { rocket } = tunables.combat;
+  return blastHitPushAt(tunables, rocket.power, rocket.radius);
+}
+
 /** Crater reach at toughness 1, world units; a material's cut is this ÷ its toughness. */
 export function craterReach(tunables: GameTunables, power: number): number {
   return Math.max(0, power) * tunables.combat.blast.craterPerPower;

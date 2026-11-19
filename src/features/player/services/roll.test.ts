@@ -139,12 +139,6 @@ describe("reactToHit strength", () => {
     expect(shove).toBeGreaterThan(0);
     expect(blast).toBeGreaterThan(shove * 2);
   });
-
-  it("should lock a back hit at least the hard lock when its impulse is small", () => {
-    const { player } = createSim({ x: 100, y: FLOOR_Y });
-    reactToHit(player, { impulse: { x: 10, y: 0 }, hard: true }, T);
-    expect(player.rollLockSeconds).toBeGreaterThanOrEqual(ROLL.hardLockSeconds);
-  });
 });
 
 describe("roll bounces", () => {
