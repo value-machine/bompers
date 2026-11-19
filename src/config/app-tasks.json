@@ -1,5 +1,15 @@
 [
   {
+    "title": "Show the saved mute state on screen",
+    "description": "The M key mutes all audio and the mute is saved in localStorage, but nothing on screen shows it. Likely cause of the owner's \"audio broke on production\" scare (fixed by clearing site data; preview origins had no saved mute). Show a visible muted indicator (lobby + match) and an easy way to unmute; consider not persisting mute, or persisting with the indicator. Size XS/S.",
+    "status": "to-do"
+  },
+  {
+    "title": "Unlock audio on gamepad input",
+    "description": "The AudioContext only resumes on keydown or pointerdown, so a player who only uses a gamepad hears nothing. Resume it on the first gamepad button press too. Size XS.",
+    "status": "to-do"
+  },
+  {
     "title": "Ice lap 4: look polish",
     "description": "Ice element follow-up, optional: polish the frozen ground look after the owner has played it. The ray look was settled in #63 (owner pick D9, cold breath). Size S.",
     "status": "to-do"
