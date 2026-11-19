@@ -43,5 +43,20 @@
     "title": "Parked: once-per-game multi-colour ink spike (weekend)",
     "description": "Owner, on main after #106: once per game, stretched spikes to off-screen in yellow/green and magenta/purple at the same time; NO [debugInk] outline log, so outline ring data is clean. Multi-layer colours in one shape point at Pixi 8.23 shared batcher (an index pointing at another element's vertices for a frame). Ruled out by reading: Uint16->Uint32 index type swap, attribute buffer resize, unbatched whole-terrain ink. Open: (a) Uint16 index values overflowing when batched vertices exceed 65535; (b) stale attribute/index offsets on a batched element whose context changed without an instruction rebuild. Next step (weekend, owner parked it): headless real-match repro on bonfire-bridge + piston-works with a WebGL drawElements hook that flags mixed-colour triangles and dumps batcher state; ~2-4 h agent time. Unproven mitigation (patch on top, owner call): Batcher.defaultOptions.indicesInitialSize > 65535.",
     "status": "to-do"
+  },
+  {
+    "title": "Split blob drawing into its own feature",
+    "description": "Follow-up from #109 (crouch sink, owner D7): move blob drawing (blobPose, blobShapes, crouchPose, playerRenderer) out of the player feature into its own feature and drop the player file-budget waiver. Size S/M.",
+    "status": "to-do"
+  },
+  {
+    "title": "Sky-drop pickups use the crouched hurt box",
+    "description": "Follow-up from #109: sky-drop pickup hits still use the standing body; make them read the hurt box (0.6 height when crouched). Size XS.",
+    "status": "to-do"
+  },
+  {
+    "title": "blob-fire bodyCenter follows the hurt box",
+    "description": "Follow-up from #109: blob-fire keeps a private bodyCenter; derive it from the shared hurt box so burning a crouched blob centres right. Size XS.",
+    "status": "to-do"
   }
 ]
