@@ -227,7 +227,8 @@ export function moverPieceIndices(level: LevelDefinition): Set<number> {
   return new Set((level.movers ?? []).flatMap((mover) => mover.terrainIndices));
 }
 
-const shiftShape = (shape: TerrainShape, by: Vec2): TerrainShape => {
+/** A shape moved so that `by` becomes its origin (a part's pieces in the part's own grid). */
+export const shiftShape = (shape: TerrainShape, by: Vec2): TerrainShape => {
   if (shape.type === "rect") return { ...shape, x: shape.x - by.x, y: shape.y - by.y };
   if (shape.type === "circle") return { ...shape, cx: shape.cx - by.x, cy: shape.cy - by.y };
   return { type: "polygon", points: shape.points.map((p) => ({ x: p.x - by.x, y: p.y - by.y })) };

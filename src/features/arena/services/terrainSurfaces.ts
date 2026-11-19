@@ -5,24 +5,25 @@ import { DESIGN_SCALE } from "@/shared/utils/outlineWidth";
 import type { MaterialSurface } from "@/shared/types/terrainSurface.types";
 import type { TerrainShape } from "@/features/level/api/levelApi";
 import { EMPTY_CELL, type TerrainGrid } from "@/features/arena/types/arena.types";
-import { fieldBand, isBreakableSlot } from "@/features/arena/services/terrainGrid";
+import { fieldBand } from "@/features/arena/services/terrainGrid";
 
 /**
- * Terrain slab drawing shared by every material (DESIGN_LANGUAGE § 2): one rounded slab with a
- * lighter lip on top, in the piece's colour swatch. Ice gets gloss streaks and a white inner rim;
- * breakable pieces are plain slabs like stone (owner, terrain-curves D5). The outline and the
- * clip of breakable fills both come from one rule: the contour of the terrain distance field
+ * Terrain slab drawing shared by every material (DESIGN_LANGUAGE § 2): each colour's fill is the
+ * terrain's own shape, so touching slabs of one colour are one wall (outline-system D6), with a
+ * lighter lip as a band along every edge that faces up into the air (D7). Ice gets gloss streaks
+ * and a white inner rim; breakable pieces are plain slabs like stone (owner, terrain-curves D5).
+ * Outline, fills and lips all come from one rule: the contour of the terrain distance field
  * (terrain-curves D8).
  */
 export interface SlabPiece {
+  /** The piece's shape in its body's own grid coordinates. */
   shape: TerrainShape;
   swatch: TerrainSwatch;
   surface: MaterialSurface;
 }
 
 /** Mockup numbers at the reference blob, scaled to the game (visual-pass D1). */
-const SLAB = { radius: 14 * DESIGN_SCALE, lipInset: 6 * DESIGN_SCALE, lipTop: 4 * DESIGN_SCALE };
-const LIP_HEIGHT = 9 * DESIGN_SCALE;
+const SLAB = { radius: 14 * DESIGN_SCALE };
 
 /** Rect slabs' corner radius; the terrain field is seeded with it so its contour is the slab. */
 export const SLAB_CORNER_RADIUS = SLAB.radius;
@@ -33,7 +34,7 @@ const STREAKS = [
   { fx: 0.2, fy: 0.3, len: 0.3 },
 ] as const;
 
-export function slabPath(g: Graphics, shape: TerrainShape): Graphics {
+function slabPath(g: Graphics, shape: TerrainShape): Graphics {
   if (shape.type === "rect") {
     const radius = Math.min(SLAB.radius, shape.w / 2, shape.h / 2);
     return g.roundRect(shape.x, shape.y, shape.w, shape.h, radius);
@@ -78,20 +79,9 @@ function drawIceGloss(g: Graphics, shape: TerrainShape): void {
   });
 }
 
-/** Fills, then the lip along the top of rect slabs tall enough to carry one, then ice cues. */
-export function drawSlabFill(g: Graphics, pieces: readonly SlabPiece[]): void {
+/** The ice cues of every ice piece (gloss streaks, white inner rim), drawn over the fills. */
+export function drawSlabDetails(g: Graphics, pieces: readonly SlabPiece[]): void {
   g.clear();
-  for (const { shape, swatch } of pieces) slabPath(g, shape).fill(swatch.fill);
-  for (const { shape, swatch } of pieces) {
-    if (shape.type !== "rect" || shape.h < LIP_HEIGHT * 2) continue;
-    g.roundRect(
-      shape.x + SLAB.lipInset,
-      shape.y + SLAB.lipTop,
-      shape.w - SLAB.lipInset * 2,
-      LIP_HEIGHT,
-      LIP_HEIGHT / 2
-    ).fill(swatch.lip);
-  }
   for (const { shape, surface } of pieces) if (surface === "ice") drawIceGloss(g, shape);
 }
 
@@ -143,13 +133,72 @@ const sampleIndex = (grid: TerrainGrid, cx: number, cy: number): number =>
 const isSolidSample = (grid: TerrainGrid, index: number): boolean =>
   (grid.cells[index] ?? EMPTY_CELL) !== EMPTY_CELL;
 
-/** The breakable terrain as a region: every sample but the unbreakable solid ones. */
-export function breakableRegion(grid: TerrainGrid): SampleRegion {
+/**
+ * The terrain of slot `slot` and every later slot as a region (outline-system D6). Fills are
+ * painted slot by slot, each over the earlier ones: the first is the whole terrain, so its edge
+ * is the outline's own and no gap can open where two colours meet at the terrain's edge; a later
+ * slot ends where it meets an earlier one, on the line between their samples.
+ */
+export function slotLayerRegion(grid: TerrainGrid, slot: number, box?: SampleBox): SampleRegion {
   const band = fieldBand(grid);
   return {
-    value: (index) =>
-      isSolidSample(grid, index) && !isBreakableSlot(grid.slots[grid.cells[index]!]) ? -band : band,
+    box,
+    value: (index) => {
+      const at = grid.cells[index] ?? EMPTY_CELL;
+      return at !== EMPTY_CELL && at < slot ? -(grid.distance[index] ?? band) : band;
+    },
   };
+}
+
+/**
+ * A region without its lip (outline-system D7, owner pick "band along the edge"): the part whose
+ * sample above is terrain too. Drawn over the whole region, it leaves a band one sample high
+ * along every edge that faces up into the air: slab tops with their rounded corners, crater rims
+ * and burnt edges alike, and none where another shape sits on top. Second copy of the idea:
+ * `features/ice/services/iceRenderer.ts` `underLip` cuts frost's lip against the frost itself.
+ */
+export function belowLipRegion(grid: TerrainGrid, region: SampleRegion): SampleRegion {
+  const band = fieldBand(grid);
+  return {
+    box: region.box,
+    value: (index) => {
+      const above = index - grid.widthCells;
+      return Math.min(region.value(index), above < 0 ? -band : (grid.distance[above] ?? -band));
+    },
+  };
+}
+
+/** The box of samples each slot's layer covers (the slot and every later one), by slot index. */
+export function slotLayerBoxes(grid: TerrainGrid): Map<number, SampleBox> {
+  const own = new Map<number, SampleBox>();
+  grid.cells.forEach((slot, index) => {
+    if (slot === EMPTY_CELL) return;
+    const cx = index % grid.widthCells;
+    const cy = Math.floor(index / grid.widthCells);
+    const box = own.get(slot) ?? { minX: cx, minY: cy, maxX: cx, maxY: cy };
+    own.set(slot, {
+      minX: Math.min(box.minX, cx),
+      minY: Math.min(box.minY, cy),
+      maxX: Math.max(box.maxX, cx),
+      maxY: Math.max(box.maxY, cy),
+    });
+  });
+  const layers = new Map<number, SampleBox>();
+  let cover: SampleBox | null = null;
+  for (const slot of [...own.keys()].sort((a, b) => b - a)) {
+    const box: SampleBox = own.get(slot)!;
+    cover = cover
+      ? {
+          minX: Math.min(cover.minX, box.minX),
+          minY: Math.min(cover.minY, box.minY),
+          maxX: Math.max(cover.maxX, box.maxX),
+          maxY: Math.max(cover.maxY, box.maxY),
+        }
+      : box;
+    layers.set(slot, cover);
+  }
+  // Painted in slot order: the first layer is the whole terrain.
+  return new Map([...layers].sort((a, b) => a[0] - b[0]));
 }
 
 /**
