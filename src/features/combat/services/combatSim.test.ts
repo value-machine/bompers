@@ -11,6 +11,7 @@ import {
   stepPlayers,
   weaponAim,
   type PlayerState,
+  hurtCenter,
 } from "@/features/player/api/playerApi";
 import { stepCombat } from "@/features/combat/services/combatSim";
 import {
@@ -21,7 +22,7 @@ import {
   type CombatContext,
 } from "@/features/combat/services/combatState";
 import { explode, type Blast } from "@/features/combat/services/explosions";
-import { bodyCenter, helmetPoint } from "@/features/combat/services/combatGeometry";
+import { helmetPoint } from "@/features/combat/services/combatGeometry";
 import { stepAttacks } from "@/features/combat/services/attacks";
 import { takeWeaponPickups } from "@/features/combat/services/weapons";
 import type { CombatEvent, CombatState } from "@/features/combat/types/combat.types";
@@ -256,11 +257,11 @@ describe("combat — crouched targets (crouch-sink D4)", () => {
     const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
     const player = world.players[0]!;
     const standingHelmet = helmetPoint(player);
-    const standingCentre = bodyCenter(player);
+    const standingCentre = hurtCenter(player);
     player.crouching = true;
     const sunk = player.height - player.crouchHeight;
     expect(helmetPoint(player).y).toBeCloseTo(standingHelmet.y + sunk, 6);
-    expect(bodyCenter(player).y).toBeCloseTo(standingCentre.y + sunk / 2, 6);
+    expect(hurtCenter(player).y).toBeCloseTo(standingCentre.y + sunk / 2, 6);
   });
 
   it("should fly over a crouched blob that the same shot hits standing (crouch-sink D4)", () => {

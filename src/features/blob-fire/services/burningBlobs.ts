@@ -8,7 +8,7 @@ import {
   terrainBodies,
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
-import type { BodyContact, PlayerState } from "@/features/player/api/playerApi";
+import { hurtCenter, type BodyContact, type PlayerState } from "@/features/player/api/playerApi";
 import type { FireState } from "@/features/fire/api/fireApi";
 import type { BlobFireMoment, BlobFireState } from "@/features/blob-fire/types/blobFire.types";
 
@@ -23,11 +23,6 @@ import type { BlobFireMoment, BlobFireState } from "@/features/blob-fire/types/b
  * catch for `fire.blob.graceSeconds`, so a bump never passes the fire straight back.
  * Control is unchanged while burning; only with no move input does `panicInputs` run it away.
  */
-
-const bodyCenter = (player: PlayerState): Vec2 => ({
-  x: player.x,
-  y: player.y - player.height / 2,
-});
 
 /** Fresh state: nothing burns. */
 export const createBlobFireState = (): BlobFireState => ({
@@ -67,7 +62,7 @@ export function catchFire(
   addMoment(blobFire, {
     kind: "caught",
     slot: player.slot,
-    at: bodyCenter(player),
+    at: hurtCenter(player),
     atSeconds: args.now,
   });
   return true;
@@ -90,7 +85,7 @@ function putOut(blobFire: BlobFireState, player: PlayerState, how: PutOut): void
   const moment: BlobFireMoment = {
     kind: how.kind,
     slot: player.slot,
-    at: bodyCenter(player),
+    at: hurtCenter(player),
     atSeconds: how.now,
   };
   if (how.to) moment.to = how.to;
@@ -169,7 +164,7 @@ function douseBurning(blobFire: BlobFireState, args: StepBurningBlobsArgs): void
   const { terrain, now, tunables } = args;
   for (const player of args.players) {
     if (!blobFire.blobs.has(player.id)) continue;
-    const near = { center: bodyCenter(player), reach: reachOf(terrain, player) };
+    const near = { center: hurtCenter(player), reach: reachOf(terrain, player) };
     const iced = someSampleNear(
       terrain,
       near,
@@ -192,7 +187,7 @@ function catchFromTerrain(blobFire: BlobFireState, args: StepBurningBlobsArgs): 
   const bodies = terrainBodies(terrain);
   const grids = bodyGrids(terrain);
   for (const player of args.players) {
-    const world = bodyCenter(player);
+    const world = hurtCenter(player);
     const reach = reachOf(terrain, player);
     bodies.some(({ toLocal }, body) => {
       const ground = args.fire.grounds[body];
@@ -217,7 +212,7 @@ function passOnBump(blobFire: BlobFireState, args: StepBurningBlobsArgs): void {
     const [from, to] = aBurns ? [contact.a, contact.b] : [contact.b, contact.a];
     // Passing it on makes the passer the one who lit the rival (credit for the chunk, D5).
     if (!catchFire(blobFire, to, { now, fromX: from.x, bySlot: from.slot })) continue;
-    putOut(blobFire, from, { kind: "leap", now, tunables, to: bodyCenter(to) });
+    putOut(blobFire, from, { kind: "leap", now, tunables, to: hurtCenter(to) });
   }
 }
 
@@ -233,7 +228,7 @@ function burnDown(blobFire: BlobFireState, args: StepBurningBlobsArgs): BurnDown
     const burning = blobFire.blobs.get(player.id);
     if (!burning) continue;
     const burnt = now - burning.since;
-    const chunk = { player, bySlot: burning.bySlot, at: bodyCenter(player) };
+    const chunk = { player, bySlot: burning.bySlot, at: hurtCenter(player) };
     if (burning.ticks === 0 && burnt >= firstTickSeconds) {
       burning.ticks = 1;
       downs.push(chunk);

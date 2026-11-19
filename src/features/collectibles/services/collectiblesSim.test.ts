@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
+import type { Rect } from "@/shared/types/gameGeometry.types";
 import type { LevelCollectible } from "@/features/level/api/levelApi";
-import { createPlayer } from "@/features/player/api/playerApi";
+import { createPlayer, hurtBox } from "@/features/player/api/playerApi";
 import {
   createCollectiblesState,
   stepCollectibles,
 } from "@/features/collectibles/services/collectiblesSim";
+import { firstToucher } from "@/features/collectibles/services/skyDrops";
 
 const tunables = DEFAULT_GAME_TUNABLES;
 const schedule = tunables.collectibles;
@@ -92,5 +94,24 @@ describe("collectiblesSim", () => {
       });
     }
     expect(state.orbs).toHaveLength(0);
+  });
+});
+
+/** A thin box just above the crouched hurt box, still inside the standing body. */
+const aboveCrouchedHurtBox = (hurt: Rect): Rect => ({ x: hurt.x, y: hurt.y - 4, w: hurt.w, h: 2 });
+
+describe("skyDrops — firstToucher (crouch-sink D6)", () => {
+  it("should hand the drop to a standing blob when it touches the upper body", () => {
+    const player = createPlayer(0, { x: 100, y: 200 }, DEFAULT_GAME_TUNABLES);
+    player.crouching = true;
+    const box = aboveCrouchedHurtBox(hurtBox(player));
+    player.crouching = false;
+    expect(firstToucher(box, [player])).toBe(player);
+  });
+
+  it("should not hand the drop over when it passes above a crouched blob's hurt box", () => {
+    const player = createPlayer(0, { x: 100, y: 200 }, DEFAULT_GAME_TUNABLES);
+    player.crouching = true;
+    expect(firstToucher(aboveCrouchedHurtBox(hurtBox(player)), [player])).toBeUndefined();
   });
 });

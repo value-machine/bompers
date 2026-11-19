@@ -21,7 +21,7 @@ export type {
   UnarmedFirePress,
 } from "@/features/combat/services/attacks";
 export { stepCombat, type StepCombatArgs } from "@/features/combat/services/combatSim";
-export { bodyCenter, helmetPoint } from "@/features/combat/services/combatGeometry";
+export { helmetPoint } from "@/features/combat/services/combatGeometry";
 export { reportTerrainDestroyed } from "@/features/combat/services/explosions";
 export {
   maxWeaponRecoil,
