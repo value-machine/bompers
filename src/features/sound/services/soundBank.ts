@@ -46,6 +46,8 @@ export const SOUND_FILES: Readonly<Record<string, readonly string[]>> = {
   "freeze-solid": takes("freeze-solid", 1),
   "ice-crack": takes("ice-crack", 1),
   "ice-shatter": takes("ice-shatter", 1),
+  // Taking a point orb (owner pick A1, pickup-juice D8).
+  "orb-collect": takes("orb-collect", 1),
 };
 
 /** Semitone offset per player slot (P1 0, P2 +2, P3 −2, P4 +4), so four blobs never sound alike. */

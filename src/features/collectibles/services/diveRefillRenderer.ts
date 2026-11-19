@@ -1,5 +1,6 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import { easeOutQuad, popInScale } from "@/shared/utils/easing";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 import type { OutlineWidth } from "@/shared/utils/outlineWidth";
 import type { DiveRefillPickup } from "@/features/collectibles/types/collectibles.types";
@@ -32,15 +33,6 @@ export type DiveRefillPhase =
   | { kind: "popping"; t: number }
   | { kind: "regrowing"; grow: number };
 
-/** 0 → 1 with a back-out overshoot (the pop-in). */
-const backOut = (t: number): number => {
-  const c = 1.7;
-  const u = t - 1;
-  return 1 + (c + 1) * u * u * u + c * u * u;
-};
-
-const easeOut = (t: number): number => 1 - (1 - t) * (1 - t);
-
 /** Which state the bubble is drawn in, from the pickup's sim timers. */
 export function diveRefillPhase(
   refill: DiveRefillPickup,
@@ -48,14 +40,13 @@ export function diveRefillPhase(
 ): DiveRefillPhase {
   const { popInSeconds, popSeconds, regrow } = DIVE_REFILL_LOOK;
   if (refill.respawnTimer === 0) {
-    const t = refill.presentSeconds / popInSeconds;
-    return { kind: "present", popIn: t < 1 ? backOut(t) : 1 };
+    return { kind: "present", popIn: popInScale(refill.presentSeconds / popInSeconds) };
   }
   const since = args.respawnSeconds - refill.respawnTimer;
   if (since < popSeconds) return { kind: "popping", t: Math.max(0, since / popSeconds) };
   const span = Math.max(1e-6, args.respawnSeconds - popSeconds);
   const t = Math.min(1, (since - popSeconds) / span);
-  return { kind: "regrowing", grow: regrow.from + (regrow.to - regrow.from) * easeOut(t) };
+  return { kind: "regrowing", grow: regrow.from + (regrow.to - regrow.from) * easeOutQuad(t) };
 }
 
 /** Idle wobble pose; each point is offset so neighbours do not wobble in step. */
@@ -154,7 +145,7 @@ function placePop(sprite: RefillSprite, t: number): void {
   const count = sprite.droplets.length;
   sprite.droplets.forEach((drop, i) => {
     const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
-    const distance = r * 0.7 + easeOut(t) * r * 1.5;
+    const distance = r * 0.7 + easeOutQuad(t) * r * 1.5;
     drop.position.set(Math.cos(angle) * distance, Math.sin(angle) * distance + t * t * r * 0.6);
     drop.scale.set(1 - t * 0.5);
     drop.alpha = 1 - t * 0.7;

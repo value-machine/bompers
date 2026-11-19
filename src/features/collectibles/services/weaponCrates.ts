@@ -6,6 +6,7 @@ import type { PlayerState } from "@/features/player/api/playerApi";
 import { fallSpeed, firstToucher, tickDropTimer } from "@/features/collectibles/services/skyDrops";
 import type {
   CrateStepResult,
+  PickupBurst,
   WeaponCrate,
   WeaponCratesState,
 } from "@/features/collectibles/types/collectibles.types";
@@ -26,6 +27,7 @@ export const createWeaponCratesState = (tunables: GameTunables): WeaponCratesSta
   nextDropIndex: 0,
   nextItemIndex: 0,
   nextId: 1,
+  landCount: 0,
 });
 
 export interface StepWeaponCratesArgs {
@@ -39,6 +41,8 @@ export interface StepWeaponCratesArgs {
   bounds: Rect;
   tunables: GameTunables;
   dt: number;
+  /** Where a taken crate's burst goes (the collectibles state's `bursts`; render only). */
+  bursts: PickupBurst[];
 }
 
 export const crateBox = (crate: WeaponCrate, size: number): Rect => ({
@@ -57,7 +61,16 @@ function spawnCrate(args: StepWeaponCratesArgs, result: CrateStepResult): void {
   const itemId = weapons[state.nextItemIndex % weapons.length];
   if (!drop || !itemId) return;
   state.nextItemIndex += 1;
-  state.list.push({ id: state.nextId, itemId, x: drop.at.x, y: drop.at.y, vy: 0, grounded: false });
+  state.list.push({
+    id: state.nextId,
+    itemId,
+    x: drop.at.x,
+    y: drop.at.y,
+    vy: 0,
+    grounded: false,
+    ageSeconds: 0,
+    groundedSeconds: 0,
+  });
   state.nextId += 1;
   result.spawned.push({ itemId, x: drop.at.x, y: drop.at.y });
 }
@@ -70,11 +83,26 @@ function stepDropSchedule(args: StepWeaponCratesArgs, result: CrateStepResult): 
   if (tick.due && drops.length > 0) spawnCrate(args, result);
 }
 
-/** Snaps the crate onto the top of the cell row it entered. */
-function land(crate: WeaponCrate, cell: number): void {
+/** Snaps the crate onto the top of the cell row it entered; counts the landing (its sound). */
+function land(state: WeaponCratesState, crate: WeaponCrate, cell: number): void {
   crate.y = Math.floor(crate.y / cell) * cell;
   crate.vy = 0;
   crate.grounded = true;
+  crate.groundedSeconds = 0;
+  state.landCount += 1;
+}
+
+/** Ages the crate; true while it still rests on terrain (the floor under it may be blasted away). */
+function stillGrounded(args: StepWeaponCratesArgs, crate: WeaponCrate): boolean {
+  const below = { ...crateBox(crate, args.tunables.combat.drops.size), y: crate.y, h: 1 };
+  crate.ageSeconds += args.dt;
+  if (crate.grounded && rectHitsSolid(args.terrain, below)) {
+    crate.groundedSeconds += args.dt;
+    return true;
+  }
+  crate.grounded = false;
+  crate.groundedSeconds = 0;
+  return false;
 }
 
 /** Falls in half-cell sub-steps; on contact lands on the cell row it entered. */
@@ -82,16 +110,14 @@ function fall(args: StepWeaponCratesArgs, crate: WeaponCrate): void {
   const { terrain, tunables, dt } = args;
   const size = tunables.combat.drops.size;
   const cell = terrain.cellSize;
-  const below = { ...crateBox(crate, size), y: crate.y, h: 1 };
-  if (crate.grounded && rectHitsSolid(terrain, below)) return;
-  crate.grounded = false;
+  if (stillGrounded(args, crate)) return;
   crate.vy = fallSpeed(crate.vy, tunables.world, dt);
   const distance = crate.vy * dt;
   const steps = Math.max(1, Math.ceil(distance / (cell / 2)));
   for (let i = 0; i < steps; i += 1) {
     crate.y += distance / steps;
     if (!rectHitsSolid(terrain, crateBox(crate, size))) continue;
-    land(crate, cell);
+    land(args.crates, crate, cell);
     return;
   }
 }
@@ -109,6 +135,7 @@ export function stepWeaponCrates(args: StepWeaponCratesArgs): CrateStepResult {
     const player = firstToucher(crateBox(crate, size), args.players);
     if (!player) return true;
     result.collected.push({ itemId: crate.itemId, slot: player.slot });
+    args.bursts.push({ id: crate.id, itemId: crate.itemId, x: crate.x, y: crate.y, ageSeconds: 0 });
     return false;
   });
   return result;

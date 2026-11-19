@@ -29,6 +29,9 @@ interface PlayerCard {
   pop: Graphics;
   poppedAt: number;
   score: Text;
+  /** Score last shown and when it last went up (the score pop, pickup-juice D1). */
+  scoreShown: number;
+  scoredAt: number;
   shown: { health: number; max: number };
   /** Ammo pills of the held weapon; hidden when unarmed. */
   ammo: Graphics;
@@ -40,6 +43,8 @@ const DESIGN_WIDTH = 1280;
 const CARD = { w: 228, h: 86, radius: 18, gap: 12, margin: 16, top: 12, tilt: 0.026 };
 const TIMER = { w: 140, h: 70, radius: 18, warnSeconds: 10 };
 const PIP = { w: 22, h: 20, radius: 7, gap: 4, x: 70, y: 40, popSeconds: 0.15 };
+/** The score number pops when it goes up: scale 1.35 → 1 over the `squash` window (pickup-juice D1). */
+const SCORE_POP = { seconds: 0.15, scale: 1.35 };
 /** Ammo row under the health chunks (weapon-visuals D3): same pills, weapon accent, health-row width. */
 const AMMO = { y: 66, h: 10, radius: 5, gap: 3 };
 /** Health row width: `max` chunks of `PIP.w`; the ammo row spans the same width. */
@@ -108,6 +113,8 @@ function createPlayerCard(slot: number): PlayerCard {
     pop,
     poppedAt: -Infinity,
     score,
+    scoreShown: 0,
+    scoredAt: -Infinity,
     shown: { health: -1, max: -1 },
     ammo,
     ammoShown: "",
@@ -170,6 +177,17 @@ function drawPips(card: PlayerCard, { slot, health, max, timeSeconds }: PipsLook
       .roundRect(PIP.x + pill.x, PIP.y, pill.w, PIP.h, PIP.radius)
       .fill(pill.filled ? slotColor(slot) : GAME_PALETTE.healthLost);
   }
+}
+
+/** Shows the score; a rise (an orb, a kill) starts the pop, which eases back to size. */
+function syncScore(card: PlayerCard, score: number, timeSeconds: number): void {
+  if (score !== card.scoreShown) {
+    if (score > card.scoreShown) card.scoredAt = timeSeconds;
+    card.scoreShown = score;
+    card.score.text = String(score);
+  }
+  const t = (timeSeconds - card.scoredAt) / SCORE_POP.seconds;
+  card.score.scale.set(t >= 0 && t < 1 ? 1 + (SCORE_POP.scale - 1) * (1 - t) : 1);
 }
 
 function syncPop(card: PlayerCard, timeSeconds: number): void {
@@ -276,7 +294,7 @@ function syncCards(view: HudView, frame: HudFrame, scale: number): void {
       max: weapon ? weaponTunables(state.tunables, weapon.itemId).ammo : 0,
       rowWidth: healthRowWidth(max),
     });
-    card.score.text = String(state.rules.scores[player.slot] ?? 0);
+    syncScore(card, state.rules.scores[player.slot] ?? 0, state.timeSeconds);
     const centre = cardCentre(player.slot, frame, scale);
     card.root.position.set(centre.x, centre.y);
     card.root.scale.set(scale);

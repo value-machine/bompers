@@ -79,6 +79,8 @@ export const GAME_PALETTE = {
   healthLost: 0xe9dfd0,
   /** Point orb: bubblegum star (DESIGN_LANGUAGE § 1 Effects). */
   pointOrb: 0xff8fc8,
+  /** A landing weapon crate's dust puffs, with the prop ink outline (pickup-juice D2). */
+  pickupDust: 0xf3eadb,
   /** Headbutt reset: aqua jelly bubble with a cream headbutt glyph (DESIGN_LANGUAGE § 1 Effects). */
   diveRefill: 0x5fe0ff,
   /** HUD cards (DESIGN_LANGUAGE § 7): card fill, caption text, timer numerals. */
