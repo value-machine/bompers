@@ -28,6 +28,7 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   speed: 0,
   terrainHitSpeed: 0,
   diveRefillCount: 0,
+  orbCount: 0,
   catchFireCount: 0,
   iceDouseCount: 0,
   frozenCount: 0,
@@ -227,6 +228,13 @@ describe("readSoundCues — headbutt reset", () => {
   it("should play the pickup sound pitched by the collector when a player takes a headbutt reset", () => {
     const frame = snapshot({ players: [player(0), player(1, { diveRefillCount: 1 })] });
     expect(cuesAfter(frame)).toEqual([{ soundId: "pickup", slot: 1, gain: 1 }]);
+  });
+});
+
+describe("readSoundCues — point orbs", () => {
+  it("should play the orb chime pitched by the collector when a player takes a point orb", () => {
+    const frame = snapshot({ players: [player(0), player(1, { orbCount: 1 })] });
+    expect(cuesAfter(frame)).toEqual([{ soundId: "orb-collect", slot: 1, gain: 1 }]);
   });
 });
 

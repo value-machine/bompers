@@ -8,7 +8,7 @@ The pickups on main (point orb, weapon crate, headbutt reset) answer unevenly: a
 
 ## Success check
 
-On the PR preview: an orb pops in, squashes when it reaches its point, and when taken throws a pink ring and five mini stars while the collector's HUD score pops; a crate pops in, stretches as it falls, squashes with two dust puffs and a soft `thwap` when it lands, and when taken throws a ring in the weapon colour and four pieces. The headbutt reset is not touched (D7: its new look is another lap). The orb chime plays only after the owner picks a take on the listening page.
+On the PR preview: an orb pops in, squashes when it reaches its point, and when taken throws a pink ring and five mini stars while the collector's HUD score pops; a crate pops in, stretches as it falls, squashes with two dust puffs and a soft `thwap` when it lands, and when taken throws a ring in the weapon colour and four pieces. The headbutt reset is not touched (D7: its new look is another lap). Taking an orb plays the owner's chime (A1).
 
 ## Juice table (all light tier: no shake, no flash)
 

@@ -279,6 +279,8 @@ Every SFX prompt is built from one template: **material + action + palette words
 
 **Ice block sounds** (owner, 2026-11-18, ice-block-sounds lap; prompts in the lap's BRIEF, same template and model, 0.5 s): freeze solid take 1, ice crack take 2 (played at the crouch level), ice shatter take 1. A block melted by fire keeps the douse steam hiss.
 
+**Orb collect chime** (owner, 2026-11-19, pickup-juice lap; prompts in the lap's DECISIONS, `eleven_text_to_sound_v2`, 0.5 s, `prompt_influence` 0.6): take A1, a marimba sparkle of three rising notes with a bubble pop, cut to 0.4 s; it marks a scored point, so it is not the weapon `pickup` sound. The weapon crate's landing reuses cardboard's `thwap` at the crouch level.
+
 **Seamless loops** (owner, 2026-11-18: "the loops need transitions because they all have seams"): no fades to silence on a loop. Its last 0.25 s is crossfaded with equal power (quarter-sine curves) over its first 0.25 s and the file is cut to length − 0.25 s, so its last sample runs on into its first. One fixed gain to −16 LUFS; the limiter runs on three copies in a row (latency compensated) and the middle copy is kept sample-exact, because a look-ahead limiter otherwise shifts the audio and opens the seam again. Check: the jump from the last sample to the first is an ordinary step of the source at that point. In the game a loop plays as passes of the file that overlap by `SOUND_MIX.loopCrossfadeSeconds` (0.1 s, equal power), which also hides the mp3's silent edges; the game holds loops while their source lasts (GAME_JUICE § 6).
 
 ### Music (the music lap, 2026-11-16)

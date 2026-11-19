@@ -252,6 +252,10 @@
     {
       "id": "ice-shatter",
       "label": "Ice shatter"
+    },
+    {
+      "id": "orb-collect",
+      "label": "Orb collect"
     }
   ],
   "behavior": [],

@@ -29,3 +29,4 @@ Seams for later work:
 - One catalog for all content kinds; breakability comes from the material alone (no terrain roles) and colour is its own kind, free on any material (owner, material-system D1, D5). `dirt` retired without alias in the format-2 bump (D6).
 - Field names follow the level kit's `catalog.json` so the file is generated from code (game-engine-foundation D13).
 - Lookups use own keys only, so prototype names (`toString`) are unknown IDs.
+- The `orb-collect` sound ID (owner pick A1, pickup-juice D8): taking a point orb; file and wiring in the sound feature.

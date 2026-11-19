@@ -164,6 +164,7 @@ At least one `terrain` shape is required.
 | sound | `freeze-solid` | Freeze solid |  |
 | sound | `ice-crack` | Ice crack |  |
 | sound | `ice-shatter` | Ice shatter |  |
+| sound | `orb-collect` | Orb collect |  |
 | behavior | — | none yet; leave it out | |
 | item | `rocket-launcher` | Rocket launcher | use: drop |
 | item | `homing-launcher` | Homing launcher | use: drop |

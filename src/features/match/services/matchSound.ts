@@ -105,6 +105,7 @@ export function soundSnapshotOf(state: GameState): SoundSnapshot {
         speed: Math.hypot(player.vx, player.vy),
         terrainHitSpeed: Math.max(player.terrainHitSpeedX, player.terrainHitSpeedY),
         diveRefillCount: state.dive.refillCounts[player.id] ?? 0,
+        orbCount: state.collectibles.orbCounts[player.slot] ?? 0,
         catchFireCount: state.blobFire.caughtCounts[player.id] ?? 0,
         iceDouseCount: state.blobFire.dousedCounts[player.id] ?? 0,
         ...iceBlockCounts(state, player.id),

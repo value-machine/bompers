@@ -38,6 +38,8 @@ export interface SoundPlayerSnapshot {
   speed: number;
   /** Speed into the terrain this step, fastest axis, units / s (0 when nothing was hit). */
   terrainHitSpeed: number;
+  /** Point orbs taken over the match (monotonic; pickup-juice D8). */
+  orbCount: number;
   /** Headbutt resets taken over the match (monotonic). */
   diveRefillCount: number;
   /** Times caught fire / put out by ice over the match (monotonic; fire-burn D7). */

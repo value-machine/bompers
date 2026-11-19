@@ -76,7 +76,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Rocket recoil | light | `rocket-fire` (the fire cue) | — | — | — | — | body kick opposite the aim (sim impulse `combat.rocket.recoil`) | — |
 | Point orb appears (pickup-juice) | — | — (deliberately silent: a world timer) | pop-in, back-out 150 ms (`feel.pickup.popInSeconds`) | — | — | — | — | — |
 | Point orb reaches its point | — | — (silent) | squash wide 1.2 × 0.84 springing back over 150 ms (`feel.pickup.settle`), then the bob | — | — | — | — | — |
-| Point orb taken (owner pick D1) | light | **gap** until the owner picks a take of the new `orb-collect` chime (pitched by the collector) | — | — | — | — | pink ring (220 ms) and five mini stars flying out (320 ms); the collector's HUD score pops 1.35 → 1 over 150 ms (any score rise) | — |
+| Point orb taken (owner pick D1) | light | `orb-collect` chime (owner pick A1, pitched by the collector) | — | — | — | — | pink ring (220 ms) and five mini stars flying out (320 ms); the collector's HUD score pops 1.35 → 1 over 150 ms (any score rise) | — |
 | Weapon crate appears | — | — (silent: a world timer) | pop-in, back-out 150 ms | — | — | — | — | — |
 | Weapon crate falls / lands (owner pick D2; also after its floor is blasted) | light | `thwap` (cardboard) on landing, at `crouchGain`, unpitched, one per frame | stretch tall up to 0.92 × 1.08 by fall speed (`feel.pickup.fallStretch`); on landing squash wide 1.2 × 0.84 springing back over 150 ms | — | — | — | two dust puffs rolling out, 220 ms | — |
 | Weapon crate taken (owner pick D3) | light | `pickup` (pitched by the collector) | — | — | — | — | ring in the weapon's accent (220 ms) and four crate pieces flying off and falling (450 ms) | — |
