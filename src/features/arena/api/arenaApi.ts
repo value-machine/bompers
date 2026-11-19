@@ -45,11 +45,15 @@ export {
   type FieldCircle,
 } from "@/features/arena/services/terrainField";
 export {
+  belowLipRegion,
   drawContour,
+  drawOutline,
   edgeAbove,
   markedRegion,
   terrainContour,
+  terrainRings,
   type MaskShapes,
+  type OutlineRing,
   type SampleRegion,
 } from "@/features/arena/services/terrainSurfaces";
 export {

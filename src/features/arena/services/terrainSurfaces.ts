@@ -152,19 +152,26 @@ export function slotLayerRegion(grid: TerrainGrid, slot: number, box?: SampleBox
 
 /**
  * A region without its lip (outline-system D7, owner pick "band along the edge"): the part whose
- * sample above is terrain too. Drawn over the whole region, it leaves a band one sample high
- * along every edge that faces up into the air: slab tops with their rounded corners, crater rims
- * and burnt edges alike, and none where another shape sits on top. Second copy of the idea:
- * `features/ice/services/iceRenderer.ts` `underLip` cuts frost's lip against the frost itself.
+ * sample above is inside too. Drawn over the whole region, it leaves a band one sample high
+ * along every edge that faces up: slab tops with their rounded corners, crater rims and burnt
+ * edges alike. `above` says what counts as inside there: any `terrain` (a slab's lip: none
+ * where another shape sits on top) or the `region` itself (frost's lip: along the frost's own
+ * top, also under unfrozen terrain).
  */
-export function belowLipRegion(grid: TerrainGrid, region: SampleRegion): SampleRegion {
+export function belowLipRegion(
+  grid: TerrainGrid,
+  region: SampleRegion,
+  above: "terrain" | "region" = "terrain"
+): SampleRegion {
   const band = fieldBand(grid);
+  const inside = (index: number): number => {
+    if (index < 0) return -band;
+    const own = grid.distance[index] ?? -band;
+    return above === "region" ? Math.min(own, region.value(index)) : own;
+  };
   return {
     box: region.box,
-    value: (index) => {
-      const above = index - grid.widthCells;
-      return Math.min(region.value(index), above < 0 ? -band : (grid.distance[above] ?? -band));
-    },
+    value: (index) => Math.min(region.value(index), inside(index - grid.widthCells)),
   };
 }
 

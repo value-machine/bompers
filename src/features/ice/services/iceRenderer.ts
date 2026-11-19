@@ -5,6 +5,7 @@ import { inkColor } from "@/shared/utils/debugInk";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import {
   EMPTY_CELL,
+  belowLipRegion,
   bodyGrids,
   createPoseLayer,
   drawContour,
@@ -12,7 +13,6 @@ import {
   placePoseLayer,
   terrainContour,
   type MoverBody,
-  type SampleRegion,
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
 import {
@@ -143,19 +143,6 @@ function frozenBlocks(terrain: TerrainGrid): Map<number, GridBlock> {
   return blocks;
 }
 
-/**
- * The part of a region whose sample above is inside the region's shape too: the shape without
- * its top sample row. Drawn over the whole shape, it leaves the lip along every top edge.
- */
-function underLip(terrain: TerrainGrid, region: SampleRegion): SampleRegion {
-  const inShape = (index: number): number =>
-    index < 0 ? -1 : Math.min(terrain.distance[index] ?? -1, region.value(index));
-  return {
-    box: region.box,
-    value: (index) => Math.min(region.value(index), inShape(index - terrain.widthCells)),
-  };
-}
-
 function frozenSamples(terrain: TerrainGrid): number[] {
   const frozen: number[] = [];
   terrain.frozen.forEach((flag, index) => {
@@ -175,7 +162,11 @@ function drawFrost(view: FrostView, terrain: TerrainGrid): void {
     return;
   }
   drawContour(view.frostLip, terrainContour(terrain, { grow: 0, region }), COLORS.lip);
-  const body = terrainContour(terrain, { grow: 0, region: underLip(terrain, region) });
+  // The shape without its top sample row: drawn over the whole shape, it leaves the lip.
+  const body = terrainContour(terrain, {
+    grow: 0,
+    region: belowLipRegion(terrain, region, "region"),
+  });
   drawContour(view.frostBody, body, COLORS.body);
   drawGloss(view.frost, terrain);
 }
