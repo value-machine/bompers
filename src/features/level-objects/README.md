@@ -18,7 +18,7 @@ Ready-made objects a level places by kind and box (`<rect data-role="object" dat
 Seams for later work:
 
 - **New object:** one recipe file in `services/` (variants with `build(box, random)` from the part builders, every part ≥ `MIN_PART_THICKNESS`) plus one line in `OBJECT_RECIPES`, then `pnpm level-kit:sync` (catalog.json, ID tables, prompt). Kinds and variant IDs are never renamed or reused once shipped.
-- **Physics (lap 2):** the level keeps a `LevelObject` per placed object (`level` types) with the `terrainIndices` of its pieces, like a mover's, so an object can be lifted out of the static samples into its own body. An object inside a moving part has its indices in both lists; lap 2 settles which owns them.
+- **Physics objects (later):** a separate class from the terrain objects here (see Decisions, object classes). They will be whole bodies with whole-object state; they are not built from `terrainIndices`. `LevelObject.terrainIndices` stays the record of which terrain pieces a terrain object became (an object inside a moving part has its indices in the mover's list too).
 
 ## Dependencies
 
@@ -27,6 +27,7 @@ Seams for later work:
 
 ## Decisions
 
+- **Object classes (owner, 2026-11-19, after the object-physics feasibility check):** partial destruction, per-sample burning and per-sample freezing belong only to **terrain objects**. Trees, and anything else compiled to terrain pieces, stay terrain: they crater, burn and freeze per sample and never move, so a piece cut off by a blast or fire stays where it is. **Physics objects** (later, e.g. crates, balls, logs) may move and fall but are never partially destroyed: burning, freezing and damage apply to the object as a whole. One object is never both. Why: per-sample fire, frost and stains on bodies that fall and rotate cost too much (an always-on sim cost 3–5× main's step, and burning worst steps went past the frame budget). Fire also never crosses between bodies, so a tree as its own body would no longer light the ground it stands on. Trees therefore get no physics.
 - Recipes compile to terrain pieces at import; the level keeps a `LevelObject` record with `terrainIndices` (owner, D2, D5). The registry with one kind is the owner-approved exception to code-style's "no registries until a second consumer".
 - Trees are existing materials plus the new colour `bark` (owner, D4): living trunks earth (crater, only scorch), leaves cardboard (burn away), snow caps ice (unbreakable; needles touching them never catch, D4a), the dead tree cardboard throughout.
 - Default seed: FNV-1a of `<level id>#id:<element id>` (else `<level id>#<object ordinal>`) (D8); `data-seed` overrides.
