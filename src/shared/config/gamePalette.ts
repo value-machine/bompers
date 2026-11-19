@@ -55,7 +55,7 @@ export const GAME_PALETTE = {
     "homing-launcher": { accent: 0xb08cff, tube: "finned" },
     // Flame orange: no player body uses it (players are red, blue, yellow, mint).
     torch: { accent: 0xff8a1f, tube: "funnel" },
-    // Glacier blue: deeper than the sky accent and the aqua reset crystal, no player body uses it.
+    // Glacier blue: deeper than the sky accent and the aqua reset bubble, no player body uses it.
     "freeze-ray": { accent: 0x6fc8e8, tube: "dish" },
   } as Readonly<Record<WeaponItemId, WeaponLook>>,
   /**
@@ -81,7 +81,7 @@ export const GAME_PALETTE = {
   pointOrb: 0xff8fc8,
   /** A landing weapon crate's dust puffs, with the prop ink outline (pickup-juice D2). */
   pickupDust: 0xf3eadb,
-  /** Headbutt reset: aqua crystal with an ink up-chevron (DESIGN_LANGUAGE § 1 Effects). */
+  /** Headbutt reset: aqua jelly bubble with a cream headbutt glyph (DESIGN_LANGUAGE § 1 Effects). */
   diveRefill: 0x5fe0ff,
   /** HUD cards (DESIGN_LANGUAGE § 7): card fill, caption text, timer numerals. */
   hud: { card: 0xfffaf0, caption: 0x8a7a99, timer: 0xffd43b },
