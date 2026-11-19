@@ -41,7 +41,9 @@ export const LevelStrip = ({ entries, selectedId, onSelect, onLoad }: LevelStrip
   return (
     <div
       ref={stripRef}
-      className="flex w-full snap-x gap-3 overflow-x-auto px-1 pt-2 pb-3"
+      // contain-inline-size: the cards never size the strip (or the lobby around it), so a long
+      // library scrolls inside the strip instead of widening the page.
+      className="flex w-full snap-x gap-3 overflow-x-auto px-1 pt-2 pb-3 contain-inline-size"
       data-testid="lobby-level-strip"
     >
       {entries.map((entry) => {
