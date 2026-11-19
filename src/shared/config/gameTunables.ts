@@ -71,9 +71,24 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       // Four body radii: hills and crater floors hold; ledges and rims (radius ≈ 14) can launch.
       stickRadius: 56,
     },
-    // Defensive crouch (feedback round 2 § 2.4): sink fast, stand up a touch slower.
-    // Helmet down 4 u and eyes up 2 u: the rim lands on about the middle of the eyes (crouch D7).
-    crouch: { bodySx: 1.18, bodySy: 0.68, easeSeconds: 0.07, helmetDrop: 4, eyeLift: 2 },
+    // Defensive crouch, "sink + settle, low" (owner, crouch-sink D1): sink in 100 ms (squash
+    // window), settle 350 ms (settle window), stand up 150 ms with a 3 u helmet hop. The helmet ends
+    // 27 u (12 + 15) under its standing place, so the hurt box keeps 1 − 27 / 69 ≈ 0.6 of the height.
+    crouch: {
+      sinkSeconds: 0.1,
+      settleSeconds: 0.35,
+      settleHz: 2.4,
+      riseSeconds: 0.15,
+      hopSeconds: 0.2,
+      helmetSink: 12,
+      drop: 15,
+      overshoot: 2,
+      hop: 3,
+      breathe: 0.6,
+      breatheHz: 0.8,
+      areaKeep: 0.94,
+      hurtHeightScale: 0.6,
+    },
     squash: {
       // Soft jelly landing (owner pick M2, soft-landing lap): sinks, then one wobble back.
       land: {

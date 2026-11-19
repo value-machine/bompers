@@ -21,6 +21,7 @@ import {
   type CombatContext,
 } from "@/features/combat/services/combatState";
 import { explode, type Blast } from "@/features/combat/services/explosions";
+import { bodyCenter, helmetPoint } from "@/features/combat/services/combatGeometry";
 import { stepAttacks } from "@/features/combat/services/attacks";
 import { takeWeaponPickups } from "@/features/combat/services/weapons";
 import type { CombatEvent, CombatState } from "@/features/combat/types/combat.types";
@@ -247,6 +248,41 @@ describe("combat — rockets and explosions", () => {
     const victimPush = Math.abs(world.players[1]!.vx);
     expect(shooterPush).toBeGreaterThan(0);
     expect(victimPush / shooterPush).toBeCloseTo(C.blast.hitPushScale);
+  });
+});
+
+describe("combat — crouched targets (crouch-sink D4)", () => {
+  it("should fire from and aim at a lower point when the blob is crouched (crouch-sink D4)", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    const player = world.players[0]!;
+    const standingHelmet = helmetPoint(player);
+    const standingCentre = bodyCenter(player);
+    player.crouching = true;
+    const sunk = player.height - player.crouchHeight;
+    expect(helmetPoint(player).y).toBeCloseTo(standingHelmet.y + sunk, 6);
+    expect(bodyCenter(player).y).toBeCloseTo(standingCentre.y + sunk / 2, 6);
+  });
+
+  it("should fly over a crouched blob that the same shot hits standing (crouch-sink D4)", () => {
+    const tunables: GameTunables = {
+      ...DEFAULT_GAME_TUNABLES,
+      combat: { ...C, rocket: { ...C.rocket, speed: 30000 } },
+    };
+    const world = createWorld({
+      at: [
+        { x: 200, y: FLOOR_Y },
+        { x: 600, y: FLOOR_Y },
+      ],
+      tunables,
+    });
+    arm(world, 0);
+    world.step([{}, { crouch: true }], 5);
+    world.step([{ aimX: 1, fire: true }, { crouch: true }]);
+    world.step([{ aimX: 1 }, { crouch: true }], 10);
+    const nearTarget = eventsOf(world, "explosion").filter((e) => e.x >= 560 && e.x <= 620);
+    expect(world.players[1]!.crouching).toBe(true);
+    expect(nearTarget).toHaveLength(0);
+    expect(health(world, 1)).toBe(C.maxHealth);
   });
 });
 

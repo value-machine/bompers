@@ -15,6 +15,11 @@ export interface PlayerState {
   vy: number;
   width: number;
   height: number;
+  /**
+   * Height hits see while crouched (crouch-sink D4): the blob hides low under its helmet, so the
+   * hurt box (`hurtBox`) keeps `player.crouch.hurtHeightScale` of `height`. Fixed per player.
+   */
+  crouchHeight: number;
   grounded: boolean;
   /** Last horizontal direction moved: -1 left, 1 right. */
   facing: -1 | 1;

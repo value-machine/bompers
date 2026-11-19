@@ -2,7 +2,7 @@ import type { GameTunables } from "@/shared/types/gameTunables.types";
 import { castRayFan, pushAlongAim, type RayHit } from "@/shared/utils/rayFan";
 import { terrainBodies, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import { helmetPoint } from "@/features/combat/api/combatApi";
-import { weaponAim, type PlayerState } from "@/features/player/api/playerApi";
+import { hurtHeight, weaponAim, type PlayerState } from "@/features/player/api/playerApi";
 import { chillBlob } from "@/features/ice/services/frozenBlobs";
 import { feedCold } from "@/features/ice/services/iceSim";
 import type { IceState } from "@/features/ice/types/ice.types";
@@ -56,6 +56,7 @@ export function sprayFreezeRay(ice: IceState, args: FreezeRayArgs): void {
   const hits = castRayFan({
     fields: terrainBodies(terrain),
     bodies: args.players.filter((player) => player !== holder),
+    hitHeight: hurtHeight,
     origin: helmetPoint(holder),
     aim: weaponAim(holder),
     shape: { ...ray, length: args.reach ?? ray.length },

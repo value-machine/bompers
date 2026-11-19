@@ -6,6 +6,20 @@ History of the decisions jobs made: what was chosen, what was rejected, and why.
 - **Cite with the job key:** `(skill-loop D53)`. Ids restart at D1 in every job, so a bare `D53` is ambiguous.
 - **Who writes it:** `loop-ship` appends the lap's closed rows from its scratch `DECISIONS.md` in the ship commit ([`loop-ship`](../.agents/skills/loop-ship/SKILL.md)). Earlier job logs were deleted in #16; only the ones still cited are restored below from `a920c0d^`.
 
+## crouch-sink — claude/crouch-sink
+
+Crouch redesign: the jelly blob hides under its rigid helmet (sink + settle, low), and the crouched hurt box comes down with it.
+
+| id  | topic | status | choice | source | notes |
+| --- | ----- | ------ | ------ | ------ | ----- |
+| D1 | Crouch look | closed | "Sink + settle, low": rigid helmet, the blob's top shortens into the dome, jelly bulge under the rim (94 % area), drop onto and spread over the ground, settle wobble, breathing, hop on stand-up | loop-refine (asked, 4 option rounds) | owner rejected rounds 1 (shell variants) and 3 (foot variants): "nothing spills through the helmet", "sink lower, really cover a bit of the ground" |
+| D2 | Feet while crouched | closed | vanish (shrink away in the first 60 ms) | loop-refine (asked) | "The feet can just disappear." |
+| D3 | Gloss while crouched | closed | body gloss slides left onto the bulge's upper-left arc, along it | loop-refine (asked) | owner: "reflects the sky from that arc" |
+| D4 | Hurt box while crouched | closed | moves down with the helmet: top at `hurtHeightScale` (0.6) × height; weapons fire from the lowered helmet | loop-refine (asked) | owner: "hitbox should also move down" |
+| D5 | Helmet glint | closed | reshape a little so it stays well inside the dome | loop-refine (asked) | owner: "it spills off the helmet" |
+| D6 | Sky-drop pickups | closed | keep the full body box this lap | loop-plan (clear-winner) | pickups are another thread's area; follow-up task |
+| D7 | player feature file budget (services 10/10) | closed | waiver (`featureBudgets.config.cjs` overrides.player, 12 per layer) + follow-up task: move the blob drawing into its own feature | loop-plan (asked) | plan-review A1 |
+
 ## ice-frozen-blobs — claude/ice-frozen-blobs
 
 Ice lap 2: what the freeze ray does to a blob (the ice block), its ways out, and fire on a frozen blob.

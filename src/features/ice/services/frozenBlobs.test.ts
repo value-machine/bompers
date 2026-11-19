@@ -6,6 +6,7 @@ import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import { buildTerrainFromLevel } from "@/features/arena/api/arenaApi";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { createPlayer, stepPlayers, type PlayerState } from "@/features/player/api/playerApi";
+import { bodyCenter, helmetPoint } from "@/features/combat/api/combatApi";
 import {
   BLOCK_LOOK,
   blockBox,
@@ -96,6 +97,12 @@ describe("frozen blobs (ice-frozen-blobs D1)", () => {
   it("should take twice as long to freeze when the blob is crouching", () => {
     const s = scene();
     s.victim.crouching = true;
+    // A crouched blob hides low (crouch-sink D4): aim from the helmet at its lowered centre.
+    const from = helmetPoint(s.holder);
+    const to = bodyCenter(s.victim);
+    const length = Math.hypot(to.x - from.x, to.y - from.y);
+    s.holder.aimX = (to.x - from.x) / length;
+    s.holder.aimY = (to.y - from.y) / length;
     s.step(B.freezeSeconds + 0.1, true);
     expect(isFrozen(s.ice, s.victim)).toBe(false);
     s.step(B.freezeSeconds, true);

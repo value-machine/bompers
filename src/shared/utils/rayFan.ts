@@ -1,5 +1,6 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { PosedField } from "@/shared/types/sampleFront.types";
+import { shapeSignedDistance } from "@/shared/utils/shapeGeometry";
 
 /**
  * The ray fan of a spray weapon (fire-spread b1 D5–D7; shared by the torch and the freeze ray,
@@ -18,7 +19,7 @@ export interface RayFanShape {
   rays: number;
 }
 
-/** A round body standing on its feet point (`x`, `y` = bottom centre). */
+/** A body standing on its feet point (`x`, `y` = bottom centre). */
 export interface RayFanBody {
   x: number;
   y: number;
@@ -31,6 +32,8 @@ export interface RayFanCast<Body extends RayFanBody> {
   fields: readonly PosedField[];
   /** Bodies a ray can reach (leave the holder out). */
   bodies: readonly Body[];
+  /** How high up a body can be hit (default its `height`; e.g. lower while crouched). */
+  hitHeight?: (body: Body) => number;
   origin: Vec2;
   /** Aim direction (any length). */
   aim: Vec2;
@@ -75,11 +78,22 @@ function solidAt(fields: readonly PosedField[], p: Vec2): { sample: number; body
   return null;
 }
 
-/** A body whose circle holds `p`. */
-const bodyAt = <Body extends RayFanBody>(bodies: readonly Body[], p: Vec2): Body | undefined =>
-  bodies.find(
-    (body) => Math.hypot(p.x - body.x, p.y - (body.y - body.height / 2)) <= body.width / 2
-  );
+/**
+ * A body whose hit shape holds `p`: its box (width × hit height) with fully rounded corners, which
+ * is a circle for a square body and a low, wide pill for a crouched one.
+ */
+const bodyAt = <Body extends RayFanBody>(cast: RayFanCast<Body>, p: Vec2): Body | undefined =>
+  cast.bodies.find((body) => {
+    const h = cast.hitHeight?.(body) ?? body.height;
+    const box = {
+      type: "rect" as const,
+      x: body.x - body.width / 2,
+      y: body.y - h,
+      w: body.width,
+      h,
+    };
+    return shapeSignedDistance(box, p, Infinity) >= 0;
+  });
 
 /** Directions of the fan's rays: evenly spread over ±half-angle of the aim. */
 export function rayDirections(aim: Vec2, shape: RayFanShape): Vec2[] {
@@ -104,7 +118,7 @@ function castRay<Body extends RayFanBody>(
     const p = { x: origin.x + dir.x * s, y: origin.y + dir.y * s };
     const solid = solidAt(fields, p);
     if (solid) return { end: p, ...solid };
-    const body = bodyAt(cast.bodies, p);
+    const body = bodyAt(cast, p);
     if (body) reached.add(body);
   }
   return {

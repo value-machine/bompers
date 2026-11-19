@@ -7,12 +7,10 @@ import {
   blobShadow,
   createBlobAnim,
   createHelmetWobble,
-  crouchFace,
   eventSquash,
   kickHelmetForHit,
   kickHelmetForSquash,
   noteBlobEvents,
-  stepCrouchBlend,
   stepHelmetWobble,
   createFeetMotion,
   stepFeetMotion,
@@ -21,6 +19,7 @@ import {
   createContactHold,
   stepContactHold,
 } from "@/features/player/services/blobPose";
+import { noteCrouch, STANDING_SINK } from "@/features/player/services/crouchPose";
 import { EMPTY_PLAYER_INPUT } from "@/shared/utils/gameInputMapping";
 import { buildTerrainFromLevel } from "@/features/arena/api/arenaApi";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
@@ -371,54 +370,35 @@ describe("stepFeetMotion springs", () => {
 describe("crouch pose", () => {
   const crouch = DEFAULT_GAME_TUNABLES.player.crouch;
 
-  it("should sink the body and keep the feet once the crouch has eased in", () => {
+  const crouchedAt = (nowMs: number) => {
     const player = standing();
+    player.vx = 0;
     const anim = createBlobAnim(player);
     player.crouching = true;
-    stepCrouchBlend(anim, { player, crouch, nowMs: 0 });
-    stepCrouchBlend(anim, { player, crouch, nowMs: crouch.easeSeconds * 500 });
-    expect(anim.crouchBlend).toBeCloseTo(0.5, 6);
-    stepCrouchBlend(anim, { player, crouch, nowMs: crouch.easeSeconds * 1000 });
-    const pose = blobPose(anim, { player, squash, nowMs: 0, crouch });
-    expect(pose.bodySy).toBeCloseTo(crouch.bodySy, 6);
-    expect(pose.bodySx).toBeCloseTo(crouch.bodySx, 6);
-    expect(pose.feetSy).toBe(1);
-    expect(pose.feetSx).toBe(1);
+    noteCrouch(anim.crouch, { player, crouch, nowMs: 0 });
+    return blobPose(anim, { player, squash, nowMs, crouch });
+  };
+
+  it("should never scale the body or the helmet with it when crouched (crouch-sink D1)", () => {
+    for (const ms of [0, 50, 100, 400, 900]) {
+      const pose = crouchedAt(ms);
+      expect(pose.bodySx).toBeCloseTo(1, 1);
+      expect(pose.bodySy).toBeCloseTo(1, 1);
+    }
   });
 
-  it("should stand back up when the crouch ends", () => {
+  it("should report the sunk helmet and the vanished feet when held", () => {
+    const pose = crouchedAt(900);
+    expect(pose.crouch.k).toBe(1);
+    expect(pose.crouch.drop).toBe(crouch.drop);
+    expect(pose.crouch.feetScale).toBe(0);
+    expect(pose.crouch.helmetSink).toBeGreaterThan(crouch.helmetSink - crouch.breathe - 0.01);
+  });
+
+  it("should keep the standing pose when not crouching", () => {
     const player = standing();
-    player.crouching = true;
     const anim = createBlobAnim(player);
-    player.crouching = false;
-    stepCrouchBlend(anim, { player, crouch, nowMs: 0 });
-    stepCrouchBlend(anim, { player, crouch, nowMs: 1000 });
-    expect(anim.crouchBlend).toBe(0);
-    expect(blobPose(anim, { player, squash, nowMs: 0, crouch }).bodySy).toBe(1);
-  });
-});
-
-describe("crouch face", () => {
-  const crouch = DEFAULT_GAME_TUNABLES.player.crouch;
-
-  it("should lower the helmet, lift the eyes and tuck them under the dome when crouched", () => {
-    const player = standing();
-    player.crouching = true;
-    const anim = createBlobAnim(player);
-    expect(crouchFace(anim, crouch)).toEqual({
-      helmetDrop: crouch.helmetDrop,
-      eyeLift: crouch.eyeLift,
-      eyesUnderHelmet: true,
-    });
-  });
-
-  it("should keep the standing face when not crouching", () => {
-    const anim = createBlobAnim(standing());
-    expect(crouchFace(anim, crouch)).toEqual({
-      helmetDrop: 0,
-      eyeLift: 0,
-      eyesUnderHelmet: false,
-    });
+    expect(blobPose(anim, { player, squash, nowMs: 500, crouch }).crouch).toEqual(STANDING_SINK);
   });
 });
 
