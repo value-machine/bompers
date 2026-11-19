@@ -57,7 +57,7 @@ If promote already failed with `main is not an ancestor of develop`, reconcile o
 
 Policy (title, preview link, who reads the PR body, no task lists): `git-workflow` rule § Pull requests. This section is the procedure.
 
-**Preview link:** take it from the `cloudflare-workers-and-pages[bot]` comment on the PR ("Preview URL: …", the branch alias URL, not the per-commit one). If that comment is missing, the URL is `https://<alias>-<worker name>.<workers.dev subdomain>.workers.dev` (alias = branch name lowercased, `/` and other non-alphanumerics → `-`; this repo: `https://<alias>-bronze-plate-harness.tom-fab.workers.dev`); verify it before writing it (HTTP 200, page loads `/assets/*.js`). Until then, write `Preview: pending (Workers Builds)` and edit the PR body to the real link when it appears.
+**Preview link:** take it from the `cloudflare-workers-and-pages[bot]` comment on the PR ("Preview URL: …", the branch alias URL, not the per-commit one). If that comment is missing, the URL is `https://<alias>-<worker name>.<workers.dev subdomain>.workers.dev` (alias = branch name lowercased, `/` and other non-alphanumerics → `-`; this repo: `https://<alias>-bompers.tom-fab.workers.dev`); verify it before writing it (HTTP 200, page loads `/assets/*.js`). Until then, write `Preview: pending (Workers Builds)` and edit the PR body to the real link when it appears.
 
 **PR body template (all modes):**
 
