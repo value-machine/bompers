@@ -118,7 +118,7 @@ Never draw gloss on a non-slippery piece, even for decoration. A new behaviour t
   - Then draw the coloured parts on top with no stroke.
   - Only the outer half of the ink stroke stays visible, which is the silhouette line. That is two passes of the same shapes and no filters.
   - Cache the shape geometry per pose if needed.
-- **Width in world units (visible part):** characters 3.5, terrain slab 3.5 (every material), rockets and pickups 2, effect stars 3. Terrain ink follows one rule: the terrain as it stands, grown by the outline width, filled in ink under the fills. Authored edges, crater rims and cut faces get the same line, and where terrain is gone no ink remains (owner, terrain-curves D7–D8).
+- **Width in world units (visible part):** characters 3.5, terrain slab 3.5 (every material), rockets and pickups 2, effect stars 3. Terrain ink follows one rule: a line along the edge of the terrain as it stands, stroked at twice the outline width under the fills, which hide its inner half. Authored edges, crater rims and cut faces get the same line, and where terrain is gone no ink remains (owner, terrain-curves D7–D8). The ink is never a filled shape under the fills, so a fill that is late or missing cannot show a black shape (owner, outline-system D1).
 - **Zoom rule:** the on-screen line is `clamp(worldWidth × zoom, minPx, maxPx)`. Convert back to world width per frame (`screenWidth / zoom`) when drawing. When the camera zooms far out, the line stays readable instead of shrinking to a hairline; zoomed in, it doesn't turn into a thick border.
 
   | Line                      | world width | minPx | maxPx |
@@ -156,7 +156,7 @@ Back to front:
 
 1. Sky gradient, sun
 2. Far hills, clouds, near hills (parallax)
-3. Terrain: ink (the standing terrain grown by the outline width), slab fills (breakable slabs clipped to the standing terrain, curved along crater rims)
+3. Terrain: ink (a line along the standing terrain's edge), slab fills (breakable slabs clipped to the standing terrain, curved along crater rims)
 4. Contact shadows
 5. Pickups and collectibles
 6. **Effects:** smoke, rocket trails, explosions, debris
