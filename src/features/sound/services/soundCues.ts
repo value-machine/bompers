@@ -2,6 +2,7 @@ import { intensityGain } from "@/shared/config/gameJuice";
 import type { CombatEvent } from "@/features/combat/api/combatApi";
 import { SOUND_MIX } from "@/features/sound/services/soundBank";
 import type {
+  SoundBurst,
   SoundCue,
   SoundLoop,
   SoundPlayerSnapshot,
@@ -16,6 +17,8 @@ export interface SoundSnapshot {
   roundPhase: "playing" | "ended";
   /** Fire and ice this frame (thaw and steam cues, the held loops). */
   world: SoundWorldSnapshot;
+  /** The knockout layer's burst log (read by `n`): the death sound plays on the splat. */
+  bursts: readonly SoundBurst[];
 }
 
 /** When the rate-limited element cues last played, and what had thawed by then. */
@@ -28,6 +31,8 @@ interface ElementCueMarks {
 /** What the reader remembers between frames. A fresh round starts from `null`. */
 export interface SoundCursor {
   lastSeq: number;
+  /** Newest knockout burst already read. */
+  lastBurst: number;
   players: ReadonlyMap<number, SoundPlayerSnapshot>;
   roundPhase: "playing" | "ended";
   world: SoundWorldSnapshot;
@@ -47,6 +52,7 @@ export function readSoundCues(
   frame: SoundSnapshot
 ): { cursor: SoundCursor; cues: SoundCue[] } {
   const lastSeq = cursor?.lastSeq ?? 0;
+  const lastBurst = cursor?.lastBurst ?? 0;
   const elements = elementCues(cursor, frame.world);
   const body = guardBodyCues(
     cursor?.bodyCueAt ?? new Map(),
@@ -57,12 +63,14 @@ export function readSoundCues(
     ...roundCues(cursor, frame),
     ...body.cues,
     ...eventCues(frame, lastSeq),
+    ...burstCues(frame, lastBurst),
     ...elements.cues,
   ];
   return {
     cues,
     cursor: {
       lastSeq: frame.events.reduce((max, event) => Math.max(max, event.seq), lastSeq),
+      lastBurst: frame.bursts.reduce((max, burst) => Math.max(max, burst.n), lastBurst),
       players: new Map(frame.players.map((player) => [player.slot, player])),
       roundPhase: frame.roundPhase,
       world: frame.world,
@@ -243,13 +251,23 @@ function eventCues(frame: SoundSnapshot, lastSeq: number): SoundCue[] {
   return frame.events
     .filter((event) => event.seq > lastSeq)
     .flatMap((event) => {
+      // A crush (moving parts, owner B2): the wet splut of being squeezed; the pop follows on
+      // the pancake's burst (`burstCues`).
+      if (event.type === "playerEliminated" && event.cause === "crush")
+        return [cue("land", event.victimSlot)];
       const main = combatEventCue(event, speedOf);
-      if (!main) return [];
-      // A crush (moving parts, owner B2): the wet splut of being squeezed, then the pop.
-      const crushed = event.type === "playerEliminated" && event.cause === "crush";
-      return crushed ? [cue("land", event.victimSlot), main] : [main];
+      return main ? [main] : [];
     });
 }
+
+/**
+ * The death sound on the splat (owner, death-splat-sound lap): `elimination` plays when the
+ * knocked-out blob bursts into goo, pitched by the victim, not at the lethal hit.
+ */
+const burstCues = (frame: SoundSnapshot, lastBurst: number): SoundCue[] =>
+  frame.bursts
+    .filter((burst) => burst.n > lastBurst)
+    .map((burst) => cue("elimination", burst.slot));
 
 /**
  * Combat event → cue. Hits and eliminations take the victim's pitch, actions the actor's. A hit is
@@ -268,7 +286,9 @@ function combatEventCue(event: CombatEvent, speedOf: (slot: number) => number): 
         intensityGain(speedOf(event.victimSlot), SOUND_MIX.hitFullSpeed)
       );
     case "playerEliminated":
-      return cue("elimination", event.victimSlot);
+      // A knockout's pop waits for its burst (`burstCues`); falling out of the arena makes no
+      // knockout, so it pops at once.
+      return event.cause === "out-of-bounds" ? cue("elimination", event.victimSlot) : null;
     case "rocketFired":
       return cue("rocket-fire", event.slot);
     case "sprayStarted":
