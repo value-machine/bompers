@@ -1,15 +1,5 @@
 [
   {
-    "title": "Outline system lap 2: fills from the field",
-    "description": "Option B lap 2 (after #95). Each material fill built from the field shape so touching shapes are one fill with one lip; removes the stencil mask; rebuilds limited to the changed region. Absorbs the pillar/slab seam look. Owner looks at a junction-lip options page before build. Size M. Thread: outline-system.",
-    "status": "in-progress"
-  },
-  {
-    "title": "Outline system lap 3: elements and widths",
-    "description": "Option B lap 3. Fire body, frost and stains through the terrainRings builder (fire ink as a line), cap on the grow, one width and join source for props, blobs and effects. Size M. After lap 2.",
-    "status": "to-do"
-  },
-  {
     "title": "Soft landing sound repeats chasing a moving block",
     "description": "Owner report: while chasing a moving block, one soft landing sound plays about every 4 s. Not root-caused after the contact fixes (#90 era). Debug with spec-debug-runtime. Size S.",
     "status": "to-do"
@@ -52,6 +42,11 @@
   {
     "title": "Level prompt: remaining ability numbers",
     "description": "From PR #79 author feedback: LEVEL_PROMPT still lacks the roll, slope speeds, ice grip, freeze ray numbers, mover jump-off speed and headbutt details. Generate them from the tunables (touch the prompt only for things authors place or set, per #61, but movement numbers help authors size gaps). Size S.",
+    "status": "to-do"
+  },
+  {
+    "title": "One width and join source for props, blobs and effects",
+    "description": "Cut from outline-system lap 3 (#99): props, blobs and effects still use a handful of fixed outline numbers across six features (widths mostly come from the shared outline widths already). No bug behind it; look risk. Also flames, sprays and breaths keep small ink shapes. Low priority. Size S.",
     "status": "to-do"
   }
 ]
