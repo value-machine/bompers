@@ -94,6 +94,7 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     airSeconds: 0,
     lastLandingSpeed: 0,
     groundAngle: 0,
+    groundVelocity: { x: 0, y: 0 },
     squeeze: null,
   };
 }
@@ -120,6 +121,7 @@ export function placePlayer(player: PlayerState, at: Vec2): void {
 /** Plain movement again: no ability modifiers, no crouch, no carried speed. */
 function resetStance(player: PlayerState): void {
   player.airCarrySpeed = 0;
+  player.groundVelocity = { x: 0, y: 0 };
   player.steerScale = 1;
   player.gravityScale = 1;
   player.jumpLocked = false;
@@ -851,16 +853,25 @@ function followGround(player: PlayerState, frame: GroundFrame, speed: number): v
   player.vx = speed * frame.tangent.x + 0;
   player.vy = speed * frame.tangent.y + 0;
   player.groundAngle = Math.atan2(-frame.tangent.y, frame.tangent.x);
+  player.groundVelocity = { x: player.vx, y: player.vy };
 }
 
 /** Velocity out of the ground above this leaves it (a knock-up, a pop): units / s. */
 const LEAVE_GROUND_SPEED = 1;
 
-/** A knock-up, pop or recoil whose velocity points out of the ground lifts off it (A1). */
+/**
+ * A knock-up, pop or recoil whose velocity points out of the ground lifts off it (A1). Only what
+ * was added since the ground set the velocity counts: at the foot of a wall the ground frame tilts
+ * toward it, and when that wall is a moving part sliding away, the ground under the body is flat
+ * again on the next step, so the ground's own velocity pointed out of it and hopped the blob off
+ * the floor once a slide cycle, with a landing sound (owner report, landing-sound-mover).
+ */
 function leaveGroundIfPushedOff(player: PlayerState, terrain: TerrainGrid): void {
   if (!player.grounded) return;
   const { normal } = groundFrame(player, terrain);
-  if (player.vx * normal.x + player.vy * normal.y <= LEAVE_GROUND_SPEED) return;
+  const pushX = player.vx - player.groundVelocity.x;
+  const pushY = player.vy - player.groundVelocity.y;
+  if (pushX * normal.x + pushY * normal.y <= LEAVE_GROUND_SPEED) return;
   player.grounded = false;
   player.groundAngle = 0;
 }
