@@ -18,7 +18,10 @@ import {
   createWeaponCratesState,
   stepWeaponCrates,
 } from "@/features/collectibles/services/weaponCrates";
-import type { WeaponCratesState } from "@/features/collectibles/types/collectibles.types";
+import type {
+  PickupBurst,
+  WeaponCratesState,
+} from "@/features/collectibles/types/collectibles.types";
 
 // Moved from combatSim.test.ts ("combat — pickups") when the crates moved here; the test bodies
 // are unchanged apart from where the crates live. The world steps the chain the match runs:
@@ -53,6 +56,7 @@ interface World {
   players: PlayerState[];
   combat: CombatState;
   crates: WeaponCratesState;
+  bursts: PickupBurst[];
   step: (inputs?: InputPatch[], steps?: number) => void;
   /** Every event seen since the world was created (the live log is pruned). */
   seen: CombatEvent[];
@@ -73,6 +77,7 @@ function createWorld({ at, drops, weaponIds }: WorldArgs): World {
   const combat = createCombatState();
   const crates = createWeaponCratesState(tunables);
   const seen: CombatEvent[] = [];
+  const bursts: PickupBurst[] = [];
   let time = 0;
   let lastSeq = 0;
   const step = (patches: InputPatch[] = [], steps = 1): void => {
@@ -94,6 +99,7 @@ function createWorld({ at, drops, weaponIds }: WorldArgs): World {
         bounds: level.bounds,
         tunables,
         dt,
+        bursts,
       });
       takeWeaponPickups({ ...world, players: inPlay }, result);
       for (const event of combat.events) if (event.seq > lastSeq) seen.push(event);
@@ -102,7 +108,7 @@ function createWorld({ at, drops, weaponIds }: WorldArgs): World {
     }
   };
   step([], 60); // settle on the floor
-  return { players, combat, crates, step, seen };
+  return { players, combat, crates, bursts, step, seen };
 }
 
 const eventsOf = <T extends CombatEvent["type"]>(world: World, type: T) =>
@@ -122,6 +128,17 @@ describe("collectibles — weapon crates", () => {
     const [pickup] = world.crates.list;
     expect(eventsOf(world, "pickupSpawned")).toHaveLength(1);
     expect(pickup).toMatchObject({ x: 1000, y: FLOOR_Y, grounded: true });
+    expect(world.crates.landCount).toBe(1);
+    expect(pickup!.groundedSeconds).toBeGreaterThan(0);
+  });
+
+  it("should leave a burst with the crate's weapon where it was taken when a player takes it", () => {
+    const world = createWorld({ at: [{ x: 1000, y: FLOOR_Y }], drops });
+    world.step([], Math.ceil((C.drops.firstDelaySeconds + 2) / dt));
+    const [taken] = eventsOf(world, "pickupCollected");
+    expect(world.bursts).toEqual([
+      expect.objectContaining({ itemId: taken!.itemId, x: 1000, ageSeconds: 0 }),
+    ]);
   });
 
   it("should arm the player who touches it and drop the launcher when the ammo runs out", () => {

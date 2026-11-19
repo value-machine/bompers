@@ -44,3 +44,4 @@ The headbutt (GDD § 3 "Ongewapende aanval", the "bomp"): fire (unarmed) or a mi
 - A wall bonk stuns for 30 frames (250 ms), down from the prototype's 54, to stay fair (dive-headbutt D9).
 - Test levels list terrain as `{ shape, materialId }` only: terrain has no role since level format 2 (material-system D5).
 - The dive aim snaps to 16 directions (22.5°), up from 8, for finer headbutt aim. Keyboard aim (four direction keys) still only reaches the 8 main ones; sticks reach all 16. The owner accepted that keyboard players don't get the in-between angles (dive-16-ways D1, 2026-11-16).
+- The back-out and quad eases come from `shared/utils/easing.ts` (pickup-juice D5: four copies of the back-out ease extracted).

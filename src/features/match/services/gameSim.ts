@@ -374,6 +374,7 @@ function stepCratePickups(state: GameState, dt: number): void {
     bounds: state.killZone,
     tunables,
     dt,
+    bursts: state.collectibles.bursts,
   });
   takeWeaponPickups({ combat: state.combat, players, tunables, timeSeconds }, pickups);
 }
@@ -389,6 +390,7 @@ function stepHeadbuttResets(state: GameState, dt: number): void {
     players: spent,
     tunables: state.tunables,
     dt,
+    bursts: state.collectibles.bursts,
   });
   for (const { slot } of taken) {
     const player = spent.find((candidate) => candidate.slot === slot);

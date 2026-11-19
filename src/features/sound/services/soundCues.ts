@@ -58,6 +58,7 @@ export function readSoundCues(
     ...body.cues,
     ...eventCues(frame, lastSeq),
     ...elements.cues,
+    ...crateCues(cursor?.world, frame.world),
   ];
   return {
     cues,
@@ -161,6 +162,20 @@ function elementCues(
 }
 
 const cue = (soundId: string, slot: number | null, gain = 1): SoundCue => ({ soundId, slot, gain });
+
+/**
+ * A weapon crate landing (also after its floor was blasted away): a soft cardboard `thwap`,
+ * unpitched, at the crouch level (pickup-juice D2). Crates in the same frame share one cue.
+ */
+export const CRATE_LAND_SOUND = "thwap";
+
+function crateCues(
+  previous: SoundWorldSnapshot | undefined,
+  world: SoundWorldSnapshot
+): SoundCue[] {
+  if (!previous || world.crateLandings <= previous.crateLandings) return [];
+  return [cue(CRATE_LAND_SOUND, null, SOUND_MIX.crouchGain)];
+}
 
 function roundCues(cursor: SoundCursor | null, frame: SoundSnapshot): SoundCue[] {
   if (cursor === null) return [cue("round-start", null)];

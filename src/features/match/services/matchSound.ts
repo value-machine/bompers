@@ -74,6 +74,7 @@ export function soundWorldOf(state: GameState): SoundWorldSnapshot {
     thawedSamples: thawedCount(ice),
     frozenVersion: frozenVersionOf(state.arena.terrain),
     beamClashes: state.combat.beamClashes.length,
+    crateLandings: state.collectibles.crates.landCount,
   };
 }
 

@@ -342,5 +342,15 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       blinkSeconds: 0.5,
       splatSeconds: 4,
     },
+    // Pickups (owner picks, pickup-juice D1–D3): light tier, squash and effects only.
+    pickup: {
+      popInSeconds: 0.15,
+      settle: { sx: 1.2, sy: 0.84, seconds: 0.15 },
+      fallStretch: { sx: 0.92, sy: 1.08, fullSpeed: 900 },
+      ringSeconds: 0.22,
+      sparkSeconds: 0.32,
+      pieceSeconds: 0.45,
+      dustSeconds: 0.22,
+    },
   },
 };

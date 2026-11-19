@@ -4,6 +4,7 @@ import { JUICE_VOLUME } from "@/shared/config/gameJuice";
 import {
   readSoundCues,
   readSoundLoops,
+  CRATE_LAND_SOUND,
   WALL_BONK_SOUND,
   type SoundSnapshot,
 } from "@/features/sound/services/soundCues";
@@ -44,6 +45,7 @@ const world = (patch: Partial<SoundWorldSnapshot> = {}): SoundWorldSnapshot => (
   thawedSamples: 0,
   frozenVersion: 0,
   beamClashes: 0,
+  crateLandings: 0,
   ...patch,
 });
 
@@ -225,6 +227,15 @@ describe("readSoundCues — headbutt reset", () => {
   it("should play the pickup sound pitched by the collector when a player takes a headbutt reset", () => {
     const frame = snapshot({ players: [player(0), player(1, { diveRefillCount: 1 })] });
     expect(cuesAfter(frame)).toEqual([{ soundId: "pickup", slot: 1, gain: 1 }]);
+  });
+});
+
+describe("readSoundCues — weapon crates", () => {
+  it("should play one soft unpitched thwap when crates land in a frame", () => {
+    const frame = snapshot({ world: world({ crateLandings: 2 }) });
+    expect(cuesAfter(frame)).toEqual([
+      { soundId: CRATE_LAND_SOUND, slot: null, gain: SOUND_MIX.crouchGain },
+    ]);
   });
 });
 

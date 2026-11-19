@@ -68,6 +68,8 @@ export interface SoundWorldSnapshot {
   frozenVersion: number;
   /** Held beams ending each other in steam this step (beam-clash D1). */
   beamClashes: number;
+  /** Weapon-crate landings over the match (monotonic; pickup-juice D2). */
+  crateLandings: number;
 }
 
 /**

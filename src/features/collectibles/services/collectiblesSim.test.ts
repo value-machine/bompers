@@ -59,6 +59,25 @@ describe("collectiblesSim", () => {
     const collected = run(state, schedule.firstDelaySeconds + 2, [player]);
     expect(collected).toEqual([expect.objectContaining({ slot: 2 })]);
     expect(state.orbs).toHaveLength(0);
+    expect(state.orbCounts[2]).toBe(1);
+  });
+
+  it("should burst where the orb was taken and drop the burst when its time has passed", () => {
+    const state = createCollectiblesState(tunables);
+    const player = createPlayer(0, { x: 100, y: 210 }, tunables);
+    let collected = 0;
+    while (collected === 0) collected = run(state, dt / 2, [player]).length;
+    expect(state.bursts).toEqual([expect.objectContaining({ itemId: "point-orb", x: 100 })]);
+    run(state, 0.5);
+    expect(state.bursts).toHaveLength(0);
+  });
+
+  it("should count how long a landed orb has rested when it hovers on its point", () => {
+    const state = createCollectiblesState(tunables);
+    run(state, schedule.firstDelaySeconds + 2);
+    const [orb] = state.orbs;
+    expect(orb!.restSeconds).toBeGreaterThan(0);
+    expect(orb!.ageSeconds).toBeGreaterThan(orb!.restSeconds);
   });
 
   it("should spawn nothing when the level has no point-orb collectibles", () => {

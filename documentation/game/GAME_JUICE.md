@@ -74,8 +74,13 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Land | light | `land` soft squish (gain by speed) | squash wide (by speed), sinks then one wobble back (`settle`) | — | — | — | — | kick |
 | Shot (any weapon whose readiness drops) | light | the weapon's fire cue (`rocket-fire`) | barrel pop 0.78 × 1.22, 200 ms back-out (`feel.barrelPop`) | — | — | — | mouth accent drops to 15 % and refills with the cooldown | — |
 | Rocket recoil | light | `rocket-fire` (the fire cue) | — | — | — | — | body kick opposite the aim (sim impulse `combat.rocket.recoil`) | — |
-| Pickup collected | light | `pickup` | — | — | — | — | — | — |
-| Headbutt reset taken | light | `pickup` (pitched by the collector) | — | — | — | — | ring burst in the crystal colour, 220 ms; then a ghost outline until it is back | — |
+| Point orb appears (pickup-juice) | — | — (deliberately silent: a world timer) | pop-in, back-out 150 ms (`feel.pickup.popInSeconds`) | — | — | — | — | — |
+| Point orb reaches its point | — | — (silent) | squash wide 1.2 × 0.84 springing back over 150 ms (`feel.pickup.settle`), then the bob | — | — | — | — | — |
+| Point orb taken (owner pick D1) | light | **gap** until the owner picks a take of the new `orb-collect` chime (pitched by the collector) | — | — | — | — | pink ring (220 ms) and five mini stars flying out (320 ms); the collector's HUD score pops 1.35 → 1 over 150 ms (any score rise) | — |
+| Weapon crate appears | — | — (silent: a world timer) | pop-in, back-out 150 ms | — | — | — | — | — |
+| Weapon crate falls / lands (owner pick D2; also after its floor is blasted) | light | `thwap` (cardboard) on landing, at `crouchGain`, unpitched, one per frame | stretch tall up to 0.92 × 1.08 by fall speed (`feel.pickup.fallStretch`); on landing squash wide 1.2 × 0.84 springing back over 150 ms | — | — | — | two dust puffs rolling out, 220 ms | — |
+| Weapon crate taken (owner pick D3) | light | `pickup` (pitched by the collector) | — | — | — | — | ring in the weapon's accent (220 ms) and four crate pieces flying off and falling (450 ms) | — |
+| Headbutt reset taken | light | `pickup` (pitched by the collector) | — | — | — | — | the shared pickup ring in the crystal colour, 220 ms; then a ghost outline until it is back | — |
 | Headbutt reset returns | — | — (deliberately silent: a world timer every 2.5 s would be noise) | crystal pop-in, back-out 150 ms | — | — | — | — | — |
 | Respawn | light | `respawn` | — | — | — | — | blink 8 Hz + ring | — |
 | Dive launch (fire, or a mid-air jump press: double-jump-bash D1) | light | `dive-launch` | dive pose | — | — | — | — | — |
@@ -121,7 +126,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 
 Rows marked **gap** break § 1 today; the lap that builds the missing channel fills the row.
 
-Where the values live: shake / flash / hit-stop / helmet in `feel` tunables (read by `effects/feelCues.ts`, `camera/cameraShake.ts`, `player/playerRenderer.ts`); squash presets in `player.squash` (`player/blobPose.ts`); effect timings in `effects/effectsRenderer.ts`; HUD pops in `match/hudRenderer.ts`; sound in the `sound` feature.
+Where the values live: shake / flash / hit-stop / helmet in `feel` tunables (read by `effects/feelCues.ts`, `camera/cameraShake.ts`, `player/playerRenderer.ts`); squash presets in `player.squash` (`player/blobPose.ts`); pickup timings and poses in `feel.pickup` (`collectibles` renderers); shared easing and spring-back poses in `shared/utils/easing.ts`; effect timings in `effects/effectsRenderer.ts`; HUD pops in `match/hudRenderer.ts`; sound in the `sound` feature.
 
 ## 7. Checklist for a new game element
 

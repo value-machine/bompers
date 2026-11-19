@@ -606,5 +606,20 @@ export interface GameTunables {
       /** Goo stains on terrain: full until the respawn, then they fade out evenly and are gone by this age. */
       splatSeconds: number;
     };
+    /**
+     * Pickups (point orbs, weapon crates, headbutt resets; pickup-juice D1–D3), all light tier:
+     * a pop-in where one appears, a wide squash springing back when a dropped one comes to rest, a
+     * falling crate's stretch (full at `fullSpeed`, units / s), the ring every taken pickup throws,
+     * an orb's mini stars, a crate's flying pieces and a landing crate's dust puffs. Seconds.
+     */
+    pickup: {
+      popInSeconds: number;
+      settle: { sx: number; sy: number; seconds: number };
+      fallStretch: { sx: number; sy: number; fullSpeed: number };
+      ringSeconds: number;
+      sparkSeconds: number;
+      pieceSeconds: number;
+      dustSeconds: number;
+    };
   };
 }

@@ -6,6 +6,7 @@ import { firstToucher } from "@/features/collectibles/services/skyDrops";
 import type {
   DiveRefillCollected,
   DiveRefillPickup,
+  PickupBurst,
 } from "@/features/collectibles/types/collectibles.types";
 
 /**
@@ -31,6 +32,8 @@ export interface StepDiveRefillsArgs {
   players: readonly PlayerState[];
   tunables: GameTunables;
   dt: number;
+  /** Where a taken reset's burst goes (the collectibles state's `bursts`; render only). */
+  bursts: PickupBurst[];
 }
 
 export const diveRefillBox = (refill: DiveRefillPickup, size: number): Rect => ({
@@ -65,6 +68,8 @@ export function stepDiveRefills(args: StepDiveRefillsArgs): DiveRefillCollected[
     if (!player) continue;
     refill.respawnTimer = respawnSeconds;
     collected.push({ slot: player.slot, x: refill.x, y: refill.y });
+    const burst = { id: refill.pointIndex, itemId: DIVE_REFILL_ITEM, ageSeconds: 0 } as const;
+    args.bursts.push({ ...burst, x: refill.x, y: refill.y });
     candidates = candidates.filter((candidate) => candidate !== player);
   }
   return collected;
