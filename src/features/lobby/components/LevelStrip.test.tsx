@@ -37,6 +37,26 @@ describe("LevelStrip", () => {
     expect(screen.getByRole("button", { name: /load level/i })).toBeInTheDocument();
   });
 
+  it("should scroll inside the strip and keep the picked card in view when the library is long", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const many: LevelLibraryEntry[] = Array.from({ length: 30 }, (_, index) => ({
+      id: `import:${index}`,
+      origin: "imported",
+      level: level(`Level ${index}`),
+      error: null,
+      memory: "copy",
+    }));
+    render(
+      <LevelStrip entries={many} selectedId="import:29" onSelect={vi.fn()} onLoad={vi.fn()} />
+    );
+    const strip = screen.getByTestId("lobby-level-strip");
+    // The strip is the scroll container and its cards never size it (no page-wide overflow).
+    expect(strip).toHaveClass("overflow-x-auto", "contain-inline-size", "w-full");
+    expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ inline: "center" }));
+    expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByTestId("lobby-level-card-import:29"));
+  });
+
   it("should pick a level when its card is clicked and open the picker from the load card", () => {
     const onSelect = vi.fn();
     const onLoad = vi.fn();
