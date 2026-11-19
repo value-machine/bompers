@@ -1,12 +1,16 @@
+import { readFileSync } from "node:fs";
+import { buildLine } from "pixi.js";
 import { describe, expect, it } from "vitest";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
-import { burnOut, clearCrater } from "@/features/arena/services/terrainGrid";
+import { burnOut, clearCrater, fieldBand } from "@/features/arena/services/terrainGrid";
+import { parseLevelFile } from "@/features/level-file/api/levelFileApi";
 import { createTerrainView, syncTerrainView } from "@/features/arena/services/terrainRenderer";
 import {
   belowLipRegion,
   edgeAbove,
   markedRegion,
+  outlineRingIssue,
   slotLayerBoxes,
   slotLayerRegion,
   terrainContour,
@@ -307,6 +311,87 @@ describe("terrainRings (outline-system: the terrain's edge as closed lines)", ()
         expect(
           Math.hypot(points[j]! - points[i]!, points[j + 1]! - points[i + 1]!)
         ).toBeGreaterThan(0.01);
+      }
+    }
+  });
+});
+
+describe("outlineRingIssue (terrain-ink-spikes guard)", () => {
+  // Ground truth: the shipped kit levels the owner saw the spikes on (fire and crusher test).
+  const kitLevel = (name: string): LevelDefinition => {
+    const result = parseLevelFile(readFileSync(`public/level-kit/v2/${name}.html`, "utf8"));
+    if (!result.ok) throw new Error(name);
+    return result.level;
+  };
+  /** Distance from a point to the nearest ring segment. */
+  const nearestSegment = (rings: readonly OutlineRing[], x: number, y: number): number => {
+    let best = Infinity;
+    for (const { points, closed } of rings) {
+      const n = points.length / 2;
+      for (let a = 0; a < (closed ? n : n - 1); a += 1) {
+        const b = (a + 1) % n;
+        const ax = points[a * 2]!;
+        const ay = points[a * 2 + 1]!;
+        const dx = points[b * 2]! - ax;
+        const dy = points[b * 2 + 1]! - ay;
+        const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy)));
+        best = Math.min(best, Math.hypot(x - ax - dx * t, y - ay - dy * t));
+      }
+    }
+    return best;
+  };
+
+  it("should name a point outside the field when a ring holds one", () => {
+    const grid = buildTerrainFromLevel(level);
+    const broken = [{ points: [10, 10, 20, 10, Number.NaN, 20], closed: true }];
+    expect(outlineRingIssue(grid, broken, 20)).toContain("outside the field");
+    expect(outlineRingIssue(grid, terrainRings(grid, { grow: 0 }), 20)).toBeNull();
+  });
+
+  it("should keep every ring whole and every stroked vertex at its ring when blasts and burn-outs cut the kit levels", () => {
+    let seed = 7;
+    const random = (): number => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (const name of ["fire-test-level", "crusher-test-level"]) {
+      const def = kitLevel(name);
+      const grid = buildTerrainFromLevel(def);
+      const { w, h } = def.worldSize;
+      for (let step = 0; step < 24; step += 1) {
+        if (step % 2 === 0) {
+          clearCrater(grid, {
+            x: random() * w,
+            y: random() * h,
+            reach: 10 + random() * 40,
+            shape: "round",
+          });
+        } else {
+          const start = Math.floor(random() * grid.cells.length);
+          const around = Array.from(
+            { length: 80 },
+            (_, k) => start + (k % 10) + Math.floor(k / 10) * grid.widthCells
+          );
+          burnOut(
+            grid,
+            around.filter((index) => index < grid.cells.length)
+          );
+        }
+        const rings = terrainRings(grid, { grow: 0 });
+        expect(outlineRingIssue(grid, rings, fieldBand(grid))).toBeNull();
+        // What Pixi strokes from them: no vertex strays from its line (a spike would).
+        const width = 2 + (step % 4) * 3;
+        const vertices: number[] = [];
+        for (const ring of rings) {
+          buildLine(
+            ring.points,
+            { width, alignment: 0.5, join: "round", cap: "round", miterLimit: 10 } as never,
+            false,
+            ring.closed,
+            vertices,
+            []
+          );
+        }
+        for (let v = 0; v < vertices.length; v += 2 * 9) {
+          expect(nearestSegment(rings, vertices[v]!, vertices[v + 1]!)).toBeLessThan(width * 2);
+        }
       }
     }
   });
