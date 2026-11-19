@@ -1,5 +1,6 @@
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import type { GameTunables } from "@/shared/types/gameTunables.types";
+import { directHitPush } from "@/shared/utils/blastPower";
 import { MOTION_LIMITS } from "@/shared/utils/levelMotion";
 
 /**
@@ -60,18 +61,6 @@ export const freezePatchRadius = (t: GameTunables): number =>
   Math.sqrt((t.ice.freezeAreaPerSecond * t.combat.freezeRay.ammo) / Math.PI);
 
 /** Slopes and the roll: what decides ramps, hills and run-ups. */
-/**
- * Speed a full-speed headbutt gives a standing blob it hits: the body collision's handover
- * (`(1 + e) / 2` of the dive speed, capped) plus the strike along the hit and the lift, scaled by
- * the share the victim keeps (`dive.hitPushScale`).
- */
-export function diveHitPush(t: GameTunables): number {
-  const { restitution, maxImpulse } = t.bodyCollision;
-  const exchange = Math.min(((1 + restitution) / 2) * t.dive.launchSpeed, maxImpulse);
-  const along = (exchange + t.dive.strikeImpulse) * t.dive.hitPushScale;
-  return Math.hypot(along, t.dive.strikeLift * t.dive.hitPushScale);
-}
-
 export function slopeAndRollLines(t: GameTunables): string[] {
   const { slope, runSpeed } = t.player;
   const { roll, dive } = t;
@@ -90,7 +79,7 @@ export function groundAndPartLines(t: GameTunables): string[] {
   return [
     `- Ice grip \`${grip}\` (1 = stone): from a run a blob slides ~\`${round(brakeSlide(t, grip))}\` units to a stop on ice (~\`${round(brakeSlide(t, 1))}\` on stone), and a roll from \`${t.dive.launchSpeed}\` coasts ~\`${round(rollCoast(t, t.dive.launchSpeed, grip))}\` on flat ice before its \`${t.roll.maxSeconds}\` s run out, and keeps rolling down any slope over ~\`${Math.max(1, round(rollMinSlope(t, grip)))}°\`. Frozen ground grips like ice.`,
     `- Leaving a moving part (jump, headbutt or walk off) keeps its velocity, up to \`${leave}\` units/s: a jump off a lift rising at full speed peaks ~\`${round(liftJumpApex(t))}\` units up instead of ~\`${round(t.player.jumpSpeed ** 2 / (2 * t.world.gravity))}\`.`,
-    `- A headbutt that hits a player shoves it at ~\`${round(diveHitPush(t))}\` units/s and pops the diver up ~\`${round(pop)}\` units; a glancing hit on terrain just ends the dive.`,
+    `- A headbutt that hits a player pushes it like a direct rocket hit (\`${round(directHitPush(t))}\` units/s) and pops the diver up ~\`${round(pop)}\` units; a glancing hit on terrain just ends the dive.`,
   ];
 }
 

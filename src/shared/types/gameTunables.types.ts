@@ -196,8 +196,6 @@ export interface GameTunables {
     lockPerImpulse: number;
     /** Longest lock from one hit. */
     maxLockSeconds: number;
-    /** Least lock from a hit in the back. */
-    hardLockSeconds: number;
     /** Bounciness of a terrain impact (share of the speed into it that comes back). */
     restitution: number;
     /** Share of the speed along the surface kept on each bounce. */
@@ -273,17 +271,10 @@ export interface GameTunables {
     bonkStunSeconds: number;
     bonkMinAlignment: number;
     bonkRebound: number;
-    /** On a hit, on top of the body-collision exchange: push on the victim along the hit direction. */
-    strikeImpulse: number;
     /**
-     * Share of the hit's whole push the victim keeps: the body-collision exchange it got plus
-     * `strikeImpulse` along the hit, and `strikeLift` up. The dive owns its knockback, so this is
-     * the one knob for how far a dive hit sends a blob (the bump of a plain run-in is unchanged).
+     * On a hit the victim is pushed like a direct rocket hit (`directHitPush`); the attacker
+     * ricochets up at this speed, its dive available again at once.
      */
-    hitPushScale: number;
-    /** … upward pop on the victim, units / s. */
-    strikeLift: number;
-    /** … upward speed the attacker ricochets off with; its dive is available again at once. */
     attackerPop: number;
     /** Seconds a hit victim steers at `staggerSteerScale` (keeps the knockback readable). */
     staggerSeconds: number;

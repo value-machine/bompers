@@ -116,7 +116,6 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   roll: {
     lockPerImpulse: 0.0008,
     maxLockSeconds: 1.2,
-    hardLockSeconds: 0.5,
     restitution: 0.3,
     surfaceSpeedKeep: 0.85,
     minBounceSpeed: 300,
@@ -159,14 +158,6 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     bonkStunSeconds: 0.25,
     bonkMinAlignment: 0.8,
     bonkRebound: 0.25,
-    strikeImpulse: 160,
-    // The victim keeps this share of the hit's push (owner, dive-push lap: 1 → 0.2, the feel picked
-    // for blasts in #114). Measured on the 7 shipped levels from every spawn (gameSim.test.ts § dive
-    // knockback): one dive hit carried a standing blob ≈ 860 units (43 % of a level width) and off
-    // the map from 19 of 28 spawns; now ≈ 65 units (≈ 2 blob widths) and none, and repeated dives
-    // toward the near edge eliminate by damage in 22 of 28 (was 8). Blobs near a drop still go off.
-    hitPushScale: 0.2,
-    strikeLift: 256,
     attackerPop: 576,
     staggerSeconds: 0.3,
     staggerSteerScale: 0.15,

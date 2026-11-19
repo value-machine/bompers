@@ -12,6 +12,7 @@ import {
 } from "@/features/player/api/playerApi";
 import type { DiveHit, DiveMotion, DiveState, DiveTrigger } from "@/features/dive/types/dive.types";
 import { applyHit, type CombatState } from "@/features/combat/api/combatApi";
+import { directHitPush } from "@/shared/utils/blastPower";
 
 /**
  * Dive headbutt system (sim step 3b, after players, body contacts and combat). Unarmed fire
@@ -388,28 +389,29 @@ function ricochet(strike: Strike, d: DiveTunables): void {
 }
 
 /**
- * The dive owns the hit's knockback: the victim leaves along the hit at `hitPushScale` of the
- * speed the body collision + strike would give it (never slower than it was already moving away)
- * and pops up by that share of the lift. Returns the velocity change it gave (the hurt reaction's).
+ * A landed headbutt pushes the victim like a direct rocket hit (`directHitPush`, owner,
+ * bash-matches-rocket lap): away from the impact, added to how it was already moving. The body
+ * collision already exchanged momentum; that exchange is replaced by the push, except that a
+ * victim the collision bounced back (a head-on clash) keeps that bounce up to the push. Returns the
+ * velocity change it gave (the hurt reaction's, as for a blast).
  */
-function knockVictim(strike: Strike, d: DiveTunables): Vec2 {
+function knockVictim(strike: Strike, push: number): Vec2 {
   const { victim, direction, contact } = strike;
   const exchange = victim === contact.a ? contact.aImpulse : contact.bImpulse;
   const along = victim.vx * direction.x + victim.vy * direction.y;
   const before = along - exchange;
-  const leave = Math.max(before, (along + d.strikeImpulse) * d.hitPushScale);
-  const lift = d.strikeLift * d.hitPushScale;
+  const leave = Math.max(before + push, Math.min(along, push));
   victim.vx += direction.x * (leave - along);
-  victim.vy += direction.y * (leave - along) - lift;
+  victim.vy += direction.y * (leave - along);
   victim.grounded = false;
   const given = leave - before;
-  return { x: direction.x * given, y: direction.y * given - lift };
+  return { x: direction.x * given, y: direction.y * given };
 }
 
 /** Applies one strike's push on the victim and returns its hit event. */
 function applyStrike(strike: Strike, args: StepDivesArgs): DiveHit {
   const { attacker, victim, direction, contact } = strike;
-  const impulse = knockVictim(strike, args.tunables.dive);
+  const impulse = knockVictim(strike, directHitPush(args.tunables));
   // Damage, spawn protection, credit and the `playerHit` event are combat's.
   const hit = {
     victimSlot: victim.slot,
@@ -420,8 +422,8 @@ function applyStrike(strike: Strike, args: StepDivesArgs): DiveHit {
     direction,
   } as const;
   const result = applyHit(args, hit);
-  // The victim rolls as long as the hit was hard (a back hit at least the hard lock).
-  reactToHit(victim, { impulse, hard: result.zone === "back" }, args.tunables);
+  // The victim rolls as long as the push says, like a blast victim.
+  reactToHit(victim, { impulse }, args.tunables);
   return { ...hit, ...result, impulse };
 }
 
