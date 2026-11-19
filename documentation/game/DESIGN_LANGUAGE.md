@@ -62,6 +62,7 @@ Named colours a level puts on any material (`data-color`; catalog kind `color`).
 | `mint`      | `#3aa889` | `#67c7aa` | `#247a62` |             |
 | `frost`     | `#a8cfe6` | `#dff1fa` | `#6b97b8` | ice         |
 | `rose`      | `#c95a86` | `#e384a8` | `#8f3a5d` |             |
+| `bark`      | `#7a5233` | `#9a6e48` | `#553620` |             |
 
 ### Effects
 

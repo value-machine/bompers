@@ -25,7 +25,9 @@ export type LevelWarningCode =
   | "W18"
   | "W19"
   | "W20"
-  | "W21";
+  | "W21"
+  | "W22"
+  | "W23";
 
 export interface LevelIssue {
   /** Spec rule; absent for engine notes the spec has no number for. */
@@ -43,7 +45,7 @@ export interface LevelImportReport {
 }
 
 /** Every `data-role` value the current format knows. */
-export type LevelRole = "terrain" | "spawn" | "drop" | "collectible" | "bounds";
+export type LevelRole = "terrain" | "object" | "spawn" | "drop" | "collectible" | "bounds";
 
 /** A role element that passed the structural checks (W1–W3), with its readable name. */
 export interface RoleElement {

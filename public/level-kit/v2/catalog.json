@@ -120,6 +120,12 @@
       "label": "Rose",
       "fill": "#c95a86",
       "lip": "#e384a8"
+    },
+    {
+      "id": "bark",
+      "label": "Bark",
+      "fill": "#7a5233",
+      "lip": "#9a6e48"
     }
   ],
   "effect": [
@@ -289,6 +295,64 @@
       "id": "dive-reset",
       "label": "Headbutt reset",
       "use": "collectible"
+    }
+  ],
+  "object": [
+    {
+      "kind": "tree",
+      "label": "Tree",
+      "height": {
+        "min": 96,
+        "max": 480
+      },
+      "defaultVariant": "oak",
+      "variants": [
+        {
+          "id": "oak",
+          "label": "Round oak",
+          "aspect": {
+            "min": 0.6,
+            "max": 1.2
+          },
+          "madeOf": "earth trunk in bark colour (craters, only scorches) under a cardboard canopy in moss (burns away)"
+        },
+        {
+          "id": "pine",
+          "label": "Pine",
+          "aspect": {
+            "min": 0.35,
+            "max": 0.75
+          },
+          "madeOf": "earth trunk in bark colour under stacked cardboard needle tiers in mint (burn away)"
+        },
+        {
+          "id": "snowy-pine",
+          "label": "Snowy pine",
+          "aspect": {
+            "min": 0.35,
+            "max": 0.75
+          },
+          "madeOf": "a pine with ice caps in frost on each tier (needles touching ice never catch fire)"
+        },
+        {
+          "id": "palm",
+          "label": "Palm",
+          "aspect": {
+            "min": 0.5,
+            "max": 1.1
+          },
+          "madeOf": "bending earth trunk in cardboard colour, cardboard fronds in moss and two nuts (burn away)"
+        },
+        {
+          "id": "dead",
+          "label": "Dead tree",
+          "aspect": {
+            "min": 0.5,
+            "max": 1.1
+          },
+          "madeOf": "bare cardboard trunk and branches in bark colour: one spark burns the whole tree"
+        }
+      ]
     }
   ]
 }

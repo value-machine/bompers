@@ -86,6 +86,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
     mint: { id: "mint", label: "Mint" },
     frost: { id: "frost", label: "Frost" },
     rose: { id: "rose", label: "Rose" },
+    // Tree trunks and the dead tree (owner, level-objects D4).
+    bark: { id: "bark", label: "Bark" },
   },
   effect: {
     none: { id: "none", label: "No effect" },

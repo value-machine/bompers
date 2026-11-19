@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tree Grove — Bompers level</title>
+    <!-- Optional preview kit: legend, labels, grid. The level works without it. -->
+    <link rel="stylesheet" href="/level-kit/v2/preview.css" />
+    <script src="/level-kit/v2/preview.js" defer></script>
+  </head>
+  <body>
+    <svg
+      id="level"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 2400 1100"
+      data-level-format="2"
+      data-level-id="tree-grove"
+      data-title="Tree Grove"
+      data-author="Bompers team"
+      data-agent="claude"
+      data-description="A grove of placed objects: all five tree variants at several sizes on stone, earth and cardboard ground, one small oak riding a sliding platform, with torch, freeze-ray and rocket drops."
+      data-cell-size="4"
+      data-gravity="1"
+      data-match-duration="180"
+      data-weapons="torch freeze-ray rocket-launcher"
+      style="display: block; width: 100%; height: auto; background: #cfeaf7"
+    >
+      <title>Tree Grove</title>
+
+      <!-- In-bounds area: leaving it eliminates the player. -->
+      <rect data-role="bounds" x="0" y="0" width="2400" height="1100" fill="none" stroke="#d24b3a" />
+
+      <!-- Ground: a stone floor, an earth step and a cardboard step. -->
+      <rect data-role="terrain" data-material="stone" x="80" y="840" width="2240" height="96" fill="#5a3f7a" />
+      <rect data-role="terrain" data-material="earth" x="880" y="760" width="480" height="80" fill="#c4673f" />
+      <rect data-role="terrain" data-material="cardboard" x="1600" y="776" width="560" height="64" fill="#c99a62" />
+
+      <!-- Trees: each stands on its box's bottom edge, drawn after the ground it stands on. -->
+      <rect id="big-oak" data-role="object" data-kind="tree" data-variant="oak" x="160" y="536" width="256" height="304" fill="#5f8f3e" />
+      <rect id="small-oak" data-role="object" data-kind="tree" data-variant="oak" x="440" y="712" width="112" height="128" fill="#5f8f3e" />
+      <rect id="pine" data-role="object" data-kind="tree" data-variant="pine" x="600" y="632" width="104" height="208" fill="#3aa889" />
+      <rect id="snowy-pine" data-role="object" data-kind="tree" data-variant="snowy-pine" x="920" y="376" width="176" height="384" fill="#3aa889" />
+      <rect id="palm" data-role="object" data-kind="tree" data-variant="palm" x="1140" y="520" width="200" height="240" fill="#5f8f3e" />
+      <rect id="dead-tree" data-role="object" data-kind="tree" data-variant="dead" x="1640" y="568" width="176" height="208" fill="#7a5233" />
+      <rect id="small-snowy-pine" data-role="object" data-kind="tree" data-variant="snowy-pine" x="1880" y="648" width="64" height="128" fill="#3aa889" />
+      <rect id="tall-pine" data-role="object" data-kind="tree" data-variant="pine" x="2000" y="432" width="160" height="344" fill="#3aa889" />
+      <!-- No variant: the game picks one from the seed. -->
+      <rect id="surprise-tree" data-role="object" data-kind="tree" data-seed="7" x="2200" y="712" width="96" height="128" fill="#5f8f3e" />
+
+      <!-- A sliding platform carrying a small oak. -->
+      <g data-motion="slide 240,0 4s" data-end-sound="thud">
+        <rect data-role="terrain" data-material="stone" x="1200" y="320" width="160" height="24" fill="#5a3f7a" />
+        <rect id="riding-oak" data-role="object" data-kind="tree" data-variant="oak" x="1224" y="192" width="112" height="128" fill="#5f8f3e" />
+      </g>
+
+      <!-- Spawns: on the ground between the trees. -->
+      <circle data-role="spawn" cx="760" cy="816" r="14" fill="#3f8f5f" />
+      <circle data-role="spawn" cx="1420" cy="816" r="14" fill="#3f8f5f" />
+      <circle data-role="spawn" cx="1520" cy="816" r="14" fill="#3f8f5f" />
+      <circle data-role="spawn" cx="1856" cy="752" r="14" fill="#3f8f5f" />
+
+      <!-- Weapon crates: torch, freeze ray and rockets. -->
+      <circle data-role="drop" cx="600" cy="120" r="12" fill="#c94f7c" />
+      <circle data-role="drop" cx="1200" cy="120" r="12" fill="#c94f7c" />
+      <circle data-role="drop" cx="1800" cy="120" r="12" fill="#c94f7c" />
+    </svg>
+  </body>
+</html>

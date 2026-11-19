@@ -207,7 +207,7 @@ function warnContents(
 ): void {
   const { group, name } = part;
   for (const item of ctx.items) {
-    if (item.role !== "terrain" && group.contains(item.el)) {
+    if (item.role !== "terrain" && item.role !== "object" && group.contains(item.el)) {
       addWarning(
         ctx.log,
         "W13",

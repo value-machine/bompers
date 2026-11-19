@@ -7,13 +7,16 @@ import {
   type LevelDefinition,
   type LevelDrop,
   type LevelMover,
+  type LevelObject,
   type TerrainPiece,
 } from "@/features/level/api/levelApi";
+import { placeObject } from "@/features/level-objects/api/levelObjectsApi";
 import { checkMoverSweeps, collectMovers } from "@/features/level-file/services/levelFileMotion";
 import {
   checkPointBehavior,
   collectRoleElements,
   readCollectibleItem,
+  readObjectRequest,
   readTerrainRefs,
 } from "@/features/level-file/services/levelFileElements";
 import {
@@ -56,20 +59,63 @@ export const RECOMMENDED_SPAWNS = 4;
 const ofRole = <R extends RoleElement["role"]>(items: readonly RoleElement[], ...roles: R[]) =>
   items.filter((item): item is RoleElement & { role: R } => roles.includes(item.role as R));
 
-/** Terrain pieces in document order (the raster resolves overlaps, LEVEL_FORMAT § 4), with the element of each. */
+interface TerrainRead {
+  pieces: TerrainPiece[];
+  /** The element of each piece (an object's element once per piece, so movers find them). */
+  els: Element[];
+  objects: LevelObject[];
+}
+
+/**
+ * An object element built into terrain pieces (level-objects D6): W22 unknown kind (skipped),
+ * W23 each correction the registry made (unknown variant, clamped size).
+ */
+function addObject(
+  item: RoleElement,
+  ctx: { levelId: string; ordinal: number; log: LevelIssueLog },
+  read: TerrainRead
+): void {
+  const box = readRect(item, ctx.log);
+  const request = box && readObjectRequest(item, ctx, ctx.log);
+  if (!box || !request) return;
+  const placed = placeObject({ ...request, box });
+  if (!placed.ok) {
+    addWarning(ctx.log, "W22", `${item.name}: unknown object kind "${request.kind}"; ignored.`);
+    return;
+  }
+  for (const note of placed.notes) addWarning(ctx.log, "W23", `${item.name}: ${note}.`);
+  const first = read.pieces.length;
+  for (const { shape, materialId, colorId } of placed.parts) {
+    read.pieces.push({ shape, materialId, colorId });
+    read.els.push(item.el);
+  }
+  const terrainIndices = placed.parts.map((_, i) => first + i);
+  const { kind, variant, seed } = placed;
+  read.objects.push({ kind, variant, box: placed.box, seed, terrainIndices });
+}
+
+/**
+ * Terrain pieces in document order (the raster resolves overlaps, LEVEL_FORMAT § 4), with the
+ * element of each; placed objects add their parts where they stand in the document.
+ */
 function readTerrain(
   items: readonly RoleElement[],
-  log: LevelIssueLog
-): { pieces: TerrainPiece[]; els: Element[] } {
-  const pieces: TerrainPiece[] = [];
-  const els: Element[] = [];
-  for (const item of ofRole(items, "terrain")) {
-    const shape = readShape(item, log);
+  ctx: { levelId: string; log: LevelIssueLog }
+): TerrainRead {
+  const read: TerrainRead = { pieces: [], els: [], objects: [] };
+  let ordinal = 0;
+  for (const item of ofRole(items, "terrain", "object")) {
+    if (item.role === "object") {
+      ordinal += 1;
+      addObject(item, { ...ctx, ordinal }, read);
+      continue;
+    }
+    const shape = readShape(item, ctx.log);
     if (!shape) continue;
-    pieces.push({ shape, ...readTerrainRefs(item, log) });
-    els.push(item.el);
+    read.pieces.push({ shape, ...readTerrainRefs(item, ctx.log) });
+    read.els.push(item.el);
   }
-  return { pieces, els };
+  return read;
 }
 
 /** The part of `rect` inside `world`; null when they don't overlap. */
@@ -201,13 +247,15 @@ const readCollectibles = (items: readonly RoleElement[], ctx: PointContext): Lev
 
 type LevelContent = Pick<
   LevelDefinition,
-  "terrain" | "spawns" | "drops" | "collectibles" | "bounds" | "movers"
+  "terrain" | "spawns" | "drops" | "collectibles" | "bounds" | "movers" | "objects"
 >;
 
 interface ContentArgs {
   root: Element;
   world: { w: number; h: number };
   cellSize: number;
+  /** For objects' default seeds (level-objects D8). */
+  levelId: string;
   log: LevelIssueLog;
 }
 
@@ -238,7 +286,7 @@ function readMovers(
 function readContent(args: ContentArgs): LevelContent {
   const { root, world, log } = args;
   const items = collectRoleElements(root, log);
-  const terrainRead = readTerrain(items, log);
+  const terrainRead = readTerrain(items, { levelId: args.levelId, log });
   const terrain = terrainRead.pieces;
   if (terrain.length === 0) {
     addError(log, "E6", "No valid terrain: add at least one platform or destructible shape.");
@@ -249,7 +297,16 @@ function readContent(args: ContentArgs): LevelContent {
   const drops = readDrops(items, ctx);
   const collectibles = readCollectibles(items, ctx);
   const movers = readMovers(args, { items, terrain: terrainRead, spawns, bounds });
-  return { terrain, spawns, drops, collectibles, bounds, ...(movers.length > 0 && { movers }) };
+  const { objects } = terrainRead;
+  return {
+    terrain,
+    spawns,
+    drops,
+    collectibles,
+    bounds,
+    ...(movers.length > 0 && { movers }),
+    ...(objects.length > 0 && { objects }),
+  };
 }
 
 const rejected = (log: LevelIssueLog): LevelImportResult => ({
@@ -273,7 +330,13 @@ export function parseLevelFile(
   if (!worldSize) return rejected(log);
   const meta = readLevelMeta(root, log);
   const settings = readLevelSettings(root, log);
-  const content = readContent({ root, world: worldSize, cellSize: settings.cellSize, log });
+  const content = readContent({
+    root,
+    world: worldSize,
+    cellSize: settings.cellSize,
+    levelId: meta.levelId,
+    log,
+  });
   if (log.errors.length > 0) return rejected(log);
   const formatVersion = options.toVersion ?? LEVEL_FORMAT_VERSION;
   const normalized = normalizeLevelDefinition({

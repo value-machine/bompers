@@ -6,6 +6,7 @@ import {
   type ItemUse,
 } from "@/features/content-catalog/api/contentCatalogApi";
 import type { TerrainPiece } from "@/features/level/api/levelApi";
+import { hashSeed } from "@/shared/utils/seededRandom";
 import { addWarning, type LevelIssueLog } from "@/features/level-file/services/levelFileIssues";
 import { CATALOG_ID_RE } from "@/features/level-file/services/levelFileRoot";
 import type { LevelRole, RoleElement } from "@/features/level-file/types/levelFile.types";
@@ -24,6 +25,7 @@ const ROLE_RULES: Readonly<
     tags: TERRAIN_TAGS,
     attrs: ["data-material", "data-color", "data-effect", "data-sound", "data-behavior"],
   },
+  object: { tags: ["rect"], attrs: ["data-kind", "data-variant", "data-seed"] },
   spawn: { tags: ["circle"], attrs: ["data-behavior"] },
   drop: { tags: ["circle"], attrs: ["data-behavior"] },
   collectible: { tags: ["circle"], attrs: ["data-item", "data-behavior"] },
@@ -155,7 +157,7 @@ const readRef = (item: RoleElement, spec: RefSpec, log: LevelIssueLog): string |
 
 /** Terrain piece references; the material falls back to the default, the colour to the material's. */
 export function readTerrainRefs(
-  item: RoleElement & { role: "terrain" },
+  item: RoleElement,
   log: LevelIssueLog
 ): Omit<TerrainPiece, "shape"> {
   const fallback = CATALOG_DEFAULTS.material;
@@ -223,4 +225,47 @@ export function readCollectibleItem(item: RoleElement, log: LevelIssueLog): stri
   const spec: RefSpec = { attr: "data-item", kind: "item", instead: `using "${fallback}"` };
   const raw = item.el.getAttribute(spec.attr);
   return checkItem(item, { spec, raw, use: "collectible" }, log) ?? fallback;
+}
+
+/** What an object element asks for, before the registry clamps it (level-objects D3, D8). */
+export interface ObjectRequestFields {
+  kind: string;
+  variant?: string;
+  seed: number;
+}
+
+const WHOLE_NUMBER_RE = /^-?\d+$/;
+
+/**
+ * An object element's kind, variant and seed. W22: no `data-kind` (null: skipped). W23: a
+ * `data-seed` that is not a whole number uses the default seed, hash of the level id and the
+ * element's `id` (else its object ordinal), so inserting other trees keeps an id'd tree as is.
+ */
+export function readObjectRequest(
+  item: RoleElement,
+  ctx: { levelId: string; ordinal: number },
+  log: LevelIssueLog
+): ObjectRequestFields | null {
+  const kind = item.el.getAttribute("data-kind")?.trim() ?? "";
+  if (kind === "") {
+    addWarning(log, "W22", `${item.name} has no data-kind; ignored.`);
+    return null;
+  }
+  const variant = item.el.getAttribute("data-variant")?.trim();
+  // Separate namespaces, so id="3" and the third object without an id seed differently.
+  const id = item.el.getAttribute("id");
+  const ref = id ? `id:${id}` : String(ctx.ordinal);
+  const fallbackSeed = hashSeed(`${ctx.levelId}#${ref}`);
+  const rawSeed = item.el.getAttribute("data-seed");
+  let seed = fallbackSeed;
+  if (rawSeed !== null) {
+    if (WHOLE_NUMBER_RE.test(rawSeed.trim())) seed = Number(rawSeed.trim()) >>> 0;
+    else
+      addWarning(
+        log,
+        "W23",
+        `${item.name}: data-seed="${rawSeed}" is not a whole number; using the default seed.`
+      );
+  }
+  return { kind, ...(variant ? { variant } : {}), seed };
 }

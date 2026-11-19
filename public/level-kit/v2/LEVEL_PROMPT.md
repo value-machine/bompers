@@ -64,6 +64,7 @@ Root attributes:
 |---|---|---|---|
 | `bounds` | `<rect>` | exactly 1 | The play area, inside the viewBox. Falling below its **bottom** edge eliminates a player. The **side and top edges are open**: the kill lines there lie far beyond the bounds, so players can be launched out and fly back. Suggested `fill="none" stroke="#d24b3a"`. |
 | `terrain` | rect, polygon, circle | ≥ 1 | Ground. `data-material` = behaviour (default `stone`), `data-color` = looks (optional, default = the material's colour). Optional `data-effect`, `data-sound`, `data-label`, `id`. Later shapes paint over earlier ones where they overlap. |
+| `object` | `<rect>` | ≥ 0 | A ready-made object built inside the rect (§ 3 Objects): `data-kind` (`tree`), optional `data-variant`, `data-seed`. It is solid ground made of catalog materials. `fill="#5f8f3e"`. |
 | `spawn` | `<circle>` | ≥ 4 | Player start (the centre counts, `r="14"`). Inside bounds, never inside terrain, centre ~`24` above a solid surface, not over a pit. `fill="#3f8f5f"`. |
 | `drop` | `<circle>` | ≥ 1 | Weapon crates fall from here (`r="12"`); place high up. The game picks each crate's weapon. `fill="#c94f7c"`. |
 | `collectible` | `<circle>` | ≥ 0 | A pickup point (`r="10"`), `data-item` = one collectible item (§ 4). `point-orb`: point orbs fall from the sky onto it. `dive-reset`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns 2.5 s after use) — hang them in the air between platforms and off edges for headbutt chains. `fill="#e0b62c"`. |
@@ -95,6 +96,26 @@ Wrap terrain shapes in `<g data-motion="…">` to move them as one part. Draw th
 </g>
 ```
 
+### Objects (optional)
+
+Place ready-made objects with one `<rect data-role="object">` each. The game builds the object inside the rect from catalog materials, so it behaves like terrain: players stand on it, blasts crater its breakable parts, fire burns its cardboard parts away, cold freezes its trunk and leaves.
+
+- The object stands on the rect's **bottom centre** and fills its **height**: draw the rect with its bottom edge on a surface. The width is the object's spread; it is kept inside the variant's width range below.
+- `data-kind` — REQUIRED, one kind below. `data-variant` — optional; leave it out for a varied pick. `data-seed` — optional whole number; the same seed gives the same shape. Without a seed every object still differs and looks the same on every load; give the rect an `id` to keep its shape when you add objects before it.
+- Sizes outside a kind's height range or a variant's width range are clamped (with a warning). Snap `x`, `y`, `width`, `height` to multiples of `4`; keep `data-cell-size` at `4` so thin branches stay solid.
+- Like terrain, later shapes paint over earlier ones: put objects after the ground they stand on. An object inside a `<g data-motion>` moves with that part. Spawns go beside or on top of objects, never inside one.
+
+- `tree` (Tree): height `96`–`480`; default variant `oak`. Variants:
+  - `oak` (Round oak): width 0.6–1.2 × height; earth trunk in bark colour (craters, only scorches) under a cardboard canopy in moss (burns away).
+  - `pine` (Pine): width 0.35–0.75 × height; earth trunk in bark colour under stacked cardboard needle tiers in mint (burn away).
+  - `snowy-pine` (Snowy pine): width 0.35–0.75 × height; a pine with ice caps in frost on each tier (needles touching ice never catch fire).
+  - `palm` (Palm): width 0.5–1.1 × height; bending earth trunk in cardboard colour, cardboard fronds in moss and two nuts (burn away).
+  - `dead` (Dead tree): width 0.5–1.1 × height; bare cardboard trunk and branches in bark colour: one spark burns the whole tree.
+
+```svg
+<rect data-role="object" data-kind="tree" data-variant="pine" x="800" y="400" width="120" height="208" fill="#5f8f3e" />
+```
+
 ## 4. Valid catalog IDs (v2)
 
 Reference content **by ID only**; IDs are lowercase-kebab. Unknown IDs fall back to the default with a warning.
@@ -104,7 +125,7 @@ Reference content **by ID only**; IDs are lowercase-kebab. Unknown IDs fall back
   - `earth`: breakable, toughness 1 (a rocket clears ~34 units around the hit); default colour `clay` (`fill="#c4673f"`).
   - `cardboard`: breakable, toughness 0.7 (a rocket clears ~49 units around the hit); default colour `cardboard` (`fill="#c99a62"`).
   - `ice`: never breaks, slippery; default colour `frost` (`fill="#a8cfe6"`).
-- `data-color` (looks; any colour on any material, names only, no hex) — use the hex as that shape's `fill`: `plum` `#5a3f7a`, `slate` `#4f6178`, `cardboard` `#c99a62`, `clay` `#c4673f`, `moss` `#5f8f3e`, `mint` `#3aa889`, `frost` `#a8cfe6`, `rose` `#c95a86`.
+- `data-color` (looks; any colour on any material, names only, no hex) — use the hex as that shape's `fill`: `plum` `#5a3f7a`, `slate` `#4f6178`, `cardboard` `#c99a62`, `clay` `#c4673f`, `moss` `#5f8f3e`, `mint` `#3aa889`, `frost` `#a8cfe6`, `rose` `#c95a86`, `bark` `#7a5233`.
 - `data-effect`: `none`, `dust-burst`.
 - `data-sound`: `none`, `thud`, `crumble`, `thwap`, `clink`, `jump`, `land`, `tumble-bounce`, `dive-launch`, `dive-impact`, `hit`, `elimination`, `rocket-fire`, `explosion`, `pickup`, `respawn`, `round-start`, `round-end`, `torch-start`, `torch-loop`, `fire-crackle`, `burn-out`, `catch-fire`, `steam-hiss`, `freeze-start`, `freeze-loop`, `thaw`, `freeze-solid`, `ice-crack`, `ice-shatter`, `orb-collect`.
 - `data-item` (collectible): `point-orb`, `dive-reset`; default `point-orb`.
@@ -144,7 +165,8 @@ With another gravity multiplier `k`, heights and jump gaps scale by about `1 / k
 6. `collectible` circles (optional) inside bounds with a `data-item` from § 4.
 7. Only rect / polygon / circle carry `data-role`; no `<path>`, no `transform`, no units; terrain snapped to multiples of `4`.
 8. Every shape has a `fill`; every route in the map request is reachable with the metrics in § 5.
-9. Each `<g data-motion>` holds only terrain and follows the moving-part rules in § 3.
+9. Each `<g data-motion>` holds only terrain (and objects) and follows the moving-part rules in § 3.
+10. Each `object` rect (optional) has a `data-kind` from § 3 Objects, its bottom edge on a surface, and comes after that ground.
 
 Smallest valid level (shape reference only; build the map from § 7):
 

@@ -14,6 +14,7 @@ import {
   groundAndPartLines,
   slopeAndRollLines,
 } from "@/features/level-kit/services/levelPromptAbilities";
+import { objectRoleRow, renderObjects } from "@/features/level-kit/services/levelPromptObjects";
 
 /**
  * The copyable level-generation prompt (feedback round 2 § 2.1, level-gen-prompt D1): one text a
@@ -138,6 +139,7 @@ function renderRoles(ctx: PromptContext): string {
     "|---|---|---|---|",
     `| \`bounds\` | \`<rect>\` | exactly 1 | The play area, inside the viewBox. Falling below its **bottom** edge eliminates a player. The **side and top edges are open**: the kill lines there lie far beyond the bounds, so players can be launched out and fly back. Suggested \`fill="none" stroke="${PREVIEW_FILLS.bounds}"\`. |`,
     `| \`terrain\` | rect, polygon, circle | ≥ 1 | Ground. \`data-material\` = behaviour (default \`${CATALOG_DEFAULTS.material}\`), \`data-color\` = looks (optional, default = the material's colour). Optional \`data-effect\`, \`data-sound\`, \`data-label\`, \`id\`. Later shapes paint over earlier ones where they overlap. |`,
+    objectRoleRow(),
     `| \`spawn\` | \`<circle>\` | ≥ ${RECOMMENDED_SPAWNS} | Player start (the centre counts, \`r="${POINT_RADIUS.spawn}"\`). Inside bounds, never inside terrain, centre ~\`${lift}\` above a solid surface, not over a pit. \`fill="${PREVIEW_FILLS.spawn}"\`. |`,
     `| \`drop\` | \`<circle>\` | ≥ 1 | Weapon crates fall from here (\`r="${POINT_RADIUS.drop}"\`); place high up. The game picks each crate's weapon. \`fill="${PREVIEW_FILLS.drop}"\`. |`,
     `| \`collectible\` | \`<circle>\` | ≥ 0 | A pickup point (\`r="${POINT_RADIUS.collectible}"\`), \`data-item\` = one collectible item (§ 4). \`point-orb\`: point orbs fall from the sky onto it. \`dive-reset\`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns ${respawn} s after use) — hang them in the air between platforms and off edges for headbutt chains. \`fill="${PREVIEW_FILLS.collectible}"\`. |`,
@@ -347,7 +349,8 @@ function renderChecklist(ctx: PromptContext): string {
     "6. `collectible` circles (optional) inside bounds with a `data-item` from § 4.",
     `7. Only rect / polygon / circle carry \`data-role\`; no \`<path>\`, no \`transform\`, no units; terrain snapped to multiples of \`${ctx.cell}\`.`,
     "8. Every shape has a `fill`; every route in the map request is reachable with the metrics in § 5.",
-    "9. Each `<g data-motion>` holds only terrain and follows the moving-part rules in § 3.",
+    "9. Each `<g data-motion>` holds only terrain (and objects) and follows the moving-part rules in § 3.",
+    "10. Each `object` rect (optional) has a `data-kind` from § 3 Objects, its bottom edge on a surface, and comes after that ground.",
   ].join("\n");
 }
 
@@ -399,6 +402,7 @@ export function buildLevelPrompt(tunables: GameTunables = DEFAULT_GAME_TUNABLES)
     renderCoordinates(ctx),
     renderRoles(ctx),
     renderMovingParts(ctx),
+    renderObjects(ctx.cell),
     renderCatalog(ctx),
     renderPhysics(ctx),
     renderChecklist(ctx),
