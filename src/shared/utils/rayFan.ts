@@ -18,12 +18,17 @@ export interface RayFanShape {
   rays: number;
 }
 
-/** A round body standing on its feet point (`x`, `y` = bottom centre). */
+/**
+ * A body standing on its feet point (`x`, `y` = bottom centre). A crouched body (`crouching`)
+ * is hit only up to `crouchHeight` (crouch-sink D4); players fit this shape as they are.
+ */
 export interface RayFanBody {
   x: number;
   y: number;
   width: number;
   height: number;
+  crouching?: boolean;
+  crouchHeight?: number;
 }
 
 export interface RayFanCast<Body extends RayFanBody> {
@@ -75,11 +80,21 @@ function solidAt(fields: readonly PosedField[], p: Vec2): { sample: number; body
   return null;
 }
 
-/** A body whose circle holds `p`. */
+/**
+ * Whether `p` lies in the body's hit shape: a capsule filling its hurt box (width × hit height),
+ * which is the old circle for a standing body (width = height) and a low, wide pill when crouched.
+ */
+function bodyHolds(body: RayFanBody, p: Vec2): boolean {
+  const h = body.crouching && body.crouchHeight !== undefined ? body.crouchHeight : body.height;
+  const radius = Math.min(body.width, h) / 2;
+  const reach = Math.max(0, body.width / 2 - radius);
+  const dx = Math.max(0, Math.abs(p.x - body.x) - reach);
+  return Math.hypot(dx, p.y - (body.y - h / 2)) <= radius;
+}
+
+/** A body whose hit shape holds `p`. */
 const bodyAt = <Body extends RayFanBody>(bodies: readonly Body[], p: Vec2): Body | undefined =>
-  bodies.find(
-    (body) => Math.hypot(p.x - body.x, p.y - (body.y - body.height / 2)) <= body.width / 2
-  );
+  bodies.find((body) => bodyHolds(body, p));
 
 /** Directions of the fan's rays: evenly spread over ±half-angle of the aim. */
 export function rayDirections(aim: Vec2, shape: RayFanShape): Vec2[] {

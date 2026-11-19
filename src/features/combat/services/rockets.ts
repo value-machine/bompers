@@ -1,6 +1,6 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { isSolidAt } from "@/features/arena/api/arenaApi";
-import { playerBody, weaponAim, type PlayerState } from "@/features/player/api/playerApi";
+import { hurtBox, weaponAim, type PlayerState } from "@/features/player/api/playerApi";
 import { bodyCenter, helmetPoint, rectContains } from "@/features/combat/services/combatGeometry";
 import { emitCombatEvent, type CombatContext } from "@/features/combat/services/combatState";
 import { explode } from "@/features/combat/services/explosions";
@@ -59,7 +59,7 @@ function touchesSomething(ctx: CombatContext, rocket: RocketState, point: Vec2):
     (player) =>
       player.id !== rocket.ownerId &&
       isLive(ctx, player) &&
-      rectContains(playerBody(player), point, margin)
+      rectContains(hurtBox(player), point, margin)
   );
 }
 

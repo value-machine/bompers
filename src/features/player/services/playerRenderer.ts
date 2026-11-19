@@ -28,9 +28,6 @@ import {
   type BlobAnim,
   type BlobPose,
   type BlobPoseOverlay,
-  type CrouchFace,
-  type CrouchTunables,
-  stepCrouchBlend,
   type HelmetTunables,
   type HelmetWobble,
   type SquashTunables,
@@ -57,6 +54,15 @@ import {
   type BlobMetrics,
 } from "@/features/player/services/blobShapes";
 import type { PlayerState } from "@/features/player/types/player.types";
+import {
+  crouchEyeY,
+  crouchGloss,
+  crouchOutline,
+  eyesUnderHelmet,
+  noteCrouch,
+  type CrouchSink,
+  type CrouchTunables,
+} from "@/features/player/services/crouchPose";
 import { weaponAim } from "@/features/player/services/roll";
 
 /**
@@ -109,8 +115,14 @@ interface BlobSprite {
   helmet: Container[];
   /** The barrel's shot pop: readiness last frame, and when the last shot was seen. */
   pop: { lastReady: number; startMs: number };
-  /** White egg over the body fill; alpha = hit flash. */
+  /** White body over the body fill; alpha = hit flash. */
   flash: Graphics;
+  /** Body fill and gloss: the crouch reshapes the body and slides the gloss (crouchPose.ts). */
+  bodyFill: Graphics;
+  gloss: Graphics;
+  slot: number;
+  /** Whether the body is drawn in a crouch outline (false: the plain egg). */
+  crouchDrawn: boolean;
   inks: { body: Graphics; helmet: Graphics; feet: [Graphics, Graphics]; tube: Graphics };
   /** Barrel fill and its mouth light, redrawn when the weapon or outline step changes. */
   tubeFill: Graphics;
@@ -127,8 +139,9 @@ interface BlobSprite {
   /** Steadied ground / wall contact the feet, the lean and the shadow read. */
   contactHold: ContactHold;
   metrics: BlobMetrics;
-  /** Outline step the ink was drawn at (null before the first draw). */
+  /** Outline step and width the ink was drawn at (null before the first draw). */
   inkStep: number | null;
+  inkWidth: number;
 }
 
 /** A held weapon as the blob shows it (weapon-visuals D1, D3). */
@@ -287,20 +300,22 @@ function buildTorso(
   ];
   torso.ink.addChild(sprite.inks.body, helmetInk);
   const { eyes, pupils } = buildEyes(m.u);
-  const flash = drawBodyFlash(m);
+  const flash = drawBodyFlash(new Graphics(), m);
   flash.visible = false;
+  const bodyFill = drawBodyFill(new Graphics(), m, { slot });
+  const gloss = drawBodyGloss(m);
   addRanked(torso.fill, [
-    [drawBodyFill(slot, m), 1],
+    [bodyFill, 1],
     [flash, 2],
     [helmetDome, 4],
-    [drawBodyGloss(m), 5],
+    [gloss, 5],
     ...eyes.map((eye): [Container, number] => [eye, EYES_OVER_HELMET]),
     [helmetBarrel, BARREL_OVER_EYES],
     [helmetDetails, 8],
   ]);
   sprite.body.ink.addChild(torso.ink);
   sprite.body.fill.addChild(torso.fill);
-  return { eyes, pupils, helmet, flash, tubeFill, muzzle };
+  return { eyes, pupils, helmet, flash, bodyFill, gloss, tubeFill, muzzle };
 }
 
 function createBlobSprite(player: PlayerState): BlobSprite {
@@ -314,7 +329,7 @@ function createBlobSprite(player: PlayerState): BlobSprite {
   const feet: [PartPair, PartPair] = [pair(), pair()];
   const body = pair();
   const tube = pair();
-  const { eyes, pupils, helmet, flash, tubeFill, muzzle } = buildTorso(
+  const { eyes, pupils, helmet, flash, bodyFill, gloss, tubeFill, muzzle } = buildTorso(
     { body, tube, inks },
     player.slot,
     m
@@ -341,6 +356,10 @@ function createBlobSprite(player: PlayerState): BlobSprite {
     tube,
     helmet,
     flash,
+    bodyFill,
+    gloss,
+    slot: player.slot,
+    crouchDrawn: false,
     inks,
     tubeFill,
     muzzle,
@@ -356,6 +375,7 @@ function createBlobSprite(player: PlayerState): BlobSprite {
     contactHold: createContactHold(player),
     metrics: m,
     inkStep: null,
+    inkWidth: 0,
   };
 }
 
@@ -364,10 +384,27 @@ function syncInk(sprite: BlobSprite, zoom: number): void {
   const outline = outlineWidth("character", zoom);
   if (outline.step === sprite.inkStep) return;
   const { metrics: m, inks } = sprite;
-  drawBodyInk(inks.body, m, outline.width);
+  drawBodyInk(inks.body, m, { width: outline.width });
   drawHelmetInk(inks.helmet, m, outline.width);
   inks.feet.forEach((foot) => drawFootInk(foot, m, outline.width));
   sprite.inkStep = outline.step;
+  sprite.inkWidth = outline.width;
+  sprite.crouchDrawn = false;
+}
+
+/**
+ * The body in its crouch outline (fill, hit flash and ink) while crouched, and back to the plain
+ * egg once on the frame the crouch ends; standing blobs never redraw (crouch-sink D1).
+ */
+function syncBodyShape(sprite: BlobSprite, frame: { sink: CrouchSink; crouch: CrouchTunables }) {
+  const { metrics: m } = sprite;
+  const outline = crouchOutline(m, frame) ?? undefined;
+  if (!outline && !sprite.crouchDrawn) return outline;
+  drawBodyFill(sprite.bodyFill, m, { slot: sprite.slot, outline });
+  drawBodyFlash(sprite.flash, m, outline);
+  drawBodyInk(sprite.inks.body, m, { width: sprite.inkWidth, outline });
+  sprite.crouchDrawn = outline !== undefined;
+  return outline;
 }
 
 /** Mouth light alpha while a shot recharges (faded, never fully gone) … ready (full). */
@@ -424,6 +461,7 @@ interface PoseFrame {
   armed: boolean;
   feet: FeetTunables | undefined;
   groundTilt: GroundTiltTunables | undefined;
+  crouch: CrouchTunables;
   nowMs: number;
 }
 
@@ -460,6 +498,9 @@ function placeBlob(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
   });
 }
 
+/** Feet scaled below this by the crouch are not drawn. */
+const FEET_HIDDEN_BELOW = 0.02;
+
 /**
  * Feet lag the body's squash a little and move per `stepFeetMotion`, which turns them around the
  * body circle to the surface under the blob (the root already carries the slope lean, the feet
@@ -480,39 +521,42 @@ function placeFeet(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
     contact: sprite.contactHold.contact,
     nowMs: frame.nowMs,
   });
+  // The crouch makes the feet vanish (owner, crouch-sink D2).
+  const shown = pose.crouch.feetScale;
   sprite.feet.forEach((foot, i) => {
     const p = poses[i]!;
     eachSide(foot, (c) => {
+      c.visible = shown > FEET_HIDDEN_BELOW;
       c.pivot.set(0, -centre);
       c.position.set(p.x, p.y - centre * pose.feetSy);
       c.rotation = p.rotation;
-      c.scale.set(pose.feetSx, pose.feetSy);
+      c.scale.set(pose.feetSx * shown, pose.feetSy * shown);
     });
   });
 }
 
 interface EyeLook {
-  face: CrouchFace;
+  sink: CrouchSink;
   pupilScale: number;
   /** The body's scale this frame; the eyes undo it (owner, squish-eyes). */
   bodyScale: { sx: number; sy: number };
 }
 
 /**
- * Eyes sit under the helmet rim and look toward the aim. While crouching they rise a little and
- * slip under the dome, so the lowered rim covers about half of each eye (crouch D7). Every squash
+ * Eyes sit under the helmet rim and look toward the aim. While crouching they ride down with the
+ * face and slip under the dome, so the sunk rim covers the top half of each eye. Every squash
  * squishes the body but never the eyes: they ride their spot on the squashed face and undo the
  * body's scale, so they keep their size and shape (owner, squish-eyes).
  */
 function placeEyes(sprite: BlobSprite, player: PlayerState, look: EyeLook): void {
-  const { face, pupilScale, bodyScale } = look;
+  const { sink, pupilScale, bodyScale } = look;
   const { r, u } = sprite.metrics;
-  const y = 0.12 * r + player.aimY * 2 * u - face.eyeLift * u;
+  const y = crouchEyeY(sprite.metrics, sink) + player.aimY * 2 * u;
   sprite.eyes.forEach((eye, i) => {
     const side = i === 0 ? -1 : 1;
     eye.position.set(side * 0.27 * r + player.aimX * 5 * u, y);
     eye.scale.set(1 / bodyScale.sx, 1 / bodyScale.sy);
-    eye.zIndex = face.eyesUnderHelmet ? EYES_UNDER_HELMET : EYES_OVER_HELMET;
+    eye.zIndex = eyesUnderHelmet(sink) ? EYES_UNDER_HELMET : EYES_OVER_HELMET;
     sprite.pupils[i]!.position.set(player.aimX * 1.6 * u, 1.5 * u + player.aimY * 1.2 * u);
     sprite.pupils[i]!.scale.set(pupilScale);
   });
@@ -538,8 +582,12 @@ function applyPose(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
   const { pose } = frame;
   placeBlob(sprite, player, frame);
   placeFeet(sprite, player, frame);
+  const outline = syncBodyShape(sprite, { sink: pose.crouch, crouch: frame.crouch });
+  const gloss = crouchGloss(sprite.metrics, { sink: pose.crouch, outline: outline ?? null });
+  sprite.gloss.position.set(gloss.x, gloss.y);
+  sprite.gloss.rotation = gloss.rotation;
   placeEyes(sprite, player, {
-    face: pose.face,
+    sink: pose.crouch,
     pupilScale: frame.overlay?.pupilScale ?? 1,
     bodyScale: bodyScale(frame),
   });
@@ -633,7 +681,7 @@ export function syncPlayersView(
   for (const player of players) {
     const sprite = spriteFor(view, player);
     const moment = noteBlobEvents(sprite.anim, { player, squash, nowMs });
-    stepCrouchBlend(sprite.anim, { player, crouch, nowMs });
+    noteCrouch(sprite.anim.crouch, { player, crouch, nowMs });
     // Steadied first: the shadow, the lean and the feet all read it this frame.
     const pose = blobPose(sprite.anim, {
       player,
@@ -655,6 +703,7 @@ export function syncPlayersView(
       armed: options.weapons?.has(player.id) === true,
       feet: options.feet,
       groundTilt: options.groundTilt,
+      crouch,
       nowMs,
     });
     applyFeel(sprite, player, {
@@ -662,7 +711,7 @@ export function syncPlayersView(
       hit: options.hits?.get(player.id),
       helmet,
       nowMs,
-      crouchDrop: pose.face.helmetDrop,
+      crouchDrop: pose.crouch.helmetSink + pose.crouch.drop,
     });
     applyProtection(sprite, options.protectedIds?.has(player.id) === true, nowMs);
   }

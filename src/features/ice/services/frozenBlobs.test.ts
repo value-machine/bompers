@@ -96,6 +96,11 @@ describe("frozen blobs (ice-frozen-blobs D1)", () => {
   it("should take twice as long to freeze when the blob is crouching", () => {
     const s = scene();
     s.victim.crouching = true;
+    // A crouched blob hides low (crouch-sink D4): aim from the helmet at its lowered centre.
+    const dx = 60;
+    const dy = s.victim.height / 2 + s.victim.height * 0.28 - s.victim.crouchHeight / 2;
+    s.holder.aimX = dx / Math.hypot(dx, dy);
+    s.holder.aimY = dy / Math.hypot(dx, dy);
     s.step(B.freezeSeconds + 0.1, true);
     expect(isFrozen(s.ice, s.victim)).toBe(false);
     s.step(B.freezeSeconds, true);

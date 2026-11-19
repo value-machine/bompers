@@ -83,6 +83,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Roll bounce (hit or dash roll) | medium | `tumble-bounce` | squash wide (by speed) | — | 3 px (by speed) | — | — | kick |
 | Dash roll starts (fire held through a dive) | light | `land` soft thud (`crouchGain`) | — | — | — | — | the body spins with its ground speed (sim `rollAngle`) | — |
 | Roll comes to rest | light | `land` soft thud (`crouchGain`) | — | — | — | — | the body turns back upright (stand-up) | — |
+| Crouch (sink, hold, stand up; owner, crouch-sink D1) | light | `land` soft thud (`crouchGain`) on the press; the stand-up has no cue of its own (it is the moment's recovery) | no scale: the body's top shortens into the rigid helmet, the blob drops onto the ground and spreads, the jelly bulges under the rim (area kept at `areaKeep` 0.94, inside the band); sink 100 ms (`squash`), 2 u overshoot settling 350 ms (`settle`), breathing ±0.6 u while held; stand-up 150 ms (`squash`) | — | — | — | feet vanish in 60 ms; the body gloss slides onto the bulge's upper-left arc | sinks 12 u into the blob (27 u with the drop); hops 3 u over 200 ms (`squash`) on the stand-up |
 | Dive wall bonk | medium | `land` + the wall's material sound (gain by speed into the wall) | bonk squash (dive pose) | — | — | — | — | — |
 | Back hit taken | heavy | `hit` / `dive-impact` (gain by knockback) | — | 1.0 | 6 px | 50 ms | impact pop (not on dive hits) | kick |
 | Explosion | heavy | `explosion` (ducks music) | — | — | 6 px (by radius) | — | star burst | — |

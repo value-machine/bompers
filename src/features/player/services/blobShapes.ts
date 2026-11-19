@@ -39,28 +39,83 @@ export function blobMetrics(height: number): BlobMetrics {
   };
 }
 
-/** Soft egg from four cubic curves: widest a little below the middle, fuller at the bottom. */
-export function eggPath(g: Graphics, r: number): Graphics {
+/** A point in torso space (body centre origin, y down). */
+export type ShapePoint = readonly [x: number, y: number];
+
+/** One cubic curve: start, two controls, end. */
+export type CubicSegment = readonly [ShapePoint, ShapePoint, ShapePoint, ShapePoint];
+
+/** The egg's four cubic curves (shared by `eggPath` and the crouch outline). */
+export function eggSegments(r: number): CubicSegment[] {
   const t = r;
   const b = r * 0.94;
   const k = 0.56 * 1.05;
-  return g
-    .moveTo(0, -t)
-    .bezierCurveTo(r * k, -t, r, -t * 0.52, r, b * 0.08)
-    .bezierCurveTo(r, b * 0.66, r * 0.6, b, 0, b)
-    .bezierCurveTo(-r * 0.6, b, -r, b * 0.66, -r, b * 0.08)
-    .bezierCurveTo(-r, -t * 0.52, -r * k, -t, 0, -t)
-    .closePath();
+  return [
+    [
+      [0, -t],
+      [r * k, -t],
+      [r, -t * 0.52],
+      [r, b * 0.08],
+    ],
+    [
+      [r, b * 0.08],
+      [r, b * 0.66],
+      [r * 0.6, b],
+      [0, b],
+    ],
+    [
+      [0, b],
+      [-r * 0.6, b],
+      [-r, b * 0.66],
+      [-r, b * 0.08],
+    ],
+    [
+      [-r, b * 0.08],
+      [-r, -t * 0.52],
+      [-r * k, -t],
+      [0, -t],
+    ],
+  ];
+}
+
+/** Soft egg from four cubic curves: widest a little below the middle, fuller at the bottom. */
+export function eggPath(g: Graphics, r: number): Graphics {
+  const segments = eggSegments(r);
+  g.moveTo(...segments[0]![0]);
+  for (const [, c1, c2, end] of segments) g.bezierCurveTo(...c1, ...c2, ...end);
+  return g.closePath();
+}
+
+/** A closed outline through `points` (the crouched body). */
+export function outlinePath(g: Graphics, points: readonly ShapePoint[]): Graphics {
+  g.moveTo(...points[0]!);
+  for (let i = 1; i < points.length; i += 1) g.lineTo(...points[i]!);
+  return g.closePath();
+}
+
+/** The body's path: the egg, or the crouch's reshaped outline when one is given. */
+const bodyPath = (g: Graphics, m: BlobMetrics, outline?: readonly ShapePoint[]): Graphics =>
+  outline ? outlinePath(g, outline) : eggPath(g, m.r);
+
+/** The dome's cubic curve from the left rim corner to the right one (torso space). */
+export function helmetDome(m: BlobMetrics): CubicSegment {
+  const { half, top, rim } = m.helmet;
+  const peak = top - 8 * m.u;
+  return [
+    [-half, rim],
+    [-half, peak],
+    [half, peak],
+    [half, rim],
+  ];
 }
 
 /** Helmet dome over the top of the body, with a slightly curved rim. */
 export function helmetPath(g: Graphics, m: BlobMetrics): Graphics {
-  const { half, top, rim } = m.helmet;
-  const lift = 8 * m.u;
+  const [start, c1, c2, end] = helmetDome(m);
   return g
-    .moveTo(-half, rim)
-    .bezierCurveTo(-half, top - lift, half, top - lift, half, rim)
-    .quadraticCurveTo(0, rim + 7 * m.u, -half, rim)
+    .moveTo(...start)
+    .bezierCurveTo(...c1, ...c2, ...end)
+    .quadraticCurveTo(0, m.helmet.rim + 7 * m.u, ...start)
     .closePath();
 }
 
@@ -109,8 +164,11 @@ const inkStroke = (width: number) => ({
 });
 
 /** Ink pass of the body (the helmet has its own, so it can wobble on its spring). */
-export const drawBodyInk = (g: Graphics, m: BlobMetrics, width: number): Graphics =>
-  eggPath(g.clear(), m.r).stroke(inkStroke(width));
+export const drawBodyInk = (
+  g: Graphics,
+  m: BlobMetrics,
+  look: { width: number; outline?: readonly ShapePoint[] }
+): Graphics => bodyPath(g.clear(), m, look.outline).stroke(inkStroke(look.width));
 
 export const drawHelmetInk = (g: Graphics, m: BlobMetrics, width: number): Graphics =>
   helmetPath(g.clear(), m).stroke(inkStroke(width));
@@ -123,12 +181,18 @@ export const drawTubeInk = (g: Graphics, tube: WeaponTubeParts, width: number): 
   traceWeaponTube(g.clear(), tube.parts).stroke(inkStroke(width));
 
 /** Fill pass of the body: the gradient egg. */
-export const drawBodyFill = (slot: number, m: BlobMetrics): Graphics =>
-  eggPath(new Graphics(), m.r).fill(bodyGradient(slot));
+export const drawBodyFill = (
+  g: Graphics,
+  m: BlobMetrics,
+  look: { slot: number; outline?: readonly ShapePoint[] }
+): Graphics => bodyPath(g.clear(), m, look.outline).fill(bodyGradient(look.slot));
 
-/** Hit flash: the egg in flat white, drawn over the body fill; its alpha is set per frame. */
-export const drawBodyFlash = (m: BlobMetrics): Graphics =>
-  eggPath(new Graphics(), m.r).fill(GAME_PALETTE.hitFlash);
+/** Hit flash: the body in flat white, drawn over the body fill; its alpha is set per frame. */
+export const drawBodyFlash = (
+  g: Graphics,
+  m: BlobMetrics,
+  outline?: readonly ShapePoint[]
+): Graphics => bodyPath(g.clear(), m, outline).fill(GAME_PALETTE.hitFlash);
 
 /** Fill pass of the helmet dome: flat cream, the same fill as the weapon barrel (§ 3, § 9). */
 export const drawHelmetFill = (m: BlobMetrics): Graphics =>
@@ -144,17 +208,33 @@ export function drawBodyGloss(m: BlobMetrics): Graphics {
   return gloss;
 }
 
-/** Helmet gloss stroke along the dome and the slot emblem in the player colour, no outlines. */
-export function drawHelmetDetails(slot: number, m: BlobMetrics): Graphics[] {
+/** The helmet glint: one curved stroke under the dome's top-left (torso space, helmet unsunk). */
+export function helmetGlint(m: BlobMetrics): {
+  start: ShapePoint;
+  control: ShapePoint;
+  end: ShapePoint;
+  width: number;
+} {
   const { half, top } = m.helmet;
   const { u } = m;
+  // Shorter and lower than the first cut, so it never comes near the dome's outline (owner,
+  // crouch-sink D5): the dome's curve peaks under `top` and falls away fast at the sides.
+  return {
+    start: [-half * 0.5, top + 12 * u],
+    control: [-half * 0.2, top + 5 * u],
+    end: [half * 0.06, top + 7 * u],
+    width: 3.5 * u,
+  };
+}
+
+/** Helmet gloss stroke along the dome and the slot emblem in the player colour, no outlines. */
+export function drawHelmetDetails(slot: number, m: BlobMetrics): Graphics[] {
+  const glint = helmetGlint(m);
   const gloss = new Graphics()
-    // 3 u below the dome's nominal top: the dome's curve peaks lower than `top`, and a stroke
-    // drawn up to it poked over the outline.
-    .moveTo(-half * 0.6, top + 10 * u)
-    .quadraticCurveTo(-half * 0.2, top + 2 * u, half * 0.12, top + 5 * u)
-    .stroke({ width: 3.5 * u, color: GAME_PALETTE.gloss, alpha: 0.85, cap: "round" });
-  const emblem = traceEmblem(new Graphics(), playerEmblemShape(slot, 6.5 * u)).fill(
+    .moveTo(...glint.start)
+    .quadraticCurveTo(...glint.control, ...glint.end)
+    .stroke({ width: glint.width, color: GAME_PALETTE.gloss, alpha: 0.85, cap: "round" });
+  const emblem = traceEmblem(new Graphics(), playerEmblemShape(slot, 6.5 * m.u)).fill(
     slotColor(GAME_PALETTE.players, slot)
   );
   emblem.position.set(0, helmetCentreY(m));

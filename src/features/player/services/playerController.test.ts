@@ -10,7 +10,13 @@ import {
 } from "@/features/arena/api/arenaApi";
 import type { Rect } from "@/shared/types/gameGeometry.types";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
-import { createPlayer, stepPlayers } from "@/features/player/services/playerController";
+import {
+  createPlayer,
+  hurtBox,
+  hurtHeight,
+  playerBody,
+  stepPlayers,
+} from "@/features/player/services/playerController";
 import type { PlayerState } from "@/features/player/types/player.types";
 import { startRoll } from "@/features/player/services/roll";
 
@@ -858,5 +864,19 @@ describe("playerController — seams between slabs (slope-jump D3)", () => {
     ]);
     const oneSlab = seamWorld([{ x: 400, y: 200, w: 60, h: 300 }]);
     expect(wallJumpApex(twoSlabs)).toBeCloseTo(wallJumpApex(oneSlab), 1);
+  });
+});
+
+describe("hurt box (crouch-sink D4)", () => {
+  it("should lower the hurt box to the crouch height when crouching and restore it when standing", () => {
+    const player = createPlayer(0, { x: 50, y: 100 }, DEFAULT_GAME_TUNABLES);
+    const scale = DEFAULT_GAME_TUNABLES.player.crouch.hurtHeightScale;
+    expect(hurtBox(player)).toEqual(playerBody(player));
+    player.crouching = true;
+    expect(hurtHeight(player)).toBeCloseTo(player.height * scale, 6);
+    expect(hurtBox(player).y + hurtBox(player).h).toBe(player.y);
+    expect(playerBody(player).h).toBe(player.height);
+    player.crouching = false;
+    expect(hurtHeight(player)).toBe(player.height);
   });
 });

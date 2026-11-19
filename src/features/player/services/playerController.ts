@@ -51,6 +51,7 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     vy: 0,
     width: tunables.player.width,
     height: tunables.player.height,
+    crouchHeight: tunables.player.height * tunables.player.crouch.hurtHeightScale,
     grounded: false,
     facing: 1,
     aimX: 1,
@@ -134,6 +135,19 @@ export const playerBody = (player: PlayerState): Rect => ({
   w: player.width,
   h: player.height,
 });
+
+/** Height hits see: the full height, or the lower `crouchHeight` while crouched (crouch-sink D4). */
+export const hurtHeight = (player: PlayerState): number =>
+  player.crouching ? player.crouchHeight : player.height;
+
+/**
+ * What weapons, blasts and beams hit: the body box from the feet up `hurtHeight`. Terrain and
+ * blob-to-blob collision keep the full `playerBody`.
+ */
+export const hurtBox = (player: PlayerState): Rect => {
+  const h = hurtHeight(player);
+  return { x: player.x - player.width / 2, y: player.y - h, w: player.width, h };
+};
 
 // ── Collision ────────────────────────────────────────────────────────────────
 

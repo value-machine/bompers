@@ -126,20 +126,31 @@ export interface GameTunables {
       stickRadius: number;
     };
     /**
-     * Defensive crouch (grounded + crouch held): the blob stands still. Render-only numbers:
-     * body scale (anchored at the feet point) and the seconds to sink in / stand up. The feet
-     * keep their normal pose (owner, crouch D6).
+     * Defensive crouch (grounded + crouch held): the blob stands still and hides under its helmet
+     * (owner, crouch-sink D1). Lengths in mockup units (u = r / 30), times in seconds. The helmet
+     * keeps its shape: it sinks `helmetSink` into the blob, whose top shortens to fit inside the
+     * dome, while the whole blob drops `drop` and presses onto the ground; the jelly pushed out
+     * bulges under the rim so the body keeps `areaKeep` of its standing area. Render only, except
+     * `hurtHeightScale`, which the sim reads.
      */
     crouch: {
-      bodySx: number;
-      bodySy: number;
-      easeSeconds: number;
-      /**
-       * Face while crouched, in mockup units (u = r / 30): the helmet sinks this far and the eyes
-       * rise this far, drawn under the dome so the rim covers about half of each eye.
-       */
-      helmetDrop: number;
-      eyeLift: number;
+      /** Sink in (ease-out), then the overshoot settles over `settleSeconds` at `settleHz`. */
+      sinkSeconds: number;
+      settleSeconds: number;
+      settleHz: number;
+      /** Stand up; the helmet hops `hop` over `hopSeconds` on the way. */
+      riseSeconds: number;
+      hopSeconds: number;
+      helmetSink: number;
+      drop: number;
+      overshoot: number;
+      hop: number;
+      /** Slow breathing of the held helmet (and the bulge with it). */
+      breathe: number;
+      breatheHz: number;
+      areaKeep: number;
+      /** Hurt box height while crouched, as a share of the standing height (crouch-sink D4). */
+      hurtHeightScale: number;
     };
     /** Render-only squash and stretch (sx, sy pairs; seconds). */
     squash: {
