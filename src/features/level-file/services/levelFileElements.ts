@@ -252,7 +252,9 @@ export function readObjectRequest(
     return null;
   }
   const variant = item.el.getAttribute("data-variant")?.trim();
-  const ref = item.el.getAttribute("id") || String(ctx.ordinal);
+  // Separate namespaces, so id="3" and the third object without an id seed differently.
+  const id = item.el.getAttribute("id");
+  const ref = id ? `id:${id}` : String(ctx.ordinal);
   const fallbackSeed = hashSeed(`${ctx.levelId}#${ref}`);
   const rawSeed = item.el.getAttribute("data-seed");
   let seed = fallbackSeed;

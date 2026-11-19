@@ -22,13 +22,13 @@ Seams for later work:
 
 ## Dependencies
 
-- `level` (types), `content-catalog` (tests only), `src/shared/utils/seededRandom.ts`, `src/shared/types/gameGeometry.types.ts`.
+- `level`, `arena`, `fire`, `ice` and `content-catalog` (tests only: the objects-as-terrain checks), `src/shared/utils/seededRandom.ts`, `src/shared/types/gameGeometry.types.ts`.
 - Consumed by `level-file` (importer: `placeObject`) and `level-kit` (catalog.json `object`, ID table rows, the prompt's Objects section).
 
 ## Decisions
 
 - Recipes compile to terrain pieces at import; the level keeps a `LevelObject` record with `terrainIndices` (owner, D2, D5). The registry with one kind is the owner-approved exception to code-style's "no registries until a second consumer".
 - Trees are existing materials plus the new colour `bark` (owner, D4): living trunks earth (crater, only scorch), leaves cardboard (burn away), snow caps ice (unbreakable; needles touching them never catch, D4a), the dead tree cardboard throughout.
-- Default seed: FNV-1a of `<level id>#<element id, else object ordinal>` (D8); `data-seed` overrides.
+- Default seed: FNV-1a of `<level id>#id:<element id>` (else `<level id>#<object ordinal>`) (D8); `data-seed` overrides.
 - The thinnest part is 8 units, two samples at the default cell size (D9); a coarser `data-cell-size` can lose twigs.
 - No new juice moment: trees use their materials' terrain moments (D10).

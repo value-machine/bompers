@@ -181,9 +181,11 @@ function frondPart(crown: Vec2, frond: { a: number; len: number; width: number }
     const u = j / 6;
     const x = crown.x + Math.cos(frond.a) * frond.len * u;
     const y = crown.y + Math.sin(frond.a) * frond.len * u * 0.7 + frond.len * 0.55 * u * u;
-    const half = frond.width * Math.sin(Math.PI * Math.min(1, u * 1.15 + 0.05));
+    // At least MIN_PART_THICKNESS thick (half × 1.6) up to the tip, which is one point (D9).
+    const profile = frond.width * Math.sin(Math.PI * Math.min(1, u * 1.15 + 0.05));
+    const half = j === 6 ? 0 : Math.max(MIN_PART_THICKNESS / 1.6, profile);
     top.push({ x, y: y - half });
-    under.unshift({ x, y: y + half * 0.6 });
+    if (j < 6) under.unshift({ x, y: y + half * 0.6 });
   }
   return polygonPart([...top, ...under], LEAVES);
 }
@@ -194,7 +196,7 @@ function buildPalm({ w, h }: Size, random: Random): ObjectPart[] {
     side(random) * Math.max(0, Math.min(h * between(random, 0.18, 0.28), w / 2 - len - 6));
   const { parts, crown } = palmTrunk(bend, h);
   const count = 6 + Math.floor(random() * 2);
-  const width = Math.max(5, h * 0.05);
+  const width = Math.max(MIN_PART_THICKNESS / 1.6, h * 0.05);
   for (let i = 0; i < count; i++) {
     const a = Math.PI * (1 + i / (count - 1)) + between(random, -0.06, 0.06);
     parts.push(frondPart(crown, { a: Math.min(2 * Math.PI, Math.max(Math.PI, a)), len, width }));
@@ -224,6 +226,8 @@ function growLimb(limb: Limb, ctx: { size: Size; random: Random; parts: ObjectPa
     y: limb.from.y + Math.sin(limb.angle) * limb.len,
   };
   const to = insideLocalBox(raw, ctx.size, w1 / 2);
+  // Clamped into a corner it started from: no room for this limb or its forks.
+  if (Math.hypot(to.x - limb.from.x, to.y - limb.from.y) < MIN_PART_THICKNESS / 2) return;
   ctx.parts.push(limbPart({ from: limb.from, to, w0: limb.width, w1 }, DEAD_LIMB));
   ctx.parts.push(circlePart(to, w1 / 2, DEAD_LIMB));
   if (limb.depth === 0) return;

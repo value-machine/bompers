@@ -38,7 +38,7 @@ export function renderObjects(cell: number): string {
   return [
     "### Objects (optional)",
     "",
-    'Place ready-made objects with one `<rect data-role="object">` each. The game builds the object inside the rect from catalog materials, so it behaves like terrain: players stand on it, blasts crater its breakable parts, fire burns its cardboard parts away, cold freezes it.',
+    'Place ready-made objects with one `<rect data-role="object">` each. The game builds the object inside the rect from catalog materials, so it behaves like terrain: players stand on it, blasts crater its breakable parts, fire burns its cardboard parts away, cold freezes its trunk and leaves.',
     "",
     "- The object stands on the rect's **bottom centre** and fills its **height**: draw the rect with its bottom edge on a surface. The width is the object's spread; it is kept inside the variant's width range below.",
     "- `data-kind` — REQUIRED, one kind below. `data-variant` — optional; leave it out for a varied pick. `data-seed` — optional whole number; the same seed gives the same shape. Without a seed every object still differs and looks the same on every load; give the rect an `id` to keep its shape when you add objects before it.",
