@@ -102,6 +102,12 @@ const ARC = stone({
 });
 const PLANK = stone({ type: "rect", x: 200, y: 440, w: 240, h: 16 });
 const BLOCK = stone({ type: "rect", x: 100, y: 480, w: 40, h: 80 });
+/** The block sliding 300 right and back every 4 s. */
+const SLIDE: LevelMover = {
+  motion: { kind: "slide", offset: { x: 300, y: 0 }, periodS: 4, phase: 0 },
+  pivot: { x: 120, y: 520 },
+  terrainIndices: [1],
+};
 
 function moverLevel(
   terrain: TerrainPiece[],
@@ -153,13 +159,19 @@ describe("matchSound — collision sound jitter", () => {
     expect(landCuesWhile(moverLevel([FLOOR, PLANK], [spin], { x: 300, y: 430 }), 2, [])).toBe(0);
   });
 
-  it("should play at most one land sound per cycle when the player runs after a moving block", () => {
-    const slide: LevelMover = {
-      motion: { kind: "slide", offset: { x: 300, y: 0 }, periodS: 4, phase: 0 },
-      pivot: { x: 120, y: 520 },
-      terrainIndices: [1],
-    };
-    const state = moverLevel([FLOOR, BLOCK], [slide], { x: 300, y: 550 });
-    expect(landCuesWhile(state, 8, ["KeyA"])).toBeLessThanOrEqual(2);
+  // Owner report (2026-11-19): one soft landing every 4 s (the slide's period) while chasing the
+  // block. At the foot of the block the ground frame tilts toward the wall, the block slides on,
+  // and the next step read that tilted ground velocity as a push off the floor: a hop and a land.
+  it("should play no land sound when the player runs after a moving block", () => {
+    const state = moverLevel([FLOOR, BLOCK], [SLIDE], { x: 300, y: 550 });
+    expect(landCuesWhile(state, 8, ["KeyA"])).toBe(0);
+  });
+
+  it("should keep the player on the floor when it runs after a moving block", () => {
+    const state = moverLevel([FLOOR, BLOCK], [SLIDE], { x: 300, y: 550 });
+    landCuesWhile(state, 0, []);
+    const landed = state.players[0]!.landCount;
+    landCuesWhile(state, 8, ["KeyA"]);
+    expect(state.players[0]!.landCount).toBe(landed);
   });
 });

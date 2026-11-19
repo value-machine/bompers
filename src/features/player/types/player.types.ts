@@ -1,3 +1,5 @@
+import type { Vec2 } from "@/shared/types/gameGeometry.types";
+
 /**
  * One player's simulation state. Position is the feet point (bottom-center of the body), so
  * spawn points and ground contact read naturally. y grows downward.
@@ -114,6 +116,12 @@ export interface PlayerState {
   lastLandingSpeed: number;
   /** Slope under the feet while grounded, radians (+ = rising to the right); 0 in the air. */
   groundAngle: number;
+  /**
+   * The velocity the ground gave the body on its last grounded step (along the ground there).
+   * Only velocity added on top of it can push the body off the ground: where the ground under
+   * the feet changed since (a moving part slid away beside it), the old ground velocity is no push.
+   */
+  groundVelocity: Vec2;
   /**
    * Squeezed by a moving part into a gap narrower than the body, but not crushed (owner,
    * moving-parts lap B-2): the collision circle shrinks to `scale` × its radius so the blob still
