@@ -82,7 +82,7 @@ export const SOUND_MIX = {
    * The two intensity knobs (owner, 2026-11-16): the impact speed (units / s) that plays at full
    * volume; slower is quieter, down to `JUICE_VOLUME.minGain` (`intensityGain`, gameJuice.ts).
    * Landing: fall speed at touchdown. Hit: a wall bonk's speed into the wall, or a hit victim's
-   * knockback speed (a full dive hit is about 1000, a point-blank blast hit about 220).
+   * knockback speed (a point-blank blast hit about 600, a dive hit about 210).
    */
   landingFullSpeed: 900,
   hitFullSpeed: 1000,

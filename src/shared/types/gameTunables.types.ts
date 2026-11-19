@@ -275,6 +275,12 @@ export interface GameTunables {
     bonkRebound: number;
     /** On a hit, on top of the body-collision exchange: push on the victim along the hit direction. */
     strikeImpulse: number;
+    /**
+     * Share of the hit's whole push the victim keeps: the body-collision exchange it got plus
+     * `strikeImpulse` along the hit, and `strikeLift` up. The dive owns its knockback, so this is
+     * the one knob for how far a dive hit sends a blob (the bump of a plain run-in is unchanged).
+     */
+    hitPushScale: number;
     /** … upward pop on the victim, units / s. */
     strikeLift: number;
     /** … upward speed the attacker ricochets off with; its dive is available again at once. */

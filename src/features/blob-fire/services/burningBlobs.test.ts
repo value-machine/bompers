@@ -78,7 +78,8 @@ const contactOf = (a: PlayerState, b: PlayerState): BodyContact => ({
   at: { x: (a.x + b.x) / 2, y: a.y },
   aApproachSpeed: 100,
   bApproachSpeed: 0,
-  impulse: 100,
+  aImpulse: 95,
+  bImpulse: 95,
 });
 
 const input = (patch: Partial<PlayerInput> = {}): PlayerInput => ({

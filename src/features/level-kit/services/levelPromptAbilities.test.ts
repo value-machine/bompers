@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildLevelPrompt } from "@/features/level-kit/services/levelPrompt";
 import {
   brakeSlide,
+  diveHitPush,
   freezePatchRadius,
   iceGrip,
   liftJumpApex,
@@ -28,6 +29,7 @@ describe("level prompt ability numbers", () => {
       n(T.roll.jumpCarryMax),
       n(T.roll.sweepTurnsPerSecond),
       n(T.dive.rollCarryMax),
+      n(Math.round(diveHitPush(T))),
       n(iceGrip()),
       n(freezeRay.length),
       `±${freezeRay.halfAngleDegrees}°`,
