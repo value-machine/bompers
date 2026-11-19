@@ -1,7 +1,17 @@
 [
   {
-    "title": "World of bodies L4: craters on parts",
-    "description": "Owner 2026-11-18: yes, blasts break moving parts like terrain (cardboard and earth crater; stone and ice stay whole). Arena is at its services budget: make room first. Size S-M.",
+    "title": "Outline system lap 2: fills from the field",
+    "description": "Option B lap 2 (after #95). Each material fill built from the field shape so touching shapes are one fill with one lip; removes the stencil mask; rebuilds limited to the changed region. Absorbs the pillar/slab seam look. Owner looks at a junction-lip options page before build. Size M. Thread: outline-system.",
+    "status": "in-progress"
+  },
+  {
+    "title": "Outline system lap 3: elements and widths",
+    "description": "Option B lap 3. Fire body, frost and stains through the terrainRings builder (fire ink as a line), cap on the grow, one width and join source for props, blobs and effects. Size M. After lap 2.",
+    "status": "to-do"
+  },
+  {
+    "title": "Soft landing sound repeats chasing a moving block",
+    "description": "Owner report: while chasing a moving block, one soft landing sound plays about every 4 s. Not root-caused after the contact fixes (#90 era). Debug with spec-debug-runtime. Size S.",
     "status": "to-do"
   },
   {
