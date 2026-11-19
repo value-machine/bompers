@@ -84,18 +84,11 @@ export function createTerrainGrid(size: TerrainGridSize): TerrainGrid {
   };
 }
 
-/** Index of the slot for this material + colour, or -1 when the grid has none. */
-export const findSlot = (
-  grid: TerrainGrid,
-  look: Pick<TerrainCellSlot, "materialId" | "colorId">
-): number =>
-  grid.slots.findIndex(
-    (s, i) => i > 0 && s.materialId === look.materialId && s.colorId === look.colorId
-  );
-
 /** Index of the slot for this material + colour, added on first use. */
 export function slotFor(grid: TerrainGrid, slot: TerrainCellSlot): number {
-  const found = findSlot(grid, slot);
+  const found = grid.slots.findIndex(
+    (s, i) => i > 0 && s.materialId === slot.materialId && s.colorId === slot.colorId
+  );
   if (found > 0) return found;
   grid.slots.push(slot);
   return grid.slots.length - 1;

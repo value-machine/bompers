@@ -5,27 +5,25 @@ import { DESIGN_SCALE } from "@/shared/utils/outlineWidth";
 import type { MaterialSurface } from "@/shared/types/terrainSurface.types";
 import type { TerrainShape } from "@/features/level/api/levelApi";
 import { EMPTY_CELL, type TerrainGrid } from "@/features/arena/types/arena.types";
-import { fieldBand, gridDistanceAt } from "@/features/arena/services/terrainGrid";
+import { fieldBand } from "@/features/arena/services/terrainGrid";
 
 /**
  * Terrain slab drawing shared by every material (DESIGN_LANGUAGE § 2): each colour's fill is the
  * terrain's own shape, so touching slabs of one colour are one wall (outline-system D6), with a
- * lighter lip along every top edge open to the air. Ice gets gloss streaks and a white inner rim;
- * breakable pieces are plain slabs like stone (owner, terrain-curves D5). Outline, fills and lips
- * all come from one rule: the contour of the terrain distance field (terrain-curves D8).
+ * lighter lip as a band along every edge that faces up into the air (D7). Ice gets gloss streaks
+ * and a white inner rim; breakable pieces are plain slabs like stone (owner, terrain-curves D5).
+ * Outline, fills and lips all come from one rule: the contour of the terrain distance field
+ * (terrain-curves D8).
  */
 export interface SlabPiece {
   /** The piece's shape in its body's own grid coordinates. */
   shape: TerrainShape;
   swatch: TerrainSwatch;
   surface: MaterialSurface;
-  /** The piece's material + colour slot in its body's grid. */
-  slot: number;
 }
 
 /** Mockup numbers at the reference blob, scaled to the game (visual-pass D1). */
-const SLAB = { radius: 14 * DESIGN_SCALE, lipInset: 6 * DESIGN_SCALE, lipTop: 4 * DESIGN_SCALE };
-const LIP_HEIGHT = 9 * DESIGN_SCALE;
+const SLAB = { radius: 14 * DESIGN_SCALE };
 
 /** Rect slabs' corner radius; the terrain field is seeded with it so its contour is the slab. */
 export const SLAB_CORNER_RADIUS = SLAB.radius;
@@ -85,95 +83,6 @@ function drawIceGloss(g: Graphics, shape: TerrainShape): void {
 export function drawSlabDetails(g: Graphics, pieces: readonly SlabPiece[]): void {
   g.clear();
   for (const { shape, surface } of pieces) if (surface === "ice") drawIceGloss(g, shape);
-}
-
-/** One lip: a pill along a stretch of top edge, in its body's grid coordinates. */
-export interface SlabLip {
-  x: number;
-  y: number;
-  w: number;
-  color: number;
-}
-
-/** A stretch of top edge shared by touching rect slabs of one slot. */
-interface TopLine {
-  slot: number;
-  y: number;
-  from: number;
-  to: number;
-  color: number;
-}
-
-/** The top edges of the rect slabs tall enough for a lip, joined where slabs of one slot meet. */
-function topLines(pieces: readonly SlabPiece[]): TopLine[] {
-  const lines = pieces
-    .flatMap(({ shape, slot, swatch }) =>
-      shape.type === "rect" && shape.h >= LIP_HEIGHT * 2
-        ? [{ slot, y: shape.y, from: shape.x, to: shape.x + shape.w, color: swatch.lip }]
-        : []
-    )
-    .sort((a, b) => a.slot - b.slot || a.y - b.y || a.from - b.from);
-  const joined: TopLine[] = [];
-  for (const line of lines) {
-    const last = joined[joined.length - 1];
-    if (last && last.slot === line.slot && last.y === line.y && line.from <= last.to) {
-      last.to = Math.max(last.to, line.to);
-    } else joined.push({ ...line });
-  }
-  return joined;
-}
-
-/** Spacing of the checks along a top edge, and how far above it air is looked for, world units. */
-const LIP_STEP = 1;
-const LIP_AIR_PROBE = 2;
-
-/**
- * Whether a lip may pass x on a top line (outline-system D6, owner pick "lips on open tops"):
- * the lip's middle lies in standing terrain of the line's own slot, deep enough to hold the
- * lip, and air is above the edge, here and one inset to either side, so a lip ends set in from
- * a slab's end, a wall that rises from it, another colour and a crater's rim alike.
- */
-function lipFits(grid: TerrainGrid, line: TopLine, x: number): boolean {
-  const middle = line.y + SLAB.lipTop + LIP_HEIGHT / 2;
-  if (gridDistanceAt(grid, { x, y: middle }) < LIP_HEIGHT / 2 - 0.25) return false;
-  const row = Math.floor(middle / grid.cellSize);
-  for (const dx of [-SLAB.lipInset, 0, SLAB.lipInset]) {
-    const index = sampleIndex(grid, Math.floor((x + dx) / grid.cellSize), row);
-    if (index < 0 || grid.cells[index] !== line.slot) return false;
-    if (gridDistanceAt(grid, { x: x + dx, y: line.y - LIP_AIR_PROBE }) > 0) return false;
-  }
-  return true;
-}
-
-/**
- * The lips of a body's slabs as the terrain stands: one pill per stretch of top edge that is
- * open to the air, over touching slabs of one colour as one. A crater or a burn-out that takes
- * the edge takes the lip with it.
- */
-export function slabLips(grid: TerrainGrid, pieces: readonly SlabPiece[]): SlabLip[] {
-  const lips: SlabLip[] = [];
-  for (const line of topLines(pieces)) {
-    let start: number | null = null;
-    for (let x = line.from; x <= line.to + LIP_STEP; x += LIP_STEP) {
-      const fits = x <= line.to && lipFits(grid, line, x);
-      if (fits && start === null) start = x;
-      if (fits || start === null) continue;
-      const end = x - LIP_STEP;
-      if (end - start >= LIP_HEIGHT) {
-        lips.push({ x: start, y: line.y + SLAB.lipTop, w: end - start, color: line.color });
-      }
-      start = null;
-    }
-  }
-  return lips;
-}
-
-/** Draws lips as pills in their colours. */
-export function drawSlabLips(g: Graphics, lips: readonly SlabLip[]): void {
-  g.clear();
-  for (const lip of lips) {
-    g.roundRect(lip.x, lip.y, lip.w, LIP_HEIGHT, LIP_HEIGHT / 2).fill(lip.color);
-  }
 }
 
 /** World-space contour geometry: plain rects plus contour pieces (flat [x, y, …] polygons). */
@@ -237,6 +146,24 @@ export function slotLayerRegion(grid: TerrainGrid, slot: number, box?: SampleBox
     value: (index) => {
       const at = grid.cells[index] ?? EMPTY_CELL;
       return at !== EMPTY_CELL && at < slot ? -(grid.distance[index] ?? band) : band;
+    },
+  };
+}
+
+/**
+ * A region without its lip (outline-system D7, owner pick "band along the edge"): the part whose
+ * sample above is terrain too. Drawn over the whole region, it leaves a band one sample high
+ * along every edge that faces up into the air: slab tops with their rounded corners, crater rims
+ * and burnt edges alike, and none where another shape sits on top. Second copy of the idea:
+ * `features/ice/services/iceRenderer.ts` `underLip` cuts frost's lip against the frost itself.
+ */
+export function belowLipRegion(grid: TerrainGrid, region: SampleRegion): SampleRegion {
+  const band = fieldBand(grid);
+  return {
+    box: region.box,
+    value: (index) => {
+      const above = index - grid.widthCells;
+      return Math.min(region.value(index), above < 0 ? -band : (grid.distance[above] ?? -band));
     },
   };
 }

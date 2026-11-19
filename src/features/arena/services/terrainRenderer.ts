@@ -4,22 +4,17 @@ import { inkColor } from "@/shared/utils/debugInk";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelApi";
 import type { MoverBody, TerrainGrid } from "@/features/arena/types/arena.types";
-import {
-  FIELD_BAND_SAMPLES,
-  findSlot,
-  takeDirtyChunks,
-} from "@/features/arena/services/terrainGrid";
+import { FIELD_BAND_SAMPLES, takeDirtyChunks } from "@/features/arena/services/terrainGrid";
 import {
   moverPieceIndices,
   pieceCellSlot,
   shiftShape,
 } from "@/features/arena/services/terrainRaster";
 import {
+  belowLipRegion,
   drawContour,
   drawOutline,
   drawSlabDetails,
-  drawSlabLips,
-  slabLips,
   slotLayerBoxes,
   slotLayerRegion,
   terrainContour,
@@ -43,14 +38,16 @@ import {
  *   the field's contour of that slot and every later one, so the first layer is the whole
  *   terrain, touching slabs of one colour are one fill with no seam, two colours meet without a
  *   gap, and a crater or a burn-out cuts them all. No clip mask.
- * - **Lips:** a lighter pill along every top edge open to the air (`slabLips`), then ice cues.
- * Rings, fills and lips are rebuilt when the sim changes the terrain (a slot's fill only when
- * the change is near it); an outline step only restrokes the rings it has.
+ * - **Lips:** each layer is painted in its lip colour first and its fill colour over that
+ *   without the lip (`belowLipRegion`), which leaves a lighter band along every edge that faces
+ *   up into the air (outline-system D7). Then the ice cues.
+ * Rings and fills are rebuilt when the sim changes the terrain (a slot's layer only when the
+ * change is near it); an outline step only restrokes the rings it has.
  */
 export interface TerrainView {
   container: Container;
   ink: Graphics;
-  /** The static terrain's fills, lips and ice cues. */
+  /** The static terrain's fill layers (each with its lip) and ice cues. */
   slabs: SlabLayers;
   /** Outline step the ink was drawn at (null before the first draw). */
   inkStep: number | null;
@@ -66,24 +63,25 @@ export interface TerrainView {
 interface SlabLayers {
   layer: Container;
   /** One fill layer per slot, in paint order, with the box of samples the layer covers. */
-  fills: Map<number, { g: Graphics; box: SampleBox; color: number }>;
-  lips: Graphics;
-  pieces: SlabPiece[];
+  fills: Map<number, SlotLayer>;
+}
+
+/** A slot's layer: the whole of it in the lip colour, then all but the lip in the fill colour. */
+interface SlotLayer {
+  lip: Graphics;
+  body: Graphics;
+  box: SampleBox;
+  swatch: { fill: number; lip: number };
 }
 
 /** A body's pieces in its own grid coordinates (`origin` is where its grid starts). */
-function slabPieces(
-  grid: TerrainGrid,
-  pieces: readonly TerrainPiece[],
-  origin = { x: 0, y: 0 }
-): SlabPiece[] {
+function slabPieces(pieces: readonly TerrainPiece[], origin = { x: 0, y: 0 }): SlabPiece[] {
   return pieces.map((piece) => {
     const info = pieceCellSlot(piece);
     return {
       shape: shiftShape(piece.shape, origin),
       swatch: terrainSwatch(info.colorId),
       surface: info.surface,
-      slot: findSlot(grid, info),
     };
   });
 }
@@ -92,16 +90,15 @@ function createSlabLayers(grid: TerrainGrid, pieces: SlabPiece[]): SlabLayers {
   const layer = new Container({ label: "slabs" });
   const fills: SlabLayers["fills"] = new Map();
   for (const [slot, box] of slotLayerBoxes(grid)) {
-    const g = new Graphics({ label: `slab-fill-${slot}` });
-    const info = grid.slots[slot];
-    fills.set(slot, { g, box, color: terrainSwatch(info?.colorId ?? "").fill });
-    layer.addChild(g);
+    const lip = new Graphics({ label: `slab-lip-${slot}` });
+    const body = new Graphics({ label: `slab-fill-${slot}` });
+    fills.set(slot, { lip, body, box, swatch: terrainSwatch(grid.slots[slot]?.colorId ?? "") });
+    layer.addChild(lip, body);
   }
-  const lips = new Graphics({ label: "slab-lips" });
   const details = new Graphics({ label: "slab-details" });
   drawSlabDetails(details, pieces);
-  layer.addChild(lips, details);
-  return { layer, fills, lips, pieces };
+  layer.addChild(details);
+  return { layer, fills };
 }
 
 /** The box of samples the dirty chunks cover, grown by how far a change moves distances. */
@@ -122,15 +119,15 @@ function dirtyBox(grid: TerrainGrid, chunks: readonly number[]): SampleBox {
 const boxesMeet = (a: SampleBox, b: SampleBox): boolean =>
   a.minX <= b.maxX && b.minX <= a.maxX && a.minY <= b.maxY && b.minY <= a.maxY;
 
-/** Redraws the fills of the slots a change reached (all of them without `changed`), and the lips. */
+/** Redraws the layers of the slots a change reached (all of them without `changed`). */
 function syncSlabLayers(slabs: SlabLayers, grid: TerrainGrid, changed?: SampleBox): void {
   for (const [slot, fill] of slabs.fills) {
     if (changed && !boxesMeet(fill.box, changed)) continue;
     const region = slotLayerRegion(grid, slot, fill.box);
-    const shape = terrainContour(grid, { grow: 0, region });
-    drawContour(fill.g, shape, fill.color);
+    drawContour(fill.lip, terrainContour(grid, { grow: 0, region }), fill.swatch.lip);
+    const body = terrainContour(grid, { grow: 0, region: belowLipRegion(grid, region) });
+    drawContour(fill.body, body, fill.swatch.fill);
   }
-  drawSlabLips(slabs.lips, slabLips(grid, slabs.pieces));
 }
 
 /**
@@ -175,7 +172,7 @@ function createMoverView(level: LevelDefinition, mover: MoverBody): MoverView {
   const ink = new Graphics({ label: "moving-part-ink" });
   ink.position.set(mover.origin.x, mover.origin.y);
   const pieces = mover.terrainIndices.flatMap((i) => level.terrain[i] ?? []);
-  const slabs = createSlabLayers(mover.field, slabPieces(mover.field, pieces, mover.origin));
+  const slabs = createSlabLayers(mover.field, slabPieces(pieces, mover.origin));
   slabs.layer.position.set(mover.origin.x, mover.origin.y);
   container.addChild(ink, slabs.layer);
   return { container, ink, slabs, shapeSeen: -1, rings: [] };
@@ -189,7 +186,7 @@ export function createTerrainView(arena: {
   const ink = new Graphics({ label: "terrain-ink" });
   const moving = moverPieceIndices(arena.level);
   const pieces = arena.level.terrain.filter((_, i) => !moving.has(i));
-  const slabs = createSlabLayers(arena.terrain, slabPieces(arena.terrain, pieces));
+  const slabs = createSlabLayers(arena.terrain, slabPieces(pieces));
   container.addChild(ink, slabs.layer);
   const movers = arena.terrain.movers.map((mover) => createMoverView(arena.level, mover));
   for (const mover of movers) container.addChild(mover.container);
@@ -214,7 +211,7 @@ export function syncTerrainView(view: TerrainView, grid: TerrainGrid, zoom: numb
   view.movers.forEach((moverView, i) => {
     const mover = grid.movers[i];
     if (!mover) return;
-    // A part's field changes when it burns away or is blasted: outline, fills and lips follow.
+    // A part's field changes when it burns away or is blasted: outline and fills follow.
     const shapeChanged = mover.field.shapeVersion !== moverView.shapeSeen;
     if (shapeChanged) {
       moverView.shapeSeen = mover.field.shapeVersion;

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
-import { burnOut, clearCrater, findSlot } from "@/features/arena/services/terrainGrid";
+import { burnOut, clearCrater } from "@/features/arena/services/terrainGrid";
 import { createTerrainView, syncTerrainView } from "@/features/arena/services/terrainRenderer";
 import {
+  belowLipRegion,
   edgeAbove,
   markedRegion,
-  slabLips,
   slotLayerBoxes,
   slotLayerRegion,
   terrainContour,
@@ -370,7 +370,7 @@ describe("moving part view (mover-materials-l2)", () => {
     const view = createTerrainView({ terrain, level: partLevel });
     syncTerrainView(view, terrain, 1);
     const part = view.movers[0]!;
-    const partFill = [...part.slabs.fills.values()][0]!.g;
+    const partFill = [...part.slabs.fills.values()][0]!.body;
     const [before, maskBefore] = [part.ink, partFill].map((g) => g.getLocalBounds().width) as [
       number,
       number,
@@ -408,20 +408,15 @@ const wallLevel: LevelDefinition = {
   bounds: { x: 0, y: 0, w: 640, h: 480 },
 };
 
-const lipsAt = (grid: Grid, lvl: LevelDefinition, y: number) => {
-  const pieces = lvl.terrain.map((piece) => ({
-    shape: piece.shape,
-    swatch: { fill: 1, lip: 2, seam: 3 },
-    surface: "plain" as const,
-    slot: findSlot(grid, {
-      materialId: piece.materialId,
-      colorId: grid.slots.find((s) => s.materialId === piece.materialId)?.colorId ?? "",
-    }),
-  }));
-  return slabLips(grid, pieces)
-    .filter((lip) => Math.abs(lip.y - y) < 4)
-    .sort((a, b) => a.x - b.x);
+/** A slot layer's fill without its lip, as the view draws it over the lip colour. */
+const bodyFill = (grid: Grid, materialId: string): MaskShapes => {
+  const slot = grid.slots.findIndex((s, i) => i > 0 && s.materialId === materialId);
+  const region = slotLayerRegion(grid, slot, slotLayerBoxes(grid).get(slot));
+  return terrainContour(grid, { grow: 0, region: belowLipRegion(grid, region) });
 };
+/** True where the lip colour shows: inside the layer and not under its fill colour. */
+const isLip = (grid: Grid, materialId: string, at: { x: number; y: number }): boolean =>
+  covers(slotFill(grid, materialId), at.x, at.y) && !covers(bodyFill(grid, materialId), at.x, at.y);
 
 describe("slab fills from the field (outline-system D6: touching shapes are one)", () => {
   it("should fill the inner corners where a pillar meets a slab when both are one colour", () => {
@@ -471,53 +466,64 @@ describe("slab fills from the field (outline-system D6: touching shapes are one)
   });
 });
 
-describe("slabLips (owner pick: lips on open tops)", () => {
-  it("should give the top slab one lip set in from both ends when nothing sits on it", () => {
+describe("belowLipRegion (owner pick: a lip band along every edge that faces up)", () => {
+  it("should leave a band one sample high along a slab's open top and none deeper", () => {
     const grid = buildTerrainFromLevel(wallLevel);
-    const lips = lipsAt(grid, wallLevel, 40);
-    expect(lips).toHaveLength(1);
-    expect(lips[0]!.x).toBeGreaterThan(80 + 1.5);
-    expect(lips[0]!.x).toBeLessThan(80 + 5);
-    expect(lips[0]!.x + lips[0]!.w).toBeGreaterThan(560 - 5);
-    expect(lips[0]!.x + lips[0]!.w).toBeLessThan(560 - 1.5);
+    expect(isLip(grid, "stone", { x: 200, y: 41.5 })).toBe(true);
+    expect(isLip(grid, "stone", { x: 200, y: 43 })).toBe(true);
+    expect(isLip(grid, "stone", { x: 200, y: 45 })).toBe(false);
+    expect(isLip(grid, "stone", { x: 200, y: 100 })).toBe(false);
   });
 
-  it("should give the pillar no lip when a slab sits on top of it", () => {
+  it("should leave no band on the pillar or under its foot when shapes sit on top", () => {
     const grid = buildTerrainFromLevel(wallLevel);
-    expect(lipsAt(grid, wallLevel, 136)).toHaveLength(0);
+    // The pillar's top under the slab, and the floor's top under the pillar.
+    expect(isLip(grid, "stone", { x: 300, y: 137.5 })).toBe(false);
+    expect(isLip(grid, "stone", { x: 300, y: 361.5 })).toBe(false);
+    // The floor's open top on both sides of the pillar, right up to its walls.
+    expect(isLip(grid, "stone", { x: 100, y: 361.5 })).toBe(true);
+    expect(isLip(grid, "stone", { x: 236, y: 361.5 })).toBe(true);
+    expect(isLip(grid, "stone", { x: 364, y: 361.5 })).toBe(true);
   });
 
-  it("should give the floor a lip on each side of the pillar, set in from the pillar's walls", () => {
+  it("should follow the rounded corner when the top edge turns down", () => {
     const grid = buildTerrainFromLevel(wallLevel);
-    const lips = lipsAt(grid, wallLevel, 360);
-    expect(lips).toHaveLength(2);
-    expect(lips[0]!.x + lips[0]!.w).toBeLessThan(240 - 1.5);
-    expect(lips[0]!.x + lips[0]!.w).toBeGreaterThan(240 - 5);
-    expect(lips[1]!.x).toBeGreaterThan(360 + 1.5);
-    expect(lips[1]!.x).toBeLessThan(360 + 5);
+    // On the top slab's top-left corner arc (radius about 6.2), a point just inside the arc.
+    expect(isLip(grid, "stone", { x: 83.5, y: 43.5 })).toBe(true);
+    // Lower down the straight side there is no band.
+    expect(isLip(grid, "stone", { x: 82, y: 90 })).toBe(false);
   });
 
-  it("should run one lip across two slabs when they stand side by side at one height", () => {
-    const sideBySide: LevelDefinition = {
+  it("should give a thin platform a band when it is only two samples high", () => {
+    const thin: LevelDefinition = {
+      ...wallLevel,
+      terrain: [{ shape: { type: "rect", x: 80, y: 200, w: 200, h: 8 }, materialId: "stone" }],
+    };
+    const grid = buildTerrainFromLevel(thin);
+    expect(isLip(grid, "stone", { x: 180, y: 201.5 })).toBe(true);
+    expect(isLip(grid, "stone", { x: 180, y: 206.5 })).toBe(false);
+  });
+
+  it("should put a band on a crater's rim where it faces up when a blast cuts the top", () => {
+    const grid = buildTerrainFromLevel(level);
+    expect(isLip(grid, "earth", { x: 200, y: 133 })).toBe(false);
+    clearCrater(grid, { x: 200, y: 101, reach: 30, shape: "round" });
+    // The crater's floor is 30 below the old top: a band just under it, none deeper.
+    expect(isLip(grid, "earth", { x: 200, y: 133 })).toBe(true);
+    expect(isLip(grid, "earth", { x: 200, y: 140 })).toBe(false);
+  });
+
+  it("should leave no band on the lower colour when another colour sits on top of it", () => {
+    const stacked: LevelDefinition = {
       ...wallLevel,
       terrain: [
-        { shape: { type: "rect", x: 80, y: 200, w: 200, h: 80 }, materialId: "stone" },
-        { shape: { type: "rect", x: 280, y: 200, w: 200, h: 80 }, materialId: "stone" },
+        { shape: { type: "rect", x: 80, y: 200, w: 200, h: 80 }, materialId: "earth" },
+        { shape: { type: "rect", x: 80, y: 120, w: 200, h: 80 }, materialId: "stone" },
       ],
     };
-    const lips = lipsAt(buildTerrainFromLevel(sideBySide), sideBySide, 200);
-    expect(lips).toHaveLength(1);
-    expect(lips[0]!.w).toBeGreaterThan(380);
-  });
-
-  it("should split the lip around a crater when a blast takes the top edge", () => {
-    const grid = buildTerrainFromLevel(level);
-    expect(lipsAt(grid, level, 101)).toHaveLength(1);
-    clearCrater(grid, { x: 200, y: 101, reach: 30, shape: "round" });
-    const lips = lipsAt(grid, level, 101);
-    expect(lips).toHaveLength(2);
-    expect(lips[0]!.x + lips[0]!.w).toBeLessThan(200 - 30);
-    expect(lips[1]!.x).toBeGreaterThan(200 + 30);
+    const grid = buildTerrainFromLevel(stacked);
+    expect(isLip(grid, "earth", { x: 180, y: 201.5 })).toBe(false);
+    expect(isLip(grid, "stone", { x: 180, y: 121.5 })).toBe(true);
   });
 });
 
@@ -547,11 +553,11 @@ describe("terrain view without a clip mask (outline-system D6)", () => {
     const view = createTerrainView({ terrain: grid, level: far });
     syncTerrainView(view, grid, 1);
     const stone = [...view.slabs.fills.values()].find((layer) => layer.box.minY > 50)!;
-    expect(stone.g.context.instructions.length).toBeGreaterThan(0);
+    expect(stone.body.context.instructions.length).toBeGreaterThan(0);
     // Emptied by hand: a redraw would fill it again.
-    stone.g.context.instructions.length = 0;
+    stone.body.context.instructions.length = 0;
     clearCrater(grid, { x: 56, y: 40, reach: 20, shape: "round" });
     syncTerrainView(view, grid, 1);
-    expect(stone.g.context.instructions.length).toBe(0);
+    expect(stone.body.context.instructions.length).toBe(0);
   });
 });
