@@ -352,6 +352,94 @@ describe("playerController — crouch", () => {
   });
 });
 
+describe("playerController — crouch roll (crouch-roll R1–R3)", () => {
+  const ROLL = DEFAULT_GAME_TUNABLES.roll;
+  /** Whole steps in the wind-up delay. */
+  const DELAY_STEPS = Math.round(ROLL.crouchRollDelay / dt);
+
+  it("should only turn and aim when crouch and a direction are held for less than the delay", () => {
+    const sim = grounded();
+    sim.step({ crouch: true, moveX: 1 }, DELAY_STEPS - 1);
+    expect(sim.player.crouching).toBe(true);
+    expect(sim.player.rollSource).toBeNull();
+    expect(sim.player.facing).toBe(1);
+  });
+
+  it("should roll toward the held side from the crouch start speed when the delay runs out", () => {
+    const sim = grounded();
+    sim.step({ crouch: true, moveX: 1 }, DELAY_STEPS);
+    expect(sim.player.rollSource).toBe("crouch");
+    expect(sim.player.crouching).toBe(false);
+    expect(sim.player.moveRollCount).toBe(1);
+    expect(sim.player.vx).toBeGreaterThan(ROLL.crouchStartSpeed * 0.95);
+    sim.step({ crouch: true, moveX: 1 }, 30);
+    expect(sim.player.x).toBeGreaterThan(330);
+  });
+
+  it("should roll left when left is the held side", () => {
+    const sim = grounded();
+    sim.step({ crouch: true, moveX: -1 }, DELAY_STEPS);
+    expect(sim.player.rollSource).toBe("crouch");
+    expect(sim.player.vx).toBeLessThan(-ROLL.crouchStartSpeed * 0.95);
+  });
+
+  it("should not roll while fire is held and should restart the wait when fire is let go", () => {
+    const sim = grounded();
+    sim.step({ crouch: true, moveX: 1, fire: true }, DELAY_STEPS + 20);
+    expect(sim.player.rollSource).toBeNull();
+    sim.step({ crouch: true, moveX: 1 }, DELAY_STEPS - 1);
+    expect(sim.player.rollSource).toBeNull();
+    sim.step({ crouch: true, moveX: 1 }, 1);
+    expect(sim.player.rollSource).toBe("crouch");
+  });
+
+  it("should restart the wait when the direction flips or is let go", () => {
+    const sim = grounded();
+    sim.step({ crouch: true, moveX: 1 }, DELAY_STEPS - 10);
+    sim.step({ crouch: true, moveX: -1 }, DELAY_STEPS - 10);
+    sim.step({ crouch: true }, 1);
+    sim.step({ crouch: true, moveX: -1 }, DELAY_STEPS - 10);
+    expect(sim.player.rollSource).toBeNull();
+    expect(sim.player.crouching).toBe(true);
+  });
+
+  it("should end the roll and stand when crouch is let go", () => {
+    const sim = grounded();
+    sim.step({ crouch: true, moveX: 1 }, DELAY_STEPS);
+    sim.step({ moveX: 1 }, 1);
+    expect(sim.player.rollSource).toBeNull();
+    expect(sim.player.crouching).toBe(false);
+  });
+
+  it("should come to rest back in the crouch when crouch stays held without a direction", () => {
+    const sim = grounded();
+    sim.step({ crouch: true, moveX: 1 }, DELAY_STEPS);
+    sim.step({ crouch: true }, 240);
+    expect(sim.player.rollSource).toBeNull();
+    expect(sim.player.rollRestCount).toBe(1);
+    expect(sim.player.crouching).toBe(true);
+  });
+
+  it("should carry the roll's speed into a jump", () => {
+    const sim = grounded(200);
+    sim.step({ crouch: true, moveX: 1 }, DELAY_STEPS);
+    sim.step({ moveX: 1, crouch: true, jump: true }, 1);
+    expect(sim.player.rollSource).toBeNull();
+    expect(sim.player.vy).toBeLessThan(0);
+    expect(sim.player.vx).toBeGreaterThan(P.runSpeed);
+  });
+
+  it("should not wind up in the air or while an ability steers the blob", () => {
+    const air = createSim({ x: 300, y: 100 });
+    air.step({ crouch: true, moveX: 1 }, 20);
+    expect(air.player.crouchRollSeconds).toBe(0);
+    const steered = grounded();
+    steered.player.steerScale = 0.5;
+    steered.step({ crouch: true, moveX: 1 }, DELAY_STEPS + 5);
+    expect(steered.player.rollSource).toBeNull();
+  });
+});
+
 // A curved hill: a dome (circle r 160 centred under the floor) on a flat floor, 4-unit samples,
 // the way a crater rim or authored curve reads after the distance-field laps.
 const hill: LevelDefinition = {

@@ -23,7 +23,7 @@ export interface SoundPlayerSnapshot {
   lastLandingSpeed: number;
   /** Roll terrain bounces, dash-roll starts and hit rolls that came to rest (monotonic). */
   rollBounceCount: number;
-  dashRollCount: number;
+  moveRollCount: number;
   rollRestCount: number;
   /** Crouch starts (monotonic). */
   crouchCount: number;
