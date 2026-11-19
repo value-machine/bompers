@@ -668,7 +668,7 @@ describe("gameSim — jump dive rules (double-jump-bash D2, D5, D17)", () => {
     stepFor(state, 1);
     // One dive spent the charge; the second press found nothing to start.
     expect(state.dive.motions.p0?.trigger).toBe("fire");
-    expect(state.players[0]!.dashRollCount).toBe(0);
+    expect(state.players[0]!.moveRollCount).toBe(0);
   });
 
   it("should not dive again with a jump press while the airtime's dive is spent", () => {

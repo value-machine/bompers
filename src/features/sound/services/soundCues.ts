@@ -192,7 +192,7 @@ const PLAYER_RULES: readonly [
   // The roll bounce keeps the `tumble-bounce` file (shared-roll D8).
   ["tumble-bounce", (p, n) => n.rollBounceCount > p.rollBounceCount, () => 1],
   // Rolling on from a dash, and a roll coming to rest: a soft thud, like a crouch.
-  ["land", (p, n) => n.dashRollCount > p.dashRollCount, () => SOUND_MIX.crouchGain],
+  ["land", (p, n) => n.moveRollCount > p.moveRollCount, () => SOUND_MIX.crouchGain],
   ["land", (p, n) => n.rollRestCount > p.rollRestCount, () => SOUND_MIX.crouchGain],
   ["dive-launch", (p, n) => n.divePhase === "travel" && p.divePhase !== "travel", () => 1],
   ["respawn", (p, n) => n.inPlay && !p.inPlay, () => 1],

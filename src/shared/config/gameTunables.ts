@@ -134,6 +134,10 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     // Spin-fire (D2): 1.25 turns / s ≈ 3.75° per 1/120 s step, under the freeze ray's 6° fan. The
     // body spins at speed / 14 (a 400 roll ≈ 4.5 turns / s), far too fast to sweep a beam at.
     sweepTurnsPerSecond: 1.25,
+    // Crouch roll (owner, crouch-roll R7): 0.8 s of crouch + one direction with no fire reads as
+    // "roll", shorter as aiming. Starts at 500 (run 340, jump carry cap 600, dive dash 900).
+    crouchRollDelay: 0.8,
+    crouchStartSpeed: 500,
   },
   dive: {
     minHitSpeed: 150,

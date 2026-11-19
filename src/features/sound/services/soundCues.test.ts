@@ -17,7 +17,7 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   landCount: 0,
   lastLandingSpeed: 0,
   rollBounceCount: 0,
-  dashRollCount: 0,
+  moveRollCount: 0,
   rollRestCount: 0,
   crouchCount: 0,
   inPlay: true,
@@ -97,7 +97,7 @@ describe("readSoundCues", () => {
   });
 
   it("should cue a soft thud when a dash roll starts or a roll comes to rest", () => {
-    for (const patch of [{ dashRollCount: 1 }, { rollRestCount: 1 }]) {
+    for (const patch of [{ moveRollCount: 1 }, { rollRestCount: 1 }]) {
       const cues = cuesAfter(snapshot({ players: [player(0, patch), player(1)] }));
       expect(cues).toEqual([{ soundId: "land", slot: 0, gain: SOUND_MIX.crouchGain }]);
     }
