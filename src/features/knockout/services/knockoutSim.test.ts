@@ -131,6 +131,17 @@ describe("knockout — flight ends", () => {
 });
 
 describe("knockout — burst", () => {
+  it("should log the burst on the same step the droplets appear when the blob bursts", () => {
+    const world = knockedOut(eliminated({ overkill: true }));
+    let frames = 0;
+    while (world.droplets.length === 0 && frames < 60) {
+      expect(world.bursts).toEqual([]);
+      run(world, 1 / 60, sky);
+      frames += 1;
+    }
+    expect(world.bursts).toEqual([{ n: 1, slot: 1 }]);
+  });
+
   it("should hand the droplets the blob's momentum plus a small spread when it bursts", () => {
     const world = knockedOut(eliminated({ overkill: true, vx: 800, vy: -200 }));
     run(world, T.squash.seconds + 1 / 120, sky);
@@ -205,6 +216,14 @@ describe("knockout — crush", () => {
     expect(onPart.every((splat) => splat.nx === 1 && splat.x < 400)).toBe(true);
     expect(onWall.every((splat) => splat.nx === -1 && splat.x > 400)).toBe(true);
     expect(world.pieces.length).toBeGreaterThan(0);
+  });
+
+  it("should log the burst on the step the pancake turns into splats", () => {
+    const world = knockedOut(crushed);
+    step(world, CRUSH_PANCAKE.holdSeconds - 0.02);
+    expect(world.bursts).toEqual([]);
+    step(world, 0.04);
+    expect(world.bursts).toEqual([{ n: 1, slot: 1 }]);
   });
 });
 
