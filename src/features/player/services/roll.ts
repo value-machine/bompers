@@ -13,12 +13,16 @@ import type { PlayerState, RollHoldButton, RollSource } from "@/features/player/
  * - **Dash:** holding fire through a dive's travel rolls on with the dive's speed (the dive
  *   feature calls `startRoll` with source `dash`); letting go of the button that started the
  *   dive (fire, or jump for a jump dive) ends it.
+ * - **Crouch:** crouched on the ground with one direction held and no fire for
+ *   `roll.crouchRollDelay` (shorter is aiming or turning, crouch D4) rolls that way from at least
+ *   `roll.crouchStartSpeed` (the controller calls `startRoll` with source `crouch`). Letting go of
+ *   crouch ends it; at rest it ends like a hit roll, back into the crouch (crouch-roll R1–R3).
  *
  * While rolling the controller runs ball physics (`steerRoll` in the controller): gravity along
  * the ground (rolls down hills), rolling friction, weak steering; terrain impacts bounce by
  * restitution (`bounceRoll`). Exits: coming to rest, a jump once the lock ran out, releasing a
- * dash, respawn, or `roll.maxSeconds`. The spin (`rollAngle`) is sim state, so the look follows
- * the physics; after a roll the body turns back upright.
+ * dash or crouch roll's button, respawn, or `roll.maxSeconds`. The spin (`rollAngle`) is sim
+ * state, so the look follows the physics; after a roll the body turns back upright.
  *
  * Held weapons sweep round with the spin (spin-fire D1): `weaponAim` is the stick aim turned by
  * `weaponSweep`, which follows the spin at most `roll.sweepTurnsPerSecond` and is 0 outside a roll.
@@ -37,8 +41,14 @@ export interface StartRollArgs {
   impulse?: Vec2;
   /** Least lock, seconds (a back hit). */
   minLockSeconds?: number;
-  /** A dash: the button that keeps it going (default fire). */
+  /** A dash: the button that keeps it going (default fire). A crouch roll is always held by crouch. */
   holdButton?: RollHoldButton;
+}
+
+/** What keeps a roll going: none for a hit, crouch for a crouch roll, the dive's button for a dash. */
+function holdButtonOf(source: RollSource, holdButton?: RollHoldButton): RollHoldButton | null {
+  if (source === "hit") return null;
+  return source === "crouch" ? "crouch" : (holdButton ?? "fire");
 }
 
 /** Lock seconds for an impulse: linear in its strength, capped (shared-roll D3). */
@@ -57,10 +67,10 @@ export function startRoll(player: PlayerState, args: StartRollArgs, tunables: Ga
   if (!isRolling(player)) {
     player.rollSeconds = 0;
     player.rollSpin = 0;
-    if (args.source === "dash") player.dashRollCount += 1;
+    if (args.source !== "hit") player.moveRollCount += 1;
   }
   if (player.rollSource !== "hit") player.rollSource = args.source;
-  player.rollHoldButton = player.rollSource === "dash" ? (args.holdButton ?? "fire") : null;
+  player.rollHoldButton = holdButtonOf(player.rollSource, args.holdButton);
   player.rollLockSeconds = Math.max(player.rollLockSeconds, lock);
   player.crouching = false;
 }
@@ -103,11 +113,11 @@ export function reactToHit(
   return true;
 }
 
-/** A dash roll lasts while its hold button (fire, or jump for a jump dive) is held. */
+/** A dash or crouch roll lasts while its hold button (fire, jump for a jump dive, or crouch) is held. */
 export function releaseRoll(player: PlayerState, input: PlayerInput): void {
-  if (player.rollSource !== "dash") return;
-  const held = player.rollHoldButton === "jump" ? input.jump : input.fire;
-  if (!held) endRoll(player);
+  const button = player.rollHoldButton;
+  if (button === null || player.rollSource === "hit") return;
+  if (!input[button]) endRoll(player);
 }
 
 function bounceAxis(player: PlayerState, axis: "x" | "y", t: RollTunables): void {
@@ -181,9 +191,13 @@ function standUp(player: PlayerState, t: RollTunables, dt: number): void {
   player.rollSpin = 0;
 }
 
-/** A hit roll is over when the lock ran out and the blob rests on the ground. */
+/**
+ * A hit or crouch roll is over when the lock ran out and the blob rests on the ground (a dash
+ * lasts while its button is held).
+ */
 const atRest = (player: PlayerState, t: RollTunables): boolean =>
-  player.rollSource === "hit" &&
+  player.rollSource !== "dash" &&
+  player.rollSource !== null &&
   player.rollLockSeconds <= 0 &&
   player.grounded &&
   Math.hypot(player.vx, player.vy) < t.stopSpeed;

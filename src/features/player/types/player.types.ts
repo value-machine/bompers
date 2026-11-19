@@ -75,19 +75,22 @@ export interface PlayerState {
    * Roll (`services/roll.ts`, shared-roll D2): what started it (`null` = not rolling), seconds
    * of lock left (no jump-out, weak steering) and seconds rolled. `rollAngle` is the body's spin
    * (radians, eases back upright after a roll) and `rollSpin` its rate. Counters and the bounce
-   * speed are render events (squash, shake, sound): dash-roll starts, hit rolls that came to
+   * speed are render events (squash, shake, sound): move-roll starts (dash, crouch), hit rolls that came to
    * rest, terrain bounces. `weaponSweep` is how far held weapons have swept round from the aim
    * with the spin (radians, clockwise; 0 when not rolling; spin-fire D1, D2).
    */
   rollSource: RollSource | null;
-  /** A dash roll lasts while this button is held (the one that started its dive); null otherwise. */
+  /**
+   * A dash or crouch roll lasts while this button is held (the one that started its dive, or
+   * crouch); null otherwise.
+   */
   rollHoldButton: RollHoldButton | null;
   rollLockSeconds: number;
   rollSeconds: number;
   rollAngle: number;
   rollSpin: number;
   weaponSweep: number;
-  dashRollCount: number;
+  moveRollCount: number;
   rollRestCount: number;
   rollBounceCount: number;
   lastRollBounceSpeed: number;
@@ -97,6 +100,11 @@ export interface PlayerState {
    */
   crouching: boolean;
   crouchCount: number;
+  /**
+   * Crouch roll wind-up (crouch-roll R1): seconds crouched with one direction held and no fire;
+   * at `roll.crouchRollDelay` the roll starts. 0 whenever that hold breaks.
+   */
+  crouchRollSeconds: number;
   /** Top of the first surface below the feet within shadow range, or null (contact shadow). */
   groundBelowY: number | null;
   /**
@@ -136,8 +144,11 @@ export interface PlayerState {
   squeeze: { scale: number; nx: number; ny: number } | null;
 }
 
-/** Why a blob rolls: knocked by a hit (any attack) or rolling on from a held dash. */
-export type RollSource = "hit" | "dash";
+/**
+ * Why a blob rolls: knocked by a hit (any attack), rolling on from a held dash, or a crouch held
+ * toward one side (crouch-roll R1).
+ */
+export type RollSource = "hit" | "dash" | "crouch";
 
-/** The button that keeps a dash roll going (the one that started its dive). */
-export type RollHoldButton = "fire" | "jump";
+/** The button that keeps a dash or crouch roll going (the one that started its dive, or crouch). */
+export type RollHoldButton = "fire" | "jump" | "crouch";

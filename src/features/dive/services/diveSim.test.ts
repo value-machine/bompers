@@ -456,7 +456,7 @@ describe("stepDives dash-hold roll", () => {
     expect(player.rollSource).toBe("dash");
     expect(sim.phaseOf(player)).toBe("idle");
     expect(player.vx).toBeGreaterThan(D.launchSpeed * D.exitSpeedScale);
-    expect(player.dashRollCount).toBe(1);
+    expect(player.moveRollCount).toBe(1);
   });
 
   it("should recover as before when fire is let go before the travel ends", () => {
