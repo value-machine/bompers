@@ -387,16 +387,29 @@ function ricochet(strike: Strike, d: DiveTunables): void {
   strike.attacker.grounded = false;
 }
 
+/**
+ * The dive owns the hit's knockback: the victim leaves along the hit at `hitPushScale` of the
+ * speed the body collision + strike would give it (never slower than it was already moving away)
+ * and pops up by that share of the lift. Returns the velocity change it gave (the hurt reaction's).
+ */
+function knockVictim(strike: Strike, d: DiveTunables): Vec2 {
+  const { victim, direction, contact } = strike;
+  const exchange = victim === contact.a ? contact.aImpulse : contact.bImpulse;
+  const along = victim.vx * direction.x + victim.vy * direction.y;
+  const before = along - exchange;
+  const leave = Math.max(before, (along + d.strikeImpulse) * d.hitPushScale);
+  const lift = d.strikeLift * d.hitPushScale;
+  victim.vx += direction.x * (leave - along);
+  victim.vy += direction.y * (leave - along) - lift;
+  victim.grounded = false;
+  const given = leave - before;
+  return { x: direction.x * given, y: direction.y * given - lift };
+}
+
 /** Applies one strike's push on the victim and returns its hit event. */
 function applyStrike(strike: Strike, args: StepDivesArgs): DiveHit {
   const { attacker, victim, direction, contact } = strike;
-  const d = args.tunables.dive;
-  const push = d.strikeImpulse;
-  victim.vx += direction.x * push;
-  victim.vy += direction.y * push - d.strikeLift;
-  victim.grounded = false;
-  const total = contact.impulse + push;
-  const impulse = { x: direction.x * total, y: direction.y * total - d.strikeLift };
+  const impulse = knockVictim(strike, args.tunables.dive);
   // Damage, spawn protection, credit and the `playerHit` event are combat's.
   const hit = {
     victimSlot: victim.slot,

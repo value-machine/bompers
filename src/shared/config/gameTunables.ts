@@ -160,6 +160,12 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     bonkMinAlignment: 0.8,
     bonkRebound: 0.25,
     strikeImpulse: 160,
+    // The victim keeps this share of the hit's push (owner, dive-push lap: 1 → 0.2, the feel picked
+    // for blasts in #114). Measured on the 7 shipped levels from every spawn (gameSim.test.ts § dive
+    // knockback): one dive hit carried a standing blob ≈ 860 units (43 % of a level width) and off
+    // the map from 19 of 28 spawns; now ≈ 65 units (≈ 2 blob widths) and none, and repeated dives
+    // toward the near edge eliminate by damage in 22 of 28 (was 8). Blobs near a drop still go off.
+    hitPushScale: 0.2,
     strikeLift: 256,
     attackerPop: 576,
     staggerSeconds: 0.3,
@@ -266,19 +272,15 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     // Chosen so power 50 (the rocket) keeps the pre-power blast: push 1080, reach 64, crater 34 on
     // toughness 1 (blast-power D3, D10). Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units;
     // with the recoil (1080 + 200) ≈ 585, well above a full jump (≈ 250).
-    // hitPushScale: the push on hit players; the shooter's rocket jump stays full. Owner: hits
-    // flung blobs off the map before damage could finish them (elimination-goo: 1 → 0.55; still
-    // "way too strong", blast-knockback lap: 0.55 → 0.2). Measured on the 7 shipped levels from
-    // every spawn (gameSim.test.ts § blast knockback): a point-blank hit now shoves a standing blob
-    // ≈ 50 units (≈ 2 blob widths, 2.5 % of a level width; was ≈ 300–390, 15–20 %) and none off
-    // the map (was 16 of 28); a 0.4 s barrage toward the near edge eliminates by damage in 19–23 of
-    // 28 spots (was 11–12). A blob near a drop can still be knocked off.
+    // hitPushScale: the push on hit players, lowered so a hit no longer flings a blob off the map
+    // (owner, elimination-goo Change round: 1 → 0.55); the shooter's rocket jump stays full. The
+    // owner keeps it there (dive-push lap: #114's cut to 0.2 was meant for the dive hit).
     blast: {
       pushPerPower: 21.6,
       reachPerPower: 1.28,
       craterPerPower: 0.68,
       minFalloff: 0.35,
-      hitPushScale: 0.2,
+      hitPushScale: 0.55,
     },
     drops: { firstDelaySeconds: 3, intervalSeconds: 7, maxActive: 2, size: 22 },
   },
