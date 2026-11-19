@@ -79,6 +79,7 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     rollSeconds: 0,
     rollAngle: 0,
     rollSpin: 0,
+    weaponSweep: 0,
     dashRollCount: 0,
     rollRestCount: 0,
     rollBounceCount: 0,

@@ -57,6 +57,7 @@ import {
   type BlobMetrics,
 } from "@/features/player/services/blobShapes";
 import type { PlayerState } from "@/features/player/types/player.types";
+import { weaponAim } from "@/features/player/services/roll";
 
 /**
  * Player render layer in line style E (DESIGN_LANGUAGE § 2–6, mockup variant E): one blob per
@@ -517,10 +518,15 @@ function placeEyes(sprite: BlobSprite, player: PlayerState, look: EyeLook): void
   });
 }
 
-/** The barrel pivots on the helmet centre toward the aim (weapon-visuals-embellish D1). */
+/**
+ * The barrel pivots on the helmet centre toward the weapon aim (weapon-visuals-embellish D1). The
+ * helmet turns with the root (roll, slope lean, overlays), so the root's turn is taken back out:
+ * the barrel points where the weapon fires, swept by a roll (spin-fire D1).
+ */
 function placeFace(sprite: BlobSprite, player: PlayerState, armed: boolean): void {
   const pivotY = helmetCentreY(sprite.metrics);
-  const angle = Math.atan2(player.aimY, player.aimX);
+  const aim = weaponAim(player);
+  const angle = Math.atan2(aim.y, aim.x) - sprite.root.rotation;
   eachSide(sprite.tube, (c) => {
     c.visible = armed;
     c.position.set(0, pivotY);

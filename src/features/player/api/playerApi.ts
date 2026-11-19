@@ -19,6 +19,7 @@ export {
   reactToHit,
   rollLockFor,
   startRoll,
+  weaponAim,
   type HitReactionArgs,
   type StartRollArgs,
 } from "@/features/player/services/roll";

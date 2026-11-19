@@ -19,6 +19,9 @@ import type { PlayerState, RollHoldButton, RollSource } from "@/features/player/
  * restitution (`bounceRoll`). Exits: coming to rest, a jump once the lock ran out, releasing a
  * dash, respawn, or `roll.maxSeconds`. The spin (`rollAngle`) is sim state, so the look follows
  * the physics; after a roll the body turns back upright.
+ *
+ * Held weapons sweep round with the spin (spin-fire D1): `weaponAim` is the stick aim turned by
+ * `weaponSweep`, which follows the spin at most `roll.sweepTurnsPerSecond` and is 0 outside a roll.
  */
 type RollTunables = GameTunables["roll"];
 
@@ -65,6 +68,7 @@ export function startRoll(player: PlayerState, args: StartRollArgs, tunables: Ga
 export function endRoll(player: PlayerState): void {
   if (!isRolling(player)) return;
   player.rollSource = null;
+  player.weaponSweep = 0;
   player.rollHoldButton = null;
   player.rollLockSeconds = 0;
 }
@@ -150,6 +154,25 @@ function spin(player: PlayerState, dt: number): void {
   player.rollAngle = wrapAngle(player.rollAngle + player.rollSpin * dt);
 }
 
+/** Held weapons turn with the spin, capped so a beam sweeps less than its width per step (D2). */
+function sweepWeapon(player: PlayerState, t: RollTunables, dt: number): void {
+  const cap = t.sweepTurnsPerSecond * Math.PI * 2;
+  const rate = Math.sign(player.rollSpin) * Math.min(Math.abs(player.rollSpin), cap);
+  player.weaponSweep = wrapAngle(player.weaponSweep + rate * dt);
+}
+
+/**
+ * The unit direction held weapons fire in: the stick aim, turned by the roll's sweep (clockwise,
+ * y down). Equal to the aim outside a roll.
+ */
+export function weaponAim(player: PlayerState): Vec2 {
+  const turn = player.weaponSweep;
+  if (turn === 0) return { x: player.aimX, y: player.aimY };
+  const cos = Math.cos(turn);
+  const sin = Math.sin(turn);
+  return { x: player.aimX * cos - player.aimY * sin, y: player.aimX * sin + player.aimY * cos };
+}
+
 /** After a roll the body turns back upright the short way. */
 function standUp(player: PlayerState, t: RollTunables, dt: number): void {
   const angle = wrapAngle(player.rollAngle);
@@ -175,6 +198,7 @@ export function tickRoll(player: PlayerState, tunables: GameTunables, dt: number
   player.rollLockSeconds = Math.max(0, player.rollLockSeconds - dt);
   player.rollSeconds += dt;
   spin(player, dt);
+  sweepWeapon(player, t, dt);
   if (atRest(player, t)) {
     player.rollRestCount += 1;
     endRoll(player);

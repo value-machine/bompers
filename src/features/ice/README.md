@@ -61,3 +61,4 @@ Tests: `services/iceSim.test.ts` (the touched sample freezes at once; the same a
 - Fire and ice on a blob are cancelled by the match, so neither feature imports the other (D6). Known: the fire's catch pop and cue play for the one step a flame touches a block.
 - Starting values (D8): `ice.blob` freeze 0.5 s, crouch × 0.5, frozen 2.5 s, 3 cracks, grip 0.15, grace 0.5 s.
 - Starting values (D7, D8): `ice.freezeAreaPerSecond` 3600 units² (a 3 s crate makes a round patch of about 59 units radius inside a slab), `ice.frozenSeconds` 8, beam 180 units long and ±3°, push 300.
+- The freeze ray points along the holder's `weaponAim` (owner, spin-fire D1, D2, v0.45.0): a rolling holder sweeps it round at most `roll.sweepTurnsPerSecond`, under the beam's ±3° width per step, so the sweep leaves no gaps; ice spreads thinner per cell while sweeping.
