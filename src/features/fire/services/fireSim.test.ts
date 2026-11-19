@@ -422,6 +422,14 @@ describe("fire layers per body (mover-materials-l2 D3, D4)", () => {
     expect(view.grounds[0]!.bodyFill.getLocalBounds().width).toBe(0);
   });
 
+  it("should draw the burning body's ink as strokes only, never a shape under the fill", () => {
+    const { frame } = burningPart();
+    const view = createFireView();
+    syncFireView(view, frame);
+    const actions = view.grounds[1]!.bodyInk.context.instructions.map((drawn) => drawn.action);
+    expect(actions).toEqual(["stroke"]);
+  });
+
   it("should move the part's fire layer with the part when the part's pose changes", () => {
     const { terrain, frame } = burningPart();
     const view = createFireView();

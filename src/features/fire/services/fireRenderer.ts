@@ -9,10 +9,12 @@ import {
   bodyWorldPoint,
   createPoseLayer,
   drawContour,
+  drawOutline,
   edgeAbove,
   markedRegion,
   placePoseLayer,
   terrainContour,
+  terrainRings,
   type MoverBody,
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
@@ -69,7 +71,7 @@ interface GroundFireView {
   /** Holds the layers; a moving part's is turned about its pivot and shifted by its pose. */
   layer: Container;
   scorch: Graphics;
-  /** The burning terrain: ink, then (above the flames' ink) ember and the hot inside. */
+  /** The burning terrain: an ink line, then (above the flames' ink) ember and the hot inside. */
   bodyInk: Graphics;
   bodyFill: Graphics;
   bodyHot: Graphics;
@@ -274,8 +276,8 @@ const HOT_STEP_SECONDS = 0.25;
 
 /**
  * The burning terrain's body (element-overlay-shape D1): the terrain's contour limited to the
- * burning samples, in ink grown by the outline width, in ember, and the fresh samples' inside in
- * amber. Redrawn only when the fire, the terrain or the outline width changes, and a few times a
+ * burning samples: an ink line along its edge (stroked at twice the outline width, the ember
+ * fill hides the inner half), the ember fill, and the fresh samples' inside in amber. Redrawn only when the fire, the terrain or the outline width changes, and a few times a
  * second for the hot inside.
  */
 function drawBody(draw: GroundDraw, ink: number): void {
@@ -290,7 +292,11 @@ function drawBody(draw: GroundDraw, ink: number): void {
     for (const g of [view.bodyInk, view.bodyFill, view.bodyHot]) g.clear();
     return;
   }
-  drawContour(view.bodyInk, terrainContour(terrain, { grow: ink, region }), BODY_INK);
+  // The ink is a line along the body's edge (outline-system D1), never a shape under the fill.
+  drawOutline(view.bodyInk, terrainRings(terrain, { grow: 0, region }), {
+    width: ink,
+    color: BODY_INK,
+  });
   drawContour(view.bodyFill, terrainContour(terrain, { grow: 0, region }), COLORS.outer);
   drawHot(draw, burning);
 }
