@@ -8,7 +8,9 @@ import {
   edgeAbove,
   markedRegion,
   terrainContour,
+  terrainRings,
   type MaskShapes,
+  type OutlineRing,
 } from "@/features/arena/services/terrainSurfaces";
 
 // A stone floor and one cardboard part (piece 1), 120 wide.
@@ -216,6 +218,116 @@ describe("edgeAbove", () => {
       (cy) => grid.cells[cy * grid.widthCells + column] !== 0
     )!;
     expect(edgeAbove(grid, first * grid.widthCells + column)).toBeCloseTo(101 + 34, 0);
+  });
+});
+
+/** Distance from a point to the nearest segment of any ring. */
+function ringDistance(rings: readonly OutlineRing[], x: number, y: number): number {
+  let best = Infinity;
+  for (const { points, closed } of rings) {
+    const last = closed ? points.length : points.length - 2;
+    for (let i = 0; i < last; i += 2) {
+      const ax = points[i]!;
+      const ay = points[i + 1]!;
+      const bx = points[(i + 2) % points.length]!;
+      const by = points[(i + 3) % points.length]!;
+      const len = (bx - ax) ** 2 + (by - ay) ** 2;
+      const t =
+        len > 0 ? Math.max(0, Math.min(1, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / len)) : 0;
+      best = Math.min(best, Math.hypot(x - ax - (bx - ax) * t, y - ay - (by - ay) * t));
+    }
+  }
+  return best;
+}
+
+/** Signed area of a flat [x, y, …] ring (the sign tells its winding). */
+function ringArea(points: readonly number[]): number {
+  let sum = 0;
+  for (let i = 0; i < points.length; i += 2) {
+    const j = (i + 2) % points.length;
+    sum += points[i]! * points[j + 1]! - points[j]! * points[i + 1]!;
+  }
+  return sum / 2;
+}
+
+describe("terrainRings (outline-system: the terrain's edge as closed lines)", () => {
+  it("should trace each untouched slab as one closed ring on its edge", () => {
+    const rings = terrainRings(buildTerrainFromLevel(level), { grow: 0 });
+    expect(rings).toHaveLength(2);
+    expect(rings.every((ring) => ring.closed)).toBe(true);
+    // On the slab's top and bottom edges (where the contour's fill ends); nowhere near its middle.
+    expect(ringDistance(rings, 200, 101)).toBeLessThan(0.5);
+    expect(ringDistance(rings, 200, 161)).toBeLessThan(0.5);
+    expect(ringDistance(rings, 200, 131)).toBeGreaterThan(25);
+  });
+
+  it("should keep a straight edge as one segment when the slab is a rounded rect", () => {
+    const rings = terrainRings(buildTerrainFromLevel(level), { grow: 0 });
+    // Four sides plus a few points per rounded corner, not one point per sample.
+    for (const ring of rings) expect(ring.points.length / 2).toBeLessThan(40);
+  });
+
+  it("should wind a hole against its slab when a crater opens inside the slab", () => {
+    const grid = buildTerrainFromLevel(level);
+    clearCrater(grid, { x: 200, y: 131, reach: 14, shape: "round" });
+    const rings = terrainRings(grid, { grow: 0 });
+    expect(rings).toHaveLength(3);
+    expect(rings.every((ring) => ring.closed)).toBe(true);
+    const signs = rings.map((ring) => Math.sign(ringArea(ring.points)));
+    expect(signs.filter((sign) => sign !== signs[0])).toHaveLength(1);
+    // The crater's rim (radius 14) carries a line.
+    expect(ringDistance(rings, 200 + 14, 131)).toBeLessThan(0.75);
+  });
+
+  it("should hold no broken numbers and no repeated points when blasts and burn-outs cut the slab", () => {
+    const grid = buildTerrainFromLevel(level);
+    for (let x = 70; x <= 330; x += 52) clearCrater(grid, { x, y: 110, reach: 22, shape: "round" });
+    burnOut(
+      grid,
+      [...grid.cells.keys()].filter((index) => grid.cells[index] !== 0 && index % 7 === 0)
+    );
+    const rings = terrainRings(grid, { grow: 0 });
+    expect(rings.length).toBeGreaterThan(0);
+    for (const { points, closed } of rings) {
+      expect(closed).toBe(true);
+      expect(points.every(Number.isFinite)).toBe(true);
+      for (let i = 0; i < points.length; i += 2) {
+        const j = (i + 2) % points.length;
+        expect(
+          Math.hypot(points[j]! - points[i]!, points[j + 1]! - points[i + 1]!)
+        ).toBeGreaterThan(0.01);
+      }
+    }
+  });
+});
+
+describe("terrain ink (outline-system: a line, never a shape under the fill)", () => {
+  const actions = (g: { context: { instructions: readonly { action: string }[] } }): string[] =>
+    g.context.instructions.map((instruction) => instruction.action);
+
+  it("should draw the terrain's ink as strokes only when the view is synced", () => {
+    const terrain = buildTerrainFromLevel(level);
+    const view = createTerrainView({ terrain, level });
+    syncTerrainView(view, terrain, 1);
+    expect(actions(view.ink)).toEqual(["stroke"]);
+  });
+
+  it("should draw a moving part's ink as strokes only when the view is synced", () => {
+    const terrain = buildTerrainFromLevel(partLevel);
+    const view = createTerrainView({ terrain, level: partLevel });
+    syncTerrainView(view, terrain, 1);
+    expect(actions(view.movers[0]!.ink)).toEqual(["stroke"]);
+  });
+
+  it("should restroke the same rings at the new width when only the zoom steps", () => {
+    const terrain = buildTerrainFromLevel(level);
+    const view = createTerrainView({ terrain, level });
+    syncTerrainView(view, terrain, 1);
+    const rings = view.rings;
+    const before = view.ink.getLocalBounds().width;
+    syncTerrainView(view, terrain, 0.5);
+    expect(view.rings).toBe(rings);
+    expect(view.ink.getLocalBounds().width).toBeGreaterThan(before);
   });
 });
 
