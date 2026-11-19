@@ -27,23 +27,22 @@ On the ground, crouch held + left or right held starts the shared roll in that d
 
 | # | Question | Pick | Why |
 |---|----------|------|-----|
-| R1 | Entry | grounded, crouch held, `moveX ≠ 0`, not rolling, `steerScale ≥ 1` (no dive / frozen), same step — no crouch frame first | "presses **or wants to move**": a held direction counts, so run + down rolls straight out of the run (slide into roll). Air down stays aim (crouch D3). |
+| R1 | Entry | **owner, R7**: crouched (grounded, crouch held, not rolling, `steerScale ≥ 1`) with a direction held for `roll.crouchRollDelay` (0.8 s) and no fire → the roll starts that way. Timer `crouchRollSeconds` on `PlayerState`. | Owner: rolling starts only when the input does not read as aiming to that side. |
+| R1a | What resets the timer to 0 | fire held (counting restarts once fire is let go, if the direction is still held); direction released or flipped; crouch released; leaving the ground; any roll or ability steering (dive, freeze) | One rule: only an unbroken, fire-free hold in one direction while crouched counts. |
+| R1b | Running straight into crouch | waits the same delay: the crouch brakes the run (crouch D4), then the roll starts at `crouchStartSpeed` | One consistent rule (orchestrator). DOC_APP_VISION has no input-intent principle to cite; the owner's answer to R7 is the source. |
+| R1c | Wind-up tell | none this lap | The juice ledger has no existing wind-up cue that fits; a tell would be new crouch-pose work (out of edges). Backlog candidate if the owner misses it. |
 | R2 | Start speed | new `roll.crouchStartSpeed = 500` (run 340, jump carry cap 600, dash 900); a faster run keeps its speed | From a standstill the roll's own steering (500 /s² toward run speed) would take ~0.7 s to get going; 500 coasts ~`rollCoast(500)` then holds ~200 with the stick held, like any roll. Below the 600 jump-carry cap so it is weaker than a dive dash. |
-| R3 | Exit | release crouch → roll ends, blob stands with its speed; jump (unlocked) → jump with roll carry; fire unarmed → dive with roll carry; comes to rest (hit-roll rest rule) or `roll.maxSeconds` → back to crouch if still held (re-rolls if a direction is still held) | Mirrors the dash's hold-to-keep. A crouch roll at rest must not stay a frozen ball, so it takes the hit roll's rest exit. |
+| R3 | Exit | release crouch → roll ends, blob stands with its speed; jump (unlocked) → jump with roll carry; fire unarmed → dive with roll carry; comes to rest (hit-roll rest rule) or `roll.maxSeconds` → back to crouch if still held (rolls again after another `crouchRollDelay` if a direction is still held) | Mirrors the dash's hold-to-keep. A crouch roll at rest must not stay a frozen ball, so it takes the hit roll's rest exit. |
 | R4 | Sound counter | `dashRollCount` → `moveRollCount` (dash + crouch starts), F3 naming pass | One counter for the one moment; the name no longer encodes its first caller. |
 | R5 | Slopes / ice | nothing special: existing ball physics (gravity along the slope, grip × friction) | Same roll. |
 | R6 | Hurt box while rolling | full (not crouched): `startRoll` already clears `crouching` | A roll is not a crouch; halved crouch damage does not apply. |
-| R7 | Armed vs unarmed | **open — owner** (conflict with crouch D4) | see below |
-
-## Open (owner)
-
-R7 — conflicts with crouch D4 ("aim, fire and jump stay live while crouching; facing still turns"). If crouch + left/right always rolls, a crouched blob can no longer turn on the spot, and on keyboard (aim = move keys) a grounded blob can no longer aim diagonally down (down-left / down-right); the air keeps it. Options: roll always (recommended, literal request); roll only unarmed (armed keeps crouch-turn and down-diagonal aim).
+| R7 | Armed vs unarmed | **owner (2026-11-19, via orchestrator)**: same rule for both — crouch + direction is crouch-turn / aim first (D4 kept, diagonal-down aim works); the roll starts after `crouchRollDelay` with no fire input | Owner: "Rolling should only start if the input does not align with a player trying to shoot to that side … after 0.8 sec or so no shoot input … same delay for unarmed for consistency." |
 
 ## Plan (S)
 
-1. Tests first in `playerController.test.ts`: standstill crouch + right → rolling right at ≥ `crouchStartSpeed`; run + crouch keeps run speed if faster; release crouch ends roll; at rest with crouch held → crouching; airborne crouch + right → no roll; jump out carries; dive-steered (`steerScale < 1`) → no roll.
+1. Tests first in `playerController.test.ts`: crouch + right held < delay → crouched, facing right, not rolling; held ≥ delay → rolling right at ≥ `crouchStartSpeed`; fire held during the window → no roll (restarts after release); direction released / flipped resets; run + crouch keeps run speed if faster; release crouch ends roll; at rest with crouch held → crouching; airborne crouch + right → no roll; jump out carries; dive-steered (`steerScale < 1`) → no roll.
 2. `player.types.ts`: `RollSource` + `"crouch"`, `RollHoldButton` + `"crouch"`, rename counter.
 3. `roll.ts`: `startRoll` counts move rolls; `releaseRoll` for any hold button; `atRest` for hit and crouch.
-4. `playerController.ts`: `startCrouchRoll` before `updateCrouch` (ground frame for the tangent).
-5. Tunables + types: `roll.crouchStartSpeed`; prompt line; GAME_JUICE row; player README (crouch + roll sections, crouch D4 superseded per R7).
+4. `playerController.ts`: `updateCrouchRoll` after `updateCrouch` (counts `crouchRollSeconds`, starts the roll via `startRoll` with the ground frame's tangent).
+5. Tunables + types: `roll.crouchStartSpeed`, `roll.crouchRollDelay`; prompt line; GAME_JUICE row; player README (crouch + roll sections; crouch D4 kept, roll after the delay).
 6. Gates: targeted tests, `type-check`, `lint`, `arch:check`, `validate:structure`.
