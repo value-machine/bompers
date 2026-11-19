@@ -65,6 +65,7 @@ export function readSoundCues(
     ...eventCues(frame, lastSeq),
     ...burstCues(frame, lastBurst),
     ...elements.cues,
+    ...crateCues(cursor?.world, frame.world),
   ];
   return {
     cues,
@@ -170,6 +171,20 @@ function elementCues(
 
 const cue = (soundId: string, slot: number | null, gain = 1): SoundCue => ({ soundId, slot, gain });
 
+/**
+ * A weapon crate landing (also after its floor was blasted away): a soft cardboard `thwap`,
+ * unpitched, at the crouch level (pickup-juice D2). Crates in the same frame share one cue.
+ */
+export const CRATE_LAND_SOUND = "thwap";
+
+function crateCues(
+  previous: SoundWorldSnapshot | undefined,
+  world: SoundWorldSnapshot
+): SoundCue[] {
+  if (!previous || world.crateLandings <= previous.crateLandings) return [];
+  return [cue(CRATE_LAND_SOUND, null, SOUND_MIX.crouchGain)];
+}
+
 function roundCues(cursor: SoundCursor | null, frame: SoundSnapshot): SoundCue[] {
   if (cursor === null) return [cue("round-start", null)];
   const ended = cursor.roundPhase === "playing" && frame.roundPhase === "ended";
@@ -206,6 +221,8 @@ const PLAYER_RULES: readonly [
   ["respawn", (p, n) => n.inPlay && !p.inPlay, () => 1],
   // A headbutt reset reuses the pickup sound, pitched by the collector (headbutt-reset D5).
   ["pickup", (p, n) => n.diveRefillCount > p.diveRefillCount, () => 1],
+  // Taking a point orb: its own chime, pitched by the collector (pickup-juice D8).
+  ["orb-collect", (p, n) => n.orbCount > p.orbCount, () => 1],
   // A blob catching fire, and ice putting it out with steam (owner picks, element-sounds lap).
   ["catch-fire", (p, n) => n.catchFireCount > p.catchFireCount, () => 1],
   ["steam-hiss", (p, n) => n.iceDouseCount > p.iceDouseCount, () => 1],

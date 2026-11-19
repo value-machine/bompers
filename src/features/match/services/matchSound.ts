@@ -75,6 +75,7 @@ export function soundWorldOf(state: GameState): SoundWorldSnapshot {
     thawedSamples: thawedCount(ice),
     frozenVersion: frozenVersionOf(state.arena.terrain),
     beamClashes: state.combat.beamClashes.length,
+    crateLandings: state.collectibles.crates.landCount,
   };
 }
 
@@ -108,6 +109,7 @@ export function soundSnapshotOf(
         speed: Math.hypot(player.vx, player.vy),
         terrainHitSpeed: Math.max(player.terrainHitSpeedX, player.terrainHitSpeedY),
         diveRefillCount: state.dive.refillCounts[player.id] ?? 0,
+        orbCount: state.collectibles.orbCounts[player.slot] ?? 0,
         catchFireCount: state.blobFire.caughtCounts[player.id] ?? 0,
         iceDouseCount: state.blobFire.dousedCounts[player.id] ?? 0,
         ...iceBlockCounts(state, player.id),

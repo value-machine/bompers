@@ -6,6 +6,7 @@ import {
   type DampedSpring,
 } from "@/shared/utils/dampedSpring";
 import type { PlayerState } from "@/features/player/types/player.types";
+import { easeOutQuad, springBackPose } from "@/shared/utils/easing";
 import {
   createCrouchClock,
   crouchSink,
@@ -102,15 +103,6 @@ export const createBlobAnim = (player: PlayerState): BlobAnim => ({
   crouch: createCrouchClock(player),
 });
 
-/** Back-out ease 0 → 1 with a small overshoot past 1. */
-const easeOutBack = (t: number): number => {
-  const c1 = 1.70158;
-  const c3 = c1 + 1;
-  return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2;
-};
-
-const easeOutQuad = (t: number): number => 1 - (1 - t) * (1 - t);
-
 export type BarrelPopTunables = GameTunables["feel"]["barrelPop"];
 
 /**
@@ -121,10 +113,7 @@ export function barrelPopScale(
   elapsedMs: number,
   pop: BarrelPopTunables
 ): { sx: number; sy: number } {
-  const t = elapsedMs / (pop.seconds * 1000);
-  if (t < 0 || t >= 1) return { sx: 1, sy: 1 };
-  const k = 1 - easeOutBack(t);
-  return { sx: 1 + (pop.sx - 1) * k, sy: 1 + (pop.sy - 1) * k };
+  return springBackPose(pop, elapsedMs / (pop.seconds * 1000));
 }
 
 /**

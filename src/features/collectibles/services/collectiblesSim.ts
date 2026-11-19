@@ -8,6 +8,7 @@ import { createDiveRefills } from "@/features/collectibles/services/diveRefills"
 import type {
   CollectiblesState,
   OrbCollected,
+  PickupBurst,
   PointOrb,
 } from "@/features/collectibles/types/collectibles.types";
 
@@ -33,6 +34,8 @@ export function createCollectiblesState(
     nextPointIndex: 0,
     nextId: 1,
     crates: createWeaponCratesState(tunables),
+    bursts: [],
+    orbCounts: {},
   };
 }
 
@@ -70,6 +73,8 @@ function spawnOrb(args: StepCollectiblesArgs): void {
     y: point.at.y - tunables.collectibles.dropHeight,
     restY: point.at.y,
     vy: 0,
+    ageSeconds: 0,
+    restSeconds: 0,
   });
   state.nextId += 1;
 }
@@ -83,7 +88,11 @@ function stepSchedule(args: StepCollectiblesArgs): void {
 }
 
 function fall(orb: PointOrb, tunables: GameTunables, dt: number): void {
-  if (orb.y >= orb.restY) return;
+  orb.ageSeconds += dt;
+  if (orb.y >= orb.restY) {
+    orb.restSeconds += dt;
+    return;
+  }
   orb.vy = fallSpeed(orb.vy, tunables.world, dt);
   orb.y = Math.min(orb.restY, orb.y + orb.vy * dt);
   if (orb.y === orb.restY) orb.vy = 0;
@@ -100,18 +109,43 @@ function collector(orb: PointOrb, args: StepCollectiblesArgs): PlayerState | und
   return firstToucher(orbBox(orb, args.tunables.collectibles.size), args.players);
 }
 
+/** A taken pickup's burst lasts as long as its longest part (`feel.pickup`). */
+export const pickupBurstSeconds = ({
+  ringSeconds,
+  sparkSeconds,
+  pieceSeconds,
+}: PickupFeel): number => Math.max(ringSeconds, sparkSeconds, pieceSeconds);
+
+type PickupFeel = GameTunables["feel"]["pickup"];
+
+/** Ages every pickup burst one step and drops the finished ones. */
+function ageBursts(bursts: PickupBurst[], tunables: GameTunables, dt: number): PickupBurst[] {
+  const life = pickupBurstSeconds(tunables.feel.pickup);
+  for (const burst of bursts) burst.ageSeconds += dt;
+  return bursts.filter((burst) => burst.ageSeconds < life);
+}
+
+function take(state: CollectiblesState, orb: PointOrb, slot: number): OrbCollected {
+  state.orbCounts[slot] = (state.orbCounts[slot] ?? 0) + 1;
+  state.bursts.push({ id: orb.id, itemId: POINT_ORB_ITEM, x: orb.x, y: orb.y, ageSeconds: 0 });
+  return { slot, x: orb.x, y: orb.y };
+}
+
 /**
- * Advances point-orb spawns, falls and pickups one step. Returns the orbs taken this step.
- * Weapon crates step separately (`stepWeaponCrates`), at combat's point in the step order.
+ * Advances point-orb spawns, falls and pickups one step, and ages the pickup bursts. Returns the
+ * orbs taken this step. Weapon crates step separately (`stepWeaponCrates`), at combat's point in
+ * the step order; their bursts are aged here too, once per step.
  */
 export function stepCollectibles(args: StepCollectiblesArgs): OrbCollected[] {
+  const state = args.collectibles;
+  state.bursts = ageBursts(state.bursts, args.tunables, args.dt);
   stepSchedule(args);
   const collected: OrbCollected[] = [];
-  args.collectibles.orbs = args.collectibles.orbs.filter((orb) => {
+  state.orbs = state.orbs.filter((orb) => {
     fall(orb, args.tunables, args.dt);
     const player = collector(orb, args);
     if (!player) return true;
-    collected.push({ slot: player.slot, x: orb.x, y: orb.y });
+    collected.push(take(state, orb, player.slot));
     return false;
   });
   return collected;
