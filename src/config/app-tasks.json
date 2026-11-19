@@ -38,5 +38,10 @@
     "title": "One width and join source for props, blobs and effects",
     "description": "Cut from outline-system lap 3 (#99): props, blobs and effects still use a handful of fixed outline numbers across six features (widths mostly come from the shared outline widths already). No bug behind it; look risk. Also flames, sprays and breaths keep small ink shapes. Low priority. Size S.",
     "status": "to-do"
+  },
+  {
+    "title": "Parked: once-per-game multi-colour ink spike (weekend)",
+    "description": "Owner, on main after #106: once per game, stretched spikes to off-screen in yellow/green and magenta/purple at the same time; NO [debugInk] outline log, so outline ring data is clean. Multi-layer colours in one shape point at Pixi 8.23 shared batcher (an index pointing at another element's vertices for a frame). Ruled out by reading: Uint16->Uint32 index type swap, attribute buffer resize, unbatched whole-terrain ink. Open: (a) Uint16 index values overflowing when batched vertices exceed 65535; (b) stale attribute/index offsets on a batched element whose context changed without an instruction rebuild. Next step (weekend, owner parked it): headless real-match repro on bonfire-bridge + piston-works with a WebGL drawElements hook that flags mixed-colour triangles and dumps batcher state; ~2-4 h agent time. Unproven mitigation (patch on top, owner call): Batcher.defaultOptions.indicesInitialSize > 65535.",
+    "status": "to-do"
   }
 ]
