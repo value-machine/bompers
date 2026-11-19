@@ -152,6 +152,12 @@ export const hurtBox = (player: PlayerState): Rect => {
   return { ...playerBody(player), y: player.y - h, h };
 };
 
+/** Centre of the hurt box: where hits, aim and burn effects centre on a blob (crouch-sink D4). */
+export const hurtCenter = (player: PlayerState): Vec2 => {
+  const box = hurtBox(player);
+  return { x: player.x, y: box.y + box.h / 2 };
+};
+
 // ── Collision ────────────────────────────────────────────────────────────────
 
 type Axis = "x" | "y";

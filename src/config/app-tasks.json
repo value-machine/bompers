@@ -20,11 +20,6 @@
     "status": "to-do"
   },
   {
-    "title": "Objects in levels",
-    "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): when the first object is wanted: object role as a plain box with a catalog ID (the box is the size, the game draws the real thing); sizes at 1.0 in catalog and prompt; fit-to-box drawing; warnings; vision line becomes \"shows the layout\"; revisit the prompt structure here. Size M.",
-    "status": "to-do"
-  },
-  {
     "title": "Level gallery",
     "description": "Level direction (owner 2026-11-18, PR #61 D1–D8): later, unshaped. No remix feature.",
     "status": "to-do"
@@ -57,6 +52,11 @@
   {
     "title": "blob-fire bodyCenter follows the hurt box",
     "description": "Follow-up from #109: blob-fire keeps a private bodyCenter; derive it from the shared hurt box so burning a crouched blob centres right. Size XS.",
+    "status": "to-do"
+  },
+  {
+    "title": "Objects lap 2: object physics",
+    "description": "Follow-up to #120 (level objects, trees). Lift an object's terrain pieces (LevelObject.terrainIndices) into its own body, like MoverBody, so trees can topple or fall when their base is blasted or burnt through. Then more recipes (rocks, bushes, crates, bridges), one recipe file each. Size M.",
     "status": "to-do"
   }
 ]

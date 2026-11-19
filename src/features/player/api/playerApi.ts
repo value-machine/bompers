@@ -3,6 +3,7 @@ export type { PlayerState } from "@/features/player/types/player.types";
 export {
   createPlayer,
   hurtBox,
+  hurtCenter,
   hurtHeight,
   placePlayer,
   playerBody,

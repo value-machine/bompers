@@ -3,7 +3,12 @@ import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import type { PlayerInput } from "@/shared/types/gameInput.types";
 import { buildTerrainFromLevel, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelApi";
-import { createPlayer, type BodyContact, type PlayerState } from "@/features/player/api/playerApi";
+import {
+  createPlayer,
+  hurtBox,
+  type BodyContact,
+  type PlayerState,
+} from "@/features/player/api/playerApi";
 import { createFireState, ignite, stepFire, type FireState } from "@/features/fire/api/fireApi";
 import {
   catchFire,
@@ -103,6 +108,15 @@ describe("burning blobs — catching (fire-burn D6)", () => {
     step(w, 0);
     expect(w.blobFire.blobs.get(w.players[0]!.id)).toMatchObject({ since: 0, bySlot: null });
     expect(w.blobFire.caughtCounts[w.players[0]!.id]).toBe(1);
+  });
+
+  it("should centre the caught moment on the hurt box when the blob is crouching", () => {
+    const blob = blobAt(0, 200);
+    blob.crouching = true;
+    const w = world([], [blob]);
+    expect(catchFire(w.blobFire, blob, lit)).toBe(true);
+    const hurt = hurtBox(blob);
+    expect(w.blobFire.blobMoments[0]?.at).toEqual({ x: blob.x, y: hurt.y + hurt.h / 2 });
   });
 
   it("should not catch fire when the burning cardboard is out of reach", () => {

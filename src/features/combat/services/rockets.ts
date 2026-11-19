@@ -1,7 +1,7 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { isSolidAt } from "@/features/arena/api/arenaApi";
-import { hurtBox, weaponAim, type PlayerState } from "@/features/player/api/playerApi";
-import { bodyCenter, helmetPoint, rectContains } from "@/features/combat/services/combatGeometry";
+import { hurtBox, hurtCenter, weaponAim, type PlayerState } from "@/features/player/api/playerApi";
+import { helmetPoint, rectContains } from "@/features/combat/services/combatGeometry";
 import { emitCombatEvent, type CombatContext } from "@/features/combat/services/combatState";
 import { explode } from "@/features/combat/services/explosions";
 import { flightTunables } from "@/features/combat/services/weapons";
@@ -133,7 +133,7 @@ function pickHomingTarget(
   let best: { id: string; distance: number } | null = null;
   for (const player of ctx.players) {
     if (player.id === shooter.id || !isLive(ctx, player)) continue;
-    const centre = bodyCenter(player);
+    const centre = hurtCenter(player);
     const dx = centre.x - from.x;
     const dy = centre.y - from.y;
     const distance = Math.hypot(dx, dy);
@@ -155,7 +155,7 @@ function steerHoming(ctx: CombatContext, rocket: RocketState, dt: number): void 
     rocket.targetId = null;
     return;
   }
-  const centre = bodyCenter(target);
+  const centre = hurtCenter(target);
   const heading = Math.atan2(rocket.dirY, rocket.dirX);
   const wanted = Math.atan2(centre.y - rocket.y, centre.x - rocket.x);
   const maxTurn = homing.turnRate * dt;

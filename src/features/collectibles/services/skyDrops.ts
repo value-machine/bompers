@@ -1,6 +1,6 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { Rect } from "@/shared/types/gameGeometry.types";
-import { playerBody, type PlayerState } from "@/features/player/api/playerApi";
+import { hurtBox, type PlayerState } from "@/features/player/api/playerApi";
 
 /**
  * Mechanics every sky drop shares (point orbs, weapon crates): the deterministic drop timer
@@ -36,6 +36,6 @@ export const fallSpeed = (vy: number, world: GameTunables["world"], dt: number):
 const overlaps = (a: Rect, b: Rect): boolean =>
   a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
-/** The first of `players` whose body touches `box` (they take the drop), or undefined. */
+/** The first of `players` whose hurt box (lower while crouched, crouch-sink D6) touches `box` (they take the drop), or undefined. */
 export const firstToucher = (box: Rect, players: readonly PlayerState[]): PlayerState | undefined =>
-  players.find((player) => overlaps(box, playerBody(player)));
+  players.find((player) => overlaps(box, hurtBox(player)));
