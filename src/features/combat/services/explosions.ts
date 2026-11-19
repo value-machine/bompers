@@ -2,8 +2,8 @@ import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { CraterShape } from "@/shared/types/craterShape.types";
 import { clearCraterOnBodies, type ClearedBodies } from "@/features/arena/api/arenaApi";
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
-import { hurtBox, reactToHit, type PlayerState } from "@/features/player/api/playerApi";
-import { bodyCenter, distanceToRect, unitBetween } from "@/features/combat/services/combatGeometry";
+import { hurtBox, hurtCenter, reactToHit, type PlayerState } from "@/features/player/api/playerApi";
+import { distanceToRect, unitBetween } from "@/features/combat/services/combatGeometry";
 import { blastHitPushAt, blastPushAt, blastReach, craterReach } from "@/shared/utils/blastPower";
 import {
   applyHit,
@@ -53,7 +53,7 @@ function pushPlayer(ctx: CombatContext, player: PlayerState, blast: Blast): Blas
       ? blastPushAt(ctx.tunables, blast.power, distance)
       : blastHitPushAt(ctx.tunables, blast.power, distance);
   if (strength <= 0) return null;
-  const direction = unitBetween(blast.at, bodyCenter(player), UP);
+  const direction = unitBetween(blast.at, hurtCenter(player), UP);
   const push = { x: direction.x * strength, y: direction.y * strength };
   player.vx += push.x;
   player.vy += push.y;

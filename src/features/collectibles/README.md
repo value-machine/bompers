@@ -20,7 +20,7 @@ Everything that drops from the sky (combat D2, match-rules D2). **Point orbs** (
 
 ## Dependencies
 
-- `level` (collectible and drop points), `player` (`playerBody` for touch), `arena` (`rectHitsSolid`, `surfaceBelow` for crates) through their `api/` files.
+- `level` (collectible and drop points), `player` (`hurtBox` for touch: a crouched blob picks up low, crouch-sink D6), `arena` (`rectHitsSolid`, `surfaceBelow` for crates) through their `api/` files.
 - Shared: `gameTunables` (`collectibles` section, `combat.drops` for crates, world gravity), `gamePalette` (`pointOrb`, `crateMarkOutline`, `gloss`, `weaponLook`), `weaponTube` + `weaponTubeRenderer` (crate mark), `weaponItems` (`isWeaponItemId`), `weaponItems.types` (`WeaponItemId`), `contactShadowLayer`.
 - Used by `match` (sim step 3a crates → combat's `takeWeaponPickups`, step 4 orbs; render layers). No dependency on `combat`.
 

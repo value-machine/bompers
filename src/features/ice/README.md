@@ -39,7 +39,7 @@ Tests: `services/iceSim.test.ts` (the touched sample freezes at once; the same a
 
 - `arena` via `api/arenaApi.ts` (`TerrainGrid`, `getCellInfo`, `isFrozenSample`, `setSampleFrozen`).
 - `combat` via `api/combatApi.ts` (`helmetPoint`); combat does not import ice.
-- `player` via `api/playerApi.ts` (`PlayerState`, `BlobPoseOverlay`, `endRoll`, `stepPlayers` in the test).
+- `player` via `api/playerApi.ts` (`PlayerState`, `BlobPoseOverlay`, `endRoll`; `stepPlayers` and `hurtCenter` in the test).
 - Shared: `sampleFront`, `rayFan`, `gameTunables` (`ice`, `combat.freezeRay`), `gamePalette.ice`; `pixi.js` in the renderer.
 - Consumed by `match` (state slice, step 3e, the hook, two render layers).
 
