@@ -573,6 +573,52 @@ export function terrainRings(grid: TerrainGrid, options: ContourOptions): Outlin
 }
 
 /**
+ * The first way rings break the outline builder's promise, or null (terrain-ink-spikes guard):
+ * every point finite and inside the grid's world box plus `margin`, every ring long enough to
+ * stroke and with no two neighbouring points on top of each other. A broken ring strokes as a
+ * spike, so the debug ink logs this and the tests keep it as a property.
+ */
+export function outlineRingIssue(
+  grid: TerrainGrid,
+  rings: readonly OutlineRing[],
+  margin: number
+): string | null {
+  const box = {
+    minX: -margin,
+    minY: -margin,
+    maxX: grid.widthCells * grid.cellSize + margin,
+    maxY: grid.heightCells * grid.cellSize + margin,
+  };
+  for (const [id, ring] of rings.entries()) {
+    const issue = ringIssue(ring, box);
+    if (issue) return `ring ${id}: ${issue}`;
+  }
+  return null;
+}
+
+const inBox = (box: SampleBox, x: number, y: number): boolean =>
+  x >= box.minX && x <= box.maxX && y >= box.minY && y <= box.maxY;
+
+/** The first broken point of one ring inside a world box, or null. */
+function ringIssue({ points, closed }: OutlineRing, box: SampleBox): string | null {
+  if (points.length % 2 !== 0 || points.length < (closed ? 6 : 4)) {
+    return `${points.length / 2} points (closed ${closed})`;
+  }
+  for (let i = 0; i < points.length; i += 2) {
+    const x = points[i]!;
+    const y = points[i + 1]!;
+    if (!inBox(box, x, y)) {
+      return `point ${i / 2} (${x}, ${y}) outside the field`;
+    }
+    const j = i >= 2 ? i - 2 : closed ? points.length - 2 : -1;
+    if (j >= 0 && Math.hypot(x - points[j]!, y - points[j + 1]!) < RING_MIN_STEP / 2) {
+      return `point ${i / 2} repeats its neighbour`;
+    }
+  }
+  return null;
+}
+
+/**
  * Draws rings as an ink line (outline-system D1): stroked at twice the visible width with round
  * joins, to sit under the shape's fill, which hides the inner half. Returns false when there are
  * no rings.

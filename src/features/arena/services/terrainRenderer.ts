@@ -1,6 +1,6 @@
 import { Container, Graphics } from "pixi.js";
 import { terrainSwatch } from "@/shared/config/gamePalette";
-import { inkColor } from "@/shared/utils/debugInk";
+import { DEBUG_INK_ON, inkColor } from "@/shared/utils/debugInk";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelApi";
 import type { MoverBody, TerrainGrid } from "@/features/arena/types/arena.types";
@@ -15,6 +15,7 @@ import {
   drawContour,
   drawOutline,
   drawSlabDetails,
+  outlineRingIssue,
   slotLayerBoxes,
   slotLayerRegion,
   terrainContour,
@@ -193,6 +194,13 @@ export function createTerrainView(arena: {
   return { container, ink, slabs, inkStep: null, inkWidth: 0, rings: [], movers };
 }
 
+/** Debug ink only: logs the first broken outline ring (terrain-ink-spikes guard). */
+function reportRingIssue(what: string, grid: TerrainGrid, rings: readonly OutlineRing[]): void {
+  if (!DEBUG_INK_ON) return;
+  const issue = outlineRingIssue(grid, rings, FIELD_BAND_SAMPLES * grid.cellSize);
+  if (issue) console.warn(`[debugInk] ${what} outline: ${issue}`);
+}
+
 /** Redraws what the terrain's change or the outline's width step asks for. */
 export function syncTerrainView(view: TerrainView, grid: TerrainGrid, zoom: number): void {
   const outline = outlineWidth("terrain", zoom);
@@ -201,6 +209,7 @@ export function syncTerrainView(view: TerrainView, grid: TerrainGrid, zoom: numb
   const terrainChanged = dirty.length > 0;
   if (terrainChanged) {
     view.rings = terrainRings(grid, { grow: 0 });
+    reportRingIssue("terrain", grid, view.rings);
     syncSlabLayers(view.slabs, grid, dirtyBox(grid, dirty));
   }
   if (stepChanged || terrainChanged) {
@@ -216,6 +225,7 @@ export function syncTerrainView(view: TerrainView, grid: TerrainGrid, zoom: numb
     if (shapeChanged) {
       moverView.shapeSeen = mover.field.shapeVersion;
       moverView.rings = terrainRings(mover.field, { grow: 0 });
+      reportRingIssue("moving part", mover.field, moverView.rings);
       syncSlabLayers(moverView.slabs, mover.field);
     }
     if (stepChanged || shapeChanged) {
