@@ -16,6 +16,10 @@ export interface PointOrb {
   /** The authored point: the orb falls until it reaches this y, then hovers. */
   restY: number;
   vy: number;
+  /** Sim seconds since it appeared (render pop-in). */
+  ageSeconds: number;
+  /** Sim seconds since it reached its point (render settle squash); 0 while falling. */
+  restSeconds: number;
 }
 
 /** A weapon crate: holds one weapon (`WeaponItemId`). */
@@ -27,6 +31,10 @@ export interface WeaponCrate {
   y: number;
   vy: number;
   grounded: boolean;
+  /** Sim seconds since it was released (render pop-in). */
+  ageSeconds: number;
+  /** Sim seconds since it last landed (render squash and dust); 0 while falling. */
+  groundedSeconds: number;
 }
 
 /** Weapon crates in the arena and their drop schedule (round-robin over the level's drop points). */
@@ -39,6 +47,21 @@ export interface WeaponCratesState {
   /** Counts released crates; picks the weapon among a drop point's items (homing-missiles D4). */
   nextItemIndex: number;
   nextId: number;
+  /** Crate landings over the match (monotonic; the landing sound). */
+  landCount: number;
+}
+
+/**
+ * A taken point orb or weapon crate, kept for the render burst (pickup-juice D1, D3): where it
+ * was, what it held (`point-orb` or the crate's weapon), its id and its age. Gone once its longest
+ * part is over (`pickupBurstSeconds`).
+ */
+export interface PickupBurst {
+  id: number;
+  itemId: "point-orb" | WeaponItemId;
+  x: number;
+  y: number;
+  ageSeconds: number;
 }
 
 /**
@@ -70,6 +93,10 @@ export interface CollectiblesState {
   /** Headbutt resets, one per `dive-reset` collectible point, from the match start. */
   diveRefills: DiveRefillPickup[];
   crates: WeaponCratesState;
+  /** Taken orbs and crates bursting (render only, aged once per step by `stepCollectibles`). */
+  bursts: PickupBurst[];
+  /** Point orbs taken per player slot over the match (monotonic; the orb chime). */
+  orbCounts: Record<number, number>;
   /** Sim seconds until the next spawn attempt. */
   spawnTimer: number;
   /** Next collectible point to try (round-robin). */

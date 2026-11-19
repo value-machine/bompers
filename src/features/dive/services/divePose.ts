@@ -1,6 +1,7 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { BlobPoseOverlay } from "@/features/player/api/playerApi";
 import type { DiveMotion } from "@/features/dive/types/dive.types";
+import { easeOutBack, easeOutQuad } from "@/shared/utils/easing";
 
 /**
  * Render-only read of a dive (DESIGN_LANGUAGE § 6), driven by the sim's phase timers:
@@ -36,13 +37,6 @@ const mixScale = (from: Scale, to: Scale, t: number): Scale => ({
   sx: mix(from.sx, to.sx, t),
   sy: mix(from.sy, to.sy, t),
 });
-/** Fast start, soft landing. */
-const easeOut = (t: number): number => 1 - (1 - t) * (1 - t);
-/** Back-out: overshoots past 1 before settling (the spring off a hit). */
-const easeOutBack = (t: number): number => {
-  const c1 = 1.70158;
-  return 1 + (c1 + 1) * (t - 1) ** 3 + c1 * (t - 1) ** 2;
-};
 
 const phaseProgress = (motion: DiveMotion): number =>
   motion.phaseDuration > 0 ? clamp01(motion.phaseSeconds / motion.phaseDuration) : 1;
@@ -53,7 +47,7 @@ function reactionPose(motion: DiveMotion, staggerSeconds: number): BlobPoseOverl
     const t = motion.sinceRicochet / RICOCHET_SECONDS;
     const angle = headfirstAngle(motion.dirX, motion.dirY);
     return {
-      rotation: angle * (1 - easeOut(t)),
+      rotation: angle * (1 - easeOutQuad(t)),
       ...mixScale(RICOCHET_SQUASH, UPRIGHT, easeOutBack(t)),
     };
   }
@@ -72,17 +66,17 @@ export function diveBlobPose(
   switch (motion.phase) {
     case "windup":
       return {
-        rotation: angle * WINDUP_LEAN * easeOut(t),
-        ...mixScale(UPRIGHT, WINDUP_SQUASH, easeOut(t)),
+        rotation: angle * WINDUP_LEAN * easeOutQuad(t),
+        ...mixScale(UPRIGHT, WINDUP_SQUASH, easeOutQuad(t)),
       };
     case "travel": {
       const settle = clamp01(motion.phaseSeconds / LAUNCH_SETTLE_SECONDS);
-      return { rotation: angle, ...mixScale(LAUNCH_STRETCH, TRAVEL_STRETCH, easeOut(settle)) };
+      return { rotation: angle, ...mixScale(LAUNCH_STRETCH, TRAVEL_STRETCH, easeOutQuad(settle)) };
     }
     case "recovery":
       return {
-        rotation: angle * (1 - easeOut(t)),
-        ...mixScale(motion.bonked ? BONK_SQUASH : TRAVEL_STRETCH, UPRIGHT, easeOut(t)),
+        rotation: angle * (1 - easeOutQuad(t)),
+        ...mixScale(motion.bonked ? BONK_SQUASH : TRAVEL_STRETCH, UPRIGHT, easeOutQuad(t)),
       };
     default:
       return reactionPose(motion, tunables.staggerSeconds);

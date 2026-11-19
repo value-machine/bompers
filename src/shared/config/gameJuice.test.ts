@@ -57,6 +57,18 @@ describe("feel tunables conform to the juice scale", () => {
     }
   });
 
+  it("should keep the pickup poses in the band and their timings in their windows when built", () => {
+    const { pickup } = feel;
+    expect(isJuiceSquash(pickup.settle)).toBe(true);
+    expect(isJuiceSquash(pickup.fallStretch)).toBe(true);
+    expect(isInJuiceWindow("squash", pickup.settle.seconds)).toBe(true);
+    expect(isInJuiceWindow("squash", pickup.popInSeconds)).toBe(true);
+    for (const seconds of [pickup.ringSeconds, pickup.sparkSeconds, pickup.dustSeconds]) {
+      expect(isInJuiceWindow("effect", seconds)).toBe(true);
+    }
+    expect(isInJuiceWindow("linger", pickup.pieceSeconds)).toBe(true);
+  });
+
   it("should keep the landing squash inside the volume band and settle window when built", () => {
     const { land } = player.squash;
     expect(isJuiceSquash(land)).toBe(true);

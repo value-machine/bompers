@@ -44,6 +44,8 @@ export interface SoundPlayerSnapshot {
   speed: number;
   /** Speed into the terrain this step, fastest axis, units / s (0 when nothing was hit). */
   terrainHitSpeed: number;
+  /** Point orbs taken over the match (monotonic; pickup-juice D8). */
+  orbCount: number;
   /** Headbutt resets taken over the match (monotonic). */
   diveRefillCount: number;
   /** Times caught fire / put out by ice over the match (monotonic; fire-burn D7). */
@@ -74,6 +76,8 @@ export interface SoundWorldSnapshot {
   frozenVersion: number;
   /** Held beams ending each other in steam this step (beam-clash D1). */
   beamClashes: number;
+  /** Weapon-crate landings over the match (monotonic; pickup-juice D2). */
+  crateLandings: number;
 }
 
 /**

@@ -374,6 +374,7 @@ function stepCratePickups(state: GameState, dt: number): void {
     bounds: state.killZone,
     tunables,
     dt,
+    bursts: state.collectibles.bursts,
   });
   takeWeaponPickups({ combat: state.combat, players, tunables, timeSeconds }, pickups);
 }
