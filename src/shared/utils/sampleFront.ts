@@ -151,7 +151,13 @@ export function advanceFront(front: SampleFront, field: SampleField, advance: Fr
     const stale = front.arriveAt[index] !== time;
     if (!stale && advance.until?.(index, time)) return;
     heapPop(front);
-    if (stale || !advance.canEnter(index)) continue;
+    if (stale) continue;
+    if (!advance.canEnter(index)) {
+      // Not reached after all (it froze while waiting, say): forget its time, so `arriveAt` holds
+      // only samples the front really reached (fire-ice seam: damage read a fire never drawn).
+      clearArrival(front, index);
+      continue;
+    }
     advance.onArrive(index, time);
     reach(front, field, { index, time, advance });
   }
