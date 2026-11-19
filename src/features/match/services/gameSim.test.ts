@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
@@ -8,6 +8,7 @@ import { applyHit } from "@/features/combat/api/combatApi";
 import { catchFire } from "@/features/blob-fire/api/blobFireApi";
 import { chillBlob, isFrozen, isIced } from "@/features/ice/api/iceApi";
 import { parseLevelFile } from "@/features/level-file/api/levelFileApi";
+import { hurtHeight } from "@/features/player/api/playerApi";
 import { createGameState, stepGame } from "@/features/match/services/gameSim";
 
 const level: LevelDefinition = {
@@ -839,5 +840,115 @@ describe("level routes — Bobsled Run needs the roll", () => {
       stepGame(game, keys("KeyF", "KeyD"), dt);
     expect(p.rollSource).toBe("dash");
     expect(jumpAndDiveFromEdge(game, { diveAt: 1.0, extra: ["KeyF"] })).toBe(true);
+  });
+});
+
+/**
+ * Blast knockback on the shipped levels (owner, blast-knockback lap: "bombers fly off the map
+ * before they die"). A blob stands on each spawn; rockets from the level's middle side (pushing it
+ * toward the near edge) explode by its feet, as a shot at a standing blob usually does. Player 0
+ * is the shooter, pinned out of the way in a corner.
+ */
+type BlastGame = ReturnType<typeof createGameState>;
+const SHIPPED_LEVELS = readdirSync("public/levels").map(loadLevel);
+const BLOB_WIDTH = DEFAULT_GAME_TUNABLES.player.width;
+
+const stepPinned = (game: BlastGame): void => {
+  const { bounds } = game.arena.level;
+  Object.assign(game.players[0]!, { x: bounds.x + 10, y: bounds.y + 10, vx: 0, vy: 0 });
+  stepGame(game, keys(), dt);
+};
+
+/** The level with player 2 settled on spawn `index`; null if it does not stand there. */
+const standOnSpawn = (level: LevelDefinition, index: number): BlastGame | null => {
+  const game = createGameState({ level, tunables: DEFAULT_GAME_TUNABLES });
+  stepGame(game, keys(), dt);
+  Object.assign(game.players[1]!, { ...level.spawns[index]!, vx: 0, vy: 0 });
+  for (let i = 0; i < 90; i += 1) stepPinned(game);
+  return game.players[1]!.grounded ? game : null;
+};
+
+/** A rocket coming down `beside` units from the victim's centre, on the level's middle side. */
+const rocketAtFeet = (game: BlastGame, beside: number): void => {
+  const victim = game.players[1]!;
+  const { bounds } = game.arena.level;
+  const away = Math.sign(victim.x - (bounds.x + bounds.w / 2)) || 1;
+  const x = victim.x - away * beside;
+  game.combat.rockets.push({
+    id: game.combat.nextEntityId++,
+    kind: "rocket",
+    targetId: null,
+    ownerSlot: 0,
+    ownerId: "p0",
+    x,
+    y: victim.y - hurtHeight(victim) / 4,
+    dirX: 0,
+    dirY: 1,
+    age: 0,
+  });
+};
+
+const victimEliminatedBy = (game: BlastGame): string | null => {
+  const event = game.combat.events.find((e) => e.type === "playerEliminated" && e.victimSlot === 1);
+  return event?.type === "playerEliminated" ? event.cause : null;
+};
+
+/** Furthest the victim got sideways in 3 s after one feet hit, or null when it left the map. */
+function carryOfOneHit(game: BlastGame): number | null {
+  const startX = game.players[1]!.x;
+  rocketAtFeet(game, 22);
+  let carry = 0;
+  for (let i = 0; i < 3 / dt; i += 1) {
+    stepPinned(game);
+    if (victimEliminatedBy(game)) return null;
+    carry = Math.max(carry, Math.abs(game.players[1]!.x - startX));
+  }
+  return carry;
+}
+
+/** A feet hit every 0.4 s (the rocket's fire cooldown) until the victim is eliminated. */
+function barrageUntilEliminated(game: BlastGame): string | null {
+  for (let i = 0; i < 12 / dt; i += 1) {
+    if (i % Math.round(DEFAULT_GAME_TUNABLES.combat.rocket.fireCooldown / dt) === 0)
+      rocketAtFeet(game, 22);
+    stepPinned(game);
+    const cause = victimEliminatedBy(game);
+    if (cause) return cause;
+  }
+  return null;
+}
+
+const everySpawn = (): { level: LevelDefinition; index: number }[] =>
+  SHIPPED_LEVELS.flatMap((level) => level.spawns.map((_, index) => ({ level, index })));
+
+describe("gameSim — blast knockback on the shipped levels (blast-knockback lap)", () => {
+  it("should shove a standing blob a few blob widths, not across the level, when a rocket hits its feet", () => {
+    const carries: { units: number; share: number }[] = [];
+    let offMap = 0;
+    for (const { level, index } of everySpawn()) {
+      const game = standOnSpawn(level, index);
+      if (!game) continue;
+      const carry = carryOfOneHit(game);
+      if (carry === null) offMap += 1;
+      else carries.push({ units: carry, share: carry / level.bounds.w });
+    }
+    const average = (pick: (c: (typeof carries)[number]) => number): number =>
+      carries.reduce((sum, c) => sum + pick(c), 0) / carries.length;
+    // Shipped 0.55: ≈ 390 units, 20 % of a level width, and 16 of 28 spawns off the map.
+    expect(average((c) => c.units)).toBeGreaterThan(BLOB_WIDTH);
+    expect(average((c) => c.share)).toBeLessThan(0.05);
+    expect(offMap).toBe(0);
+  });
+
+  it("should eliminate most blobs by damage, not by flying off, when a barrage pushes them toward the edge", () => {
+    const causes = everySpawn()
+      .map(({ level, index }) => standOnSpawn(level, index))
+      .filter((game): game is BlastGame => game !== null)
+      .map(barrageUntilEliminated);
+    const byDamage = causes.filter((cause) => cause === "rocket").length;
+    // Shipped 0.55: 11 of 28 by damage, the other 17 off the map after 1–3 hits.
+    expect(byDamage).toBeGreaterThan(causes.length / 2);
+    // A blob near a drop can still be knocked off.
+    expect(causes).toContain("out-of-bounds");
   });
 });
