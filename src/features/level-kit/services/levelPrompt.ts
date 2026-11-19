@@ -9,6 +9,11 @@ import { DEFAULT_GAME_TUNABLES, type GameTunables } from "@/shared/config/gameTu
 import { terrainSwatch, toCssColor } from "@/shared/config/gamePalette";
 import { blastPushAt, blastReach, craterReach } from "@/shared/utils/blastPower";
 import { MOTION_DEFAULTS, MOTION_LIMITS, MOTION_PIVOTS } from "@/shared/utils/levelMotion";
+import {
+  freezeRayLine,
+  groundAndPartLines,
+  slopeAndRollLines,
+} from "@/features/level-kit/services/levelPromptAbilities";
 
 /**
  * The copyable level-generation prompt (feedback round 2 § 2.1, level-gen-prompt D1): one text a
@@ -285,6 +290,7 @@ function movementLines({ tunables: t, cell }: PromptContext): string[] {
     `- Gravity \`${g}\` units/s², max fall speed \`${t.world.maxFallSpeed}\`. Run speed \`${p.runSpeed}\` units/s.`,
     `- Jump: \`jumpSpeed ${p.jumpSpeed}\` → apex ~\`${round(apex)}\` units in ${(p.jumpSpeed / g).toFixed(2)} s. Easy step up \`${snapDown(apex * 0.5, cell)}\`, hard step \`${snapDown(apex * 0.85, cell)}\`. Running jump across a flat gap: ~\`${snapDown(runReach * 0.75, cell)}\` comfortable, ~\`${round(runReach)}\` max.`,
     `- Headbutt dive (once per air time, aimed in 16 directions): \`${dive.launchSpeed}\` units/s for \`${dive.travelSeconds}\` s (~\`${round(diveDistance)}\` units) after a \`${dive.windupSeconds}\` s windup; jump + dive across a flat gap: ~\`${snapDown(jumpDiveReach(t, apexTime), cell)}\` diving at the top of the jump, ~\`${snapDown(bestJumpDiveReach(t), cell)}\` max with a late dive, ~\`${snapDown(bestJumpDiveReach(t, true), cell)}\` jumping out of a fast roll (it keeps up to \`${t.roll.jumpCarryMax}\` units/s sideways). A gap between those two needs the roll. A head-on dive into a wall bonks (\`${dive.bonkStunSeconds}\` s stun).`,
+    ...slopeAndRollLines(t),
     `- Wall slide \`${p.wallSlideSpeed}\` units/s; wall jump \`vx ${p.wallJumpSpeedX}\`, \`vy ${p.wallJumpSpeedY}\` (~\`${round(wallGain)}\` height per kick). Wall-jump chimney width \`${snapDown(p.width * 4.5, cell)}\`–\`${snapDown(p.width * 8, cell)}\`.`,
   ];
 }
@@ -308,6 +314,7 @@ function weaponLines({ tunables: t }: PromptContext): string[] {
     `- Rocket jump (no self-damage): a point-blank blast under a standing player lifts ~\`${round((blastOnly * blastOnly) / (2 * g))}\` units, ~\`${round((withRecoil * withRecoil) / (2 * g))}\` with the shot's recoil.`,
     `- Homing missiles fly \`${t.combat.homing.speed}\` units/s and turn slowly: open spaces make them dodgeable, tight corridors make them deadly.`,
     `- ${code("torch")}: \`${t.combat.torch.ammo}\` s of flame held on fire, a \`${t.combat.torch.length}\`-unit cone that lights cardboard and lightly pushes players; no blast, no crater. Fire spreads through touching cardboard at \`${t.fire.spreadSpeed}\` units/s, each bit burns \`${t.fire.burnSeconds}\` s and is gone; it never crosses air, flows around stone, stops at earth, and cardboard touching ice never catches. Cardboard bridges and towers become timed hazards with a torch in the drop list.`,
+    freezeRayLine(t),
   ];
 }
 
@@ -319,6 +326,7 @@ function renderPhysics(ctx: PromptContext): string {
     "With another gravity multiplier `k`, heights and jump gaps scale by about `1 / k`.",
     "",
     ...movementLines(ctx),
+    ...groundAndPartLines(ctx.tunables),
     ...weaponLines(ctx),
     `- Match: up to ${m.maxPlayers} players, ${m.durationSeconds} s by default; respawn after ${m.respawnDelaySeconds} s at a spawn.`,
   ].join("\n");

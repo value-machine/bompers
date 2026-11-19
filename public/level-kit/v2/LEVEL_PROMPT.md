@@ -118,12 +118,18 @@ With another gravity multiplier `k`, heights and jump gaps scale by about `1 / k
 - Gravity `1400` units/s², max fall speed `1120`. Run speed `340` units/s.
 - Jump: `jumpSpeed 840` → apex ~`252` units in 0.60 s. Easy step up `124`, hard step `212`. Running jump across a flat gap: ~`304` comfortable, ~`408` max.
 - Headbutt dive (once per air time, aimed in 16 directions): `900` units/s for `0.25` s (~`225` units) after a `0.1` s windup; jump + dive across a flat gap: ~`620` diving at the top of the jump, ~`712` max with a late dive, ~`904` jumping out of a fast roll (it keeps up to `600` units/s sideways). A gap between those two needs the roll. A head-on dive into a wall bonks (`0.25` s stun).
+- Slopes: ground up to `80°` is walked; steeper is a wall (wall slide and wall jump), except a ledge whose top is within `12` units, which the blob pulls itself over at `85` units/s. A blob already on a curve keeps its footing up to `88°`, so round tops can be walked over. Walking speed: `213` up a 30° slope, `160` up 45°, `468` down 30° (run `340`).
+- Roll: holding fire through a headbutt rolls on at the dive's `900` units/s; a roll from `900` coasts ~`418` units on the flat, lasts at most `6` s, keeps rolling down slopes steeper than ~`8°` (~`186` units/s down 20°, ~`333` down 30°) and bounces off terrain. A headbutt out of a fast roll launches at up to `1150` units/s (~`288` units of dive). Weapons fired while rolling aim round with the spin, at up to `1.25` turns/s.
 - Wall slide `220` units/s; wall jump `vx 420`, `vy 720` (~`185` height per kick). Wall-jump chimney width `124`–`224`.
+- Ice grip `0.12` (1 = stone): from a run a blob slides ~`161` units to a stop on ice (~`19` on stone), and a roll from `900` coasts ~`2991` on flat ice before its `6` s run out, and keeps rolling down any slope over ~`1°`. Frozen ground grips like ice.
+- Leaving a moving part (jump, headbutt or walk off) keeps its velocity, up to `340` units/s: a jump off a lift rising at full speed peaks ~`497` units up instead of ~`252`.
+- A headbutt that hits a player pops the diver up ~`118` units; a glancing hit on terrain just ends the dive.
 - `rocket-launcher`: 6 shots, blast power `50` → reach `64`, push `1080` units/s at the centre, crater `34` at toughness 1 (crater = this ÷ toughness), recoil `200`.
 - `homing-launcher`: 3 shots, blast power `50` → reach `64`, push `1080` units/s at the centre, crater `34` at toughness 1 (crater = this ÷ toughness), recoil `120`.
 - Rocket jump (no self-damage): a point-blank blast under a standing player lifts ~`417` units, ~`585` with the shot's recoil.
 - Homing missiles fly `480` units/s and turn slowly: open spaces make them dodgeable, tight corridors make them deadly.
 - `torch`: `3` s of flame held on fire, a `84`-unit cone that lights cardboard and lightly pushes players; no blast, no crater. Fire spreads through touching cardboard at `13` units/s, each bit burns `7.5` s and is gone; it never crosses air, flows around stone, stops at earth, and cardboard touching ice never catches. Cardboard bridges and towers become timed hazards with a torch in the drop list.
+- `freeze-ray`: `3` s of beam held on fire, `180` units long and narrow (±3°), a light push; it freezes ground at `3600` units² per second (a full charge ≈ `10800` units²: a round patch ~`59` units in radius) and the ice thaws after `8` s or at once under the torch. A blob held in the beam `0.5` s (`1` s crouching) is frozen `2.5` s and slides with `0.15` grip.
 - Match: up to 4 players, 180 s by default; respawn after 2 s at a spawn.
 
 ## 6. Pre-output validation checklist
