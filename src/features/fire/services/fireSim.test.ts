@@ -1,3 +1,4 @@
+import type { Graphics } from "pixi.js";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import {
@@ -418,16 +419,20 @@ describe("fire layers per body (mover-materials-l2 D3, D4)", () => {
     const view = createFireView();
     syncFireView(view, frame);
     expect(view.grounds).toHaveLength(2);
-    expect(view.grounds[1]!.bodyFill.getLocalBounds().width).toBeGreaterThan(0);
-    expect(view.grounds[0]!.bodyFill.getLocalBounds().width).toBe(0);
+    expect(view.grounds[1]!.body.fill.getLocalBounds().width).toBeGreaterThan(0);
+    expect(view.grounds[0]!.body.fill.getLocalBounds().width).toBe(0);
   });
 
   it("should draw the burning body's ink as strokes only, never a shape under the fill", () => {
     const { frame } = burningPart();
     const view = createFireView();
     syncFireView(view, frame);
-    const actions = view.grounds[1]!.bodyInk.context.instructions.map((drawn) => drawn.action);
-    expect(actions).toEqual(["stroke"]);
+    const tiles = view.grounds[1]!.body.ink.children as Graphics[];
+    const drawn = tiles
+      .map((g) => g.context.instructions.map((instruction) => instruction.action))
+      .filter((list) => list.length > 0);
+    expect(drawn.length).toBeGreaterThan(0);
+    for (const list of drawn) expect(list).toEqual(["stroke"]);
   });
 
   it("should move the part's fire layer with the part when the part's pose changes", () => {
