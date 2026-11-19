@@ -77,6 +77,7 @@ export function createTerrainGrid(size: TerrainGridSize): TerrainGrid {
     chunksY,
     dirtyChunks,
     shapeVersion: 0,
+    chunkVersions: new Uint32Array(chunksX * chunksY),
     frozen: new Uint8Array(count),
     frozenVersion: 0,
     frozenFriction: size.frozenFriction ?? 1,
@@ -145,9 +146,15 @@ export function writeSample(grid: TerrainGrid, write: SampleWrite): boolean {
     grid.frozen[index] = 0;
     grid.frozenVersion += 1;
   }
-  grid.dirtyChunks.add(chunkIndexOfCell(grid, cx, cy));
-  grid.shapeVersion += 1;
+  markShapeChanged(grid, chunkIndexOfCell(grid, cx, cy));
   return true;
+}
+
+/** Records a changed sample in `chunk`: dirty for the renderer, and every shape version bumped. */
+function markShapeChanged(grid: TerrainGrid, chunk: number): void {
+  grid.dirtyChunks.add(chunk);
+  grid.chunkVersions[chunk] = (grid.chunkVersions[chunk] ?? 0) + 1;
+  grid.shapeVersion += 1;
 }
 
 /**
@@ -604,6 +611,27 @@ function partFrictionAt(grid: TerrainGrid, p: Vec2): number | null {
     if (info) return sampleFriction(part, cy * part.widthCells + cx, info);
   }
   return null;
+}
+
+/**
+ * How often the samples in a box have changed: the sum of its chunks' `chunkVersions`. It changes
+ * exactly when a sample there does, so a layer can tell that its part of the terrain changed
+ * without taking the terrain renderer's dirty chunks.
+ */
+export function boxShapeVersion(
+  grid: TerrainGrid,
+  box: { minX: number; minY: number; maxX: number; maxY: number }
+): number {
+  const last = { x: grid.chunksX - 1, y: grid.chunksY - 1 };
+  const x0 = Math.max(0, Math.floor(box.minX / grid.chunkCells));
+  const x1 = Math.min(last.x, Math.floor(box.maxX / grid.chunkCells));
+  const y0 = Math.max(0, Math.floor(box.minY / grid.chunkCells));
+  const y1 = Math.min(last.y, Math.floor(box.maxY / grid.chunkCells));
+  let sum = 0;
+  for (let y = y0; y <= y1; y += 1) {
+    for (let x = x0; x <= x1; x += 1) sum += grid.chunkVersions[y * grid.chunksX + x] ?? 0;
+  }
+  return sum;
 }
 
 /** Returns the dirty chunk indices and clears the set (called by the renderer). */

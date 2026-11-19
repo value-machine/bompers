@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { buildLine } from "pixi.js";
+import { buildLine, type Container, type Graphics } from "pixi.js";
 import { describe, expect, it } from "vitest";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
@@ -13,6 +13,7 @@ import {
   outlineRingIssue,
   slotLayerBoxes,
   slotLayerRegion,
+  surfaceTiles,
   terrainContour,
   terrainRings,
   type MaskShapes,
@@ -398,32 +399,40 @@ describe("outlineRingIssue (terrain-ink-spikes guard)", () => {
 });
 
 describe("terrain ink (outline-system: a line, never a shape under the fill)", () => {
-  const actions = (g: { context: { instructions: readonly { action: string }[] } }): string[] =>
-    g.context.instructions.map((instruction) => instruction.action);
+  type Drawn = { context: { instructions: readonly { action: string }[] } };
+  /** The actions of every tile that drew something. */
+  const actions = (ink: Container): string[][] =>
+    (ink.children as unknown as Drawn[])
+      .map((g) => g.context.instructions.map((instruction) => instruction.action))
+      .filter((list) => list.length > 0);
 
   it("should draw the terrain's ink as strokes only when the view is synced", () => {
     const terrain = buildTerrainFromLevel(level);
     const view = createTerrainView({ terrain, level });
     syncTerrainView(view, terrain, 1);
-    expect(actions(view.ink)).toEqual(["stroke"]);
+    const drawn = actions(view.surface.ink);
+    expect(drawn.length).toBeGreaterThan(0);
+    for (const list of drawn) expect(list).toEqual(["stroke"]);
   });
 
   it("should draw a moving part's ink as strokes only when the view is synced", () => {
     const terrain = buildTerrainFromLevel(partLevel);
     const view = createTerrainView({ terrain, level: partLevel });
     syncTerrainView(view, terrain, 1);
-    expect(actions(view.movers[0]!.ink)).toEqual(["stroke"]);
+    const drawn = actions(view.movers[0]!.surface.ink);
+    expect(drawn.length).toBeGreaterThan(0);
+    for (const list of drawn) expect(list).toEqual(["stroke"]);
   });
 
   it("should restroke the same rings at the new width when only the zoom steps", () => {
     const terrain = buildTerrainFromLevel(level);
     const view = createTerrainView({ terrain, level });
     syncTerrainView(view, terrain, 1);
-    const rings = view.rings;
-    const before = view.ink.getLocalBounds().width;
+    const rings = view.surface.tiles.map((tile) => tile.rings);
+    const before = view.surface.ink.getLocalBounds().width;
     syncTerrainView(view, terrain, 0.5);
-    expect(view.rings).toBe(rings);
-    expect(view.ink.getLocalBounds().width).toBeGreaterThan(before);
+    view.surface.tiles.forEach((tile, i) => expect(tile.rings).toBe(rings[i]));
+    expect(view.surface.ink.getLocalBounds().width).toBeGreaterThan(before);
   });
 });
 
@@ -454,8 +463,8 @@ describe("moving part view (mover-materials-l2)", () => {
     const terrain = buildTerrainFromLevel(partLevel);
     const view = createTerrainView({ terrain, level: partLevel });
     syncTerrainView(view, terrain, 1);
-    const part = view.movers[0]!;
-    const partFill = [...part.slabs.fills.values()][0]!.body;
+    const part = view.movers[0]!.surface;
+    const partFill = [...part.slots.values()][0]!.bodies;
     const [before, maskBefore] = [part.ink, partFill].map((g) => g.getLocalBounds().width) as [
       number,
       number,
@@ -637,12 +646,76 @@ describe("terrain view without a clip mask (outline-system D6)", () => {
     const grid = buildTerrainFromLevel(far);
     const view = createTerrainView({ terrain: grid, level: far });
     syncTerrainView(view, grid, 1);
-    const stone = [...view.slabs.fills.values()].find((layer) => layer.box.minY > 50)!;
-    expect(stone.body.context.instructions.length).toBeGreaterThan(0);
-    // Emptied by hand: a redraw would fill it again.
-    stone.body.context.instructions.length = 0;
+    const stone = [...view.surface.slots.values()].find((layer) => layer.box.minY > 50)!;
+    const tiles = stone.bodies.children as Graphics[];
+    expect(tiles.some((g) => g.context.instructions.length > 0)).toBe(true);
+    // Emptied by hand: a redraw would fill them again.
+    for (const g of tiles) g.context.instructions.length = 0;
     clearCrater(grid, { x: 56, y: 40, reach: 20, shape: "round" });
     syncTerrainView(view, grid, 1);
-    expect(stone.body.context.instructions.length).toBe(0);
+    expect(tiles.every((g) => g.context.instructions.length === 0)).toBe(true);
+  });
+});
+
+describe("surface tiles (tree-fire-perf: drawn per tile, the same look)", () => {
+  /** Rect cover per row as merged [from, to] runs, and the pieces sorted: what a fill paints. */
+  const cover = (shapes: MaskShapes) => {
+    const rows = new Map<number, [number, number][]>();
+    for (const r of shapes.rects) rows.set(r.y, [...(rows.get(r.y) ?? []), [r.x, r.x + r.w]]);
+    const merged = [...rows.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([y, runs]) => {
+        const out: [number, number][] = [];
+        for (const run of runs.sort((a, b) => a[0] - b[0])) {
+          const last = out[out.length - 1];
+          if (last && Math.abs(last[1] - run[0]) < 1e-9) last[1] = run[1];
+          else out.push([...run]);
+        }
+        return [y, out];
+      });
+    const pieces = shapes.pieces.map((p) => p.map((v) => v.toFixed(6)).join(",")).sort();
+    return { merged, pieces };
+  };
+  const ringLength = (rings: readonly OutlineRing[]): number =>
+    rings.reduce((sum, { points, closed }) => {
+      let length = 0;
+      const n = points.length / 2;
+      for (let i = 1; i < n + (closed ? 1 : 0); i += 1) {
+        const a = ((i - 1) % n) * 2;
+        const b = (i % n) * 2;
+        length += Math.hypot(points[b]! - points[a]!, points[b + 1]! - points[a + 1]!);
+      }
+      return sum + length;
+    }, 0);
+  const blasted = (): Grid => {
+    const grid = buildTerrainFromLevel(wallLevel);
+    clearCrater(grid, { x: 300, y: 136, reach: 40, shape: "round" });
+    return grid;
+  };
+
+  it("should paint the same fill when a slot layer is marched per tile", () => {
+    const grid = blasted();
+    const tiles = surfaceTiles(grid, 32);
+    expect(tiles.length).toBeGreaterThan(4);
+    const region = belowLipRegion(grid, slotLayerRegion(grid, 1));
+    const whole = terrainContour(grid, { grow: 0, region });
+    const parts: MaskShapes = { rects: [], pieces: [] };
+    for (const cells of tiles) {
+      const part = terrainContour(grid, { grow: 0, region, cells });
+      parts.rects.push(...part.rects);
+      parts.pieces.push(...part.pieces);
+    }
+    expect(cover(parts)).toEqual(cover(whole));
+  });
+
+  it("should give the outline the same length when its rings are built per tile", () => {
+    const grid = blasted();
+    const whole = ringLength(terrainRings(grid, { grow: 0 }));
+    const tiled = surfaceTiles(grid, 32).reduce(
+      (sum, cells) => sum + ringLength(terrainRings(grid, { grow: 0, cells })),
+      0
+    );
+    expect(whole).toBeGreaterThan(0);
+    expect(tiled).toBeCloseTo(whole, 3);
   });
 });

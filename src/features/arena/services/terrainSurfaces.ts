@@ -116,6 +116,8 @@ export interface ContourOptions {
   /** Widens the shape by this many world units (the outline: the terrain grown by its width). */
   grow: number;
   region?: SampleRegion;
+  /** Marches only these contour cells (one surface tile), within what the region asks for. */
+  cells?: SampleBox;
 }
 
 /** What one contour cell (between four sample centres) contributes. */
@@ -370,19 +372,67 @@ function contourRow(shapes: MaskShapes, pass: ContourPass, row: { cy: number; bo
   }
 }
 
-/** Contour cells to march: every cell that touches the region's samples, grown shape included. */
+const meetBoxes = (a: SampleBox, b: SampleBox): SampleBox => ({
+  minX: Math.max(a.minX, b.minX),
+  minY: Math.max(a.minY, b.minY),
+  maxX: Math.min(a.maxX, b.maxX),
+  maxY: Math.min(a.maxY, b.maxY),
+});
+
+/**
+ * Contour cells to march: every cell that touches the region's samples, grown shape included,
+ * and only those of `cells` when given (empty when they do not meet).
+ */
 function contourCells(grid: TerrainGrid, options: ContourOptions): SampleBox {
   const all = { minX: -1, minY: -1, maxX: grid.widthCells - 1, maxY: grid.heightCells - 1 };
+  const limit = options.cells ? meetBoxes(all, options.cells) : all;
   const box = options.region?.box;
-  if (!box) return all;
+  if (!box) return limit;
   const pad = 1 + Math.ceil(Math.max(0, options.grow) / grid.cellSize);
-  return {
-    minX: Math.max(all.minX, box.minX - pad),
-    minY: Math.max(all.minY, box.minY - pad),
-    maxX: Math.min(all.maxX, box.maxX + pad - 1),
-    maxY: Math.min(all.maxY, box.maxY + pad - 1),
-  };
+  return meetBoxes(limit, {
+    minX: box.minX - pad,
+    minY: box.minY - pad,
+    maxX: box.maxX + pad - 1,
+    maxY: box.maxY + pad - 1,
+  });
 }
+
+/**
+ * Contour cells per side of one surface tile. A change redraws only the tiles it reaches, so a
+ * burn-out costs the area around it, not the whole level (tree-fire-perf).
+ */
+export const SURFACE_TILE_CELLS = 32;
+
+/**
+ * A body's contour cells cut into surface tiles: every cell in exactly one tile. A contour or
+ * ring set marched per tile (`cells`) and drawn side by side is the whole one: fills are per
+ * cell, and a ring cut at a tile's edge ends where the next tile's piece of it starts, its round
+ * cap inside that piece's stroke.
+ */
+export function surfaceTiles(grid: TerrainGrid, size = SURFACE_TILE_CELLS): SampleBox[] {
+  const tiles: SampleBox[] = [];
+  for (let y = -1; y < grid.heightCells; y += size) {
+    for (let x = -1; x < grid.widthCells; x += size) {
+      const maxX = Math.min(grid.widthCells - 1, x + size - 1);
+      tiles.push({ minX: x, minY: y, maxX, maxY: Math.min(grid.heightCells - 1, y + size - 1) });
+    }
+  }
+  return tiles;
+}
+
+/**
+ * The samples a tile's drawing reads: its cells' corners, and the row above for the lip
+ * (`belowLipRegion`). A change to any of them redraws the tile.
+ */
+export const tileSamples = (cells: SampleBox): SampleBox => ({
+  minX: cells.minX,
+  minY: cells.minY - 1,
+  maxX: cells.maxX + 1,
+  maxY: cells.maxY + 1,
+});
+
+export const boxesMeet = (a: SampleBox, b: SampleBox): boolean =>
+  a.minX <= b.maxX && b.minX <= a.maxX && a.minY <= b.maxY && b.minY <= a.maxY;
 
 /**
  * The one terrain shape rule (terrain-curves D8): the shape where the distance field (+ `grow`)

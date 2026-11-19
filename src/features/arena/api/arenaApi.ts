@@ -18,6 +18,7 @@ export {
   type ClearedBodies,
 } from "@/features/arena/services/terrainBodies";
 export {
+  boxShapeVersion,
   burnOut,
   clearCrater,
   getCellInfo,
@@ -46,14 +47,17 @@ export {
 } from "@/features/arena/services/terrainField";
 export {
   belowLipRegion,
+  boxesMeet,
   drawContour,
   drawOutline,
   edgeAbove,
   markedRegion,
+  surfaceTiles,
   terrainContour,
   terrainRings,
   type MaskShapes,
   type OutlineRing,
+  type SampleBox,
   type SampleRegion,
 } from "@/features/arena/services/terrainSurfaces";
 export {
