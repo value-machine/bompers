@@ -227,6 +227,13 @@ export interface GameTunables {
      * width per step and the sweep stays readable.
      */
     sweepTurnsPerSecond: number;
+    /**
+     * Crouch roll (crouch-roll R1, R7): seconds a crouched blob must hold one direction with no
+     * fire before it rolls that way. Shorter, it is aiming or turning (crouch D4).
+     */
+    crouchRollDelay: number;
+    /** Least ground speed a crouch roll starts with, units / s (a faster blob keeps its own). */
+    crouchStartSpeed: number;
   };
   /**
    * Unarmed attack: the dive headbutt ("bomp", GDD § 3). A committed straight missile that

@@ -92,7 +92,7 @@ export function soundSnapshotOf(state: GameState): SoundSnapshot {
         landCount: player.landCount,
         lastLandingSpeed: player.lastLandingSpeed,
         rollBounceCount: player.rollBounceCount,
-        dashRollCount: player.dashRollCount,
+        moveRollCount: player.moveRollCount,
         rollRestCount: player.rollRestCount,
         crouchCount: player.crouchCount,
         inPlay: isInPlay(state.rules, player),
