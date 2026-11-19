@@ -40,23 +40,8 @@
     "status": "to-do"
   },
   {
-    "title": "Split blob drawing into its own feature",
-    "description": "Follow-up from #109 (crouch sink, owner D7): move blob drawing (blobPose, blobShapes, crouchPose, playerRenderer) out of the player feature into its own feature and drop the player file-budget waiver. Size S/M.",
-    "status": "to-do"
-  },
-  {
-    "title": "Sky-drop pickups use the crouched hurt box",
-    "description": "Follow-up from #109: sky-drop pickup hits still use the standing body; make them read the hurt box (0.6 height when crouched). Size XS.",
-    "status": "to-do"
-  },
-  {
-    "title": "blob-fire bodyCenter follows the hurt box",
-    "description": "Follow-up from #109: blob-fire keeps a private bodyCenter; derive it from the shared hurt box so burning a crouched blob centres right. Size XS.",
-    "status": "to-do"
-  },
-  {
-    "title": "Objects lap 2: object physics",
-    "description": "Follow-up to #120 (level objects, trees). Lift an object's terrain pieces (LevelObject.terrainIndices) into its own body, like MoverBody, so trees can topple or fall when their base is blasted or burnt through. Then more recipes (rocks, bushes, crates, bridges), one recipe file each. Size M.",
+    "title": "Physics objects (whole-object state)",
+    "description": "Owner rule (#125, level-objects README): terrain objects (trees) are partially destructible but never move; physics objects move and fall but burn/freeze/damage apply to the whole object, never per sample. Build the first physics objects (e.g. crate, ball, log) as rigid bodies with whole-object state. Feasibility numbers from the tree-physics check are in the README. Size M. Later.",
     "status": "to-do"
   }
 ]
