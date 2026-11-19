@@ -75,8 +75,8 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Shot (any weapon whose readiness drops) | light | the weapon's fire cue (`rocket-fire`) | barrel pop 0.78 × 1.22, 200 ms back-out (`feel.barrelPop`) | — | — | — | mouth accent drops to 15 % and refills with the cooldown | — |
 | Rocket recoil | light | `rocket-fire` (the fire cue) | — | — | — | — | body kick opposite the aim (sim impulse `combat.rocket.recoil`) | — |
 | Pickup collected | light | `pickup` | — | — | — | — | — | — |
-| Headbutt reset taken | light | `pickup` (pitched by the collector) | — | — | — | — | ring burst in the crystal colour, 220 ms; then a ghost outline until it is back | — |
-| Headbutt reset returns | — | — (deliberately silent: a world timer every 2.5 s would be noise) | crystal pop-in, back-out 150 ms | — | — | — | — | — |
+| Headbutt reset taken | light | `pickup` (pitched by the collector) | — | — | — | — | the bubble pops: 6 aqua droplets fly out and fall, a thin aqua ring widens, 320 ms (`linger`); then a faint bubble regrows on the point until it is back | — |
+| Headbutt reset returns | — | — (deliberately silent: a world timer every 2.5 s would be noise) | bubble pop-in, back-out 150 ms; while present a jelly wobble (sx · sy = 1, ±4 %, 1.1 s loop) | — | — | — | — | — |
 | Respawn | light | `respawn` | — | — | — | — | blink 8 Hz + ring | — |
 | Dive launch (fire, or a mid-air jump press: double-jump-bash D1) | light | `dive-launch` | dive pose | — | — | — | — | — |
 | Front hit taken | medium | `hit` / `dive-impact` (gain by knockback) | — | 0.75 | 3 px | — | impact pop (not on dive hits) | kick |
