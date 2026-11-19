@@ -133,8 +133,8 @@ function take(state: CollectiblesState, orb: PointOrb, slot: number): OrbCollect
 
 /**
  * Advances point-orb spawns, falls and pickups one step, and ages the pickup bursts. Returns the
- * orbs taken this step. Weapon crates and headbutt resets step separately (`stepWeaponCrates`,
- * `stepDiveRefills`); their bursts are aged here too, once per step.
+ * orbs taken this step. Weapon crates step separately (`stepWeaponCrates`), at combat's point in
+ * the step order; their bursts are aged here too, once per step.
  */
 export function stepCollectibles(args: StepCollectiblesArgs): OrbCollected[] {
   const state = args.collectibles;

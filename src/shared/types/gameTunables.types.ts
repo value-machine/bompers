@@ -607,7 +607,7 @@ export interface GameTunables {
       splatSeconds: number;
     };
     /**
-     * Pickups (point orbs, weapon crates, headbutt resets; pickup-juice D1–D3), all light tier:
+     * Pickups (point orbs, weapon crates; pickup-juice D1–D3), all light tier:
      * a pop-in where one appears, a wide squash springing back when a dropped one comes to rest, a
      * falling crate's stretch (full at `fullSpeed`, units / s), the ring every taken pickup throws,
      * an orb's mini stars, a crate's flying pieces and a landing crate's dust puffs. Seconds.

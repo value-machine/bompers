@@ -390,7 +390,6 @@ function stepHeadbuttResets(state: GameState, dt: number): void {
     players: spent,
     tunables: state.tunables,
     dt,
-    bursts: state.collectibles.bursts,
   });
   for (const { slot } of taken) {
     const player = spent.find((candidate) => candidate.slot === slot);

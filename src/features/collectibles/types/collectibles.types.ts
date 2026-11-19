@@ -52,13 +52,13 @@ export interface WeaponCratesState {
 }
 
 /**
- * A taken pickup, kept for the render burst (pickup-juice D1–D3): where it was, what it was
- * (`point-orb`, `dive-reset` or the crate's weapon) and its age. Gone once its longest part is
- * over (`pickupBurstSeconds`). `id` is the pickup's id (orb, crate) or point index (reset).
+ * A taken point orb or weapon crate, kept for the render burst (pickup-juice D1, D3): where it
+ * was, what it held (`point-orb` or the crate's weapon), its id and its age. Gone once its longest
+ * part is over (`pickupBurstSeconds`).
  */
 export interface PickupBurst {
   id: number;
-  itemId: "point-orb" | "dive-reset" | WeaponItemId;
+  itemId: "point-orb" | WeaponItemId;
   x: number;
   y: number;
   ageSeconds: number;
@@ -93,7 +93,7 @@ export interface CollectiblesState {
   /** Headbutt resets, one per `dive-reset` collectible point, from the match start. */
   diveRefills: DiveRefillPickup[];
   crates: WeaponCratesState;
-  /** Taken pickups bursting (render only, aged once per step by `stepCollectibles`). */
+  /** Taken orbs and crates bursting (render only, aged once per step by `stepCollectibles`). */
   bursts: PickupBurst[];
   /** Point orbs taken per player slot over the match (monotonic; the orb chime). */
   orbCounts: Record<number, number>;

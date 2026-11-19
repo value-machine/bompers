@@ -4,11 +4,11 @@ Task: "Game juice pass on all pickups" · Lap: temp_job_pickup-juice · Branch: 
 
 ## Problem
 
-The three pickups on main (point orb, weapon crate, headbutt reset) answer unevenly: a taken point orb has no sound and no visual (it vanishes), a crate lands silently and rigidly and vanishes when taken, and neither pops in. Only the headbutt reset was complete.
+The pickups on main (point orb, weapon crate, headbutt reset) answer unevenly: a taken point orb has no sound and no visual (it vanishes), a crate lands silently and rigidly and vanishes when taken, and neither pops in. Only the headbutt reset was complete.
 
 ## Success check
 
-On the PR preview: an orb pops in, squashes when it reaches its point, and when taken throws a pink ring and five mini stars while the collector's HUD score pops; a crate pops in, stretches as it falls, squashes with two dust puffs and a soft `thwap` when it lands, and when taken throws a ring in the weapon colour and four pieces; the headbutt reset looks as before. The orb chime plays only after the owner picks a take on the listening page.
+On the PR preview: an orb pops in, squashes when it reaches its point, and when taken throws a pink ring and five mini stars while the collector's HUD score pops; a crate pops in, stretches as it falls, squashes with two dust puffs and a soft `thwap` when it lands, and when taken throws a ring in the weapon colour and four pieces. The headbutt reset is not touched (D7: its new look is another lap). The orb chime plays only after the owner picks a take on the listening page.
 
 ## Juice table (all light tier: no shake, no flash)
 

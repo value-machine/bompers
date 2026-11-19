@@ -7,10 +7,7 @@ import {
   createDiveRefills,
   stepDiveRefills,
 } from "@/features/collectibles/services/diveRefills";
-import type {
-  DiveRefillPickup,
-  PickupBurst,
-} from "@/features/collectibles/types/collectibles.types";
+import type { DiveRefillPickup } from "@/features/collectibles/types/collectibles.types";
 
 const tunables = DEFAULT_GAME_TUNABLES;
 const { respawnSeconds } = tunables.collectibles.diveRefill;
@@ -28,7 +25,7 @@ const playerAt = (slot: number, x: number): PlayerState =>
 function run(refills: DiveRefillPickup[], seconds: number, players: PlayerState[] = []) {
   const collected = [];
   for (let t = 0; t < seconds - 1e-9; t += dt) {
-    collected.push(...stepDiveRefills({ refills, players, tunables, dt, bursts: [] }));
+    collected.push(...stepDiveRefills({ refills, players, tunables, dt }));
   }
   return collected;
 }
@@ -45,11 +42,8 @@ describe("diveRefills", () => {
 
   it("should give the pickup to the player touching it and take it away when it is collected", () => {
     const refills = createDiveRefills(points);
-    const bursts: PickupBurst[] = [];
-    const players = [playerAt(3, 300)];
-    const collected = stepDiveRefills({ refills, players, tunables, dt, bursts });
+    const collected = stepDiveRefills({ refills, players: [playerAt(3, 300)], tunables, dt });
     expect(collected).toEqual([{ slot: 3, x: 300, y: 200 }]);
-    expect(bursts).toEqual([{ id: 1, itemId: "dive-reset", x: 300, y: 200, ageSeconds: 0 }]);
     expect(refills[0]!.respawnTimer).toBeCloseTo(respawnSeconds);
     expect(refills[1]!.respawnTimer).toBe(0);
   });

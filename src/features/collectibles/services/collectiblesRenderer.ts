@@ -25,7 +25,7 @@ import {
 /**
  * Collectibles layers; the match renderer places them (DESIGN_LANGUAGE § 5): `shadows` (4,
  * contact shadows of falling weapon crates), `crates` (5, `weaponCrateRenderer.ts`), `orbs` (5,
- * point orbs), `bursts` (5, taken pickups). A point orb is a bubblegum star with an ink outline
+ * point orbs), `bursts` (5, taken orbs and crates). A point orb is a bubblegum star with an ink outline
  * (§ 1 Effects): it pops in where it appears, squashes wide when it reaches its point and springs
  * back, then bobs gently (GAME_JUICE § 6, `feel.pickup`). Drawn once per orb (and again when the
  * zoom-clamped prop outline width changes step); per frame only transforms change.
@@ -35,7 +35,7 @@ export interface CollectiblesView extends CrateLayers {
   orbSprites: Map<string, Container>;
   /** Headbutt resets (layer 5, beside the orbs): `diveRefillRenderer.ts`. */
   refills: DiveRefillLayer;
-  /** Taken pickups bursting (layer 5, over the pickups). */
+  /** Taken orbs and crates bursting (layer 5, over the pickups). */
   bursts: Container;
   burstSprites: Map<string, Container>;
 }
@@ -107,24 +107,20 @@ interface BurstSprite extends Container {
 interface BurstLook {
   orbSize: number;
   crateSize: number;
-  refillSize: number;
   outline: OutlineWidth;
 }
 
 function burstColor(itemId: PickupBurst["itemId"]): number {
   if (itemId === "point-orb") return GAME_PALETTE.pointOrb;
-  if (itemId === "dive-reset") return GAME_PALETTE.diveRefill;
   return weaponLook(itemId).accent;
 }
 
 function burstSize(itemId: PickupBurst["itemId"], look: BurstLook): number {
-  if (itemId === "point-orb") return look.orbSize;
-  return itemId === "dive-reset" ? look.refillSize : look.crateSize;
+  return itemId === "point-orb" ? look.orbSize : look.crateSize;
 }
 
 function drawBits(itemId: PickupBurst["itemId"], look: BurstLook, color: number): Graphics[] {
   const ink = { width: look.outline.width * 0.6, color: GAME_PALETTE.ink, join: "round" as const };
-  if (itemId === "dive-reset") return [];
   if (itemId === "point-orb") {
     const r = look.orbSize * 0.22;
     return Array.from({ length: SPARKS }, () =>
@@ -188,7 +184,7 @@ function placePieces(bits: readonly Graphics[], t: number, size: number): void {
 function placeBurst(sprite: BurstSprite, burst: PickupBurst, args: BurstFrame): void {
   const { itemId, ageSeconds } = burst;
   // A crate's burst comes out of its middle (crates stand on their bottom-centre).
-  const crate = itemId !== "point-orb" && itemId !== "dive-reset";
+  const crate = itemId !== "point-orb";
   sprite.position.set(burst.x, burst.y - (crate ? args.crateSize / 2 : 0));
   placeRing(sprite.ring, ageSeconds / args.feel.ringSeconds);
   if (itemId === "point-orb")
@@ -246,8 +242,6 @@ export function syncCollectiblesView(view: CollectiblesView, frame: Collectibles
     refills: frame.collectibles.diveRefills,
     size: frame.diveRefill.size,
     respawnSeconds: frame.diveRefill.respawnSeconds,
-    popInSeconds: feel.popInSeconds,
-    ringSeconds: feel.ringSeconds,
     outline: width,
     nowMs: frame.nowMs,
   });
@@ -260,7 +254,6 @@ export function syncCollectiblesView(view: CollectiblesView, frame: Collectibles
   syncBursts(view, frame.collectibles.bursts, {
     orbSize: frame.size,
     crateSize: frame.crateSize,
-    refillSize: frame.diveRefill.size,
     outline: width,
     feel,
   });

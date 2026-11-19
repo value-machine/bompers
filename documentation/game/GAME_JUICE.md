@@ -80,7 +80,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Weapon crate appears | — | — (silent: a world timer) | pop-in, back-out 150 ms | — | — | — | — | — |
 | Weapon crate falls / lands (owner pick D2; also after its floor is blasted) | light | `thwap` (cardboard) on landing, at `crouchGain`, unpitched, one per frame | stretch tall up to 0.92 × 1.08 by fall speed (`feel.pickup.fallStretch`); on landing squash wide 1.2 × 0.84 springing back over 150 ms | — | — | — | two dust puffs rolling out, 220 ms | — |
 | Weapon crate taken (owner pick D3) | light | `pickup` (pitched by the collector) | — | — | — | — | ring in the weapon's accent (220 ms) and four crate pieces flying off and falling (450 ms) | — |
-| Headbutt reset taken | light | `pickup` (pitched by the collector) | — | — | — | — | the shared pickup ring in the crystal colour, 220 ms; then a ghost outline until it is back | — |
+| Headbutt reset taken | light | `pickup` (pitched by the collector) | — | — | — | — | ring burst in the crystal colour, 220 ms; then a ghost outline until it is back | — |
 | Headbutt reset returns | — | — (deliberately silent: a world timer every 2.5 s would be noise) | crystal pop-in, back-out 150 ms | — | — | — | — | — |
 | Respawn | light | `respawn` | — | — | — | — | blink 8 Hz + ring | — |
 | Dive launch (fire, or a mid-air jump press: double-jump-bash D1) | light | `dive-launch` | dive pose | — | — | — | — | — |
