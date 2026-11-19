@@ -31,6 +31,7 @@ const BUILT_INS = [
   "bonfire-bridge",
   "crystal-gap",
   "slush-bowl",
+  "tree-grove",
 ].map((id) => ({
   id,
   text: readRepoFile(`public/levels/${id}.html`),
@@ -598,5 +599,100 @@ describe("parseLevelFile — moving-parts test level", () => {
       "slide",
     ]);
     expect(def.movers?.[0]?.sounds).toEqual({ end: "thud" });
+  });
+});
+
+describe("parseLevelFile — level objects", () => {
+  const TREE_GROVE = BUILT_INS.find((b) => b.id === "tree-grove")!.text;
+  const tree = (attrs: string): string =>
+    `<rect data-role="object" data-kind="tree" ${attrs} x="380" y="192" width="104" height="208" />`;
+  const withTree = (attrs: string): string => level(VALID_BODY + tree(attrs));
+
+  it("should build every tree variant into terrain without warnings when the tree grove is imported", () => {
+    const { level: def, warnings } = okLevel(parseLevelFile(TREE_GROVE));
+    expect(warnings).toEqual([]);
+    const variants = new Set(def.objects?.map((o) => o.variant));
+    for (const id of ["oak", "pine", "snowy-pine", "palm", "dead"]) expect(variants).toContain(id);
+    for (const object of def.objects ?? []) {
+      expect(object.terrainIndices.length).toBeGreaterThan(2);
+      const pieces = object.terrainIndices.map((i) => def.terrain[i]!);
+      expect(pieces.every((p) => p.materialId && p.colorId)).toBe(true);
+    }
+  });
+
+  it("should put an object inside a moving group into that part without W13 when it rides a platform", () => {
+    const { level: def, warnings } = okLevel(parseLevelFile(TREE_GROVE));
+    expect(codes(warnings)).not.toContain("W13");
+    const riding = def.objects!.find((o) => o.box.y === 192)!;
+    const mover = def.movers![0]!;
+    for (const i of riding.terrainIndices) expect(mover.terrainIndices).toContain(i);
+  });
+
+  it("should add the tree's pieces after the ground in document order when a tree follows the ground", () => {
+    const { level: def, warnings } = okLevel(parseLevelFile(withTree('data-variant="pine"')));
+    expect(warnings).toEqual([]);
+    const object = def.objects![0]!;
+    expect(object).toMatchObject({ kind: "tree", variant: "pine" });
+    expect(object.terrainIndices[0]).toBe(1);
+    expect(def.terrain).toHaveLength(1 + object.terrainIndices.length);
+    expect(def.terrain.slice(1).some((p) => p.materialId === "cardboard")).toBe(true);
+  });
+
+  it("should build the same tree each import and differ by element when no seed is given", () => {
+    const one = okLevel(parseLevelFile(withTree('data-variant="oak"'))).level.objects![0]!;
+    const again = okLevel(parseLevelFile(withTree('data-variant="oak"'))).level.objects![0]!;
+    const named = okLevel(parseLevelFile(withTree('id="t" data-variant="oak"'))).level.objects![0]!;
+    expect(again.seed).toBe(one.seed);
+    expect(named.seed).not.toBe(one.seed);
+  });
+
+  it("should skip the element with W22 when the kind is unknown or missing", () => {
+    const unknown = okLevel(
+      parseLevelFile(
+        level(
+          VALID_BODY +
+            '<rect data-role="object" data-kind="rock" x="380" y="300" width="100" height="100" />'
+        )
+      )
+    );
+    expect(codes(unknown.warnings)).toEqual(["W22"]);
+    expect(unknown.level.objects).toBeUndefined();
+    expect(unknown.level.terrain).toHaveLength(1);
+    const missing = okLevel(
+      parseLevelFile(
+        level(VALID_BODY + '<rect data-role="object" x="380" y="300" width="100" height="100" />')
+      )
+    );
+    expect(codes(missing.warnings)).toEqual(["W22"]);
+  });
+
+  it("should warn W23 and clamp when the variant is unknown, the box too tall or the seed not a number", () => {
+    // The fallback oak is wider than this pine-shaped box, so the width is clamped too.
+    const variant = okLevel(parseLevelFile(withTree('data-variant="birch"')));
+    expect(codes(variant.warnings)).toEqual(["W23", "W23"]);
+    expect(variant.warnings[0]!.message).toContain('unknown tree variant "birch"');
+    expect(variant.level.objects![0]!.variant).toBe("oak");
+    const tall = okLevel(
+      parseLevelFile(
+        level(
+          VALID_BODY +
+            '<rect data-role="object" data-kind="tree" data-variant="pine" x="380" y="-600" width="300" height="1000" />'
+        )
+      )
+    );
+    expect(codes(tall.warnings)).toEqual(["W23"]);
+    expect(tall.level.objects![0]!.box).toMatchObject({ h: 480, y: -80, w: 300 });
+    const seed = okLevel(parseLevelFile(withTree('data-variant="pine" data-seed="abc"')));
+    expect(codes(seed.warnings)).toEqual(["W23"]);
+  });
+
+  it("should skip a spawn inside a tree with W5 when the spawn sits in its trunk", () => {
+    const body =
+      VALID_BODY +
+      tree('data-variant="pine"') +
+      '<circle data-role="spawn" cx="432" cy="380" r="14" />';
+    const result = okLevel(parseLevelFile(level(body)));
+    expect(codes(result.warnings)).toEqual(["W5"]);
+    expect(result.level.spawns).toHaveLength(4);
   });
 });

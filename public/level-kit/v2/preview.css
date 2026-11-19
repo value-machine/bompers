@@ -27,6 +27,7 @@
   --lk-spawn: #2ed0a0;
   --lk-drop: #ff8a1f;
   --lk-collectible: #ff8fc8;
+  --lk-object: #5f8f3e;
   --lk-dive-reset: #5fe0ff;
   --lk-bounds: #ff4f3a;
   --lk-warn: #a8580a;
@@ -92,6 +93,14 @@ svg[data-level-format] [data-role='terrain'][data-material='ice'] {
   fill: var(--lk-ice);
   stroke: var(--lk-ice-rim);
   stroke-width: 3;
+}
+/* Object: only its box; the game builds the object (a tree …) inside it. */
+svg[data-level-format] [data-role='object'] {
+  fill: var(--lk-object);
+  fill-opacity: 0.45;
+  stroke: var(--lk-terrain-edge);
+  stroke-width: 2;
+  stroke-dasharray: 2 4;
 }
 svg[data-level-format] [data-role='spawn'] {
   fill: var(--lk-spawn);

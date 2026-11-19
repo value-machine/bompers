@@ -91,6 +91,7 @@ Every game-relevant shape carries `data-role`. Elements without it are decoratio
 | `data-role` | Shape | Count | Meaning | Reference attributes |
 |---|---|---|---|---|
 | `terrain` | rect, polygon, circle | ≥ 1 | Solid ground. Its material decides whether explosions clear its cells and how it plays (e.g. ice is slippery). | `data-material` (default `defaults.material`), `data-color` (default: the material's `defaultColor`), `data-effect`, `data-sound`, `data-behavior` |
+| `object` | rect | ≥ 0 | A ready-made object (a tree, …) the game builds inside the rect from catalog materials (level-objects lap 1): it stands on the rect's bottom centre and fills its height; the width is its spread, clamped to the variant's width range (width ÷ height), the height to the kind's range. Its parts are ordinary terrain pieces at the element's place in document order (later shapes paint over earlier ones), so they collide, crater, burn and freeze like terrain; inside a `<g data-motion>` they move with the part. Kinds, variants and ranges come from the object registry in the game code (`src/features/level-objects`), listed in the table below and in `catalog.json` `object`. Thin parts are at least 8 units (two samples at the default `data-cell-size` 4); a coarser cell size can lose twigs. | `data-kind` (required), `data-variant` (optional; omitted = a seeded pick, unknown = the kind's default), `data-seed` (optional whole number; default: hash of the level id and the element's `id`, else its object ordinal) |
 | `spawn` | circle | ≥ 2 (≥ 4 recommended) | Player spawn point. The game picks the one farthest from active opponents (GDD § 6). | `data-behavior` |
 | `drop` | circle | ≥ 1 | Where weapon crates fall from (GDD § 3–4). A spawn point only: which weapon falls is the match's weapons setting (root `data-weapons`, § 3). | `data-behavior` |
 | `collectible` | circle | ≥ 0 | A pickup point. `point-orb` (default): point orbs fall from the sky onto it (GDD § 5). `dive-reset`: a headbutt reset floats there from the start; a player whose dive is spent in the air takes it and gets the dive back, then it is gone 2.5 s (FEEDBACK_ROUND_2 § 2.3). Only items with `use: collectible`. | `data-item` (one item ID; default `defaults.items.collectible`), `data-behavior` |
@@ -132,6 +133,7 @@ At least one `terrain` shape is required.
 | color | `mint` | Mint |  |
 | color | `frost` | Frost | default for ice |
 | color | `rose` | Rose |  |
+| color | `bark` | Bark |  |
 | effect | `none` | No effect |  |
 | effect | `dust-burst` | Dust burst |  |
 | sound | `none` | Silent |  |
@@ -172,6 +174,11 @@ At least one `terrain` shape is required.
 | item | `freeze-ray` | Freeze ray | use: drop |
 | item | `point-orb` | Point orb | use: collectible, default for collectible |
 | item | `dive-reset` | Headbutt reset | use: collectible |
+| object | `tree` / `oak` | Round oak | height 96–480, width 0.6–1.2 × height, default variant |
+| object | `tree` / `pine` | Pine | height 96–480, width 0.35–0.75 × height |
+| object | `tree` / `snowy-pine` | Snowy pine | height 96–480, width 0.35–0.75 × height |
+| object | `tree` / `palm` | Palm | height 96–480, width 0.5–1.1 × height |
+| object | `tree` / `dead` | Dead tree | height 96–480, width 0.5–1.1 × height |
 <!-- level-kit:catalog-ids:end -->
 
 ## 7. Validation
@@ -213,6 +220,8 @@ The importer produces **errors** (level rejected, readable message naming the el
 | W19 | No valid `spawn` point (was E5; one spawn is W6). | Up to 4 spawns, a spawn-lift above the top centre of the widest terrain shapes, inside bounds and out of terrain. |
 | W20 | No valid `drop` point (was E7). | No weapon crates fall on this level. |
 | W21 | A geometry attribute required by its shape is missing, non-numeric, non-positive or uses a unit (was E8; the element is named). | Element ignored (it can still leave too little for E5 / E6). |
+| W22 | An `object` with no `data-kind`, or a kind the game doesn't know. | Element ignored (a misspelled kind never turns into another object). |
+| W23 | An `object` corrected: unknown `data-variant`, height outside the kind's range or width outside the variant's range, `data-seed` not a whole number. | The kind's default variant; the size clamped on the same bottom centre; the default seed. |
 
 The preview kit runs a subset of these checks in the browser and lists them under the legend.
 

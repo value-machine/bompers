@@ -8,6 +8,7 @@ You are writing **one HTML file** that holds **one inline `<svg>`**. The SVG is 
 2. Use only `<rect>`, `<polygon>` and `<circle>` for game shapes. `<g>` is fine for grouping. **No `<path>`, no `transform`** anywhere above a game shape.
 3. Every game shape has `data-role`:
    - `terrain` — ground (rect, polygon, circle). What it does comes from `data-material`, how it looks from `data-color`.
+   - `object` — a ready-made object (rect; optional): `data-kind="tree"` plus optional `data-variant` (`oak`, `pine`, `snowy-pine`, `palm`, `dead`) and `data-seed`. The game builds it inside the rect, standing on the rect's bottom centre and filling its height; it is solid terrain made of catalog materials (leaves burn, trunks crater). Draw it after the ground it stands on. Kinds, variants and size ranges: § Catalog IDs (`object` rows) and `catalog.json`.
    - `spawn` — player start point (circle; the centre counts). **At least 4.**
    - `drop` — weapons fall from here (circle). **At least 1.** Put them high up.
    - `collectible` — a pickup point (circle). Optional. `data-item="point-orb"` (the default): point orbs fall from the sky onto it. `data-item="dive-reset"`: a **headbutt reset** floats there from the start; a player who has spent their headbutt in the air gets it back by flying through it (gone 2.5 s after use). Hang them in the air between platforms and off edges to make headbutt chains and saves. Never on `drop`.
@@ -48,6 +49,7 @@ Link the preview kit in `<head>` (works offline without it):
 | color | `mint` | Mint |  |
 | color | `frost` | Frost | default for ice |
 | color | `rose` | Rose |  |
+| color | `bark` | Bark |  |
 | effect | `none` | No effect |  |
 | effect | `dust-burst` | Dust burst |  |
 | sound | `none` | Silent |  |
@@ -88,6 +90,11 @@ Link the preview kit in `<head>` (works offline without it):
 | item | `freeze-ray` | Freeze ray | use: drop |
 | item | `point-orb` | Point orb | use: collectible, default for collectible |
 | item | `dive-reset` | Headbutt reset | use: collectible |
+| object | `tree` / `oak` | Round oak | height 96–480, width 0.6–1.2 × height, default variant |
+| object | `tree` / `pine` | Pine | height 96–480, width 0.35–0.75 × height |
+| object | `tree` / `snowy-pine` | Snowy pine | height 96–480, width 0.35–0.75 × height |
+| object | `tree` / `palm` | Palm | height 96–480, width 0.5–1.1 × height |
+| object | `tree` / `dead` | Dead tree | height 96–480, width 0.5–1.1 × height |
 <!-- level-kit:catalog-ids:end -->
 
 ## Minimal valid level

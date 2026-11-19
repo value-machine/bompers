@@ -13,6 +13,7 @@
   var DEFAULT_CELL = 4;
   var ROLES = [
     { role: 'terrain', label: 'Terrain', point: false },
+    { role: 'object', label: 'Object (the game builds it in the box)', point: false },
     { role: 'spawn', label: 'Spawn', point: true },
     { role: 'drop', label: 'Drop point', point: true },
     { role: 'collectible', label: 'Collectible', point: true },

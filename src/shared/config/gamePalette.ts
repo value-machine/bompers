@@ -112,6 +112,7 @@ export const GAME_PALETTE = {
     mint: { fill: 0x3aa889, lip: 0x67c7aa, seam: 0x247a62 },
     frost: { fill: 0xa8cfe6, lip: 0xdff1fa, seam: 0x6b97b8 },
     rose: { fill: 0xc95a86, lip: 0xe384a8, seam: 0x8f3a5d },
+    bark: { fill: 0x7a5233, lip: 0x9a6e48, seam: 0x553620 },
   } as Readonly<Record<string, TerrainSwatch>>,
   /** Swatch for a colour ID with no entry (should not happen after normalisation). */
   fallbackSwatch: { fill: 0x5a3f7a, lip: 0x7d5fa6, seam: 0x3e2a56 } as TerrainSwatch,

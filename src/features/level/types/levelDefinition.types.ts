@@ -75,6 +75,24 @@ export interface LevelMover {
   sounds?: { move?: string; end?: string };
 }
 
+/**
+ * A placed object (level-objects D5): a recipe built into terrain pieces at import. The pieces
+ * stay in `LevelDefinition.terrain` (in document order) and `terrainIndices` names them, like a
+ * mover's, so a later lap can lift an object out into its own body (physics) without a format change.
+ */
+export interface LevelObject {
+  /** Recipe kind, e.g. `tree`. */
+  kind: string;
+  /** Recipe variant, e.g. `pine`. */
+  variant: string;
+  /** The box it was built in, after clamping; it stands on the box's bottom centre. */
+  box: Rect;
+  /** The seed its parts were built from. */
+  seed: number;
+  /** Indices into `LevelDefinition.terrain`, ascending. */
+  terrainIndices: readonly number[];
+}
+
 export interface LevelDefinition {
   formatVersion: number;
   meta: LevelMeta;
@@ -88,6 +106,8 @@ export interface LevelDefinition {
   collectibles: readonly LevelCollectible[];
   /** Moving parts; absent or empty = a static level. */
   movers?: readonly LevelMover[];
+  /** Placed objects; absent or empty = none. Their pieces are already in `terrain`. */
+  objects?: readonly LevelObject[];
   /** The in-bounds area; leaving it eliminates a player. */
   bounds: Rect;
 }

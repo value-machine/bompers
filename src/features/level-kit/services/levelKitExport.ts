@@ -5,6 +5,7 @@ import {
   type CatalogEntryByKind,
   type ContentKind,
 } from "@/features/content-catalog/api/contentCatalogApi";
+import { exportObjectCatalog } from "@/features/level-objects/api/levelObjectsApi";
 import { buildLevelPrompt } from "@/features/level-kit/services/levelPrompt";
 import { terrainSwatch, toCssColor } from "@/shared/config/gamePalette";
 
@@ -31,6 +32,8 @@ export function buildKitCatalog(): Record<string, unknown> {
       const swatch = terrainSwatch(entry.id);
       return { ...entry, fill: toCssColor(swatch.fill), lip: toCssColor(swatch.lip) };
     }),
+    // Placed objects (level-objects D5): kinds, variants and size ranges from the object registry.
+    object: exportObjectCatalog(),
   };
 }
 
@@ -73,7 +76,13 @@ export function renderCatalogIdTable(): string {
       (entry) => `| ${kind} | \`${entry.id}\` | ${entry.label} | ${entryNotes(kind, entry)} |`
     );
   });
-  return ["| Kind | ID | Label | Notes |", "|---|---|---|---|", ...rows].join("\n");
+  const objectRows = exportObjectCatalog().flatMap((recipe) =>
+    recipe.variants.map(
+      (v) =>
+        `| object | \`${recipe.kind}\` / \`${v.id}\` | ${v.label} | height ${recipe.height.min}–${recipe.height.max}, width ${v.aspect.min}–${v.aspect.max} × height${v.id === recipe.defaultVariant ? ", default variant" : ""} |`
+    )
+  );
+  return ["| Kind | ID | Label | Notes |", "|---|---|---|---|", ...rows, ...objectRows].join("\n");
 }
 
 const markers = (block: string) => ({
