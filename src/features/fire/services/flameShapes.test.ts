@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { isInJuiceWindow } from "@/shared/config/gameJuice";
 import { DEFAULT_GAME_TUNABLES as GAME_TUNABLES } from "@/shared/config/gameTunables";
+import { weaponTubeBounds, weaponTubeParts } from "@/shared/utils/weaponTube";
 import {
   FLAME_LOOK,
   clusterFlames,
   flameEnvelope,
+  pilotBase,
   releasePuff,
   sprayFlame,
   tonguePoints,
@@ -191,5 +193,24 @@ describe("terrain flames", () => {
     expect(Math.max(...ys)).toBeCloseTo(tongue.y + tongue.width);
     const grown = tonguePoints(tongue, 2).filter((_, i) => i % 2 === 1);
     expect(Math.min(...grown)).toBeLessThan(Math.min(...ys));
+  });
+});
+
+describe("pilot flame", () => {
+  // Mockup unit of a player at the tunables' height (blobShapes' `blobMetrics`: r = h / 2.3, u = r / 30).
+  const u = GAME_TUNABLES.player.height / 2.3 / 30;
+  const rim = weaponTubeBounds(weaponTubeParts("funnel", u).parts).right;
+
+  it("should sit in front of the funnel rim on the spray's aim line when aimed any way", () => {
+    for (const angle of [0, Math.PI / 4, Math.PI / 2, Math.PI, -Math.PI / 3, 2.5]) {
+      const aim = { x: Math.cos(angle), y: Math.sin(angle) };
+      const base = pilotBase(ORIGIN, aim);
+      const dx = base.x - ORIGIN.x;
+      const dy = base.y - ORIGIN.y;
+      const reach = Math.hypot(dx, dy);
+      expect(dx * aim.y - dy * aim.x).toBeCloseTo(0);
+      expect(dx * aim.x + dy * aim.y).toBeGreaterThan(FLAME_LOOK.spray.nozzleReach);
+      expect(reach - FLAME_LOOK.pilot.width).toBeGreaterThan(rim);
+    }
   });
 });

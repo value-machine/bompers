@@ -31,6 +31,17 @@ export const FLAME_LOOK = {
     growSeconds: 0.12,
     releaseSeconds: 0.3,
   },
+  /** The idle flame of a held torch that is not spraying. */
+  pilot: {
+    /**
+     * Units past the spray's nozzle (`spray.nozzleReach`) where the flame's foot sits, so it burns
+     * in front of the funnel and not on top of it: the funnel rim is ≈ 2 beyond the nozzle
+     * (48.5 mockup units at u ≈ 0.41) and the foot is `width` wide on each side.
+     */
+    out: 5,
+    /** Half-width of the tongue and its rounded foot. */
+    width: 2.4,
+  },
   terrain: {
     /** A flame reaches full size this long after its sample catches. */
     catchSeconds: 0.12,
@@ -481,13 +492,22 @@ export function releasePuff(last: { head: Vec2; radius: number }, k: number): Ci
   ];
 }
 
-/** The idle flame on a held torch's nozzle. */
+/**
+ * Foot of the pilot flame: on the same aim line the spray leaves the nozzle on, `pilot.out`
+ * further out, so it turns with the aim and the roll.
+ */
+export function pilotBase(origin: Vec2, aim: Vec2): Vec2 {
+  const reach = FLAME_LOOK.spray.nozzleReach + FLAME_LOOK.pilot.out;
+  return { x: origin.x + aim.x * reach, y: origin.y + aim.y * reach };
+}
+
+/** The idle flame in front of a held torch's nozzle; it licks upward whatever the aim. */
 export function pilotTongue(at: Vec2, flicker: { timeSeconds: number; seed: number }): Tongue {
   const { timeSeconds: t, seed } = flicker;
   return {
     x: at.x,
     y: at.y,
-    width: 2.4,
+    width: FLAME_LOOK.pilot.width,
     height: 6.8 * (0.85 + 0.15 * Math.sin(t * 17 + seed)),
     sway: Math.sin(t * 7 + seed) * 0.9,
   };

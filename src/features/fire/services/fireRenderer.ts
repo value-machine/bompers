@@ -24,6 +24,7 @@ import { burningSamples } from "@/features/fire/services/fireSim";
 import {
   FLAME_LOOK,
   clusterFlames,
+  pilotBase,
   pilotTongue,
   releasePuff,
   sprayFlame,
@@ -447,15 +448,12 @@ function drawReleases(view: FireView, frame: FireFrame, look: { ink: number; on:
   }
 }
 
-/** The idle flame on the nozzle of every held torch that is not spraying. */
+/** The idle flame in front of the nozzle of every held torch that is not spraying. */
 function drawPilots(view: FireView, frame: FireFrame, look: { ink: number; on: Set<number> }) {
   const g = view.sprays;
-  const { nozzleReach } = FLAME_LOOK.spray;
   for (const player of frame.players) {
     if (!frame.torchHolderIds.has(player.id) || look.on.has(player.slot)) continue;
-    const aim = weaponAim(player);
-    const from = helmetPoint(player);
-    const nozzle = { x: from.x + aim.x * nozzleReach, y: from.y + aim.y * nozzleReach };
+    const nozzle = pilotBase(helmetPoint(player), weaponAim(player));
     const flame = pilotTongue(nozzle, { timeSeconds: frame.nowMs / 1000, seed: player.slot });
     g.poly(tonguePoints(flame, look.ink)).fill(INK);
     g.poly(tonguePoints(flame)).fill(COLORS.outer);
