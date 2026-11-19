@@ -2,11 +2,8 @@ import { Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { helmetPoint } from "@/features/combat/api/combatApi";
-import {
-  PANIC_PUPIL_SCALE,
-  type BlobPoseOverlay,
-  type PlayerState,
-} from "@/features/player/api/playerApi";
+import { PANIC_PUPIL_SCALE, type BlobPoseOverlay } from "@/features/blob-look/api/blobLookApi";
+import type { PlayerState } from "@/features/player/api/playerApi";
 import type { BlobFireMoment, BlobFireState } from "@/features/blob-fire/types/blobFire.types";
 
 /**

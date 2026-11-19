@@ -13,13 +13,12 @@ import {
 import {
   createPlayersView,
   PANIC_PUPIL_SCALE,
-  stepPlayers,
   syncPlayersView,
   type BlobPoseOverlay,
   type BlobWeapon,
   type PlayersView,
-  type PlayerState,
-} from "@/features/player/api/playerApi";
+} from "@/features/blob-look/api/blobLookApi";
+import { stepPlayers, type PlayerState } from "@/features/player/api/playerApi";
 import {
   createKnockoutView,
   createKnockoutWorld,

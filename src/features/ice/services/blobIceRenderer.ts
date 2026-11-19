@@ -3,7 +3,8 @@ import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import { inkColor } from "@/shared/utils/debugInk";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
-import type { BlobPoseOverlay, PlayerState } from "@/features/player/api/playerApi";
+import type { BlobPoseOverlay } from "@/features/blob-look/api/blobLookApi";
+import type { PlayerState } from "@/features/player/api/playerApi";
 import { CRACK_HOP_SECONDS } from "@/features/ice/services/frozenBlobs";
 import type { IceBlob, IceBlobMoment, IceState } from "@/features/ice/types/ice.types";
 

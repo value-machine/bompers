@@ -1,5 +1,5 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
-import type { BlobPoseOverlay } from "@/features/player/api/playerApi";
+import type { BlobPoseOverlay } from "@/features/blob-look/api/blobLookApi";
 import type { DiveMotion } from "@/features/dive/types/dive.types";
 import { easeOutBack, easeOutQuad } from "@/shared/utils/easing";
 

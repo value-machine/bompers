@@ -33,7 +33,7 @@ import {
   type SquashTunables,
   barrelPopScale,
   type BarrelPopTunables,
-} from "@/features/player/services/blobPose";
+} from "@/features/blob-look/services/blobPose";
 import {
   blobMetrics,
   FOOT_CENTRE_UNITS,
@@ -52,8 +52,7 @@ import {
   drawTubeInk,
   helmetCentreY,
   type BlobMetrics,
-} from "@/features/player/services/blobShapes";
-import type { PlayerState } from "@/features/player/types/player.types";
+} from "@/features/blob-look/services/blobShapes";
 import {
   crouchEyeY,
   crouchGloss,
@@ -63,8 +62,8 @@ import {
   warmCrouchFit,
   type CrouchSink,
   type CrouchTunables,
-} from "@/features/player/services/crouchPose";
-import { weaponAim } from "@/features/player/services/roll";
+} from "@/features/blob-look/services/crouchPose";
+import { weaponAim, type PlayerState } from "@/features/player/api/playerApi";
 
 /**
  * Player render layer in line style E (DESIGN_LANGUAGE § 2–6, mockup variant E): one blob per

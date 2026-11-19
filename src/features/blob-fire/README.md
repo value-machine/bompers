@@ -10,7 +10,7 @@ Blobs on fire (owner rules blast-power D7, fire-burn D1–D10; split out of `fir
 | -------- | ------------------------------ | ------- |
 | Types    | `types/blobFire.types.ts`      | `BlobFireState` (slice of `GameState`: burning `blobs`, `blobGraceUntil`, recent `blobMoments`, `caughtCounts` / `dousedCounts` for sound), `BurningBlob`, `BlobFireMoment` |
 | Services | `services/burningBlobs.ts`     | `catchFire`, `douseBlob`, `isBurning`, `stepBurningBlobs(blobFire, { fire, terrain, players, contacts, isDiving, now, tunables })` → this step's `BurnDown`s (sim step 3d), `panicInputs(fire, players, inputs)` (the flee, before step 2)                                                                                                    |
-| Services | `services/blobFireRenderer.ts` | `burningBlobPoses` (drawn panic hop + pinprick pupils, the player feature's `PANIC_PUPIL_SCALE`, as player pose overlays) and `drawBlobFire` (helmet flames, sweat, the moment effects)                                                                                                                                                                           |
+| Services | `services/blobFireRenderer.ts` | `burningBlobPoses` (drawn panic hop + pinprick pupils, blob-look's `PANIC_PUPIL_SCALE`, as blob pose overlays) and `drawBlobFire` (helmet flames, sweat, the moment effects)                                                                                                                                                                           |
 | API      | `api/blobFireApi.ts`           | Public seam |
 
 Tests: `services/burningBlobs.test.ts` (catch from burning cardboard and not out of reach, catch from a burning moving part, a chunk at 1 s and at 2 s, the second skipped while crouching, no tick after ice, ice steam, dive blow-off, bump passes and not straight back, leaving play, flee with no input, own input kept, no-op when nothing burns).
@@ -25,7 +25,7 @@ Tests: `services/burningBlobs.test.ts` (catch from burning cardboard and not out
 
 - `fire` via `api/fireApi.ts` (`FireState`, type only).
 - `arena` via `api/arenaApi.ts` (`TerrainGrid`, `EMPTY_CELL`, `bodyGrids`, `terrainBodies`, `bodyWorldPoint`).
-- `combat` via `api/combatApi.ts` (`helmetPoint`), `player` via `api/playerApi.ts` (`PlayerState`, `hurtCenter` (where a blob's fire moments centre: lower while crouched, crouch-sink D4), `BodyContact` (read for who touched whom; its per-blob `aImpulse` / `bImpulse` are unused here), `BlobPoseOverlay`, `PANIC_PUPIL_SCALE`).
+- `combat` via `api/combatApi.ts` (`helmetPoint`), `player` via `api/playerApi.ts` (`PlayerState`, `hurtCenter` (where a blob's fire moments centre: lower while crouched, crouch-sink D4), `BodyContact` (read for who touched whom; its per-blob `aImpulse` / `bImpulse` are unused here), ); `blob-look` via `api/blobLookApi.ts` (`BlobPoseOverlay`, `PANIC_PUPIL_SCALE`).
 - Shared: `gameTunables` (`fire.blob`), `gamePalette.fire`, `gameInput.types`; `pixi.js` in the renderer.
 - Consumed by `match` (state slice, step 3d, the input patch, the torch's reached blobs, one render layer, pose overlays, sound counters).
 

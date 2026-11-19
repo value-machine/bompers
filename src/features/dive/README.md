@@ -29,7 +29,7 @@ The headbutt (GDD § 3 "Ongewapende aanval", the "bomp"): fire (unarmed) or a mi
 ## Dependencies
 
 - `combat` via `api/combatApi.ts` (`applyHit`, `CombatState`); `diveSim.test.ts` steps combat too (`createCombatState()`, `stepCombat` without crates — those moved to `collectibles`).
-- `player` via `api/playerApi.ts` (`PlayerState`, `BodyContact`, `BlobPoseOverlay`, `reactToHit`, `startRoll`, `isRolling`).
+- `player` via `api/playerApi.ts` (`PlayerState`, `BodyContact`, `reactToHit`, `startRoll`, `isRolling`); `blob-look` via `api/blobLookApi.ts` (`BlobPoseOverlay`).
 - Shared: `gameTunables` (`dive` section), `gamePalette`, `gameInput.types`, `gameInputMapping`, `gameGeometry.types`; `pixi.js` in the renderer.
 - Consumed by `match` only.
 

@@ -53,7 +53,7 @@ Loops (idle breathing 1.6 s, respawn blink 8 Hz) are not bound by a window. Owne
 - scales its amount by the impact (speed / full-impact speed), never above the preset;
 - kicks the helmet spring (`feel.helmet`) in the same frame, so body and helmet answer together.
 
-Feet lag the body by two frames and squash flatter (`player` feature, `blobPose.ts`). The eyes never squash: every squash and stretch leaves them their size and shape on the squashed face (owner, squish-eyes; `playerRenderer.ts` `placeEyes`).
+Feet lag the body by two frames and squash flatter (`blob-look` feature, `blobPose.ts`). The eyes never squash: every squash and stretch leaves them their size and shape on the squashed face (owner, squish-eyes; `playerRenderer.ts` `placeEyes`).
 
 ## 5. Sound
 
@@ -127,7 +127,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 
 Rows marked **gap** break § 1 today; the lap that builds the missing channel fills the row.
 
-Where the values live: shake / flash / hit-stop / helmet in `feel` tunables (read by `effects/feelCues.ts`, `camera/cameraShake.ts`, `player/playerRenderer.ts`); squash presets in `player.squash` (`player/blobPose.ts`); pickup timings and poses in `feel.pickup` (`collectibles` renderers); shared easing and spring-back poses in `shared/utils/easing.ts`; effect timings in `effects/effectsRenderer.ts`; HUD pops in `match/hudRenderer.ts`; sound in the `sound` feature.
+Where the values live: shake / flash / hit-stop / helmet in `feel` tunables (read by `effects/feelCues.ts`, `camera/cameraShake.ts`, `blob-look/playerRenderer.ts`); squash presets in `player.squash` (`blob-look/blobPose.ts`); pickup timings and poses in `feel.pickup` (`collectibles` renderers); shared easing and spring-back poses in `shared/utils/easing.ts`; effect timings in `effects/effectsRenderer.ts`; HUD pops in `match/hudRenderer.ts`; sound in the `sound` feature.
 
 ## 7. Checklist for a new game element
 

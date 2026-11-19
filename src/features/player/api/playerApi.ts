@@ -1,4 +1,4 @@
-/** Public seam of the player feature: state shape, controller system, render layer. */
+/** Public seam of the player feature: state shape, controller, body contacts and roll. The blob's look is the blob-look feature. */
 export type { PlayerState } from "@/features/player/types/player.types";
 export {
   createPlayer,
@@ -27,11 +27,3 @@ export {
   type StartRollArgs,
 } from "@/features/player/services/roll";
 export type { RollHoldButton, RollSource } from "@/features/player/types/player.types";
-export { PANIC_PUPIL_SCALE, type BlobPoseOverlay } from "@/features/player/services/blobPose";
-export { drawLooseHelmet, drawLooseTube } from "@/features/player/services/blobShapes";
-export {
-  createPlayersView,
-  syncPlayersView,
-  type BlobWeapon,
-  type PlayersView,
-} from "@/features/player/services/playerRenderer";

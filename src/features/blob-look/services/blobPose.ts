@@ -5,7 +5,7 @@ import {
   stepDampedSpring,
   type DampedSpring,
 } from "@/shared/utils/dampedSpring";
-import type { PlayerState } from "@/features/player/types/player.types";
+import type { PlayerState } from "@/features/player/api/playerApi";
 import { easeOutQuad, springBackPose } from "@/shared/utils/easing";
 import {
   createCrouchClock,
@@ -14,7 +14,7 @@ import {
   type CrouchClock,
   type CrouchSink,
   type CrouchTunables,
-} from "@/features/player/services/crouchPose";
+} from "@/features/blob-look/services/crouchPose";
 
 /**
  * Render-only blob pose (DESIGN_LANGUAGE § 4, § 6): squash / stretch, foot deform and motion,

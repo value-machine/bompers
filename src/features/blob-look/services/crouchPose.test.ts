@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isInJuiceWindow, JUICE_SQUASH } from "@/shared/config/gameJuice";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
-import { blobMetrics, bodyGlossSpot, helmetGlint } from "@/features/player/services/blobShapes";
+import { blobMetrics, bodyGlossSpot, helmetGlint } from "@/features/blob-look/services/blobShapes";
 import {
   createCrouchClock,
   crouchEyeY,
@@ -16,9 +16,8 @@ import {
   outlineArea,
   STANDING_SINK,
   type CrouchClock,
-} from "@/features/player/services/crouchPose";
-import { createPlayer } from "@/features/player/services/playerController";
-import type { PlayerState } from "@/features/player/types/player.types";
+} from "@/features/blob-look/services/crouchPose";
+import { createPlayer, type PlayerState } from "@/features/player/api/playerApi";
 
 const crouch = DEFAULT_GAME_TUNABLES.player.crouch;
 const m = blobMetrics(DEFAULT_GAME_TUNABLES.player.height);

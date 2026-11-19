@@ -32,7 +32,7 @@ Tests: `services/fireBody.test.ts` (each tile fills exactly as one march over al
 
 - `arena` via `api/arenaApi.ts` (`TerrainGrid`, `EMPTY_CELL`, `burnOut`, `ClearedCells`, `bodyGrids`, `terrainBodies`, `bodyWorldPoint`, `createPoseLayer`, `placePoseLayer`).
 - `combat` via `api/combatApi.ts` (`helmetPoint`); combat itself does not import fire (the torch arrives through the `sprayAttack` hook; burn damage is applied by the match).
-- `player` via `api/playerApi.ts` (`PlayerState`, `BodyContact`, `BlobPoseOverlay`).
+- `player` via `api/playerApi.ts` (`PlayerState`, `weaponAim`, `hurtHeight`).
 - Shared: `gameTunables` (`fire`, `fire.blob`, `combat.torch`), `gamePalette.fire`, `gameGeometry.types`, `gameInput.types`; `pixi.js` in the renderer.
 - Consumed by `match` (state slice, step 3c, the hook, two render layers, sound counters) and by `blob-fire` (reads `FireState.grounds` to catch from burning ground).
 
