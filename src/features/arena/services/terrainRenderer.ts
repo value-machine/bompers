@@ -3,7 +3,7 @@ import { terrainSwatch } from "@/shared/config/gamePalette";
 import { DEBUG_INK_ON, inkColor } from "@/shared/utils/debugInk";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelApi";
-import type { MoverBody, TerrainGrid } from "@/features/arena/types/arena.types";
+import { EMPTY_CELL, type MoverBody, type TerrainGrid } from "@/features/arena/types/arena.types";
 import { FIELD_BAND_SAMPLES, takeDirtyChunks } from "@/features/arena/services/terrainGrid";
 import {
   moverPieceIndices,
@@ -12,14 +12,17 @@ import {
 } from "@/features/arena/services/terrainRaster";
 import {
   belowLipRegion,
+  boxesMeet,
   drawContour,
   drawOutline,
   drawSlabDetails,
   outlineRingIssue,
   slotLayerBoxes,
   slotLayerRegion,
+  surfaceTiles,
   terrainContour,
   terrainRings,
+  tileSamples,
   type OutlineRing,
   type SampleBox,
   type SlabPiece,
@@ -42,37 +45,54 @@ import {
  * - **Lips:** each layer is painted in its lip colour first and its fill colour over that
  *   without the lip (`belowLipRegion`), which leaves a lighter band along every edge that faces
  *   up into the air (outline-system D7). Then the ice cues.
- * Rings and fills are rebuilt when the sim changes the terrain (a slot's layer only when the
- * change is near it); an outline step only restrokes the rings it has.
+ * Every body is drawn in surface tiles (`surfaceTiles`, tree-fire-perf): each tile has its own
+ * rings, ink and slot fills, and a change of the terrain redraws only the tiles its dirty chunks
+ * reach, so fires in several places cost their own areas, not the level. An outline step only
+ * restrokes the rings the tiles have.
  */
 export interface TerrainView {
   container: Container;
-  ink: Graphics;
-  /** The static terrain's fill layers (each with its lip) and ice cues. */
-  slabs: SlabLayers;
+  /** The static terrain's ink, fills, lips and ice cues. */
+  surface: BodySurface;
   /** Outline step the ink was drawn at (null before the first draw). */
   inkStep: number | null;
   /** Outline width the ink was drawn at. */
   inkWidth: number;
-  /** The terrain's edge the ink line follows; rebuilt only when the terrain changes. */
-  rings: OutlineRing[];
   /** One view per moving part, in `grid.movers` order, above the static terrain. */
   movers: MoverView[];
 }
 
-/** One body's slab drawing over its ink, in the body's own grid coordinates. */
-interface SlabLayers {
-  layer: Container;
-  /** One fill layer per slot, in paint order, with the box of samples the layer covers. */
-  fills: Map<number, SlotLayer>;
+/** One body's drawing in its own grid coordinates: an ink line under its slab layers. */
+interface BodySurface {
+  /** The tiles' ink lines. */
+  ink: Container;
+  /** The slot layers in paint order, then the ice cues. */
+  slabs: Container;
+  /** One layer per slot, in paint order, with the box of samples the layer covers. */
+  slots: Map<number, SlotLayer>;
+  tiles: SurfaceTile[];
+  /** Ink colour of this body's line. */
+  inkColor: number;
 }
 
 /** A slot's layer: the whole of it in the lip colour, then all but the lip in the fill colour. */
 interface SlotLayer {
-  lip: Graphics;
-  body: Graphics;
+  lips: Container;
+  bodies: Container;
   box: SampleBox;
   swatch: { fill: number; lip: number };
+}
+
+/** One tile of a body's drawing: its piece of the edge, its ink and its piece of each layer. */
+interface SurfaceTile {
+  cells: SampleBox;
+  /** The samples its drawing reads (a change there redraws it). */
+  reads: SampleBox;
+  /** The terrain's edge in this tile; rebuilt only when the tile changes. */
+  rings: OutlineRing[];
+  ink: Graphics;
+  /** Lip and fill per slot, made the first time the slot's layer reaches the tile. */
+  fills: Map<number, { lip: Graphics; body: Graphics }>;
 }
 
 /** A body's pieces in its own grid coordinates (`origin` is where its grid starts). */
@@ -87,48 +107,116 @@ function slabPieces(pieces: readonly TerrainPiece[], origin = { x: 0, y: 0 }): S
   });
 }
 
-function createSlabLayers(grid: TerrainGrid, pieces: SlabPiece[]): SlabLayers {
-  const layer = new Container({ label: "slabs" });
-  const fills: SlabLayers["fills"] = new Map();
+function createBodySurface(
+  grid: TerrainGrid,
+  look: { pieces: SlabPiece[]; inkColor: number }
+): BodySurface {
+  const ink = new Container({ label: "terrain-ink" });
+  const slabs = new Container({ label: "slabs" });
+  const slots: BodySurface["slots"] = new Map();
   for (const [slot, box] of slotLayerBoxes(grid)) {
-    const lip = new Graphics({ label: `slab-lip-${slot}` });
-    const body = new Graphics({ label: `slab-fill-${slot}` });
-    fills.set(slot, { lip, body, box, swatch: terrainSwatch(grid.slots[slot]?.colorId ?? "") });
-    layer.addChild(lip, body);
+    const lips = new Container({ label: `slab-lip-${slot}` });
+    const bodies = new Container({ label: `slab-fill-${slot}` });
+    slots.set(slot, { lips, bodies, box, swatch: terrainSwatch(grid.slots[slot]?.colorId ?? "") });
+    slabs.addChild(lips, bodies);
   }
   const details = new Graphics({ label: "slab-details" });
-  drawSlabDetails(details, pieces);
-  layer.addChild(details);
-  return { layer, fills };
+  drawSlabDetails(details, look.pieces);
+  slabs.addChild(details);
+  const tiles = surfaceTiles(grid).map((cells): SurfaceTile => {
+    const tileInk = new Graphics({ label: "terrain-ink-tile" });
+    ink.addChild(tileInk);
+    return { cells, reads: tileSamples(cells), rings: [], ink: tileInk, fills: new Map() };
+  });
+  return { ink, slabs, slots, tiles, inkColor: look.inkColor };
 }
 
-/** The box of samples the dirty chunks cover, grown by how far a change moves distances. */
-function dirtyBox(grid: TerrainGrid, chunks: readonly number[]): SampleBox {
-  const box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-  const pad = FIELD_BAND_SAMPLES + 1;
-  for (const chunk of chunks) {
+/**
+ * The boxes of samples the dirty chunks cover. Every sample whose slot or distance changed is in
+ * one (`writeSample` marks its own chunk, distance upkeep included), so a tile whose reads miss
+ * them all draws the same as before.
+ */
+function dirtyBoxes(grid: TerrainGrid, chunks: readonly number[]): SampleBox[] {
+  return chunks.map((chunk) => {
     const cx = (chunk % grid.chunksX) * grid.chunkCells;
     const cy = Math.floor(chunk / grid.chunksX) * grid.chunkCells;
-    box.minX = Math.min(box.minX, cx - pad);
-    box.minY = Math.min(box.minY, cy - pad);
-    box.maxX = Math.max(box.maxX, cx + grid.chunkCells - 1 + pad);
-    box.maxY = Math.max(box.maxY, cy + grid.chunkCells - 1 + pad);
-  }
-  return box;
+    return { minX: cx, minY: cy, maxX: cx + grid.chunkCells - 1, maxY: cy + grid.chunkCells - 1 };
+  });
 }
 
-const boxesMeet = (a: SampleBox, b: SampleBox): boolean =>
-  a.minX <= b.maxX && b.minX <= a.maxX && a.minY <= b.maxY && b.minY <= a.maxY;
+/** A tile's piece of one slot's layer, made (in tile order within the layer) when first drawn. */
+function tileFill(slot: SlotLayer, tile: SurfaceTile, slotId: number) {
+  const known = tile.fills.get(slotId);
+  if (known) return known;
+  const made = { lip: new Graphics(), body: new Graphics() };
+  slot.lips.addChild(made.lip);
+  slot.bodies.addChild(made.body);
+  tile.fills.set(slotId, made);
+  return made;
+}
 
-/** Redraws the layers of the slots a change reached (all of them without `changed`). */
-function syncSlabLayers(slabs: SlabLayers, grid: TerrainGrid, changed?: SampleBox): void {
-  for (const [slot, fill] of slabs.fills) {
-    if (changed && !boxesMeet(fill.box, changed)) continue;
-    const region = slotLayerRegion(grid, slot, fill.box);
-    drawContour(fill.lip, terrainContour(grid, { grow: 0, region }), fill.swatch.lip);
-    const body = terrainContour(grid, { grow: 0, region: belowLipRegion(grid, region) });
-    drawContour(fill.body, body, fill.swatch.fill);
+/** The slots of the solid samples a tile reads. */
+function tileSlots(grid: TerrainGrid, reads: SampleBox): Set<number> {
+  const slots = new Set<number>();
+  const minX = Math.max(0, reads.minX);
+  const maxX = Math.min(grid.widthCells - 1, reads.maxX);
+  for (
+    let cy = Math.max(0, reads.minY);
+    cy <= Math.min(grid.heightCells - 1, reads.maxY);
+    cy += 1
+  ) {
+    for (let cx = minX; cx <= maxX; cx += 1) {
+      const slot = grid.cells[cy * grid.widthCells + cx] ?? EMPTY_CELL;
+      if (slot !== EMPTY_CELL) slots.add(slot);
+    }
   }
+  return slots;
+}
+
+/**
+ * Rebuilds one tile: its rings, and its piece of the layer of each slot it holds. A slot with no
+ * sample in the tile is skipped: there its layer (that slot and every later one) is the next
+ * held slot's layer, which is painted over it in full, so the tile looks the same without it.
+ */
+function redrawTile(surface: BodySurface, grid: TerrainGrid, tile: SurfaceTile): void {
+  const { cells } = tile;
+  tile.rings = terrainRings(grid, { grow: 0, cells });
+  const held = tileSlots(grid, tile.reads);
+  for (const [slotId, slot] of surface.slots) {
+    if (!held.has(slotId)) {
+      const gone = tile.fills.get(slotId);
+      gone?.lip.clear();
+      gone?.body.clear();
+      continue;
+    }
+    const region = slotLayerRegion(grid, slotId, slot.box);
+    const fill = tileFill(slot, tile, slotId);
+    drawContour(fill.lip, terrainContour(grid, { grow: 0, region, cells }), slot.swatch.lip);
+    const body = terrainContour(grid, { grow: 0, region: belowLipRegion(grid, region), cells });
+    drawContour(fill.body, body, slot.swatch.fill);
+  }
+}
+
+function strokeTile(tile: SurfaceTile, line: { width: number; color: number }): void {
+  drawOutline(tile.ink, tile.rings, line);
+}
+
+/**
+ * Redraws the tiles a change reached, and restrokes every tile's
+ * ink when the outline width stepped. Returns the tiles it redrew.
+ */
+function syncBodySurface(
+  surface: BodySurface,
+  grid: TerrainGrid,
+  at: { changed: readonly SampleBox[]; width: number; restroke: boolean }
+): SurfaceTile[] {
+  const redrawn = surface.tiles.filter((tile) =>
+    at.changed.some((box) => boxesMeet(box, tile.reads))
+  );
+  for (const tile of redrawn) redrawTile(surface, grid, tile);
+  const line = { width: at.width, color: surface.inkColor };
+  for (const tile of at.restroke ? surface.tiles : redrawn) strokeTile(tile, line);
+  return redrawn;
 }
 
 /**
@@ -140,12 +228,7 @@ function syncSlabLayers(slabs: SlabLayers, grid: TerrainGrid, changed?: SampleBo
  */
 interface MoverView {
   container: Container;
-  ink: Graphics;
-  slabs: SlabLayers;
-  /** The field's `shapeVersion` the rings and slabs were drawn at (-1 before the first draw). */
-  shapeSeen: number;
-  /** The part's edge its ink line follows. */
-  rings: OutlineRing[];
+  surface: BodySurface;
 }
 
 /**
@@ -170,13 +253,16 @@ export function placePoseLayer(layer: Container, mover: MoverBody): void {
 function createMoverView(level: LevelDefinition, mover: MoverBody): MoverView {
   const container = createPoseLayer(mover, "moving-part");
   // A part's field starts at its origin in the rest pose; everything is drawn from the field.
-  const ink = new Graphics({ label: "moving-part-ink" });
-  ink.position.set(mover.origin.x, mover.origin.y);
   const pieces = mover.terrainIndices.flatMap((i) => level.terrain[i] ?? []);
-  const slabs = createSlabLayers(mover.field, slabPieces(pieces, mover.origin));
-  slabs.layer.position.set(mover.origin.x, mover.origin.y);
-  container.addChild(ink, slabs.layer);
-  return { container, ink, slabs, shapeSeen: -1, rings: [] };
+  const surface = createBodySurface(mover.field, {
+    pieces: slabPieces(pieces, mover.origin),
+    inkColor: inkColor("moverOutline"),
+  });
+  for (const layer of [surface.ink, surface.slabs]) {
+    layer.position.set(mover.origin.x, mover.origin.y);
+    container.addChild(layer);
+  }
+  return { container, surface };
 }
 
 export function createTerrainView(arena: {
@@ -184,54 +270,58 @@ export function createTerrainView(arena: {
   level: LevelDefinition;
 }): TerrainView {
   const container = new Container({ label: "terrain" });
-  const ink = new Graphics({ label: "terrain-ink" });
   const moving = moverPieceIndices(arena.level);
   const pieces = arena.level.terrain.filter((_, i) => !moving.has(i));
-  const slabs = createSlabLayers(arena.terrain, slabPieces(pieces));
-  container.addChild(ink, slabs.layer);
+  const surface = createBodySurface(arena.terrain, {
+    pieces: slabPieces(pieces),
+    inkColor: inkColor("terrainOutline"),
+  });
+  container.addChild(surface.ink, surface.slabs);
   const movers = arena.terrain.movers.map((mover) => createMoverView(arena.level, mover));
   for (const mover of movers) container.addChild(mover.container);
-  return { container, ink, slabs, inkStep: null, inkWidth: 0, rings: [], movers };
+  return { container, surface, inkStep: null, inkWidth: 0, movers };
 }
 
-/** Debug ink only: logs the first broken outline ring (terrain-ink-spikes guard). */
-function reportRingIssue(what: string, grid: TerrainGrid, rings: readonly OutlineRing[]): void {
+/** Debug ink only: logs the first broken outline ring of the redrawn tiles (terrain-ink-spikes guard). */
+function reportRingIssue(what: string, grid: TerrainGrid, tiles: readonly SurfaceTile[]): void {
   if (!DEBUG_INK_ON) return;
+  const rings = tiles.flatMap((tile) => tile.rings);
   const issue = outlineRingIssue(grid, rings, FIELD_BAND_SAMPLES * grid.cellSize);
   if (issue) console.warn(`[debugInk] ${what} outline: ${issue}`);
+}
+
+/** Redraws the tiles a body's change reached; restrokes all of its ink on an outline step. */
+function syncBody(
+  what: string,
+  surface: BodySurface,
+  at: { grid: TerrainGrid; width: number; restroke: boolean }
+): void {
+  const dirty = takeDirtyChunks(at.grid);
+  if (dirty.length === 0 && !at.restroke) return;
+  const redrawn = syncBodySurface(surface, at.grid, {
+    changed: dirtyBoxes(at.grid, dirty),
+    width: at.width,
+    restroke: at.restroke,
+  });
+  reportRingIssue(what, at.grid, redrawn);
 }
 
 /** Redraws what the terrain's change or the outline's width step asks for. */
 export function syncTerrainView(view: TerrainView, grid: TerrainGrid, zoom: number): void {
   const outline = outlineWidth("terrain", zoom);
-  const stepChanged = outline.step !== view.inkStep;
-  const dirty = takeDirtyChunks(grid);
-  const terrainChanged = dirty.length > 0;
-  if (terrainChanged) {
-    view.rings = terrainRings(grid, { grow: 0 });
-    reportRingIssue("terrain", grid, view.rings);
-    syncSlabLayers(view.slabs, grid, dirtyBox(grid, dirty));
-  }
-  if (stepChanged || terrainChanged) {
-    view.inkStep = outline.step;
-    view.inkWidth = outline.width;
-    drawOutline(view.ink, view.rings, { width: outline.width, color: inkColor("terrainOutline") });
-  }
+  const restroke = outline.step !== view.inkStep;
+  view.inkStep = outline.step;
+  view.inkWidth = outline.width;
+  syncBody("terrain", view.surface, { grid, width: outline.width, restroke });
   view.movers.forEach((moverView, i) => {
     const mover = grid.movers[i];
     if (!mover) return;
     // A part's field changes when it burns away or is blasted: outline and fills follow.
-    const shapeChanged = mover.field.shapeVersion !== moverView.shapeSeen;
-    if (shapeChanged) {
-      moverView.shapeSeen = mover.field.shapeVersion;
-      moverView.rings = terrainRings(mover.field, { grow: 0 });
-      reportRingIssue("moving part", mover.field, moverView.rings);
-      syncSlabLayers(moverView.slabs, mover.field);
-    }
-    if (stepChanged || shapeChanged) {
-      const line = { width: outline.width, color: inkColor("moverOutline") };
-      drawOutline(moverView.ink, moverView.rings, line);
-    }
+    syncBody("moving part", moverView.surface, {
+      grid: mover.field,
+      width: outline.width,
+      restroke,
+    });
     placePoseLayer(moverView.container, mover);
   });
 }

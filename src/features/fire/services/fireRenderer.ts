@@ -8,19 +8,19 @@ import {
   bodyGrids,
   bodyWorldPoint,
   createPoseLayer,
-  drawContour,
-  drawOutline,
   edgeAbove,
-  markedRegion,
   placePoseLayer,
-  terrainContour,
-  terrainRings,
   type MoverBody,
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
 import { helmetPoint } from "@/features/combat/api/combatApi";
 import { weaponAim, type PlayerState } from "@/features/player/api/playerApi";
 import { burningSamples } from "@/features/fire/services/fireSim";
+import {
+  createFireBodyView,
+  syncFireBody,
+  type FireBodyView,
+} from "@/features/fire/services/fireBody";
 import {
   FLAME_LOOK,
   clusterFlames,
@@ -73,11 +73,7 @@ interface GroundFireView {
   layer: Container;
   scorch: Graphics;
   /** The burning terrain: an ink line, then (above the flames' ink) ember and the hot inside. */
-  bodyInk: Graphics;
-  bodyFill: Graphics;
-  bodyHot: Graphics;
-  /** What the body was drawn from; it is redrawn when this changes. */
-  bodyKey: string;
+  body: FireBodyView;
   flameInk: Graphics;
   flames: Graphics;
   /** Fire `version` the scorch was drawn at. */
@@ -139,26 +135,21 @@ const SPRAY_GAP_SECONDS = 0.1;
 /** One body's layers; a moving part's sit in its rest pose inside a layer that follows its pose. */
 function createGroundView(mover: MoverBody | undefined): GroundFireView {
   const scorch = new Graphics({ label: "fire-scorch" });
-  const bodyInk = new Graphics({ label: "fire-body-ink" });
+  const body = createFireBodyView();
   const flameInk = new Graphics({ label: "fire-flame-ink" });
-  const bodyFill = new Graphics({ label: "fire-body" });
-  const bodyHot = new Graphics({ label: "fire-body-hot" });
   const flames = new Graphics({ label: "fire-flames" });
   const layer = mover
     ? createPoseLayer(mover, "fire-on-part")
     : new Container({ label: "fire-on-terrain" });
   // Both inks under both fills: the body and its flames share one outline.
-  const parts = [scorch, bodyInk, flameInk, bodyFill, bodyHot, flames];
+  const parts = [scorch, body.ink, flameInk, body.fill, body.hot, flames];
   // A part's field starts at its origin in the rest pose.
   if (mover) for (const g of parts) g.position.set(mover.origin.x, mover.origin.y);
   layer.addChild(...parts);
   return {
     layer,
     scorch,
-    bodyInk,
-    bodyFill,
-    bodyHot,
-    bodyKey: "",
+    body,
     flameInk,
     flames,
     scorchVersion: -1,
@@ -270,52 +261,6 @@ function tongues(g: Graphics, list: readonly Tongue[], grow = 0): boolean {
 function circles(g: Graphics, list: readonly Circle[], look: { grow?: number; scale?: number }) {
   for (const c of list) g.circle(c.x, c.y, c.r * (look.scale ?? 1) + (look.grow ?? 0));
   return list.length > 0;
-}
-
-/** Seconds between redraws of the hot inside while a fire burns (it fades as samples age). */
-const HOT_STEP_SECONDS = 0.25;
-
-/**
- * The burning terrain's body (element-overlay-shape D1): the terrain's contour limited to the
- * burning samples: an ink line along its edge (stroked at twice the outline width, the ember
- * fill hides the inner half), the ember fill, and the fresh samples' inside in amber. Redrawn only when the fire, the terrain or the outline width changes, and a few times a
- * second for the hot inside.
- */
-function drawBody(draw: GroundDraw, ink: number): void {
-  const { view, fire, terrain, frame } = draw;
-  const hotStep = Math.floor(frame.timeSeconds / HOT_STEP_SECONDS);
-  const key = `${fire.version}:${terrain.shapeVersion}:${ink}:${hotStep}`;
-  if (key === view.bodyKey) return;
-  view.bodyKey = key;
-  const burning = burningSamples(fire);
-  const region = markedRegion(terrain, burning);
-  if (!region) {
-    for (const g of [view.bodyInk, view.bodyFill, view.bodyHot]) g.clear();
-    return;
-  }
-  // The ink is a line along the body's edge (outline-system D1), never a shape under the fill.
-  drawOutline(view.bodyInk, terrainRings(terrain, { grow: 0, region }), {
-    width: ink,
-    color: BODY_INK,
-  });
-  drawContour(view.bodyFill, terrainContour(terrain, { grow: 0, region }), COLORS.outer);
-  drawHot(draw, burning);
-}
-
-/** The amber inside of the samples that caught not long ago, in from the body's edge. */
-function drawHot({ view, fire, terrain, frame }: GroundDraw, burning: readonly number[]): void {
-  const { hotUntil, hotInset } = FLAME_LOOK.cluster;
-  const freshFor = hotUntil * frame.burnSeconds;
-  const region = markedRegion(
-    terrain,
-    burning.filter((index) => frame.timeSeconds - (fire.igniteAt[index] ?? 0) < freshFor)
-  );
-  if (!region) {
-    view.bodyHot.clear();
-    return;
-  }
-  const grow = -hotInset * terrain.cellSize * 2;
-  drawContour(view.bodyHot, terrainContour(terrain, { grow, region }), COLORS.mid);
 }
 
 /**
@@ -471,7 +416,14 @@ export function syncFireView(view: FireView, frame: FireFrame): void {
     const mover = frame.terrain.movers[body - 1];
     if (mover) placePoseLayer(draw.view.layer, mover);
     if (draw.view.scorchVersion !== fire.version) drawScorch(draw);
-    drawBody(draw, ink);
+    syncFireBody(draw.view.body, {
+      fire,
+      terrain,
+      timeSeconds: frame.timeSeconds,
+      burnSeconds: frame.burnSeconds,
+      ink,
+      inkColor: BODY_INK,
+    });
     drawFlames(draw, ink);
     trackBurnOuts(view.puffs, draw, body);
   });
