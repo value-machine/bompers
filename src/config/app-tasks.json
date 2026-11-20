@@ -1,5 +1,30 @@
 [
   {
+    "title": "Buff the freeze ray",
+    "description": "Owner: the ice beam needs to be more effective. First an options page with different additions that make it stronger (owner picks), then build. In progress (thread: ice-beam-buff).",
+    "status": "in-progress"
+  },
+  {
+    "title": "Dash: easier to aim, always registers, cooldown feedback",
+    "description": "Owner: the bash/dive attack is so hard to aim that players almost never land it; sometimes the input does not register. A blob with its feet on the ground must always be able to dash. Pressing it on cooldown must give a juice notice (visual + sound) that the press was seen but cannot be used yet. In progress (thread: dash-feel).",
+    "status": "in-progress"
+  },
+  {
+    "title": "Never stuck in geometry + respawn button",
+    "description": "Owner: players got stuck inside a moving platform after it pushed them against something; this must never happen. Plus a self-eliminate/respawn button as a fallback. In progress (thread: unstuck).",
+    "status": "in-progress"
+  },
+  {
+    "title": "Level themes: backgrounds (lighting later)",
+    "description": "Owner: new level backgrounds, chosen by setting a theme in the level file; the background changes with it. Lighting per theme maybe later. Options page first. In progress (thread: level-themes).",
+    "status": "in-progress"
+  },
+  {
+    "title": "Positional gravity and multi-planet levels",
+    "description": "Owner: gravity that can be shifted and pointed at certain points (gravity wells), so a level can have several planets you jump between. Level-file syntax for gravity sources, player movement/jump/ground frame relative to local gravity, projectiles and debris under it, prompt + example level. Size M-L, cut into laps. Later.",
+    "status": "to-do"
+  },
+  {
     "title": "Show the saved mute state on screen",
     "description": "The M key mutes all audio and the mute is saved in localStorage, but nothing on screen shows it. Likely cause of the owner's \"audio broke on production\" scare (fixed by clearing site data; preview origins had no saved mute). Show a visible muted indicator (lobby + match) and an easy way to unmute; consider not persisting mute, or persisting with the indicator. Size XS/S.",
     "status": "to-do"
