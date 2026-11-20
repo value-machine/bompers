@@ -430,6 +430,31 @@ describe("parseLevelFile — weapons setting", () => {
   });
 });
 
+describe("parseLevelFile — theme setting", () => {
+  const themeOf = (attr: string) =>
+    warn(VALID_BODY, `data-level-format="2" data-title="T" ${attr}`);
+
+  it("should leave the theme unset when data-theme is missing", () => {
+    const result = themeOf("");
+    expect(result.warnings).toEqual([]);
+    expect(result.level.settings).not.toHaveProperty("themeId");
+  });
+
+  it("should read a known theme when data-theme names one", () => {
+    const result = themeOf('data-theme=" night-sky "');
+    expect(result.warnings).toEqual([]);
+    expect(result.level.settings.themeId).toBe("night-sky");
+  });
+
+  it("should fall back to the default theme with W24 when data-theme is unknown", () => {
+    const result = themeOf('data-theme="lava"');
+    expect(result.level.settings).not.toHaveProperty("themeId");
+    expect(result.warnings).toEqual([
+      { code: "W24", message: 'data-theme "lava" is not a theme; using "meadow".' },
+    ]);
+  });
+});
+
 describe("parseLevelFile — placement, ids and settings warnings", () => {
   it("should ignore points outside bounds or spawns inside terrain with W5", () => {
     const result = warn(

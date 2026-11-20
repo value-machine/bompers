@@ -1,4 +1,4 @@
-/** Public seam of the backdrop feature: the screen-space sky, sun, hills and clouds. */
+/** Public seam of the backdrop feature: the themed screen-space sky, bands and particles. */
 export {
   createBackdropView,
   syncBackdropView,

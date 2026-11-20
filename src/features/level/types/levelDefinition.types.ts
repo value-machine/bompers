@@ -45,6 +45,11 @@ export interface LevelSettings {
    * lobby's choice (level-direction D6). Wins over the lobby, like `matchDurationS`.
    */
   weaponIds?: readonly string[];
+  /**
+   * Backdrop theme ID (`data-theme`, level-themes D1): sky, silhouettes and ambient particles.
+   * Unset = the default theme (the sunny meadow).
+   */
+  themeId?: string;
 }
 
 /** A spawn point for sky crates; which weapon falls is the match's weapons setting. */

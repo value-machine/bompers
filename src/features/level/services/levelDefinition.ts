@@ -1,5 +1,6 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { isWeaponItemId } from "@/shared/config/weaponItems";
+import { isBackdropThemeId } from "@/features/backdrop-themes/api/backdropThemesApi";
 import {
   CATALOG_DEFAULTS,
   LEVEL_FORMAT_VERSION,
@@ -80,12 +81,21 @@ function normalizeSettings(settings: Partial<LevelSettings>, warnings: Warnings)
     warnings
   );
   const weaponIds = normalizeWeaponIds(settings.weaponIds, warnings);
+  const themeId = normalizeThemeId(settings.themeId, warnings);
   return {
     cellSize,
     gravity,
     ...(matchDurationS !== undefined && { matchDurationS }),
     ...(weaponIds !== undefined && { weaponIds }),
+    ...(themeId !== undefined && { themeId }),
   };
+}
+
+/** An unknown theme is dropped, so the default theme applies. */
+function normalizeThemeId(themeId: string | undefined, warnings: Warnings): string | undefined {
+  if (themeId === undefined || isBackdropThemeId(themeId)) return themeId;
+  warnings.push(`settings.themeId: "${themeId}" is not a theme, using the default`);
+  return undefined;
 }
 
 /**

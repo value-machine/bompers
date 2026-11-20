@@ -6,6 +6,7 @@ import {
   type ContentKind,
 } from "@/features/content-catalog/api/contentCatalogApi";
 import { exportObjectCatalog } from "@/features/level-objects/api/levelObjectsApi";
+import { exportBackdropThemes } from "@/features/backdrop-themes/api/backdropThemesApi";
 import { buildLevelPrompt } from "@/features/level-kit/services/levelPrompt";
 import { terrainSwatch, toCssColor } from "@/shared/config/gamePalette";
 
@@ -34,6 +35,8 @@ export function buildKitCatalog(): Record<string, unknown> {
     }),
     // Placed objects (level-objects D5): kinds, variants and size ranges from the object registry.
     object: exportObjectCatalog(),
+    // Backdrop themes (level-themes D1): IDs for `data-theme`, with the sky the preview paints.
+    theme: exportBackdropThemes(),
   };
 }
 
@@ -82,7 +85,16 @@ export function renderCatalogIdTable(): string {
         `| object | \`${recipe.kind}\` / \`${v.id}\` | ${v.label} | height ${recipe.height.min}–${recipe.height.max}, width ${v.aspect.min}–${v.aspect.max} × height${v.id === recipe.defaultVariant ? ", default variant" : ""} |`
     )
   );
-  return ["| Kind | ID | Label | Notes |", "|---|---|---|---|", ...rows, ...objectRows].join("\n");
+  const themeRows = exportBackdropThemes().map(
+    (theme) => `| theme | \`${theme.id}\` | ${theme.label} | ${theme.description} |`
+  );
+  return [
+    "| Kind | ID | Label | Notes |",
+    "|---|---|---|---|",
+    ...rows,
+    ...objectRows,
+    ...themeRows,
+  ].join("\n");
 }
 
 const markers = (block: string) => ({
