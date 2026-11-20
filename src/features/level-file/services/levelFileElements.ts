@@ -42,11 +42,46 @@ function nameOf(el: Element, role: string, ordinal: number): string {
   return ref ? `${role} "${ref}"` : `${role} #${ordinal}`;
 }
 
-function hasTransform(el: Element, root: Element): boolean {
+function hasTransform(el: Element | null, root: Element): boolean {
   for (let node: Element | null = el; node && node !== root; node = node.parentElement) {
     if (node.hasAttribute("transform")) return true;
   }
   return false;
+}
+
+const NUMBER = "[-+]?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][-+]?\\d+)?";
+const ROTATE_RE = new RegExp(
+  `^\\s*rotate\\(\\s*(${NUMBER})(?:(?:\\s*,\\s*|\\s+)(${NUMBER})(?:\\s*,\\s*|\\s+)(${NUMBER}))?\\s*\\)\\s*$`
+);
+
+/** A turn an object may carry (level-orbit D1): SVG `rotate(a)` about the origin or `rotate(a cx cy)`. */
+export interface ObjectTurn {
+  degrees: number;
+  about: { x: number; y: number };
+}
+
+/**
+ * An object rect's own `transform`: undefined when it has none, the turn when it is a single
+ * SVG `rotate(…)`, null for any other transform (W3). SVG semantics, so the preview matches.
+ */
+export function readObjectTurn(el: Element): ObjectTurn | null | undefined {
+  const raw = el.getAttribute("transform");
+  if (raw === null) return undefined;
+  const m = ROTATE_RE.exec(raw);
+  if (!m) return null;
+  return { degrees: Number(m[1]), about: { x: Number(m[2] ?? 0), y: Number(m[3] ?? 0) } };
+}
+
+/** `{ rotation }` when the element carries a valid object turn, else nothing (for spreading). */
+function turnField(el: Element): { rotation?: ObjectTurn } {
+  const rotation = readObjectTurn(el);
+  return rotation ? { rotation } : {};
+}
+
+/** W3 unless the only transform is an object's own `rotate(…)` (level-orbit D1). */
+function transformNotAllowed(item: RoleElement, root: Element): boolean {
+  if (item.role !== "object") return hasTransform(item.el, root);
+  return hasTransform(item.el.parentElement, root) || readObjectTurn(item.el) === null;
 }
 
 /** W2 / W3: false when the element is skipped. */
@@ -58,11 +93,13 @@ function passesStructure(item: RoleElement, root: Element, log: LevelIssueLog): 
     addWarning(log, "W2", `${item.name} is a <${tag}>; ${item.role} must be ${allowed}. Ignored.`);
     return false;
   }
-  if (hasTransform(item.el, root)) {
+  if (transformNotAllowed(item, root)) {
+    const objectNote =
+      item.role === "object" ? " (an object may only carry its own rotate(a cx cy))" : "";
     addWarning(
       log,
       "W3",
-      `${item.name} has a transform (on itself or a parent group); transforms are not allowed. Ignored.`
+      `${item.name} has a transform (on itself or a parent group); transforms are not allowed${objectNote}. Ignored.`
     );
     return false;
   }
@@ -232,6 +269,7 @@ export interface ObjectRequestFields {
   kind: string;
   variant?: string;
   seed: number;
+  rotation?: ObjectTurn;
 }
 
 const WHOLE_NUMBER_RE = /^-?\d+$/;
@@ -267,5 +305,5 @@ export function readObjectRequest(
         `${item.name}: data-seed="${rawSeed}" is not a whole number; using the default seed.`
       );
   }
-  return { kind, ...(variant ? { variant } : {}), seed };
+  return { kind, ...(variant ? { variant } : {}), seed, ...turnField(item.el) };
 }

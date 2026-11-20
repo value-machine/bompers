@@ -70,6 +70,14 @@
     return false;
   }
 
+  /** An object rect may carry its own rotate(a [cx cy]); every other transform is not allowed (spec § 5, W3). */
+  var ROTATE_RE = /^\s*rotate\(\s*[-+]?[\d.]+(?:[eE][-+]?\d+)?(?:(?:\s*,\s*|\s+)[-+]?[\d.]+(?:[eE][-+]?\d+)?(?:\s*,\s*|\s+)[-+]?[\d.]+(?:[eE][-+]?\d+)?)?\s*\)\s*$/;
+  function transformNotAllowed(node, role, root) {
+    if (role !== 'object') return hasTransform(node, root);
+    var own = node.getAttribute('transform');
+    return hasTransform(node.parentNode, root) || (own != null && !ROTATE_RE.test(own));
+  }
+
   function validate(root, nodes, catalog) {
     var issues = [];
     var vb = (root.getAttribute('viewBox') || '').trim().split(/[\s,]+/).map(Number);
@@ -95,7 +103,7 @@
       var isPoint = ROLES.some(function (r) { return r.role === role && r.point; });
       if (isPoint && tag !== 'circle') issues.push(role + ' must be a <circle>.');
       if (role === 'bounds' && tag !== 'rect') issues.push('bounds must be a <rect>.');
-      if (hasTransform(n, root)) issues.push(role + (n.id ? ' #' + n.id : '') + ' has a transform; transforms are not allowed.');
+      if (transformNotAllowed(n, role, root)) issues.push(role + (n.id ? ' #' + n.id : '') + ' has a transform; transforms are not allowed (an object may carry only its own rotate(a cx cy)).');
       if (n.id) {
         if (ids[n.id]) issues.push('Duplicate id "' + n.id + '".');
         ids[n.id] = true;

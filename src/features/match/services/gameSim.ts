@@ -221,8 +221,9 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
   };
 }
 
+/** A joining player's spawn: its slot among the spawns no moving part covers now (level-orbit D4). */
 const spawnPointFor = (state: GameState, slot: number): Vec2 => {
-  const points = state.arena.level.spawns;
+  const points = openSpawns(state);
   return points[slot % points.length] ?? { x: 0, y: 0 };
 };
 
@@ -349,7 +350,8 @@ function joinAndRideParts(state: GameState, inputs: PlayerInputs, dt: number): P
 
 /**
  * Spawns no moving part covers right now (moving-parts D15): a body there would be pushed or
- * pinned at once. All spawns when every one is covered (the choice must not fail).
+ * pinned at once. Used for respawns and, since level-orbit D4, for joining players too. All
+ * spawns when every one is covered (the choice must not fail).
  */
 function openSpawns(state: GameState): readonly Vec2[] {
   const { level, terrain } = state.arena;

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import type { Shape2D } from "@/shared/types/gameGeometry.types";
 import {
   buildTerrainFromLevel,
   clearCrater,
@@ -15,6 +16,7 @@ import {
   parseLevelFile,
   type LevelImportResult,
 } from "@/features/level-file/services/levelFileParser";
+import { objectFooting } from "@/features/level-objects/api/levelObjectsApi";
 import type { LevelIssue } from "@/features/level-file/types/levelFile.types";
 
 // Ground truth: the kit files shipped with the format spec (documentation/game/LEVEL_FORMAT.md).
@@ -23,6 +25,7 @@ const EXAMPLE = readRepoFile("public/level-kit/v2/example-level.html");
 const FIRE_TEST = readRepoFile("public/level-kit/v2/fire-test-level.html");
 const CRUSHER_TEST = readRepoFile("public/level-kit/v2/crusher-test-level.html");
 const FORGIVING_TEST = readRepoFile("public/level-kit/v2/forgiving-test-level.html");
+const ORBIT_TEST = readRepoFile("public/level-kit/v2/orbit-test-level.html");
 const BUILT_INS = [
   "start-arena",
   "floating-garden",
@@ -694,5 +697,78 @@ describe("parseLevelFile — level objects", () => {
     const result = okLevel(parseLevelFile(level(body)));
     expect(codes(result.warnings)).toEqual(["W5"]);
     expect(result.level.spawns).toHaveLength(4);
+  });
+});
+
+// Ground truth: the owner's planet repro (level-orbit lap): trees on a spinning planet, upright.
+describe("parseLevelFile — turned objects on a spinning planet (level-orbit)", () => {
+  const PLANET = { x: 400, y: 320, r: 160 };
+  const planet = (trees: string): string =>
+    level(`<rect data-role="bounds" x="0" y="0" width="800" height="600" />
+      <g data-motion="spin 20s center">
+        <circle data-role="terrain" cx="${PLANET.x}" cy="${PLANET.y}" r="${PLANET.r}" />
+        ${trees}
+      </g>
+      ${[300, 380, 420, 500].map((x) => `<circle data-role="spawn" cx="${x}" cy="20" r="14" />`).join("")}
+      <circle data-role="drop" cx="400" cy="40" r="12" />`);
+  /** An upright pine standing on the planet top, turned `deg` about the planet centre. */
+  const treeOnTop = (deg: number): string =>
+    `<rect data-role="object" data-kind="tree" data-variant="pine" x="376" y="64" width="48" height="96" transform="rotate(${deg} ${PLANET.x} ${PLANET.y})" />`;
+  const xsOf = (def: { terrain: readonly { shape: Shape2D }[] }, indices: readonly number[]) =>
+    indices.flatMap((i) => {
+      const shape = def.terrain[i]!.shape;
+      if (shape.type === "circle") return [shape.cx];
+      return shape.type === "polygon" ? shape.points.map((p) => p.x) : [];
+    });
+
+  it("should import the orbit test level with no warnings, spinning about the planet with trees facing outward", () => {
+    const { level: def, warnings } = okLevel(parseLevelFile(ORBIT_TEST));
+    expect(warnings).toEqual([]);
+    expect(def.movers?.[0]?.pivot).toEqual({ x: 900, y: 680 });
+    expect(def.objects).toHaveLength(5);
+    for (const object of def.objects ?? []) {
+      const { base, up } = objectFooting(object);
+      const out = { x: base.x - 900, y: base.y - 680 };
+      const dist = Math.hypot(out.x, out.y);
+      expect(Math.abs(dist - 340)).toBeLessThan(12);
+      expect((up.x * out.x + up.y * out.y) / dist).toBeGreaterThan(0.99);
+    }
+  });
+
+  it("should turn an object's parts about the rotate point when the rect carries rotate(a cx cy)", () => {
+    const { level: def, warnings } = okLevel(parseLevelFile(planet(treeOnTop(90))));
+    expect(warnings).toEqual([]);
+    const object = def.objects![0]!;
+    expect(object.rotation).toEqual({ degrees: 90, about: { x: 400, y: 320 } });
+    // A quarter turn clockwise: the tree stands on the planet's right side, pointing right.
+    expect(Math.min(...xsOf(def, object.terrainIndices))).toBeGreaterThan(PLANET.x + PLANET.r - 12);
+  });
+
+  it("should spin about the planet's own centre when trees stand on one side of it", () => {
+    const { level: def } = okLevel(parseLevelFile(planet(treeOnTop(0))));
+    expect(def.movers?.[0]?.pivot).toEqual({ x: 400, y: 320 });
+  });
+
+  it("should warn W24 with the fitting rotate when an upright tree stands on the planet's side", () => {
+    const side =
+      '<rect data-role="object" data-kind="tree" data-variant="snowy-pine" x="216" y="224" width="48" height="96" />';
+    const { warnings } = okLevel(parseLevelFile(planet(side)));
+    expect(codes(warnings)).toEqual(["W24"]);
+    expect(warnings[0]!.message).toMatch(/leans 90° .*rotate\(-90 240 320\)/);
+  });
+
+  it("should warn W24 when an object's base floats off the ground", () => {
+    const floating =
+      '<rect data-role="object" data-kind="tree" data-variant="pine" x="376" y="0" width="48" height="96" />';
+    const { warnings } = okLevel(parseLevelFile(planet(floating)));
+    expect(warnings[0]).toMatchObject({ code: "W24" });
+    expect(warnings[0]!.message).toMatch(/64 units off the ground/);
+  });
+
+  it("should still warn W3 when an object has another transform or sits in a transformed group", () => {
+    const scaled = treeOnTop(0).replace(/transform="[^"]*"/, 'transform="scale(2)"');
+    expect(codes(okLevel(parseLevelFile(planet(scaled))).warnings)).toContain("W3");
+    const grouped = `<g transform="translate(0 0)">${treeOnTop(0)}</g>`;
+    expect(codes(okLevel(parseLevelFile(planet(grouped))).warnings)).toContain("W3");
   });
 });

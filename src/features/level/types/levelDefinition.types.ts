@@ -89,6 +89,8 @@ export interface LevelObject {
   box: Rect;
   /** The seed its parts were built from. */
   seed: number;
+  /** Turn of the whole object about a world point (SVG `rotate`), when not upright. */
+  rotation?: { degrees: number; about: Vec2 };
   /** Indices into `LevelDefinition.terrain`, ascending. */
   terrainIndices: readonly number[];
 }

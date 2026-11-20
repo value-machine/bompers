@@ -8,11 +8,12 @@ Ready-made objects a level places by kind and box (`<rect data-role="object" dat
 
 | Layer    | Path                              | Purpose |
 | -------- | --------------------------------- | ------- |
-| Types    | `types/levelObject.types.ts`      | `ObjectPart` (shape + material + colour + part role), `ObjectVariant` (id, label, aspect range, `madeOf` line, `build(box, random)`), `ObjectRecipe` (kind, label, height range, default variant, variants), `ObjectPlacementRequest`, `ObjectPlacement`, `ExportedObjectRecipe` |
-| Services | `services/objectParts.ts`         | Part builders in a recipe's local frame (origin = base, y up negative): `circlePart`, `polygonPart`, `limbPart` (tapered bar), `toBox` (to world), `insideLocalBox`; `MIN_PART_THICKNESS` = 8 (two samples, D9) |
+| Types    | `types/levelObject.types.ts`      | `ObjectPart` (shape + material + colour + part role), `ObjectVariant` (id, label, aspect range, `madeOf` line, `build(box, random)`), `ObjectRecipe` (kind, label, height range, default variant, variants), `ObjectRotation` (degrees + world point, level-orbit D1), `ObjectPlacementRequest` (optional `rotation`), `ObjectPlacement` (optional `rotation`), `ObjectFootingIssue`, `ExportedObjectRecipe` |
+| Services | `services/objectParts.ts`         | Part builders in a recipe's local frame (origin = base, y up negative): `circlePart`, `polygonPart`, `limbPart` (tapered bar), `toBox` (to world), `rotateParts` (turn placed parts about a world point; a rect part becomes a polygon), `insideLocalBox`; `MIN_PART_THICKNESS` = 8 (two samples, D9) |
 | Services | `services/treeRecipe.ts`          | `TREE_RECIPE`: variants `oak`, `pine`, `snowy-pine`, `palm`, `dead` (owner picks D1, D4; options page "Level Tree Options"); height 96–480 (D11) |
 | Services | `services/objectRegistry.ts`      | `OBJECT_RECIPES`, `findObjectRecipe` (own keys only), `findObjectVariant`, `exportObjectCatalog()` |
-| Services | `services/objectPlacement.ts`     | `placeObject(request)`: unknown kind → `{ ok: false }`; variant asked / default when unknown / seeded pick when omitted; height clamped to the kind, width to the variant's aspect, on the same bottom centre; parts built from `seededRandom(seed)`; `notes` = each correction |
+| Services | `services/objectPlacement.ts`     | `placeObject(request)`: unknown kind → `{ ok: false }`; variant asked / default when unknown / seeded pick when omitted; height clamped to the kind, width to the variant's aspect, on the same bottom centre; parts built from `seededRandom(seed)`, then turned as a whole by `rotation` (none for a whole turn); `notes` = each correction |
+| Services | `services/objectFooting.ts` | `objectFooting({ box, rotation })` = base point and up direction (turned); `footingIssue(object, shapes)`: base more than 12 units off / inside the shapes, or leaning more than 30° from the surface's outward direction, with the fitting SVG rotate degrees (level-orbit D3; the importer warns W24) |
 | API      | `api/levelObjectsApi.ts`          | Public seam |
 
 Seams for later work:
@@ -33,3 +34,4 @@ Seams for later work:
 - Default seed: FNV-1a of `<level id>#id:<element id>` (else `<level id>#<object ordinal>`) (D8); `data-seed` overrides.
 - The thinnest part is 8 units, two samples at the default cell size (D9); a coarser `data-cell-size` can lose twigs.
 - No new juice moment: trees use their materials' terrain moments (D10).
+- **Turned objects (level-orbit D1, agent pick):** an object turns only as a whole, by the SVG `rotate(a cx cy)` its rect carries: standard SVG, so the preview draws exactly what the game builds, and an AI author can repeat one upright rect on a planet's top and change only the angle. Picked over `data-orient="surface"` (auto-aligning to the ground) because that would be invisible in the preview; the importer's W24 footing check gives the fitting angle instead. Turning changes no class rule: a turned tree is still terrain that never moves except with its moving part.

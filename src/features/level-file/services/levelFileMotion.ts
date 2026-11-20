@@ -217,6 +217,16 @@ function warnContents(
   }
 }
 
+/**
+ * The pieces a named pivot is measured on: the part's own terrain shapes, not the objects riding
+ * it, so a planet ringed with trees spins about the planet (level-orbit D2). All pieces when the
+ * part is only objects.
+ */
+function pivotPieces(indices: readonly number[], ctx: MoverContext): readonly number[] {
+  const shapes = indices.filter((i) => ctx.terrainEls[i]?.getAttribute("data-role") !== "object");
+  return shapes.length > 0 ? shapes : indices;
+}
+
 function readMover(group: Element, name: string, ctx: MoverContext): LevelMover | null {
   const parsed = parseMotionSpec(group.getAttribute("data-motion") ?? "", ctx.cellSize);
   if (!parsed.ok) {
@@ -230,7 +240,7 @@ function readMover(group: Element, name: string, ctx: MoverContext): LevelMover 
     addWarning(ctx.log, "W12", `${name} holds no terrain shape; ignored.`);
     return null;
   }
-  const box = piecesBounds(terrainIndices.map((i) => ctx.terrain[i]!));
+  const box = piecesBounds(pivotPieces(terrainIndices, ctx).map((i) => ctx.terrain[i]!));
   const sounds = readPartSounds(group, name, ctx.log);
   return {
     motion: parsed.motion,
@@ -326,12 +336,11 @@ interface PartGeometry {
   outline: Vec2[];
 }
 
-type SweepProblem = "bounds" | "terrain" | "spawn";
+type SweepProblem = "bounds" | "terrain";
 
 const SWEEP_MESSAGES: Record<SweepProblem, string> = {
   bounds: "leaves the bounds",
   terrain: "runs into static terrain",
-  spawn: "sweeps over a spawn point",
 };
 
 const insideRect = (r: Rect, p: Vec2): boolean =>
@@ -364,11 +373,47 @@ function problemsAt(check: PoseCheck): SweepProblem[] {
       deepInside(part.shapes, unposePoint(pose, pivot, p), OVERLAP_DEPTH)
     );
   if (hitsStatic) problems.push("terrain");
-  const coversSpawn = ctx.spawns.some((s) =>
-    deepInside(part.shapes, unposePoint(pose, pivot, s), -MOTION_LIMITS.spawnClearance)
-  );
-  if (coversSpawn) problems.push("spawn");
   return problems;
+}
+
+/** Indices of the spawns the part covers in this pose (closer than the spawn clearance). */
+const spawnsCoveredAt = (check: PoseCheck): number[] =>
+  check.ctx.spawns.flatMap((s, i) =>
+    deepInside(
+      check.part.shapes,
+      unposePoint(check.pose, check.pivot, s),
+      -MOTION_LIMITS.spawnClearance
+    )
+      ? [i]
+      : []
+  );
+
+/**
+ * One W14 per covered spawn, saying what the game does and how to fix it (level-orbit D5): the
+ * game skips a covered spawn when it places a player, but a player standing there is pushed.
+ * A turning part names its reach, so spawns can go beyond it.
+ */
+function warnSpawns(
+  sweep: { named: NamedMover; part: PartGeometry; firstAt: ReadonlyMap<number, number> },
+  ctx: SweepContext
+): void {
+  const { named, part, firstAt } = sweep;
+  const { pivot, motion } = named.mover;
+  const turns = motion.kind === "spin" || motion.kind === "swing";
+  const reach = Math.ceil(
+    Math.max(0, ...part.outline.map((p) => Math.hypot(p.x - pivot.x, p.y - pivot.y)))
+  );
+  const fix = turns
+    ? `put spawns more than ${reach + MOTION_LIMITS.spawnClearance} units from its pivot (${Math.round(pivot.x)}, ${Math.round(pivot.y)}), outside everything it carries, and let players drop onto it`
+    : "move the spawn out of the part's path";
+  for (const [index, t] of firstAt) {
+    const s = ctx.spawns[index]!;
+    addWarning(
+      ctx.log,
+      "W14",
+      `${named.name} sweeps over spawn #${index + 1} (${Math.round(s.x)}, ${Math.round(s.y)}) (first at ${t.toFixed(1)} s); the game skips that spawn while it is covered: ${fix}.`
+    );
+  }
 }
 
 function warnSpeed(named: NamedMover, part: PartGeometry, log: LevelIssueLog): void {
@@ -383,7 +428,25 @@ function warnSpeed(named: NamedMover, part: PartGeometry, log: LevelIssueLog): v
   );
 }
 
-/** W14 for every mover: sweep problems at their first sampled time, then ride speed. */
+/** When each sweep problem and each covered spawn first happens over one sampled cycle. */
+function sweepFirstTimes(
+  named: NamedMover,
+  geometry: { part: PartGeometry; statics: PartGeometry },
+  ctx: SweepContext
+): { problems: Map<SweepProblem, number>; spawns: Map<number, number> } {
+  const problems = new Map<SweepProblem, number>();
+  const spawns = new Map<number, number>();
+  const { motion, pivot } = named.mover;
+  for (let k = 0; k < SAMPLES; k += 1) {
+    const t = (k * motion.periodS) / SAMPLES;
+    const check = { pose: motionPose(motion, t), pivot, ...geometry, ctx };
+    for (const problem of problemsAt(check)) if (!problems.has(problem)) problems.set(problem, t);
+    for (const index of spawnsCoveredAt(check)) if (!spawns.has(index)) spawns.set(index, t);
+  }
+  return { problems, spawns };
+}
+
+/** W14 for every mover: sweep problems at their first sampled time, covered spawns, ride speed. */
 export function checkMoverSweeps(ctx: SweepContext): void {
   const moving = new Set(ctx.movers.flatMap(({ mover }) => mover.terrainIndices));
   const statics = geometryOf(
@@ -391,24 +454,12 @@ export function checkMoverSweeps(ctx: SweepContext): void {
   );
   for (const named of ctx.movers) {
     const part = geometryOf(named.mover.terrainIndices.map((i) => ctx.terrain[i]!.shape));
-    const firstAt = new Map<SweepProblem, number>();
-    const { motion, pivot } = named.mover;
-    for (let k = 0; k < SAMPLES; k += 1) {
-      const t = (k * motion.periodS) / SAMPLES;
-      for (const problem of problemsAt({
-        pose: motionPose(motion, t),
-        pivot,
-        part,
-        statics,
-        ctx,
-      })) {
-        if (!firstAt.has(problem)) firstAt.set(problem, t);
-      }
-    }
-    for (const [problem, t] of firstAt) {
+    const first = sweepFirstTimes(named, { part, statics }, ctx);
+    for (const [problem, t] of first.problems) {
       const message = `${named.name} ${SWEEP_MESSAGES[problem]} (first at ${t.toFixed(1)} s).`;
       addWarning(ctx.log, "W14", message);
     }
+    warnSpawns({ named, part, firstAt: first.spawns }, ctx);
     warnSpeed(named, part, ctx.log);
   }
 }

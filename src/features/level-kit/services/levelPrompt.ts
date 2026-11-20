@@ -177,7 +177,7 @@ function renderMovingParts(ctx: PromptContext): string {
   return [
     "### Moving parts (optional)",
     "",
-    'Wrap terrain shapes in `<g data-motion="…">` to move them as one part. Draw the shapes where the part **rests**, in normal absolute coordinates; the motion is relative to that place. Never use `transform`.',
+    'Wrap terrain shapes in `<g data-motion="…">` to move them as one part. Draw the shapes where the part **rests**, in normal absolute coordinates; the motion is relative to that place. Never put `transform` on the `<g>` or on terrain (only an object rect may carry its own `rotate`, § Objects).',
     "",
     '`data-motion="<kind> <args> [Ns] [@phase] [pivot] [ccw]"` (any order after the kind):',
     "",
@@ -186,7 +186,8 @@ function renderMovingParts(ctx: PromptContext): string {
     `- \`spin\` — one full turn per period about the pivot (default ${code(pivot.spin)}), clockwise; \`ccw\` reverses.`,
     `- \`swing deg\` — pendulum ± \`deg\` (≤ ${lim.maxSwingDegrees}) about the pivot (default ${code(pivot.swing)}).`,
     `- \`Ns\` = seconds per cycle, default \`${periodS}s\`, ${lim.minPeriodS}–${lim.maxPeriodS}. \`@f\` starts \`f\` of a cycle ahead (0–1): equal period and phase move in lockstep, \`@0.5\` moves opposite.`,
-    `- Pivot = a point of the part's bounding box: ${pivots}.`,
+    `- Pivot = a point of the bounding box of the part's terrain shapes (objects riding it don't count, so a planet ringed with trees spins about the planet's centre): ${pivots}.`,
+    "- Spawns and spinning parts: spawns never ride a part. Anything a spinning part carries (trees too) sweeps a full circle as far out as its farthest point, so put spawns outside that circle (above a planet, higher than its tallest tree) and let players drop onto it; the game skips a spawn while a part covers it.",
     '- Sounds (optional; parts are silent by default): `data-move-sound="<sound id>"` plays as the part passes its fastest point (a woosh: halfway along a slide or path leg, through the bottom of a swing, once per spin); `data-end-sound="<sound id>"` plays at each turning point (both ends of a slide, each path waypoint, each swing extreme). IDs from `data-sound` in § 4; put both on the `<g>`.',
     `- Rules: only terrain moves (spawns, drops and pickups inside stay still); a moving part is made of its material like any terrain (blasts crater \`earth\` and \`cardboard\` parts, fire burns \`cardboard\` parts away, \`stone\` and \`ice\` parts stay whole); offsets on multiples of \`${ctx.cell}\`; over the whole cycle the part stays inside bounds, never overlaps other terrain (touching is fine anywhere in the cycle: end a slide flush against a wall to make a crusher; a player caught in a gap under \`${crushGap}\` units is knocked out, in a wider gap only squeezed) and stays ≥ \`${lim.spawnClearance}\` from spawn centres; its fastest point moves ≤ \`${lim.rideSpeed}\` units/s (slide ≈ 3.14 × length ÷ period, spin ≈ 6.28 × radius ÷ period); at most ${lim.maxMovers} parts; no nested \`data-motion\`.`,
     "",

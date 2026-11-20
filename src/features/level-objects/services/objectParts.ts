@@ -1,5 +1,9 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
-import type { ObjectPart, ObjectPartRole } from "@/features/level-objects/types/levelObject.types";
+import type {
+  ObjectPart,
+  ObjectPartRole,
+  ObjectRotation,
+} from "@/features/level-objects/types/levelObject.types";
 
 /**
  * Part builders for object recipes, in a recipe's local frame: origin at the object's base
@@ -73,4 +77,37 @@ export function insideLocalBox(p: Vec2, box: { w: number; h: number }, margin: n
     x: Math.min(half, Math.max(-half, p.x)),
     y: Math.min(-margin, Math.max(-box.h + margin, p.y)),
   };
+}
+
+/**
+ * Turns placed parts about a world point (level-orbit D1). Circles keep their radius; a rect
+ * part becomes the polygon of its turned corners. Rounds to 0.01 units like `toBox`.
+ */
+export function rotateParts(parts: readonly ObjectPart[], rotation: ObjectRotation): ObjectPart[] {
+  const a = (rotation.degrees * Math.PI) / 180;
+  const cos = Math.cos(a);
+  const sin = Math.sin(a);
+  const { about } = rotation;
+  const turn = (p: Vec2): Vec2 => {
+    const x = p.x - about.x;
+    const y = p.y - about.y;
+    return { x: roundTo(about.x + x * cos - y * sin), y: roundTo(about.y + x * sin + y * cos) };
+  };
+  return parts.map((part) => {
+    const { shape } = part;
+    if (shape.type === "circle") {
+      const c = turn({ x: shape.cx, y: shape.cy });
+      return { ...part, shape: { type: "circle", cx: c.x, cy: c.y, r: shape.r } };
+    }
+    if (shape.type === "polygon")
+      return { ...part, shape: { type: "polygon", points: shape.points.map(turn) } };
+    const { x, y, w, h } = shape;
+    const corners = [
+      { x, y },
+      { x: x + w, y },
+      { x: x + w, y: y + h },
+      { x, y: y + h },
+    ];
+    return { ...part, shape: { type: "polygon", points: corners.map(turn) } };
+  });
 }

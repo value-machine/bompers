@@ -68,7 +68,7 @@ describe("moving parts — import", () => {
       )
     );
     const w14 = coded(warnings, "W14").join(" ");
-    expect(w14).toMatch(/sweeps over a spawn/);
+    expect(w14).toMatch(/sweeps over spawn #\d \(\d+, \d+\).*skips that spawn while it is covered/);
     expect(w14).toMatch(/leaves the bounds/);
   });
 
