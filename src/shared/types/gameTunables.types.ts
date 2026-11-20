@@ -281,6 +281,18 @@ export interface GameTunables {
     /** Seconds a hit victim steers at `staggerSteerScale` (keeps the knockback readable). */
     staggerSeconds: number;
     staggerSteerScale: number;
+    /**
+     * Aim magnetism (owner pick B, dash-aim lap): at the press, the other blob the aim points at
+     * within `coneDegrees` and `range` units bends the dash to where that blob will be when the
+     * dash arrives (its speed and gravity over wind-up + travel time). Invisible; the dash stays
+     * straight. `enabled: false` turns it off.
+     */
+    magnet: { enabled: boolean; coneDegrees: number; range: number };
+    /**
+     * Dash hit reach (option A, dash-aim lap): a travelling dash strikes a blob whose centre is
+     * within this many units. At or below the body width (28) only a touch hits (today's dash).
+     */
+    hitReach: number;
   };
   /**
    * Fire on the terrain field (blast-power D5, D6): it spreads through touching fuel at
