@@ -354,5 +354,43 @@
         }
       ]
     }
+  ],
+  "theme": [
+    {
+      "id": "meadow",
+      "label": "Sunny meadow",
+      "description": "Sunny sky, drifting clouds, soft green hills (the default).",
+      "sky": {
+        "top": "#8fd6ff",
+        "bottom": "#fff1cf"
+      }
+    },
+    {
+      "id": "night-sky",
+      "label": "Night sky",
+      "description": "Violet night sky, a cream moon, twinkling stars, dark hills.",
+      "sky": {
+        "top": "#14123a",
+        "bottom": "#4a3a7e"
+      }
+    },
+    {
+      "id": "lava-cave",
+      "label": "Lava cave",
+      "description": "Dark cave glowing orange from below, stalactites, rock spires, rising embers.",
+      "sky": {
+        "top": "#1e0f1f",
+        "bottom": "#d24d1f"
+      }
+    },
+    {
+      "id": "snowy-peaks",
+      "label": "Snowy peaks",
+      "description": "Pale winter sky, snow-capped mountains, slow falling snow.",
+      "sky": {
+        "top": "#9cc4ee",
+        "bottom": "#eef5fc"
+      }
+    }
   ]
 }

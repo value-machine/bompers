@@ -1,6 +1,10 @@
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { isWeaponItemId } from "@/shared/config/weaponItems";
 import {
+  DEFAULT_BACKDROP_THEME_ID,
+  isBackdropThemeId,
+} from "@/features/backdrop/api/backdropThemesApi";
+import {
   DEFAULT_LEVEL_SETTINGS,
   LEVEL_FORMAT_VERSION,
   type LevelMeta,
@@ -225,7 +229,7 @@ const SETTING_SPECS = {
     fallback: `the match setting (${DEFAULT_GAME_TUNABLES.match.durationSeconds} s)`,
     valid: (v: number) => v > 0,
   },
-} satisfies Record<Exclude<keyof LevelSettings, "weaponIds">, SettingSpec>;
+} satisfies Record<Exclude<keyof LevelSettings, "weaponIds" | "themeId">, SettingSpec>;
 
 const NO_WEAPONS = "none";
 const AUTO_WEAPONS = "auto";
@@ -249,6 +253,22 @@ export function readWeaponsSetting(root: Element, log: LevelIssueLog): string[] 
   return undefined;
 }
 
+/**
+ * `data-theme`: a backdrop theme ID (level-themes D1). Left out = the default theme. W24: an
+ * unknown theme uses the default.
+ */
+export function readThemeSetting(root: Element, log: LevelIssueLog): string | undefined {
+  const raw = root.getAttribute("data-theme")?.trim();
+  if (raw === undefined || raw === "") return undefined;
+  if (isBackdropThemeId(raw)) return raw;
+  addWarning(
+    log,
+    "W24",
+    `data-theme "${raw}" is not a theme; using "${DEFAULT_BACKDROP_THEME_ID}".`
+  );
+  return undefined;
+}
+
 /** W8: a setting out of range falls back to its default. */
 function readSetting(root: Element, spec: SettingSpec, log: LevelIssueLog): number | undefined {
   const raw = root.getAttribute(spec.attr);
@@ -266,10 +286,12 @@ export function readLevelSettings(root: Element, log: LevelIssueLog): LevelSetti
   const gravity = readSetting(root, SETTING_SPECS.gravity, log);
   const matchDurationS = readSetting(root, SETTING_SPECS.matchDurationS, log);
   const weaponIds = readWeaponsSetting(root, log);
+  const themeId = readThemeSetting(root, log);
   return {
     cellSize: cellSize ?? DEFAULT_LEVEL_SETTINGS.cellSize,
     gravity: gravity ?? DEFAULT_LEVEL_SETTINGS.gravity,
     ...(matchDurationS !== undefined && { matchDurationS }),
     ...(weaponIds !== undefined && { weaponIds }),
+    ...(themeId !== undefined && { themeId }),
   };
 }

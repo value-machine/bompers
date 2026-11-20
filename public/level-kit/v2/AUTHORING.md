@@ -17,7 +17,7 @@ You are writing **one HTML file** that holds **one inline `<svg>`**. The SVG is 
    - `data-material`: `stone` (solid, never breaks; the default), `earth` or `cardboard` (explosions clear it), `ice` (solid and slippery).
    - `data-color` (optional): any named colour from § Catalog IDs, on any material (pink ice, green cardboard, …). Leave it out for the material's own colour. No hex values.
    In the game breakable terrain looks like any slab (one solid colour); only ice shows a pattern (gloss streaks and a white rim). Pick colours that tell materials apart where it matters.
-5. Reference other content **by ID only**, never describe it: `data-item` on `collectible`; optional `data-weapons` on the root (space-separated weapon IDs or `none`; leave it out for every weapon). Optional on terrain: `data-effect`, `data-sound`, `data-behavior`. IDs are lowercase-kebab. Every current ID is in § Catalog IDs below (also `/level-kit/v2/catalog.json`).
+5. Reference other content **by ID only**, never describe it: `data-item` on `collectible`; optional `data-weapons` on the root (space-separated weapon IDs or `none`; leave it out for every weapon); optional `data-theme` on the root for the background (a `theme` ID; leave it out for the sunny meadow). Optional on terrain: `data-effect`, `data-sound`, `data-behavior`. IDs are lowercase-kebab. Every current ID is in § Catalog IDs below (also `/level-kit/v2/catalog.json`).
    Unknown IDs, or an item on the wrong role (a drop item on a `collectible`, a collectible item on a `drop`), don't break the level; they fall back to the default with a warning.
 6. Optional level settings on the root: `data-gravity` (multiplier, `1` = normal, `0.6` = floaty), `data-match-duration` (seconds), `data-cell-size` (terrain sample spacing, default `4`). Metadata: `data-author`, `data-agent` (your name, e.g. `claude`, `gemini`, `chatgpt`), `data-level-id`, `data-description`.
 7. Give every shape a `fill` so the file looks right with no network. The game ignores `fill`: it paints terrain with `data-color` (the hex per colour is in `catalog.json`).
@@ -95,6 +95,10 @@ Link the preview kit in `<head>` (works offline without it):
 | object | `tree` / `snowy-pine` | Snowy pine | height 96–480, width 0.35–0.75 × height |
 | object | `tree` / `palm` | Palm | height 96–480, width 0.5–1.1 × height |
 | object | `tree` / `dead` | Dead tree | height 96–480, width 0.5–1.1 × height |
+| theme | `meadow` | Sunny meadow | Sunny sky, drifting clouds, soft green hills (the default). |
+| theme | `night-sky` | Night sky | Violet night sky, a cream moon, twinkling stars, dark hills. |
+| theme | `lava-cave` | Lava cave | Dark cave glowing orange from below, stalactites, rock spires, rising embers. |
+| theme | `snowy-peaks` | Snowy peaks | Pale winter sky, snow-capped mountains, slow falling snow. |
 <!-- level-kit:catalog-ids:end -->
 
 ## Minimal valid level

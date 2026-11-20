@@ -140,6 +140,12 @@
       });
     }
 
+    // Same rule as the game's W24: an unknown data-theme falls back to the default theme.
+    var theme = (root.getAttribute('data-theme') || '').trim();
+    if (theme && catalog && catalog.theme && !catalog.theme.some(function (t) { return t.id === theme; })) {
+      issues.push('data-theme "' + theme + '" is not a theme; the game uses the default (' + (catalog.theme[0] || {}).id + ').');
+    }
+
     if ((counts.bounds || 0) !== 1) issues.push('Exactly one bounds <rect> is required (found ' + (counts.bounds || 0) + ').');
     if ((counts.spawn || 0) < 2) issues.push('At least 2 spawn points are required (found ' + (counts.spawn || 0) + ').');
     else if (counts.spawn < 4) issues.push('Fewer than 4 spawn points: 4-player rounds will share spawns.');
@@ -434,6 +440,14 @@
       });
   }
 
+  /** Paints the level's backdrop theme sky behind the SVG (data-theme; unknown = the default). */
+  function paintTheme(root, catalog) {
+    var themes = catalog.theme || [];
+    var id = (root.getAttribute('data-theme') || '').trim();
+    var theme = themes.filter(function (t) { return t.id === id; })[0] || themes[0];
+    if (theme) root.style.setProperty('--lk-sky', 'linear-gradient(' + theme.sky.top + ', ' + theme.sky.bottom + ')');
+  }
+
   /** Paints terrain the way the game does: data-color, else the material's default colour. */
   function paintTerrain(nodes, catalog) {
     var colors = {};
@@ -474,6 +488,7 @@
     loadCatalog(function (catalog) {
       if (!catalog) return;
       paintTerrain(nodes, catalog);
+      paintTheme(root, catalog);
       showIssues(ui.issues, validate(root, nodes, catalog).issues.concat(moving.issues));
     });
   }

@@ -10,6 +10,7 @@ import {
   syncBackdropView,
   type BackdropView,
 } from "@/features/backdrop/api/backdropApi";
+import { resolveBackdropTheme } from "@/features/backdrop/api/backdropThemesApi";
 import {
   createPlayersView,
   PANIC_PUPIL_SCALE,
@@ -94,7 +95,7 @@ const createElementViews = () => ({
 /**
  * Composes the render layers. Scene graph:
  *   stage
- *   ├─ backdrop (screen units: sky, sun, parallax hills and clouds — backdrop)
+ *   ├─ backdrop (screen units: the level's theme — sky, sun or moon, parallax bands, particles)
  *   ├─ world   (camera transform; world units)
  *   │  ├─ terrain   (arena: solid slabs, breakable tiles)
  *   │  ├─ contact shadows: weapon crates (collectibles), rockets (combat), players (player)
@@ -141,7 +142,10 @@ export interface GameRenderer {
 
 export function createGameRenderer(app: Application, state: GameState): GameRenderer {
   const world = new Container({ label: "world" });
-  const backdrop = createBackdropView(app.renderer);
+  const backdrop = createBackdropView(
+    app.renderer,
+    resolveBackdropTheme(state.arena.level.settings.themeId)
+  );
   const terrain = createTerrainView(state.arena);
   const players = createPlayersView();
   const combat = createCombatView();

@@ -27,7 +27,8 @@ export type LevelWarningCode =
   | "W20"
   | "W21"
   | "W22"
-  | "W23";
+  | "W23"
+  | "W24";
 
 export interface LevelIssue {
   /** Spec rule; absent for engine notes the spec has no number for. */

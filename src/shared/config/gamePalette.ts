@@ -94,6 +94,36 @@ export const GAME_PALETTE = {
     hillsFar: 0xbfe8d0,
     hillsNear: 0x9fd8b8,
   },
+  /**
+   * Level themes other than the meadow (DESIGN_LANGUAGE § 1 World, level-themes D2). The meadow
+   * theme uses `sky` and `backdrop` above. No outlines on any backdrop layer.
+   */
+  backdropThemes: {
+    nightSky: {
+      sky: { top: 0x14123a, bottom: 0x4a3a7e },
+      moon: 0xfff4e2,
+      moonCrater: 0xe2d6c8,
+      hillsFar: 0x2f2a5e,
+      hillsNear: 0x3d3577,
+      stars: [0xfff8e0, 0xffffff, 0xd9c4ff],
+    },
+    lavaCave: {
+      sky: { top: 0x1e0f1f, bottom: 0xd24d1f },
+      ceiling: 0x2a1420,
+      spiresFar: 0x43202c,
+      rocksNear: 0x2e1420,
+      embers: [0xffb21a, 0xff6a1a, 0xfff1a8],
+    },
+    snowyPeaks: {
+      sky: { top: 0x9cc4ee, bottom: 0xeef5fc },
+      sun: 0xfffbe0,
+      peaksFar: 0xd0e0f2,
+      capsFar: 0xffffff,
+      peaksNear: 0xadc6e4,
+      capsNear: 0xeef5ff,
+      snow: [0xffffff],
+    },
+  },
   /** Ice surface cue: gloss streaks and the inner rim (DESIGN_LANGUAGE § 2). */
   iceGloss: 0xffffff,
   /** Rocket smoke puffs. */

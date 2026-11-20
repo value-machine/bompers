@@ -52,6 +52,7 @@ The level root is the **first `<svg>` element with a `data-level-format` attribu
 | `data-gravity` | no | number > 0 | Multiplier of the engine's default gravity. Default `1`. |
 | `data-match-duration` | no | integer seconds > 0 | Overrides the match length for this level. Default: the match setting. |
 | `data-weapons` | no | space-separated weapon item IDs, or `none` | Limits the weapons the sky crates hold on this level, in turn; `none` = no weapon crates. Left out (or `auto`): the match setting, which defaults to every weapon the game has (level-direction D6). Non-weapon IDs are left out (W4). |
+| `data-theme` | no | theme ID (§ 6 catalog, kind `theme`) | The backdrop: sky, sun or moon, distant scenery and ambient particles (level-themes D1). Left out: `meadow`, the sunny default. An unknown ID uses `meadow` (W24). Looks only; nothing in play changes. |
 
 Per-level settings are the GDD's "per map" settings (§ 7 of the GDD: match duration, gravity, weapons). They are optional defaults in the family of the match settings (level-direction D7); the precedence against the lobby's choice belongs to the settings module, not the file.
 
@@ -179,6 +180,10 @@ At least one `terrain` shape is required.
 | object | `tree` / `snowy-pine` | Snowy pine | height 96–480, width 0.35–0.75 × height |
 | object | `tree` / `palm` | Palm | height 96–480, width 0.5–1.1 × height |
 | object | `tree` / `dead` | Dead tree | height 96–480, width 0.5–1.1 × height |
+| theme | `meadow` | Sunny meadow | Sunny sky, drifting clouds, soft green hills (the default). |
+| theme | `night-sky` | Night sky | Violet night sky, a cream moon, twinkling stars, dark hills. |
+| theme | `lava-cave` | Lava cave | Dark cave glowing orange from below, stalactites, rock spires, rising embers. |
+| theme | `snowy-peaks` | Snowy peaks | Pale winter sky, snow-capped mountains, slow falling snow. |
 <!-- level-kit:catalog-ids:end -->
 
 ## 7. Validation
@@ -222,6 +227,7 @@ The importer produces **errors** (level rejected, readable message naming the el
 | W21 | A geometry attribute required by its shape is missing, non-numeric, non-positive or uses a unit (was E8; the element is named). | Element ignored (it can still leave too little for E5 / E6). |
 | W22 | An `object` with no `data-kind`, or a kind the game doesn't know. | Element ignored (a misspelled kind never turns into another object). |
 | W23 | An `object` corrected: unknown `data-variant`, height outside the kind's range or width outside the variant's range, `data-seed` not a whole number. | The kind's default variant; the size clamped on the same bottom centre; the default seed. |
+| W24 | `data-theme` names no theme the game knows. | The default theme (`meadow`). |
 
 The preview kit runs a subset of these checks in the browser and lists them under the legend.
 
