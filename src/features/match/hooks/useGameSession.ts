@@ -3,6 +3,7 @@ import type { Application, Ticker } from "pixi.js";
 import { waitForGameFont } from "@/shared/utils/gameFont";
 import { advanceFixedStep, createFixedStepClock } from "@/shared/services/gameLoop";
 import { createGameInputReader } from "@/shared/services/gameInputService";
+import { mergeButtonPresses } from "@/shared/utils/gameInputMapping";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
 import type { PlayerInputs, SlotSources } from "@/shared/types/gameInput.types";
 import type { GameTunables } from "@/shared/types/gameTunables.types";
@@ -76,6 +77,7 @@ function startSession({ app, engine, exitRef, pause }: SessionDeps, setup: Match
   const sampleFrame = createPausableInput(input, { pause, sources: inputSources });
   let clock = createFixedStepClock();
   let previousInputs: PlayerInputs = [];
+  let unstepped: PlayerInputs | null = null;
 
   /** True when this frame's back press (round over, past the lock) left for the lobby. */
   const exitIfPressed = (pressed: boolean): boolean => {
@@ -110,7 +112,9 @@ function startSession({ app, engine, exitRef, pause }: SessionDeps, setup: Match
     });
     clock = advance.clock;
     if (exitIfPressed(frame.back)) return;
-    const { inputs } = frame;
+    // A frame that runs no step (display faster than the sim) hands its presses to the next one.
+    const inputs = unstepped ? mergeButtonPresses(unstepped, frame.inputs) : frame.inputs;
+    unstepped = advance.steps === 0 ? inputs : null;
     const restarted = restartIfPressed(inputs);
     previousInputs = inputs;
     if (restarted) return;

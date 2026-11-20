@@ -61,6 +61,7 @@ export const createDiveState = (): DiveState => ({
   motions: {},
   refillCounts: {},
   airJumpPressesRead: {},
+  deniedCounts: {},
   hits: [],
   recentHits: [],
 });
@@ -76,6 +77,7 @@ const createDiveMotion = (): DiveMotion => ({
   charged: true,
   cooldown: 0,
   fireBuffer: 0,
+  sinceDenied: Number.POSITIVE_INFINITY,
   bonked: false,
   stagger: 0,
   sinceRicochet: Number.POSITIVE_INFINITY,
@@ -87,7 +89,8 @@ function motionOf(dive: DiveState, player: PlayerState): DiveMotion {
 
 /**
  * A fire press by an unarmed player (combat's `unarmedAttack` hook calls this once per press).
- * The press is buffered: the dive starts as soon as it is available.
+ * The press is buffered (`fireBufferSeconds`): the dive starts as soon as it is available, or the
+ * press is denied (dash-feel lap).
  */
 export function requestDive(dive: DiveState, player: PlayerState, tunables: GameTunables): void {
   motionOf(dive, player).fireBuffer = tunables.dive.fireBufferSeconds;
@@ -256,9 +259,9 @@ function stepTravel(motion: DiveMotion, player: PlayerState, args: StepDivesArgs
 
 function tickTimers(motion: DiveMotion, dt: number): void {
   motion.cooldown = Math.max(0, motion.cooldown - dt);
-  motion.fireBuffer = Math.max(0, motion.fireBuffer - dt);
   motion.stagger = Math.max(0, motion.stagger - dt);
   motion.sinceRicochet += dt;
+  motion.sinceDenied += dt;
 }
 
 /** What starts a dive this step, if anything: a buffered fire press, else this step's air press. */
@@ -267,22 +270,100 @@ interface DiveStart {
   trigger: DiveTrigger;
 }
 
-const diveReady = (motion: DiveMotion, player: PlayerState): boolean =>
-  motion.cooldown <= EPSILON && motion.charged && motion.stagger <= 0 && !isRollLocked(player);
+/**
+ * Feet on the ground (or just off it, coyote time): the dash is always there (owner, dash-feel
+ * lap). The between-dives cooldown and a plain recovery only hold an airborne blob back.
+ */
+const onFeet = (player: PlayerState): boolean => player.grounded || player.coyoteTimer > 0;
+
+/** The press waits on an event no timer can predict: a landing, a refill, how a dash ends. */
+const WAITS_ON_EVENT = "event";
+
+/** Seconds of wind-up and travel still to come. */
+const activeSecondsLeft = (motion: DiveMotion, d: DiveTunables): number =>
+  motion.phaseDuration - motion.phaseSeconds + (motion.phase === "windup" ? d.travelSeconds : 0);
+
+/**
+ * How long until a dive could start: 0 = now, a number of seconds, or `WAITS_ON_EVENT` (airborne
+ * with the dive spent, or a dash that ends inside the buffer: a press just before it ends chains
+ * the next one). Locks that hold even on the ground: a wall bonk stun, a hit stagger and a locked
+ * hit roll.
+ */
+function secondsUntilReady(
+  motion: DiveMotion,
+  player: PlayerState,
+  d: DiveTunables
+): number | typeof WAITS_ON_EVENT {
+  if (motion.phase === "windup" || motion.phase === "travel") {
+    return activeSecondsLeft(motion, d) <= motion.fireBuffer ? WAITS_ON_EVENT : Infinity;
+  }
+  const locks = lockSecondsLeft(motion, player);
+  // Spent in the air: a landing brings the charge back and waives the cooldown at once.
+  if (!motion.charged && !player.grounded) return locks <= EPSILON ? WAITS_ON_EVENT : locks;
+  if (onFeet(player)) return Math.max(locks, motion.bonked ? recoveryLeft(motion) : 0);
+  return Math.max(locks, recoveryLeft(motion), motion.cooldown);
+}
+
+/** Seconds of the current recovery (or bonk stun) still to play; 0 outside one. */
+function recoveryLeft(motion: DiveMotion): number {
+  return motion.phase === "recovery" ? motion.phaseDuration - motion.phaseSeconds : 0;
+}
+
+/** Seconds of the locks that hold a blob back even on its feet: hit stagger, locked hit roll. */
+function lockSecondsLeft(motion: DiveMotion, player: PlayerState): number {
+  return Math.max(motion.stagger, isRollLocked(player) ? player.rollLockSeconds : 0);
+}
+
+const diveReady = (motion: DiveMotion, player: PlayerState, d: DiveTunables): boolean => {
+  const wait = secondsUntilReady(motion, player, d);
+  return wait !== WAITS_ON_EVENT && wait <= EPSILON;
+};
 
 /**
  * The trigger that may start a dive now. A jump request is never buffered: it starts on the step
- * it is read, in the air only, or is dropped, so a landing jump never turns into a ground dive
+ * it is read, in the air only, or is denied, so a landing jump never turns into a ground dive
  * (double-jump-bash A5). A rolling blob may dive once its roll is unlocked (D12).
  */
 function readyTrigger(
   motion: DiveMotion,
   player: PlayerState,
-  jumpRequest: boolean
+  ctx: { d: DiveTunables; jumpRequest: boolean }
 ): DiveTrigger | null {
-  if (!diveReady(motion, player)) return null;
+  const { jumpRequest } = ctx;
+  if (!diveReady(motion, player, ctx.d)) return null;
   if (motion.fireBuffer > 0) return "fire";
   return jumpRequest && !player.grounded ? "jump" : null;
+}
+
+/** A press that cannot start a dive: the "denied" moment (head shake + sound, dash-feel lap). */
+function deny(dive: DiveState, motion: DiveMotion, player: PlayerState): void {
+  motion.fireBuffer = 0;
+  motion.sinceDenied = 0;
+  dive.deniedCounts[player.id] = (dive.deniedCounts[player.id] ?? 0) + 1;
+}
+
+/**
+ * After the start check: a fire press still waiting is kept while the dive will be ready inside
+ * what is left of the buffer (or a landing may refill it), else denied at once; a buffer that runs
+ * out unused is denied too. An air jump press that did not start a dive is denied on the spot.
+ */
+function holdOrDenyPress(
+  motion: DiveMotion,
+  player: PlayerState,
+  ctx: { args: StepDivesArgs; jumpRequest: boolean; started: boolean }
+): void {
+  const { args, started } = ctx;
+  if (started) return;
+  if (ctx.jumpRequest && !player.grounded && motion.fireBuffer <= 0) {
+    deny(args.dive, motion, player);
+    return;
+  }
+  if (motion.fireBuffer <= 0) return;
+  const wait = secondsUntilReady(motion, player, args.tunables.dive);
+  motion.fireBuffer = Math.max(0, motion.fireBuffer - args.dt);
+  const expired = motion.fireBuffer <= EPSILON;
+  const tooLong = wait !== WAITS_ON_EVENT && wait > motion.fireBuffer + EPSILON;
+  if (expired || tooLong) deny(args.dive, motion, player);
 }
 
 /** True once per new air jump press the controller counted (double-jump-bash D3). */
@@ -308,19 +389,23 @@ function stepPhase(motion: DiveMotion, player: PlayerState, args: StepDivesArgs)
   tickTimers(motion, args.dt);
   const active = motion.phase === "windup" || motion.phase === "travel";
   if (player.grounded && !active) motion.charged = true;
+  // Idle, or a recovery the blob may cut short (on its feet, not bonked): a press can start here.
+  const started = !active && startIfReady(motion, player, { d, jumpRequest });
   if (motion.phase === "travel") stepTravel(motion, player, args);
-  else if (motion.phase !== "idle") motion.phaseSeconds += args.dt;
-  else startIfReady(motion, player, { d, jumpRequest });
+  else if (!started && motion.phase !== "idle") motion.phaseSeconds += args.dt;
   handOverPhase(motion, player, d);
+  holdOrDenyPress(motion, player, { args, jumpRequest, started });
 }
 
+/** Starts the wind-up when a press is waiting and the dive is ready; true if it started. */
 function startIfReady(
   motion: DiveMotion,
   player: PlayerState,
   ctx: { d: DiveTunables; jumpRequest: boolean }
-): void {
-  const trigger = readyTrigger(motion, player, ctx.jumpRequest);
+): boolean {
+  const trigger = readyTrigger(motion, player, ctx);
   if (trigger) startWindup(motion, player, { d: ctx.d, trigger });
+  return trigger !== null;
 }
 
 interface MotionModifiers {

@@ -140,7 +140,8 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
   },
   dive: {
     minHitSpeed: 150,
-    fireBufferSeconds: 0.1,
+    // A press waits up to 150 ms for the dive (a landing, a stun ending); longer waits are denied.
+    fireBufferSeconds: 0.15,
     // 12 frames of crouch, then 30 frames dead straight: 0.25 s × 900 = 225 units (8 blob widths).
     windupSeconds: 0.1,
     windupSpeedScale: 0.15,

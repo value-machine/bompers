@@ -44,6 +44,7 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 ## Decisions
 
 - Only `match` knows `GameState`; other features take slices (game-engine-foundation D5).
+- A frame that runs no sim step (a display faster than the 120 Hz sim) hands its jump / fire / crouch presses to the next frame (`mergeButtonPresses`), and the input reader reports a key tapped between two frames as held once, so a short press always reaches the sim (dash-feel lap).
 - Beam clash (beam-clash D1): combat works out where held beams end each other; the match only passes the `reach` of the `sprayAttack` hook on to `sprayTorch` / `sprayFreezeRay`, hands sound the clash count, and empties `combat.beamClashes` when the round ends (combat stops then).
 - Render the latest sim state without interpolation; revisit if motion stutters (game-engine-foundation D6).
 - Fixed step 120 Hz, max 8 steps per frame; the backlog after a stall is dropped (`gameTunables.sim`).

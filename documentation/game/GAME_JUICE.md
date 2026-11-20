@@ -84,6 +84,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Headbutt reset returns | — | — (deliberately silent: a world timer every 2.5 s would be noise) | bubble pop-in, back-out 150 ms; while present a jelly wobble (sx · sy = 1, ±4 %, 1.1 s loop) | — | — | — | — | — |
 | Respawn | light | `respawn` | — | — | — | — | blink 8 Hz + ring | — |
 | Dive launch (fire, or a mid-air jump press: double-jump-bash D1) | light | `dive-launch` | dive pose | — | — | — | — | — |
+| Dash press denied (cooldown, stun, or airborne with the dive spent: dash-feel lap) | light | `clink` soft click (`crouchGain`; placeholder until the owner picks a sound) | "no" head shake, rotation only, 180 ms | — | — | — | — | — |
 | Front hit taken | medium | `hit` / `dive-impact` (gain by knockback) | — | 0.75 | 3 px | — | impact pop (not on dive hits) | kick |
 | Roll bounce (hit or dash roll) | medium | `tumble-bounce` | squash wide (by speed) | — | 3 px (by speed) | — | — | kick |
 | Move roll starts (fire held through a dive, or crouch + one side held 0.8 s) | light | `land` soft thud (`crouchGain`) | — | — | — | — | the body spins with its ground speed (sim `rollAngle`) | — |

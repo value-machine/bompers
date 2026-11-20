@@ -43,6 +43,7 @@ Seams for later work:
 ## Decisions
 
 - Combat state is a `GameState.combat` slice keyed by player id; `PlayerState` only carries motion (combat D1).
+- The fire cooldown only holds a weapon's own next shot: once the last rocket has left, an unarmed press goes to the `unarmedAttack` hook at once (dash-feel lap; it was dropped for up to 0.7 s).
 - Events carry a monotonic `seq` and are pruned by age, so several sim steps per frame never hide one (combat D3).
 - Elimination flags the fighter; match step 4 does the respawn (combat D4).
 - Launcher: 6 rockets, no time limit, dropped when empty or on elimination (combat D5).

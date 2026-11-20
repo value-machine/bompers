@@ -197,6 +197,9 @@ function roundCues(cursor: SoundCursor | null, frame: SoundSnapshot): SoundCue[]
  */
 export const WALL_BONK_SOUND = "land";
 
+/** A dash press the dive could not take (dash-feel lap): a placeholder take until the owner picks one. */
+export const DASH_DENIED_SOUND = "clink";
+
 type PlayerRule = (previous: SoundPlayerSnapshot, now: SoundPlayerSnapshot) => boolean;
 
 /** Player-state changes that cue a sound, in play order, with each one's gain. */
@@ -218,6 +221,9 @@ const PLAYER_RULES: readonly [
   ["land", (p, n) => n.moveRollCount > p.moveRollCount, () => SOUND_MIX.crouchGain],
   ["land", (p, n) => n.rollRestCount > p.rollRestCount, () => SOUND_MIX.crouchGain],
   ["dive-launch", (p, n) => n.divePhase === "travel" && p.divePhase !== "travel", () => 1],
+  // A dash press that could not start (dash-feel lap): a soft dry-fire click, the `clink` take at
+  // crouch level until the owner picks a sound of its own.
+  [DASH_DENIED_SOUND, (p, n) => n.diveDeniedCount > p.diveDeniedCount, () => SOUND_MIX.crouchGain],
   ["respawn", (p, n) => n.inPlay && !p.inPlay, () => 1],
   // A headbutt reset reuses the pickup sound, pitched by the collector (headbutt-reset D5).
   ["pickup", (p, n) => n.diveRefillCount > p.diveRefillCount, () => 1],

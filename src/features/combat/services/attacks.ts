@@ -149,7 +149,10 @@ function attack(press: UnarmedFirePress, frame: AttackFrame): void {
   const sprays = spraysNow(fighter, pressed);
   if (sprays) spray({ ...press, dt: options.dt, reach: frame.reach }, options.sprayAttack);
   fighter.spraying = sprays && fighter.weapon !== null;
-  if (sprays || !isNewPress || fighter.eliminated || fighter.attackCooldown > 0) return;
+  // The weapon's fire cooldown only holds its own next shot: once the last rocket is gone an
+  // unarmed press dives at once (dash-feel lap; it was dropped for up to 0.7 s).
+  const reloading = fighter.weapon !== null && fighter.attackCooldown > 0;
+  if (sprays || !isNewPress || fighter.eliminated || reloading) return;
   firePress(press, options.unarmedAttack);
 }
 
