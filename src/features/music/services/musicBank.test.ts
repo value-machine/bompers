@@ -6,7 +6,7 @@ import {
   MUSIC_BASE_URL,
   MUSIC_TRACKS,
   musicTrackFor,
-} from "@/features/sound/services/musicBank";
+} from "@/features/music/services/musicBank";
 
 describe("musicBank", () => {
   it("should play the match loop when more than the final stretch is left", () => {

@@ -5,19 +5,22 @@ import {
   pickTakeIndex,
   playbackRateFor,
 } from "@/features/sound/services/soundBank";
-import { MUSIC_TRACKS } from "@/features/sound/services/musicBank";
-import { createMusicPlayer, type MusicPlayer } from "@/features/sound/services/musicPlayer";
+import {
+  MUSIC_TRACKS,
+  createMusicPlayer,
+  type MusicPlayer,
+  type MusicTrackId,
+} from "@/features/music/api/musicApi";
 import {
   busGains,
   readSoundSettings,
   writeSoundSettings,
 } from "@/features/sound/services/soundSettings";
-import type {
-  MusicTrackId,
-  SoundCue,
-  SoundLoop,
-  SoundSettings,
-} from "@/features/sound/types/sound.types";
+import {
+  watchGamepadAudioUnlock,
+  type GamepadAudioUnlock,
+} from "@/features/sound/services/gamepadAudioUnlock";
+import type { SoundCue, SoundLoop, SoundSettings } from "@/features/sound/types/sound.types";
 
 /** Key that toggles mute in game (not used by any keyboard layout). */
 export const MUTE_KEY_CODE = "KeyM";
@@ -42,10 +45,15 @@ export interface AudioEngine {
   setMusicPaused(paused: boolean): void;
   settings(): SoundSettings;
   updateSettings(change: (settings: SoundSettings) => SoundSettings): void;
-  /** Called after every settings change; returns the unsubscribe. */
+  /** Called after every settings or mute change; returns the unsubscribe. */
   subscribe(listener: () => void): () => void;
   toggleMute(): void;
+  /** The M mute, remembered by the browser; subscribers hear every change (the sound-status chip shows it). */
   isMuted(): boolean;
+  /** True when a gamepad press could not start the sound: the player must press a key or tap. */
+  needsGesture(): boolean;
+  /** Called when `needsGesture` changes; returns the unsubscribe. */
+  subscribeStatus(listener: () => void): () => void;
   dispose(): void;
 }
 
@@ -56,6 +64,8 @@ export interface SoundHost {
   AudioContext?: typeof AudioContext;
   fetch: typeof fetch;
   localStorage?: Storage;
+  /** For the gamepad unlock; absent in tests and browsers without the Gamepad API. */
+  navigator?: Pick<Navigator, "getGamepads">;
 }
 
 const readMuted = (host: SoundHost): boolean => {
@@ -79,19 +89,29 @@ const decibelsToGain = (db: number): number => 10 ** (db / 20);
 interface SettingsStore {
   get(): SoundSettings;
   update(change: (settings: SoundSettings) => SoundSettings): void;
+  isMuted(): boolean;
+  toggleMute(): void;
   subscribe(listener: () => void): () => void;
 }
 
-/** The settings, remembered by the browser, with change listeners. */
+/** The settings and the M mute, remembered by the browser, with change listeners. */
 function createSettingsStore(host: SoundHost): SettingsStore {
   let settings = readSoundSettings(host.localStorage);
+  let muted = readMuted(host);
   const listeners = new Set<() => void>();
+  const notify = (): void => listeners.forEach((listener) => listener());
   return {
     get: () => settings,
     update: (change) => {
       settings = change(settings);
       writeSoundSettings(host.localStorage, settings);
-      listeners.forEach((listener) => listener());
+      notify();
+    },
+    isMuted: () => muted,
+    toggleMute: () => {
+      muted = !muted;
+      writeMuted(host, muted);
+      notify();
     },
     subscribe: (listener) => {
       listeners.add(listener);
@@ -100,10 +120,9 @@ function createSettingsStore(host: SoundHost): SettingsStore {
   };
 }
 
-/** An engine that plays nothing (no Web Audio in this browser or test); settings still work. */
+/** An engine that plays nothing (no Web Audio in this browser or test); settings and mute still work. */
 function silentEngine(host: SoundHost): AudioEngine {
   const store = createSettingsStore(host);
-  let muted = false;
   return {
     playCue: () => undefined,
     setLoops: () => undefined,
@@ -112,10 +131,10 @@ function silentEngine(host: SoundHost): AudioEngine {
     settings: store.get,
     updateSettings: store.update,
     subscribe: store.subscribe,
-    toggleMute: () => {
-      muted = !muted;
-    },
-    isMuted: () => muted,
+    toggleMute: store.toggleMute,
+    isMuted: store.isMuted,
+    needsGesture: () => false,
+    subscribeStatus: () => () => undefined,
     dispose: () => undefined,
   };
 }
@@ -335,7 +354,7 @@ function createTakePicker(context: AudioContext): (cue: SoundCue) => string | nu
   };
 }
 
-/** Resumes the context on the first press (browsers start it suspended) and maps M to mute. */
+/** Resumes the context on the first key or pointer press (browsers start it suspended; gamepads: `gamepadAudioUnlock`) and maps M to mute. */
 function bindKeys(host: SoundHost, context: AudioContext, toggleMute: () => void): () => void {
   const resume = (): void => {
     if (context.state === "suspended") void context.resume();
@@ -349,6 +368,27 @@ function bindKeys(host: SoundHost, context: AudioContext, toggleMute: () => void
   return () => {
     host.removeEventListener("keydown", onKeyDown);
     host.removeEventListener("pointerdown", resume);
+  };
+}
+
+/** Keys, pointer and gamepads: what starts the sound and toggles mute; `unbind` ends all of it. */
+function bindInput(
+  host: SoundHost,
+  context: AudioContext,
+  toggleMute: () => void
+): { gamepadUnlock: GamepadAudioUnlock; unbind: () => void } {
+  const unbindKeys = bindKeys(host, context, toggleMute);
+  const pads = host.navigator;
+  const gamepadUnlock = watchGamepadAudioUnlock({
+    getGamepads: typeof pads?.getGamepads === "function" ? () => pads.getGamepads() : undefined,
+    context,
+  });
+  return {
+    gamepadUnlock,
+    unbind: () => {
+      unbindKeys();
+      gamepadUnlock.dispose();
+    },
   };
 }
 
@@ -371,18 +411,13 @@ export function createAudioEngine(host: SoundHost): AudioEngine {
   const pickTake = createTakePicker(context);
   const music: MusicPlayer = createMusicPlayer({ context, output: mixer.musicDuck, load });
   const store = createSettingsStore(host);
-  let muted = readMuted(host);
-  const apply = (): void => applyGains(context, mixer, { settings: store.get(), muted });
+  const apply = (): void =>
+    applyGains(context, mixer, { settings: store.get(), muted: store.isMuted() });
   apply();
   const unsubscribeGains = store.subscribe(apply);
   warm(load);
 
-  const toggleMute = (): void => {
-    muted = !muted;
-    writeMuted(host, muted);
-    apply();
-  };
-  const unbindKeys = bindKeys(host, context, toggleMute);
+  const input = bindInput(host, context, store.toggleMute);
 
   return {
     playCue: (cue) => {
@@ -397,11 +432,13 @@ export function createAudioEngine(host: SoundHost): AudioEngine {
     settings: store.get,
     updateSettings: store.update,
     subscribe: store.subscribe,
-    toggleMute,
-    isMuted: () => muted,
+    toggleMute: store.toggleMute,
+    isMuted: store.isMuted,
+    needsGesture: input.gamepadUnlock.needsGesture,
+    subscribeStatus: input.gamepadUnlock.subscribe,
     dispose: () => {
       unsubscribeGains();
-      unbindKeys();
+      input.unbind();
       void context.close();
     },
   };

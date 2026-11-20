@@ -64,6 +64,7 @@ Levels are importable as **one self-contained HTML file with inline SVG**: any A
 - **Internal seam.** The importer (`features/level-file`) turns a file into a typed `LevelDefinition` (`features/level`); the engine never depends on the file format. Built-in levels are real level files in `public/levels/`.
 - **Staying current as the game grows.** The catalog in code is the single source. The build generates the public level kit (catalog list, preview stylesheet/script, authoring guide, example level) from it, and a CI drift check fails when the kit lags behind. Files carry a format version with migrations; unknown IDs warn and fall back to a safe default, never crash.
 - **Viewable outside the app.** A level references the hosted kit for a richer preview (legend, labels) but still renders as a plain picture with no network.
+- **Every object is level-placeable (owner rule, 2026-11-20).** Every object made for the game (trees, physics objects such as the ball and later the car, and any future kind) can be summoned from a level file, and the level prompt teaches it with an example. An object lap is not done until the object is in the object registry (`features/level-objects`), which feeds the generated prompt (`features/level-kit`, `levelPromptObjects.test.ts` checks every registered kind is listed). Its placement and size attributes must be documented in `documentation/game/LEVEL_FORMAT.md`.
 
 ## Design language
 

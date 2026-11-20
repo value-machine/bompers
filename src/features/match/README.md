@@ -37,7 +37,7 @@ Adding a concept: add its slice to `GameState`, its system call at its number in
 
 ## Dependencies
 
-- `level`, `arena`, `player`, `blob-look` (the players layer), `camera`, `combat`, `dive`, `collectibles`, `sound`, `pause` through their `api/` files (the level arrives in `MatchSetup` from the lobby).
+- `level`, `arena`, `player`, `blob-look` (the players layer), `camera`, `combat`, `dive`, `collectibles`, `sound`, `music` (the round's track), `pause` through their `api/` files (the level arrives in `MatchSetup` from the lobby).
 - Shared engine: `gameLoop`, `gameInputService`, `usePixiApp`, `gameTunables`, `gamePalette`, `gameInput.types`.
 - Mounted by `src/pages/GamePage.tsx` at `/` once the lobby starts a round.
 

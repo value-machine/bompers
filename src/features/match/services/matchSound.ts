@@ -1,6 +1,5 @@
+import { FINAL_MUSIC_SECONDS, musicTrackFor } from "@/features/music/api/musicApi";
 import {
-  FINAL_MUSIC_SECONDS,
-  musicTrackFor,
   readSoundCues,
   readSoundLoops,
   type AudioEngine,
