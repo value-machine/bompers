@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createAudioEngine, type AudioEngine } from "@/features/sound/services/audioEngine";
-import type { MusicTrackId, SoundSettings } from "@/features/sound/types/sound.types";
+import type { MusicTrackId } from "@/features/music/api/musicApi";
+import type { SoundSettings, SoundStatus } from "@/features/sound/types/sound.types";
 
 /** One engine for the app lifetime: browsers allow few AudioContexts, and music must not restart. */
 let sharedEngine: AudioEngine | null = null;
@@ -30,7 +31,14 @@ export function useSoundSettings(engine: AudioEngine): SoundSettings {
   return useSyncExternalStore(engine.subscribe, engine.settings);
 }
 
-/** Whether the M mute is on, re-rendering on every toggle. */
-export function useMuted(engine: AudioEngine): boolean {
-  return useSyncExternalStore(engine.subscribe, engine.isMuted);
+/**
+ * What the sound-status chip shows: `muted` while the M mute is on (it wins: one tap on the chip
+ * unmutes and starts blocked sound alike), `blocked` while a gamepad press could not start the sound.
+ */
+export function useSoundStatus(): SoundStatus | null {
+  const engine = useAudioEngine();
+  const muted = useSyncExternalStore(engine.subscribe, engine.isMuted);
+  const needsGesture = useSyncExternalStore(engine.subscribeStatus, engine.needsGesture);
+  if (muted) return "muted";
+  return needsGesture ? "blocked" : null;
 }

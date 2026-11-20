@@ -32,6 +32,7 @@ import {
   sprayFlame,
   tonguePoints,
   type Circle,
+  type ClusterFlame,
   type FlameBlock,
   type SprayFlame,
   type Tongue,
@@ -83,6 +84,8 @@ interface GroundFireView {
   flames: Graphics;
   /** Fire `version` the scorch was drawn at. */
   scorchVersion: number;
+  /** A moving part's flames as drawn last frame (they ease toward their blocks' flames). */
+  eased: FlameMemo;
   /** Samples waiting to burn out last frame: their count and a few of them (smoke positions). */
   dueCount: number;
   dueSample: number[];
@@ -159,6 +162,7 @@ function createGroundView(mover: MoverBody | undefined): GroundFireView {
     flameInk,
     flames,
     scorchVersion: -1,
+    eased: { flames: [], atMs: -1 },
     dueCount: 0,
     dueSample: [],
   };
@@ -267,6 +271,53 @@ export function flameBlocks(on: BodyFlames): Map<number, FlameBlock> {
   return blocks;
 }
 
+/** A moving part's flames as drawn last frame and the render clock then (-1: none yet). */
+export interface FlameMemo {
+  flames: ClusterFlame[];
+  atMs: number;
+}
+
+/** Last frame's flame in the same column within `reach` up or down: the one this flame continues. */
+function previousFlame(memo: FlameMemo, flame: ClusterFlame, reach: number) {
+  let best: ClusterFlame | undefined;
+  for (const before of memo.flames) {
+    const gap = Math.abs(before.y - flame.y);
+    if (before.x !== flame.x || gap > reach) continue;
+    if (!best || gap < Math.abs(best.y - flame.y)) best = before;
+  }
+  return best;
+}
+
+/**
+ * A moving part's flames eased toward this frame's flames (owner, fire-rotating-ease): root,
+ * width and height close `1 - e^(-dt / partEaseSeconds)` of the gap per frame, so a flame whose
+ * block, top edge or neighbours changed as the part turned glides there instead of jumping. A
+ * flame with no flame before it in its column grows in from nothing. Remembers the result.
+ */
+export function easeFlames(
+  memo: FlameMemo,
+  flames: readonly ClusterFlame[],
+  look: { nowMs: number; size: number }
+): ClusterFlame[] {
+  const { partEaseSeconds, partEaseReach } = FLAME_LOOK.cluster;
+  const dt = Math.max(0, (look.nowMs - memo.atMs) / 1000);
+  const k = memo.atMs < 0 ? 1 : 1 - Math.exp(-dt / partEaseSeconds);
+  const toward = (from: number, to: number): number => from + (to - from) * k;
+  const eased = flames.map((flame): ClusterFlame => {
+    const before = previousFlame(memo, flame, partEaseReach * look.size);
+    if (!before) return { ...flame, height: flame.height * k };
+    return {
+      ...flame,
+      y: toward(before.y, flame.y),
+      width: toward(before.width, flame.width),
+      height: toward(before.height, flame.height),
+    };
+  });
+  memo.flames = eased;
+  memo.atMs = look.nowMs;
+  return eased;
+}
+
 /** A tongue shrunk toward its base: the amber and pale hearts inside the ember flame. */
 const heart = (tongue: Tongue, k: number): Tongue => ({
   x: tongue.x,
@@ -310,25 +361,33 @@ function circles(g: Graphics, list: readonly Circle[], look: { grow?: number; sc
   return list.length > 0;
 }
 
+/** A body's flames this frame: clustered on its world top edge, eased on a moving part. */
+function groundFlames({ view, fire, frame, body }: GroundDraw): ClusterFlame[] {
+  const world = frame.terrain;
+  const size = world.cellSize * 2;
+  const blocks = flameBlocks({ fire, world, body, timeSeconds: frame.timeSeconds });
+  const flames = clusterFlames(blocks, {
+    size,
+    stride: world.widthCells,
+    timeSeconds: frame.nowMs / 1000,
+    burnSeconds: frame.burnSeconds,
+  });
+  // Only a moving part's flames move under them; the static terrain's are drawn as they are.
+  return body === 0 ? flames : easeFlames(view.eased, flames, { nowMs: frame.nowMs, size });
+}
+
 /**
  * The flames on the fire's top edge (owner fire-clusters D1–D2): in ink under the body's fill,
  * then in ember with their amber and pale hearts on top of it. Shaped in the world (they rise
  * world-up) and mapped into the body's layer.
  */
 function drawFlames(draw: GroundDraw, ink: number): void {
-  const { view, fire, frame, body } = draw;
+  const { view, frame, body } = draw;
   const g = view.flames.clear();
   view.flameInk.clear();
-  const world = frame.terrain;
-  const blocks = flameBlocks({ fire, world, body, timeSeconds: frame.timeSeconds });
-  if (blocks.size === 0) return;
-  const flames = clusterFlames(blocks, {
-    size: world.cellSize * 2,
-    stride: world.widthCells,
-    timeSeconds: frame.nowMs / 1000,
-    burnSeconds: frame.burnSeconds,
-  });
-  const inFrame = bodyFrame(world, body);
+  const flames = groundFlames(draw);
+  if (flames.length === 0) return;
+  const inFrame = bodyFrame(frame.terrain, body);
   if (tongues(view.flameInk, flames, { grow: ink, frame: inFrame })) view.flameInk.fill(FLAME_INK);
   if (tongues(g, flames, { frame: inFrame })) g.fill(COLORS.outer);
   const ambers = flames.map((tongue) => heart(tongue, 0.6));

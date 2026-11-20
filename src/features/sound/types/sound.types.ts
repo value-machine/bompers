@@ -109,5 +109,9 @@ export interface SoundSettings {
   musicEnabled: boolean;
 }
 
-/** Music tracks: the lobby loop, the match loop, and the piece for the last 30 s of a round. */
-export type MusicTrackId = "lobby" | "match" | "final";
+/**
+ * Why the player hears nothing, shown on the sound-status chip: `blocked` = the browser keeps the
+ * sound off until a key or tap (a gamepad press is not enough); `muted` = the player's M mute
+ * (remembered by the browser) is on.
+ */
+export type SoundStatus = "blocked" | "muted";

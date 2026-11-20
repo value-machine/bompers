@@ -72,6 +72,15 @@ export const FLAME_LOOK = {
     /** Each flame's own fixed size: [smallest, range] of its height (in blocks) and width. */
     heightJitter: [1, 0.7],
     widthJitter: [0.9, 0.2],
+    /**
+     * A moving part's flames ease toward where their blocks put them this frame (owner,
+     * fire-rotating-ease): seconds to close about two thirds of the gap. Turning, a part's
+     * burning samples change block, top edge and neighbours every few frames; the ease keeps
+     * that from showing as jumps. The static terrain's flames are not eased.
+     */
+    partEaseSeconds: 0.1,
+    /** A part's flame follows the last frame's flame in its column within this many blocks up or down. */
+    partEaseReach: 1.5,
   },
   /** A burn-out smoke puff's life (juice window linger). */
   smokeSeconds: 0.45,

@@ -15,10 +15,12 @@ import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelAp
 import { createPlayer } from "@/features/player/api/playerApi";
 import {
   createFireView,
+  easeFlames,
   flameBlocks,
   syncFireView,
   type FireFrame,
 } from "@/features/fire/services/fireRenderer";
+import { clusterFlames, type ClusterFlame } from "@/features/fire/services/flameShapes";
 import {
   burningSamples,
   createFireState,
@@ -499,5 +501,74 @@ describe("flames on a turned part (fire-on-rotating-parts)", () => {
     // Above the part's top edge, never down past its middle or out under its bottom.
     expect(bounds.minY).toBeLessThan(TOP);
     expect(bounds.maxY).toBeLessThan((TOP + BOTTOM) / 2);
+  });
+});
+
+describe("flames on a turning part ease (fire-rotating-ease)", () => {
+  /** The whole part burning; its flames over 40 frames at 60 fps, turning 0.75° a frame. */
+  function turningFlames(ease: boolean) {
+    const { terrain, frame } = burningPart();
+    const ground = frame.fire.grounds[1]!;
+    ground.lit = [];
+    bodyGrids(terrain)[1]!.cells.forEach((slot, index) => {
+      if (slot === 0) return;
+      ground.lit.push(index);
+      ground.igniteAt[index] = 0;
+    });
+    ground.litHead = 0;
+    ground.dueOut = [];
+    const size = terrain.cellSize * 2;
+    const memo = { flames: [] as ClusterFlame[], atMs: -1 };
+    const frames: ClusterFlame[][] = [];
+    for (let k = 0; k < 40; k += 1) {
+      terrain.movers[0]!.pose = { dx: 0, dy: 0, angle: (k * 0.75 * Math.PI) / 180 };
+      const blocks = flameBlocks({ fire: ground, world: terrain, body: 1, timeSeconds: 5 });
+      // A fixed flicker clock: only the turn changes between frames.
+      const raw = clusterFlames(blocks, {
+        size,
+        stride: terrain.widthCells,
+        timeSeconds: 5,
+        burnSeconds: 20,
+      });
+      frames.push(ease ? easeFlames(memo, raw, { nowMs: (k * 1000) / 60, size }) : raw);
+    }
+    return frames.slice(10);
+  }
+
+  /** Largest change of a flame's root and height from one frame to the next, flame by flame in its column. */
+  function largestStep(frames: ClusterFlame[][]) {
+    const step = { y: 0, height: 0 };
+    frames.slice(1).forEach((flames, i) => {
+      for (const flame of flames) {
+        const before = frames[i]!.find(
+          (prev) => prev.x === flame.x && Math.abs(prev.y - flame.y) < 12
+        );
+        if (!before) continue;
+        step.y = Math.max(step.y, Math.abs(before.y - flame.y));
+        step.height = Math.max(step.height, Math.abs(before.height - flame.height));
+      }
+    });
+    return step;
+  }
+
+  it("should jump by up to a block per frame when the flames follow their blocks as they are", () => {
+    // The cause: the part's surface moves under 1 unit a frame, its flames jump far more.
+    const step = largestStep(turningFlames(false));
+    expect(step.y).toBeGreaterThan(4);
+    expect(step.height).toBeGreaterThan(6);
+  });
+
+  it("should move the flames less than a quarter block a frame when they ease", () => {
+    const step = largestStep(turningFlames(true));
+    expect(step.y).toBeLessThan(2);
+    expect(step.height).toBeLessThan(2.5);
+  });
+
+  it("should leave a flame where it is when its block's flame does not move", () => {
+    const memo = { flames: [] as ClusterFlame[], atMs: -1 };
+    const flame: ClusterFlame = { x: 4, y: 100, width: 5, height: 9, sway: 0, age: 1 };
+    easeFlames(memo, [flame], { nowMs: 0, size: 8 });
+    const [after] = easeFlames(memo, [flame], { nowMs: 16, size: 8 });
+    expect(after).toEqual(flame);
   });
 });
