@@ -7,8 +7,9 @@ export type {
 } from "@/features/ice/types/ice.types";
 export {
   chillBlob,
-  frozenInputs,
-  holdFrozenBlobs,
+  chillSlow,
+  holdIcedBlobs,
+  icedInputs,
   isFrozen,
   isIced,
   releaseBlob,

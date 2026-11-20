@@ -63,6 +63,25 @@ describe("hits — applyHit", () => {
     expect(healthOf(world)).toBe(C.maxHealth - C.hitDamage.contact.front);
   });
 
+  it("should add the bonus damage once and flag the hit when the victim's slot has a bonus", () => {
+    const { world } = createHitWorld();
+    world.combat.bonusDamage.set(1, 1);
+    const result = applyHit(world, dive(-1));
+    expect(result.damage).toBe(C.hitDamage.contact.front + 1);
+    expect(world.combat.events[world.combat.events.length - 1]).toMatchObject({
+      type: "playerHit",
+      bonus: true,
+    });
+    expect(applyHit(world, dive(-1)).damage).toBe(C.hitDamage.contact.front);
+  });
+
+  it("should not add the bonus damage when the hit is fire", () => {
+    const { world } = createHitWorld();
+    world.combat.bonusDamage.set(1, 1);
+    const burn = applyHit(world, { ...dive(-1), kind: "burn", source: "fire" });
+    expect(burn.damage).toBe(C.hitDamage.burn.front);
+  });
+
   it("should remove the back damage when a contact hit comes from behind", () => {
     const { world } = createHitWorld();
     applyHit(world, dive(1));

@@ -183,9 +183,16 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     torchThawRadius: 8,
     // The ice block (ice-frozen-blobs D1, D8, starting values): half a second of beam freezes a
     // blob (a full second while crouching) for 2.5 s; the block brakes at 15 % of normal.
+    // Freeze-ray buff (owner picked A–D): chill slows the run up to 60 % and makes the blob heavy
+    // (gravity × 1.6 at full chill: a jump reaches ~62 %), holds 1.5 s before it drains, fills
+    // twice as fast on slippery ground (0.25 s), and a hit on a block takes 1 chunk more.
     blob: {
       freezeSeconds: 0.5,
       crouchChillScale: 0.5,
+      chillSlowMax: 0.6,
+      chillHoldSeconds: 1.5,
+      slipperyChillScale: 2,
+      shatterDamage: 1,
       frozenSeconds: 2.5,
       cracksToBreak: 3,
       slideGrip: 0.15,
@@ -246,15 +253,16 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       rays: 7,
       push: 900,
     },
-    // Freeze ray (ice-element D1): 3 s of charge like the torch, but a narrow beam of about six
-    // blob widths (180 units, ±3°) and a third of the torch's push: it is for the ground.
+    // Freeze ray (ice-element D1): 3 s of charge like the torch, a beam of about six blob widths
+    // (180 units) and a third of the torch's push. Frost cone (freeze-ray buff D): ±7° on 5 rays
+    // (was ±3° on 3), about 44 units across at its end, so a dodging blob stays in it.
     freezeRay: {
       ammo: 3,
       fireCooldown: 0,
       recoil: 0,
       length: 180,
-      halfAngleDegrees: 3,
-      rays: 3,
+      halfAngleDegrees: 7,
+      rays: 5,
       push: 300,
     },
     // Beam clash (beam-clash D1): beams of reacting elements end each other where they come

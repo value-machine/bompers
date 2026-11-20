@@ -109,9 +109,11 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Fire put out by ice | light | `steam-hiss` (pitched by the blob) | — | — | — | — | white steam puffs (0.6 s) | — |
 | Beam clash (torch flame meets freeze ray, held) | light | `steam-hiss` when it starts, then at most every 0.5 s while it holds | — | — | — | — | both beams end at the meeting point; white steam puffs with an ink edge keep rising from it (0.6 s each) | — |
 | Frost building on a blob (held ray) | — | — (the ray's start cue) | — | — | — | — | the ice block forms around the blob as the chill fills | — |
+| Chilled blob slowed (freeze-ray buff A) | — | — (the ray's loop covers it) | — | — | — | — | the forming block shows how much: the slow follows the chill (run up to −60 %, heavier jumps) | — |
 | Blob freezes (ice-frozen-blobs) | light | `freeze-solid` (pitched by the blob) | — | — | — | — | white pop ring (250 ms), then the glossy block with pinprick pupils inside | — |
 | Ice block cracks (jump press) | light | `ice-crack`, soft (crouch gain, pitched by the blob) | drawn 4-unit hop, 200 ms | — | — | — | a crack line on the block, three ice chips (500 ms) | — |
 | Ice block breaks (third press, a hit, time up) | light | `ice-shatter` (pitched by the blob); a hit adds its own `hit` | — | — | — | — | eight ice shards fly off (500 ms) | — |
+| Ice block shattered by a hit (freeze-ray buff B: +1 chunk) | heavy | `ice-shatter` + the hit's own `hit` / `dive-impact` | the hit's own | full (heavy) | back-hit size (heavy) | 50 ms (heavy) | eight ice shards fly off (500 ms) | — |
 | Ice block melts (fire) | light | fire's douse `steam-hiss` | — | — | — | — | white steam puffs (500 ms) | — |
 | Moving part moves / carries | — | — by default; the author's `data-move-sound` at its fastest point and `data-end-sound` at each turning point (owner B2) | — | — | — | — | — (no motion cue, owner B1) | — |
 | Crushed by a moving part | heavy | `land` at the crush, `elimination` when the pancake bursts into goo (owner B2; death-splat-sound lap) | pancake across the squeeze, held 0.15 s (past the band, owner B3); the eyes keep their size and show the panic pupils (owner, squish-eyes) | — (no hit of its own) | 6 px (the back-hit kick) | — | goo stains on both faces, the part's riding along; helmet and tube fly off | pops off |

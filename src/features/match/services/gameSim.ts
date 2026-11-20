@@ -39,8 +39,8 @@ import {
 import { createFireState, sprayTorch, stepFire, type FireState } from "@/features/fire/api/fireApi";
 import {
   createIceState,
-  frozenInputs,
-  holdFrozenBlobs,
+  holdIcedBlobs,
+  icedInputs,
   isFrozen,
   isIced,
   releaseBlob,
@@ -98,10 +98,10 @@ import {
  *                        a held freeze ray to the ice feature's `sprayFreezeRay`
  *   3e. stepIce        — ice feature: frozen samples whose time is over thaw (the ray itself
  *                        freezes inside step 3; this runs before 3c, so freezing puts fire out)
- *   3f. frozen blobs   — ice feature: before step 2 `frozenInputs` empties a frozen blob's
+ *   3f. frozen blobs   — ice feature: before step 2 `icedInputs` empties a frozen blob's
  *                        inputs (jump presses crack its block); `stepFrozenBlobs` after 3e runs
  *                        chill down and ends blocks on time; after 3d fire and ice cancel on a
- *                        blob; after 3b a hit shatters a block and `holdFrozenBlobs` sets the slide
+ *                        blob; after 3b a hit shatters a block and `holdIcedBlobs` sets the slide
  *   3c. stepFire      — fire feature: the front spreads through fuel; burnt-out samples go
  *                        (batched), reported as combat `terrainDestroyed` events
  *   3d. stepBurningBlobs — fire feature: blobs catch, go out (ice, dive), pass it on (bump) or
@@ -501,7 +501,38 @@ function stepIceBlocks(state: GameState, players: readonly PlayerState[]): void 
       releaseBlob(state.ice, victim, { ...at, kind: "shatter" });
     }
   }
-  holdFrozenBlobs(state.ice, players, state.tunables);
+  holdIcedBlobs(state.ice, players, state.tunables);
+}
+
+/**
+ * The ice's say before the step: a frozen blob has no control, its jump presses crack the block
+ * instead (ice-frozen-blobs D7); a chilled one runs slower (freeze-ray buff A); and a block
+ * shatters for more on this step's next hit (buff B).
+ */
+function iceStepStart(
+  state: GameState,
+  players: readonly PlayerState[],
+  inputs: PlayerInputs
+): PlayerInputs {
+  markShatterBonus(state, players);
+  return icedInputs(state.ice, players, {
+    inputs,
+    now: state.timeSeconds,
+    tunables: state.tunables,
+  });
+}
+
+/**
+ * Before this step's hits: a frozen blob's block shatters on the next direct hit for
+ * `ice.blob.shatterDamage` chunks more (freeze-ray buff B), read by combat's `applyHit`.
+ */
+function markShatterBonus(state: GameState, players: readonly PlayerState[]): void {
+  const bonus = state.combat.bonusDamage;
+  bonus.clear();
+  if (state.ice.blobs.size === 0) return;
+  for (const player of players) {
+    if (isFrozen(state.ice, player)) bonus.set(player.slot, state.tunables.ice.blob.shatterDamage);
+  }
 }
 
 interface ContactStep {
@@ -545,12 +576,7 @@ function stepPlay(state: GameState, rawInputs: PlayerInputs, dt: number): void {
   const { tunables, timeSeconds } = state;
   const { level, terrain } = state.arena;
   const players = joinAndRideParts(state, rawInputs, dt);
-  // A frozen blob has no control: its jump presses crack the block instead (ice-frozen-blobs D7).
-  const inputs = frozenInputs(state.ice, players, {
-    inputs: rawInputs,
-    now: timeSeconds,
-    tunables,
-  });
+  const inputs = iceStepStart(state, players, rawInputs);
   // A burning blob with no move input runs from the fire (fire-burn D2); combat keeps the real inputs.
   stepPlayers({
     players,

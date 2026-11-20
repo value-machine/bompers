@@ -33,3 +33,4 @@ Seams for later work:
 - Debris is deterministic per event `seq` (no RNG in render), so the same event always looks the same.
 - Stroke widths are the zoom-clamped effect width at the moment the effect appears; effects live too briefly to rebuild on zoom.
 - A crush (`playerEliminated`, cause `crush`) kicks a heavy-tier shake, the back-hit size, since a crush has no hit of its own (moving-parts B3).
+- A `playerHit` flagged `bonus` (a shattered ice block, freeze-ray buff B) reads as hard: back-hit shake, flash and hit-stop (heavy tier).
