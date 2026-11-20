@@ -3,7 +3,6 @@ import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { Rect, Shape2D, Vec2 } from "@/shared/types/gameGeometry.types";
 import { shapeBounds, shapeContains } from "@/shared/utils/shapeGeometry";
 import { addWarning, type LevelIssueLog } from "@/features/level-file/services/levelFileIssues";
-import type { ObjectFootingIssue } from "@/features/level-objects/api/levelObjectsApi";
 import type { RoleElement } from "@/features/level-file/types/levelFile.types";
 
 /**
@@ -156,17 +155,4 @@ export function fallbackSpawns(shapes: readonly Shape2D[], bounds: Rect): Vec2[]
       (at) => rectContainsPoint(bounds, at) && !shapes.some((shape) => shapeContains(shape, at))
     )
     .slice(0, MAX_FALLBACK_SPAWNS);
-}
-
-const whole = (n: number): number => Math.round(n);
-
-/** The W24 sentence for an object's footing issue (level-orbit D3). */
-export function footingWarning(name: string, issue: ObjectFootingIssue): string {
-  const where = `(${whole(issue.base.x)}, ${whole(issue.base.y)})`;
-  if (issue.kind !== "leaning") {
-    const off = issue.kind === "in-ground" ? "inside terrain" : "off the ground";
-    return `${name}: its base ${where} is ${whole(issue.distance)} units ${off}; put the rect's bottom edge on a surface.`;
-  }
-  const fit = `rotate(${issue.fitDegrees} ${whole(issue.base.x)} ${whole(issue.base.y)})`;
-  return `${name} leans ${whole(issue.degrees)}° off the ground at its base ${where}; turn it to face away from the surface with transform="${fit}" on the rect.`;
 }

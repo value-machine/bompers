@@ -80,7 +80,7 @@ Recommended: make terrain edges multiples of the cell size, so the picture and t
 
 - `<path>`: needs a full `d` parser with arcs and curve flattening, and agents produce inconsistent paths. Polygons express every terrain shape the game rasterises into cells anyway.
 - `<ellipse>`, `<line>`, `<polyline>`, `<use>`, `<image>`, nested `<svg>`: no role in the format; `use` and nested viewports change coordinates.
-- `transform` anywhere on a role element **or its ancestors** (up to the root): keeps geometry literal, so a reader needs no matrix maths. **One exception (level-orbit D1):** an `object` rect may carry its own `transform="rotate(a)"` or `rotate(a cx cy)` (SVG semantics: degrees clockwise about `(cx, cy)`, default the origin). The object is built upright in the rect and turned as a whole, so its top points where the rect's top points; the preview draws the same turn. Any other transform on an object, or a transform on its ancestors, is still W3.
+- `transform` anywhere on a role element **or its ancestors** (up to the root): keeps geometry literal, so a reader needs no matrix maths. **One exception (level-orbit D1):** an `object` rect may carry its own `transform="rotate(a)"` or `rotate(a cx cy)` (SVG semantics: degrees clockwise about `(cx, cy)`, default the origin). Without it the object stands upright (the default). The object is built upright in the rect and rotated as a whole with it; the preview draws the same rotation. The importer never suggests an orientation (owner, drop-footing D1). Any other transform on an object, or a transform on its ancestors, is still W3.
 
 A role on a disallowed element is an import **warning** and the element is skipped (it still shows in the picture).
 
@@ -222,7 +222,6 @@ The importer produces **errors** (level rejected, readable message naming the el
 | W21 | A geometry attribute required by its shape is missing, non-numeric, non-positive or uses a unit (was E8; the element is named). | Element ignored (it can still leave too little for E5 / E6). |
 | W22 | An `object` with no `data-kind`, or a kind the game doesn't know. | Element ignored (a misspelled kind never turns into another object). |
 | W23 | An `object` corrected: unknown `data-variant`, height outside the kind's range or width outside the variant's range, `data-seed` not a whole number. | The kind's default variant; the size clamped on the same bottom centre; the default seed. |
-| W24 | An `object`'s base (the rect's bottom centre, turned with it) is more than 12 units off or inside the terrain shapes, or its up direction leans more than 30° from the surface's outward direction there (level-orbit D3). The message names the `rotate(a x y)` that fits. | Object built as written. |
 
 The preview kit runs a subset of these checks in the browser and lists them under the legend.
 
@@ -249,7 +248,7 @@ Served from the game's own site under `/level-kit/v2/`:
 | `LEVEL_PROMPT.md` | The copyable AI prompt (the lobby's "Copy AI prompt" copies the same text), generated whole from the format, catalog and game tunables by `pnpm level-kit:sync`. |
 | `example-level.html` | A complete level using relative kit links (works served or opened from the repo). |
 | `fire-test-level.html` | A level for testing fire: two big cardboard slabs, thin cardboard platforms and small blocks on a stone floor, with a torch in every drop (owner, fire-clusters, 2026-11-17). Import it in the lobby. |
-| `orbit-test-level.html` | A spinning planet with five trees turned to face outward (`rotate(a 900 680)` about the planet centre) and spawns above the trees' reach (level-orbit lap). Import it in the lobby; it loads with no warnings. |
+| `orbit-test-level.html` | A spinning planet with five trees that carry their own `rotate(a 900 680)` (a fixture of the rotate syntax, not authoring advice) and spawns above the trees' reach (level-orbit lap). Import it in the lobby; it loads with no warnings. |
 | `crusher-test-level.html` | A level for testing moving parts: a block that slides into a wall and thuds at each end (stand in the gap to be crushed), a block that stops 20 short of a post (stand in the gap to be squeezed and survive), a spinning bar to ride, and a fast lift to jump off, each a short walk from a spawn (orchestrator, moving-parts lap B-2). Import it in the lobby. |
 | `forgiving-test-level.html` | A deliberately odd but playable level (forgiving-import): version `2.0`, no viewBox, no bounds, one spawn, no drops, a block in `px` and a two-point polygon. It loads with W16, W17, W21 ×2, W18, W6 and W20; the lobby's **Copy report** copies them. |
 

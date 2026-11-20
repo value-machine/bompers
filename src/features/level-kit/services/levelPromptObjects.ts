@@ -46,13 +46,12 @@ export function renderObjects(cell: number): string {
     "- `data-kind` — REQUIRED, one kind below. `data-variant` — optional; leave it out for a varied pick. `data-seed` — optional whole number; the same seed gives the same shape. Without a seed every object still differs and looks the same on every load; give the rect an `id` to keep its shape when you add objects before it.",
     `- Sizes outside a kind's height range or a variant's width range are clamped (with a warning). Snap \`x\`, \`y\`, \`width\`, \`height\` to multiples of \`${cell}\`; keep \`data-cell-size\` at \`${cell}\` so thin branches stay solid.`,
     "- Like terrain, later shapes paint over earlier ones: put objects after the ground they stand on. An object inside a `<g data-motion>` moves with that part. Spawns go beside or on top of objects, never inside one.",
-    "- **Turning an object** (slopes, walls, round worlds): add `transform=\"rotate(a cx cy)\"` to the object rect only (degrees, clockwise; the one transform allowed, on the rect itself). The object is built upright in the rect, then turned as a whole about `(cx, cy)`, so its top points where the rect's top points. Easiest on a round planet: draw every tree upright on the planet's **top** (bottom edge on the top of the circle) and turn each one about the **planet centre**: `rotate(a planetCx planetCy)`, with `a` = how far round the planet it stands (90 = right side, 180 = underneath, -90 = left side). An object standing off its ground or leaning more than 30° from it gets a warning that names the `rotate(…)` that fits.",
+    '- Rotating an object (optional): objects stand upright by default. To rotate one, add `transform="rotate(a cx cy)"` to the object rect itself (degrees, clockwise, about the point `cx cy`; the only transform allowed). The object is built upright in the rect and the whole object is rotated with it.',
     "",
     ...catalog.flatMap(kindLines),
     "",
     "```svg",
     `<rect data-role="object" data-kind="${exampleKind}" data-variant="${exampleVariant}" x="800" y="400" width="120" height="208" fill="${OBJECT_PREVIEW_FILL}" />`,
-    `<rect data-role="object" data-kind="${exampleKind}" data-variant="${exampleVariant}" x="876" y="244" width="48" height="96" transform="rotate(60 900 680)" fill="${OBJECT_PREVIEW_FILL}" /> <!-- on a planet: circle cx 900 cy 680 r 340, 60° round from the top -->`,
     "```",
   ].join("\n");
 }

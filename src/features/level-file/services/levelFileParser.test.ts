@@ -16,7 +16,6 @@ import {
   parseLevelFile,
   type LevelImportResult,
 } from "@/features/level-file/services/levelFileParser";
-import { objectFooting } from "@/features/level-objects/api/levelObjectsApi";
 import type { LevelIssue } from "@/features/level-file/types/levelFile.types";
 
 // Ground truth: the kit files shipped with the format spec (documentation/game/LEVEL_FORMAT.md).
@@ -721,18 +720,20 @@ describe("parseLevelFile — turned objects on a spinning planet (level-orbit)",
       return shape.type === "polygon" ? shape.points.map((p) => p.x) : [];
     });
 
-  it("should import the orbit test level with no warnings, spinning about the planet with trees facing outward", () => {
+  it("should import the orbit test level with no warnings, spinning about the planet, its trees turned as written", () => {
     const { level: def, warnings } = okLevel(parseLevelFile(ORBIT_TEST));
     expect(warnings).toEqual([]);
     expect(def.movers?.[0]?.pivot).toEqual({ x: 900, y: 680 });
-    expect(def.objects).toHaveLength(5);
-    for (const object of def.objects ?? []) {
-      const { base, up } = objectFooting(object);
-      const out = { x: base.x - 900, y: base.y - 680 };
-      const dist = Math.hypot(out.x, out.y);
-      expect(Math.abs(dist - 340)).toBeLessThan(12);
-      expect((up.x * out.x + up.y * out.y) / dist).toBeGreaterThan(0.99);
-    }
+    expect(def.objects?.map((o) => o.rotation?.degrees)).toEqual(
+      [0, -50, 50, -110, 110].map((d) => (d === 0 ? undefined : d))
+    );
+  });
+
+  it("should build an object upright when its rect has no transform", () => {
+    const upright = treeOnTop(0).replace(/ transform="[^"]*"/, "");
+    const { level: def, warnings } = okLevel(parseLevelFile(planet(upright)));
+    expect(warnings).toEqual([]);
+    expect(def.objects![0]!.rotation).toBeUndefined();
   });
 
   it("should turn an object's parts about the rotate point when the rect carries rotate(a cx cy)", () => {
@@ -747,22 +748,6 @@ describe("parseLevelFile — turned objects on a spinning planet (level-orbit)",
   it("should spin about the planet's own centre when trees stand on one side of it", () => {
     const { level: def } = okLevel(parseLevelFile(planet(treeOnTop(0))));
     expect(def.movers?.[0]?.pivot).toEqual({ x: 400, y: 320 });
-  });
-
-  it("should warn W24 with the fitting rotate when an upright tree stands on the planet's side", () => {
-    const side =
-      '<rect data-role="object" data-kind="tree" data-variant="snowy-pine" x="216" y="224" width="48" height="96" />';
-    const { warnings } = okLevel(parseLevelFile(planet(side)));
-    expect(codes(warnings)).toEqual(["W24"]);
-    expect(warnings[0]!.message).toMatch(/leans 90° .*rotate\(-90 240 320\)/);
-  });
-
-  it("should warn W24 when an object's base floats off the ground", () => {
-    const floating =
-      '<rect data-role="object" data-kind="tree" data-variant="pine" x="376" y="0" width="48" height="96" />';
-    const { warnings } = okLevel(parseLevelFile(planet(floating)));
-    expect(warnings[0]).toMatchObject({ code: "W24" });
-    expect(warnings[0]!.message).toMatch(/64 units off the ground/);
   });
 
   it("should still warn W3 when an object has another transform or sits in a transformed group", () => {
