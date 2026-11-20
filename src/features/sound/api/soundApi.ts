@@ -6,6 +6,7 @@ export type {
   SoundLoop,
   SoundPlayerSnapshot,
   SoundSettings,
+  SoundStatus,
   SoundWorldSnapshot,
 } from "@/features/sound/types/sound.types";
 export {
@@ -28,6 +29,9 @@ export {
 export {
   useAudioEngine,
   useMusicTrack,
+  useSoundStatus,
   useSoundSettings,
 } from "@/features/sound/hooks/useAudioEngine";
+export { SoundStatusChip } from "@/features/sound/components/SoundStatusChip";
+export { SoundStatusCorner } from "@/features/sound/components/SoundStatusCorner";
 export { PLAYER_PITCH_SEMITONES, SOUND_FILES } from "@/features/sound/services/soundBank";

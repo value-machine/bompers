@@ -108,3 +108,9 @@ export interface SoundSettings {
   sfxEnabled: boolean;
   musicEnabled: boolean;
 }
+
+/**
+ * Why the player hears nothing, shown on the sound-status chip: `blocked` = the browser keeps the
+ * sound off until a key or tap (a gamepad press is not enough). Other states (muted) join here.
+ */
+export type SoundStatus = "blocked";
