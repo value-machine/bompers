@@ -88,6 +88,9 @@ function drawPop(pop: Graphics, recent: RecentHit): void {
 
 /** Draws the dive effects for the latest state. Call once per rendered frame. */
 export function syncDiveView(view: DiveView, dive: DiveState): void {
-  dive.recentHits.forEach((recent, index) => drawPop(popAt(view, index), recent));
-  for (let i = dive.recentHits.length; i < view.pops.length; i += 1) view.pops[i]!.visible = false;
+  // A landed hit that took nothing (crouched) is blocked: the effects layer marks it with its
+  // grey ring instead of an impact pop (hurt-feedback D1).
+  const shown = dive.recentHits.filter(({ hit }) => !(hit.landed && hit.damage === 0));
+  shown.forEach((recent, index) => drawPop(popAt(view, index), recent));
+  for (let i = shown.length; i < view.pops.length; i += 1) view.pops[i]!.visible = false;
 }

@@ -29,6 +29,8 @@ export interface PlayerHitFeel {
   hard: boolean;
   /** Flash alpha to draw this frame (0 = none). */
   flash: number;
+  /** Chunks the newest hit took (the hurt pose and the flying chunks). */
+  damage: number;
 }
 
 export interface FeelState {
@@ -74,10 +76,9 @@ export function hitFlashAmount(
 
 type HitEvent = Extract<CombatEvent, { type: "playerHit" }>;
 
-function noteHit(state: FeelState, event: HitEvent, frame: FeelFrame): void {
+/** The hit's screen shake, and on a hard hit the hit-stop. */
+function kickHitScreen(state: FeelState, { hard, frame }: { hard: boolean; frame: FeelFrame }) {
   const { feel, nowMs } = frame;
-  // A shattered ice block lands as hard as a back hit (freeze-ray buff B: heavy tier).
-  const hard = event.zone === "back" || event.bonus === true;
   const shake = feel.shake.hit;
   kickCameraShake(frame.shake, {
     px: shake.px * (hard ? feel.shake.hardHitScale : 1),
@@ -87,6 +88,15 @@ function noteHit(state: FeelState, event: HitEvent, frame: FeelFrame): void {
   if (hard && feel.hitStop.seconds > 0) {
     state.hitStopUntilMs = Math.max(state.hitStopUntilMs, nowMs + feel.hitStop.seconds * 1000);
   }
+}
+
+function noteHit(state: FeelState, event: HitEvent, frame: FeelFrame): void {
+  const { nowMs } = frame;
+  // A hit that takes nothing (crouched) is blocked: no flash, shake or hurt (owner, hurt-feedback D1).
+  if (event.damage === 0) return;
+  // A shattered ice block lands as hard as a back hit (freeze-ray buff B: heavy tier).
+  const hard = event.zone === "back" || event.bonus === true;
+  kickHitScreen(state, { hard, frame });
   const victim = frame.bodies.find((body) => body.slot === event.victimSlot);
   if (!victim) return;
   const dirX = Math.sign(victim.x - event.x);
@@ -95,8 +105,9 @@ function noteHit(state: FeelState, event: HitEvent, frame: FeelFrame): void {
     existing.startMs = nowMs;
     existing.dirX = dirX;
     existing.hard = hard || (existing.hard && existing.flash > 0);
+    existing.damage = event.damage;
   } else {
-    state.hits.set(victim.id, { startMs: nowMs, dirX, hard, flash: 0 });
+    state.hits.set(victim.id, { startMs: nowMs, dirX, hard, flash: 0, damage: event.damage });
   }
 }
 

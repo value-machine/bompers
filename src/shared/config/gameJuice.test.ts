@@ -4,6 +4,7 @@ import {
   JUICE_TIERS,
   isInJuiceWindow,
   JUICE_VOLUME,
+  hurtGain,
   intensityGain,
   isJuiceSquash,
 } from "@/shared/config/gameJuice";
@@ -67,6 +68,21 @@ describe("feel tunables conform to the juice scale", () => {
       expect(isInJuiceWindow("effect", seconds)).toBe(true);
     }
     expect(isInJuiceWindow("linger", pickup.pieceSeconds)).toBe(true);
+  });
+
+  it("should keep the hurt pose in the band and its timings in their windows when built", () => {
+    const { hurt } = feel;
+    expect(isJuiceSquash(hurt.squash)).toBe(true);
+    expect(isInJuiceWindow("squash", hurt.squash.seconds)).toBe(true);
+    expect(isInJuiceWindow("squash", hurt.eyesShutSeconds)).toBe(true);
+    expect(isInJuiceWindow("linger", hurt.chunkSeconds)).toBe(true);
+    expect(isInJuiceWindow("linger", hurt.barPopSeconds)).toBe(true);
+  });
+
+  it("should keep a hurt at the hurt floor or louder when it has no push", () => {
+    expect(hurtGain(0, 1000)).toBe(JUICE_VOLUME.hurtMinGain);
+    expect(hurtGain(1000, 1000)).toBe(1);
+    expect(JUICE_VOLUME.hurtMinGain).toBeGreaterThan(JUICE_VOLUME.minGain);
   });
 
   it("should keep the landing squash inside the volume band and settle window when built", () => {

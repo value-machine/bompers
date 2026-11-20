@@ -227,16 +227,31 @@ describe("readSoundCues — wall bonks and hit intensity", () => {
     expect(soft[1]?.gain).toBe(soft[0]?.gain);
   });
 
+  const hitCue = (speed: number, damage: number) =>
+    cuesAfter(
+      snapshot({
+        players: [player(0, { speed }), player(1)],
+        events: [
+          event({ type: "playerHit", victimSlot: 0, byPlayerSlot: 1, source: "rocket", damage }),
+        ],
+      })
+    )[0];
+
   it("should scale a hit's gain with the victim's knockback speed when a player is hit", () => {
-    const hitAt = (speed: number) =>
-      cuesAfter(
-        snapshot({
-          players: [player(0, { speed }), player(1)],
-          events: [event({ type: "playerHit", victimSlot: 0, byPlayerSlot: 1, source: "rocket" })],
-        })
-      )[0]?.gain ?? 0;
-    expect(hitAt(SOUND_MIX.hitFullSpeed)).toBe(1);
-    expect(hitAt(0)).toBe(JUICE_VOLUME.minGain);
+    expect(hitCue(SOUND_MIX.hitFullSpeed, 1)?.gain).toBe(1);
+    expect(hitCue(SOUND_MIX.hitFullSpeed * 0.9, 1)?.gain).toBeLessThan(1);
+  });
+
+  it("should never play a hurt below the hurt floor when the hit takes a chunk with no push", () => {
+    expect(hitCue(0, 1)).toEqual({ soundId: "hit", slot: 0, gain: JUICE_VOLUME.hurtMinGain });
+  });
+
+  it("should only clink softly off the helmet when a hit takes no chunk", () => {
+    expect(hitCue(SOUND_MIX.hitFullSpeed, 0)).toEqual({
+      soundId: "clink",
+      slot: 0,
+      gain: SOUND_MIX.crouchGain,
+    });
   });
 });
 

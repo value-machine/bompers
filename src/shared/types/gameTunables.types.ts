@@ -609,6 +609,22 @@ export interface GameTunables {
     /** Render-only freeze after a hard hit (the sim keeps running); 0 turns it off. */
     hitStop: { seconds: number };
     /**
+     * Getting hurt (owner, hurt-feedback D1): every hit that takes a chunk answers on the blob
+     * itself, whatever its push. Durations in seconds, poses inside the juice band.
+     */
+    hurt: {
+      /** Squash wide on the hurt, springing back over `seconds`. */
+      squash: { sx: number; sy: number; seconds: number };
+      /** Eyes squeezed shut ("ouch") for this long after the hurt. */
+      eyesShutSeconds: number;
+      /** One chunk per damage point flies off the blob and falls for this long. */
+      chunkSeconds: number;
+      /** The health bar over the blob pops big and settles back over this long. */
+      barPopSeconds: number;
+      /** At this many chunks or fewer the blob sweats and its outline pulses, one pulse per `pulseSeconds`. */
+      lowHealth: { chunks: number; pulseSeconds: number };
+    };
+    /**
      * Knockout (knockout feature, owner's goo pick): an eliminated blob flies with the lethal
      * hit's knockback, squashes at the first hard contact (or at once on an overkill) and bursts
      * into goo droplets that keep its momentum and splat where they touch terrain. Its helmet and

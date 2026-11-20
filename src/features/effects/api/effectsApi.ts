@@ -13,3 +13,9 @@ export {
   type FeelState,
   type PlayerHitFeel,
 } from "@/features/effects/services/feelCues";
+export {
+  hurtBlobPoses,
+  hurtPoseAt,
+  type HurtPose,
+  type HurtTunables,
+} from "@/features/effects/services/hurtPose";

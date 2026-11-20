@@ -1,4 +1,4 @@
-import { intensityGain } from "@/shared/config/gameJuice";
+import { hurtGain, intensityGain } from "@/shared/config/gameJuice";
 import type { CombatEvent } from "@/features/combat/api/combatApi";
 import { SOUND_MIX } from "@/features/sound/services/soundBank";
 import type {
@@ -294,20 +294,27 @@ const burstCues = (frame: SoundSnapshot, lastBurst: number): SoundCue[] =>
 
 /**
  * Combat event → cue. Hits and eliminations take the victim's pitch, actions the actor's. A hit is
- * as loud as the victim's knockback speed this frame (`hitFullSpeed`).
+ * as loud as the victim's knockback speed this frame (`hitFullSpeed`), never below the hurt floor
+ * when it takes a chunk (`hurtGain`).
  */
 const SPRAY_START_SOUND = { torch: "torch-start", "freeze-ray": "freeze-start" } as const;
+
+/** A hit taking a chunk: as loud as its push, never below the hurt floor; one taking nothing (crouched) only clinks off the helmet (owner, hurt-feedback D1). */
+function hitCue(
+  event: Extract<CombatEvent, { type: "playerHit" }>,
+  speedOf: (slot: number) => number
+): SoundCue {
+  if (event.damage === 0) return cue("clink", event.victimSlot, SOUND_MIX.crouchGain);
+  const gain = hurtGain(speedOf(event.victimSlot), SOUND_MIX.hitFullSpeed);
+  return cue(event.source === "dive" ? "dive-impact" : "hit", event.victimSlot, gain);
+}
 
 function combatEventCue(event: CombatEvent, speedOf: (slot: number) => number): SoundCue | null {
   // Events that name their own sound: terrain gone (the material's), a moving part's (the author's).
   if ("soundId" in event) return cue(event.soundId, null);
   switch (event.type) {
     case "playerHit":
-      return cue(
-        event.source === "dive" ? "dive-impact" : "hit",
-        event.victimSlot,
-        intensityGain(speedOf(event.victimSlot), SOUND_MIX.hitFullSpeed)
-      );
+      return hitCue(event, speedOf);
     case "playerEliminated":
       // A knockout's pop waits for its burst (`burstCues`); falling out of the arena makes no
       // knockout, so it pops at once.

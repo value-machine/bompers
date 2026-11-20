@@ -66,7 +66,8 @@ export interface BlobPose {
  * blob turns by `rotation` (radians, clockwise, around the body centre; 0 = upright) and the
  * body scale is multiplied by `sx` / `sy`. A drawn hop raises the drawing by `lift` world units
  * (the body and its shadow stay where the sim has them); `pupilScale` shrinks the pupils
- * (panic pinpricks, fire-burn D1). Both are render only.
+ * (panic pinpricks, fire-burn D1); `eyesShut` squeezes the eyes shut (the hurt "ouch",
+ * hurt-feedback D1). All render only.
  */
 export interface BlobPoseOverlay {
   rotation: number;
@@ -74,6 +75,7 @@ export interface BlobPoseOverlay {
   sy: number;
   lift?: number;
   pupilScale?: number;
+  eyesShut?: boolean;
 }
 
 /**

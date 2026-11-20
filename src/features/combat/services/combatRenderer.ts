@@ -1,5 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import type { GameTunables } from "@/shared/config/gameTunables";
+import { easeOutQuad } from "@/shared/utils/easing";
 import {
   createContactShadowLayer,
   syncContactShadows,
@@ -29,12 +31,23 @@ export interface CombatView {
   rockets: Container;
   overlay: Container;
   rocketSprites: Map<number, Container>;
-  health: Map<string, { pips: Graphics; shown: number }>;
+  health: Map<string, HealthBar>;
+  /** Low-health pulse and sweat (hurt-feedback D1), placed under the players by the match renderer. */
+  lowHealth: Graphics;
   /** Steam where beams end each other; in the overlay, so it lies over the beams. */
   clashSteam: Graphics;
 }
 
+interface HealthBar {
+  pips: Graphics;
+  shown: number;
+  /** Sim time the bar last lost health (its pop), seconds. */
+  poppedAt: number;
+}
+
 const PIP = { w: 6, h: 5, gap: 2, lift: 10 };
+/** The over-head bar pops this big on a loss and settles back (hurt-feedback D1). */
+const BAR_POP_SCALE = 2;
 const S = DESIGN_SCALE;
 /** Rocket length (mockup 25 + nose) for its contact shadow. */
 const ROCKET_LENGTH = 32 * S;
@@ -55,6 +68,7 @@ export function createCombatView(): CombatView {
     overlay,
     rocketSprites: new Map(),
     health: new Map(),
+    lowHealth: new Graphics({ label: "low-health" }),
     clashSteam,
   };
 }
@@ -188,22 +202,62 @@ function drawPips(pips: Graphics, { health, slot, max }: PipsLook): void {
   }
 }
 
+/** The player's over-head health bar, created and added to the overlay on first sight. */
+function healthBarFor(view: CombatView, playerId: string): HealthBar {
+  const existing = view.health.get(playerId);
+  if (existing) return existing;
+  const bar = { pips: new Graphics(), shown: -1, poppedAt: Number.NEGATIVE_INFINITY };
+  view.health.set(playerId, bar);
+  view.overlay.addChild(bar.pips);
+  return bar;
+}
+
 function syncPlayerExtras(view: CombatView, frame: CombatFrame): void {
   const { combat, players, maxHealth } = frame;
   for (const player of players) {
     const fighter = combat.fighters.get(player.id);
     if (!fighter) continue;
-    let bar = view.health.get(player.id);
-    if (!bar) {
-      bar = { pips: new Graphics(), shown: -1 };
-      view.health.set(player.id, bar);
-      view.overlay.addChild(bar.pips);
-    }
-    if (bar.shown !== fighter.health)
+    const bar = healthBarFor(view, player.id);
+    if (bar.shown !== fighter.health) {
+      if (fighter.health < bar.shown) bar.poppedAt = frame.timeSeconds;
       drawPips(bar.pips, { health: fighter.health, slot: player.slot, max: maxHealth });
+    }
     bar.shown = fighter.health;
     bar.pips.visible = !fighter.eliminated;
     bar.pips.position.set(player.x, player.y - player.height - PIP.lift - PIP.h);
+    bar.pips.scale.set(barPopScale((frame.timeSeconds - bar.poppedAt) / frame.hurt.barPopSeconds));
+  }
+}
+
+/** The bar's scale `t` (0 → 1) through its pop: big at once, easing back to size. */
+const barPopScale = (t: number): number =>
+  t < 0 || t >= 1 ? 1 : 1 + (BAR_POP_SCALE - 1) * (1 - easeOutQuad(t));
+
+/**
+ * Low health (hurt-feedback D1): at `lowHealth.chunks` or fewer the blob's outline pulses in its
+ * colour, one pulse per `pulseSeconds`, and sweat drops flick off its sides. Drawn under the
+ * players, so it never covers an outline.
+ */
+function drawLowHealth(g: Graphics, frame: CombatFrame): void {
+  g.clear();
+  const { chunks, pulseSeconds } = frame.hurt.lowHealth;
+  for (const player of frame.players) {
+    const fighter = frame.combat.fighters.get(player.id);
+    if (!fighter || fighter.eliminated || fighter.health > chunks) continue;
+    const phase = (frame.timeSeconds / pulseSeconds + player.slot * 0.29) % 1;
+    const pulse = 0.5 - 0.5 * Math.cos(phase * Math.PI * 2);
+    const cy = player.y - player.height / 2;
+    const pad = 3 + 4 * pulse;
+    g.ellipse(player.x, cy, player.width / 2 + pad, player.height / 2 + pad).stroke({
+      width: 3 + 3 * pulse,
+      color: slotColor(player.slot),
+      alpha: 0.35 + 0.5 * pulse,
+    });
+    for (const side of [-1, 1]) {
+      const x = player.x + side * (player.width / 2 + 2 + phase * 6);
+      const y = player.y - player.height * 0.75 - phase * 3 + phase * phase * 12;
+      g.circle(x, y, 1.8).fill({ color: GAME_PALETTE.fire.sweat, alpha: 1 - phase });
+    }
   }
 }
 
@@ -259,6 +313,8 @@ export interface CombatFrame {
   /** Sim time of the state being drawn, seconds. */
   timeSeconds: number;
   maxHealth: number;
+  /** The hurt feedback's bar pop and low-health settings (`feel.hurt`). */
+  hurt: Pick<GameTunables["feel"]["hurt"], "barPopSeconds" | "lowHealth">;
   /** Terrain the contact shadows fall on. */
   terrain: TerrainGrid;
   /** Camera zoom (screen px per world unit) for the outline width clamp. */
@@ -280,5 +336,6 @@ export function syncCombatView(view: CombatView, frame: CombatFrame): void {
   });
   syncShadows(view, frame);
   syncPlayerExtras(view, frame);
+  drawLowHealth(view.lowHealth, frame);
   drawClashSteam(view.clashSteam, frame, outlineWidth("effect", zoom).width);
 }
