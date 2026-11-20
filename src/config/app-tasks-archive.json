@@ -548,5 +548,10 @@
     "title": "Hurt feedback: players always know when they are hurt",
     "description": "Owner picked all of A-D: hit-sound floor 0.8 for chunk-losing hits, longer flash, blocked hit = clink + grey ring, ouch squash + squeezed eyes, every lost pip pops, chunks fly off, health bar pop, low-health pulse + sweat. No new sound. PR #137.",
     "status": "done"
+  },
+  {
+    "title": "Dash: easier to aim, always registers, cooldown feedback",
+    "description": "Owner: the bash/dive attack is so hard to aim that players almost never land it; sometimes the input does not register. A blob with its feet on the ground must always be able to dash. Pressing it on cooldown must give a juice notice (visual + sound) that the press was seen but cannot be used yet. Magnetism with lead (B) + cooldown clink landed; owner tests it, then a bigger dash hit reach is added or combined if aiming is still too hard (thread: dash-feel).",
+    "status": "done"
   }
 ]

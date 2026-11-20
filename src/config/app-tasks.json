@@ -1,10 +1,5 @@
 [
   {
-    "title": "Dash: easier to aim, always registers, cooldown feedback",
-    "description": "Owner: the bash/dive attack is so hard to aim that players almost never land it; sometimes the input does not register. A blob with its feet on the ground must always be able to dash. Pressing it on cooldown must give a juice notice (visual + sound) that the press was seen but cannot be used yet. Magnetism with lead (B) + cooldown clink landed; owner tests it, then a bigger dash hit reach is added or combined if aiming is still too hard (thread: dash-feel).",
-    "status": "in-progress"
-  },
-  {
     "title": "Positional gravity and multi-planet levels",
     "description": "Owner: gravity that can be shifted and pointed at certain points (gravity wells), so a level can have several planets you jump between. Level-file syntax for gravity sources, player movement/jump/ground frame relative to local gravity, projectiles and debris under it, prompt + example level. Size M-L, cut into laps. Later.",
     "status": "to-do"
@@ -12,12 +7,12 @@
   {
     "title": "Show the saved mute state on screen",
     "description": "The M key mutes all audio and the mute is saved in localStorage, but nothing on screen shows it. Likely cause of the owner's \"audio broke on production\" scare (fixed by clearing site data; preview origins had no saved mute). Show a visible muted indicator (lobby + match) and an easy way to unmute; consider not persisting mute, or persisting with the indicator. Size XS/S.",
-    "status": "to-do"
+    "status": "in-progress"
   },
   {
     "title": "Unlock audio on gamepad input",
     "description": "The AudioContext only resumes on keydown or pointerdown, so a player who only uses a gamepad hears nothing. Resume it on the first gamepad button press too. Size XS.",
-    "status": "to-do"
+    "status": "in-progress"
   },
   {
     "title": "Ice lap 4: look polish",
@@ -51,12 +46,7 @@
   },
   {
     "title": "Physics objects (whole-object state)",
-    "description": "Owner rule (#125, level-objects README): terrain objects (trees) are partially destructible but never move; physics objects move and fall but burn/freeze/damage apply to the whole object, never per sample. Build the first physics objects (e.g. crate, ball, log) as rigid bodies with whole-object state. Feasibility numbers from the tree-physics check are in the README. Size M. Later.",
-    "status": "to-do"
-  },
-  {
-    "title": "Crates use the shared never-stuck collision",
-    "description": "Never-stuck lap note: crates still resolve collision on their own path, so the freeStuckPlayers guarantee does not cover a player pinned by a crate. Route crates through the shared resolver. Size S.",
-    "status": "to-do"
+    "description": "Owner rule (#125, level-objects README): terrain objects (trees) are partially destructible but never move; physics objects move and fall but burn/freeze/damage apply to the whole object, never per sample. Build the first physics objects (e.g. crate, ball, log) as rigid bodies with whole-object state. Feasibility numbers from the tree-physics check are in the README. Size M. Later. Owner: start with a ball, a car later. Every object must be placeable from a level file and taught in the level prompt (vision § Levels). In progress (thread: physics-objects).",
+    "status": "in-progress"
   }
 ]
