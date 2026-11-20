@@ -42,9 +42,10 @@ export interface AudioEngine {
   setMusicPaused(paused: boolean): void;
   settings(): SoundSettings;
   updateSettings(change: (settings: SoundSettings) => SoundSettings): void;
-  /** Called after every settings change; returns the unsubscribe. */
+  /** Called after every settings or mute change; returns the unsubscribe. */
   subscribe(listener: () => void): () => void;
   toggleMute(): void;
+  /** The M mute, remembered by the browser; subscribers hear every change (the sound-status chip shows it). */
   isMuted(): boolean;
   dispose(): void;
 }
@@ -79,19 +80,29 @@ const decibelsToGain = (db: number): number => 10 ** (db / 20);
 interface SettingsStore {
   get(): SoundSettings;
   update(change: (settings: SoundSettings) => SoundSettings): void;
+  isMuted(): boolean;
+  toggleMute(): void;
   subscribe(listener: () => void): () => void;
 }
 
-/** The settings, remembered by the browser, with change listeners. */
+/** The settings and the M mute, remembered by the browser, with change listeners. */
 function createSettingsStore(host: SoundHost): SettingsStore {
   let settings = readSoundSettings(host.localStorage);
+  let muted = readMuted(host);
   const listeners = new Set<() => void>();
+  const notify = (): void => listeners.forEach((listener) => listener());
   return {
     get: () => settings,
     update: (change) => {
       settings = change(settings);
       writeSoundSettings(host.localStorage, settings);
-      listeners.forEach((listener) => listener());
+      notify();
+    },
+    isMuted: () => muted,
+    toggleMute: () => {
+      muted = !muted;
+      writeMuted(host, muted);
+      notify();
     },
     subscribe: (listener) => {
       listeners.add(listener);
@@ -100,10 +111,9 @@ function createSettingsStore(host: SoundHost): SettingsStore {
   };
 }
 
-/** An engine that plays nothing (no Web Audio in this browser or test); settings still work. */
+/** An engine that plays nothing (no Web Audio in this browser or test); settings and mute still work. */
 function silentEngine(host: SoundHost): AudioEngine {
   const store = createSettingsStore(host);
-  let muted = false;
   return {
     playCue: () => undefined,
     setLoops: () => undefined,
@@ -112,10 +122,8 @@ function silentEngine(host: SoundHost): AudioEngine {
     settings: store.get,
     updateSettings: store.update,
     subscribe: store.subscribe,
-    toggleMute: () => {
-      muted = !muted;
-    },
-    isMuted: () => muted,
+    toggleMute: store.toggleMute,
+    isMuted: store.isMuted,
     dispose: () => undefined,
   };
 }
@@ -371,18 +379,13 @@ export function createAudioEngine(host: SoundHost): AudioEngine {
   const pickTake = createTakePicker(context);
   const music: MusicPlayer = createMusicPlayer({ context, output: mixer.musicDuck, load });
   const store = createSettingsStore(host);
-  let muted = readMuted(host);
-  const apply = (): void => applyGains(context, mixer, { settings: store.get(), muted });
+  const apply = (): void =>
+    applyGains(context, mixer, { settings: store.get(), muted: store.isMuted() });
   apply();
   const unsubscribeGains = store.subscribe(apply);
   warm(load);
 
-  const toggleMute = (): void => {
-    muted = !muted;
-    writeMuted(host, muted);
-    apply();
-  };
-  const unbindKeys = bindKeys(host, context, toggleMute);
+  const unbindKeys = bindKeys(host, context, store.toggleMute);
 
   return {
     playCue: (cue) => {
@@ -397,8 +400,8 @@ export function createAudioEngine(host: SoundHost): AudioEngine {
     settings: store.get,
     updateSettings: store.update,
     subscribe: store.subscribe,
-    toggleMute,
-    isMuted: () => muted,
+    toggleMute: store.toggleMute,
+    isMuted: store.isMuted,
     dispose: () => {
       unsubscribeGains();
       unbindKeys();

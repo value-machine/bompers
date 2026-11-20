@@ -30,6 +30,7 @@ export {
 export {
   useAudioEngine,
   useMusicTrack,
+  useMuted,
   useSoundSettings,
 } from "@/features/sound/hooks/useAudioEngine";
 export { PLAYER_PITCH_SEMITONES, SOUND_FILES } from "@/features/sound/services/soundBank";

@@ -29,3 +29,8 @@ export function useMusicTrack(track: MusicTrackId): void {
 export function useSoundSettings(engine: AudioEngine): SoundSettings {
   return useSyncExternalStore(engine.subscribe, engine.settings);
 }
+
+/** Whether the M mute is on, re-rendering on every toggle. */
+export function useMuted(engine: AudioEngine): boolean {
+  return useSyncExternalStore(engine.subscribe, engine.isMuted);
+}
