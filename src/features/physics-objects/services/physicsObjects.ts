@@ -163,10 +163,12 @@ function moveAll(
   state: PhysicsObjectsState,
   objects: readonly PhysicsObject[],
   args: StepPhysicsObjectsArgs
-) {
+): Set<PhysicsObject> {
   const { terrain, tunables, dt, now } = args;
+  const stuck = new Set<PhysicsObject>();
   for (const object of objects) {
-    const impact = stepObjectMotion(object, { terrain, tunables, dt });
+    const { impact, stuck: wedged } = stepObjectMotion(object, { terrain, tunables, dt });
+    if (wedged) stuck.add(object);
     const strength = bounceStrength(impact, tunables);
     if (strength === null || now - lastBounceAt(state, object) < BOUNCE_GAP_SECONDS) continue;
     addMoment(state, object, {
@@ -177,6 +179,7 @@ function moveAll(
       at: { x: object.x, y: object.y + object.radius },
     });
   }
+  return stuck;
 }
 
 /** Bumps, blasts and dives; hits break frozen objects' ice. Returns the blob contacts. */
@@ -212,7 +215,8 @@ export function stepPhysicsObjects(state: PhysicsObjectsState, args: StepPhysics
   bringBack(state, { terrain, now });
   const objects = objectsInPlay(state);
   if (objects.length === 0) return;
-  moveAll(state, objects, args);
+  // Only motion can leave an object in solid (bumps and blasts move it safely or set speeds).
+  const stuck = moveAll(state, objects, args);
   const contacts = pushAll(state, objects, args);
   const burnt = stepObjectElements({
     ...args,
@@ -225,7 +229,7 @@ export function stepPhysicsObjects(state: PhysicsObjectsState, args: StepPhysics
     if (object.goneUntil !== null) continue;
     if (outside(args.killZone, object)) {
       popObject(state, object, { now, tunables, soundId: "none" });
-    } else if (objectHitsAt(terrain, object, { x: 0, y: 0 }) && !freeStuckObject(object, terrain)) {
+    } else if (stuck.has(object) && !freeStuckObject(object, terrain)) {
       popObject(state, object, { now, tunables, soundId: "thwap" });
     }
   }

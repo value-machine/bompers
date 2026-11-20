@@ -82,18 +82,19 @@ function respond(object: PhysicsObject, normal: Vec2, tunables: GameTunables): n
 function resolveTerrain(
   object: PhysicsObject,
   step: MotionStep
-): { impact: number; normal: Vec2 | null } {
+): { impact: number; normal: Vec2 | null; free: boolean } {
   let impact = 0;
   let normal: Vec2 | null = null;
   for (let pass = 0; pass < PUSH_PASSES; pass += 1) {
     const contact = circleContact(step.terrain, object, object.radius);
-    if (!contact) break;
+    if (!contact) return { impact, normal, free: true };
     object.x += contact.normal.x * contact.depth;
     object.y += contact.normal.y * contact.depth;
     impact = Math.max(impact, respond(object, contact.normal, step.tunables));
     normal = contact.normal;
   }
-  return { impact, normal };
+  // Still overlapping after every pass: wedged (the caller frees it with the shared search).
+  return { impact, normal, free: circleContact(step.terrain, object, object.radius) === null };
 }
 
 function capSpeed(object: PhysicsObject, max: number): void {
@@ -116,38 +117,51 @@ function roll(object: PhysicsObject, normal: Vec2, step: MotionStep): void {
   object.angle += (along / object.radius) * step.dt;
 }
 
+/** What one step of motion did: the hardest impact (units / s) and whether it ended in solid. */
+export interface MotionResult {
+  impact: number;
+  stuck: boolean;
+}
+
 /**
- * One step of motion through the terrain. Returns the hardest impact this step (units / s), for
- * the bounce moment. Leaves the object free of terrain unless no free spot was in reach.
+ * One step of motion through the terrain: the hardest impact this step (for the bounce moment)
+ * and whether the object is left overlapping solid (only then does the caller run the never-stuck
+ * search, so a free object costs no extra field reads).
  */
-export function stepObjectMotion(object: PhysicsObject, step: MotionStep): number {
+export function stepObjectMotion(object: PhysicsObject, step: MotionStep): MotionResult {
   const { terrain, tunables, dt } = step;
   object.vy += tunables.world.gravity * dt;
   capSpeed(object, tunables.physicsObjects.maxSpeed);
-  const { impact, ground } = moveThrough(object, step);
-  const below = circleContact(terrain, { x: object.x, y: object.y + 1 }, object.radius);
-  object.grounded = ground !== null || below !== null;
-  if (object.grounded) roll(object, ground ?? below?.normal ?? { x: 0, y: -1 }, step);
-  return impact;
+  const { impact, ground, free } = moveThrough(object, step);
+  // Touching ground this step already says grounded; only otherwise probe just below.
+  const below = ground
+    ? null
+    : circleContact(terrain, { x: object.x, y: object.y + 1 }, object.radius);
+  const normal = ground ?? below?.normal ?? null;
+  object.grounded = normal !== null;
+  if (normal) roll(object, normal, step);
+  return { impact, stuck: !free };
 }
 
 /** This step's move in sub-steps of half a cell, each resolved against terrain. */
 function moveThrough(
   object: PhysicsObject,
   step: MotionStep
-): { impact: number; ground: Vec2 | null } {
+): { impact: number; ground: Vec2 | null; free: boolean } {
   const distance = Math.hypot(object.vx, object.vy) * step.dt;
   const steps = Math.max(1, Math.ceil(distance / (step.terrain.cellSize / 2)));
   let impact = 0;
   let ground: Vec2 | null = null;
+  let free = true;
   for (let i = 0; i < steps; i += 1) {
     object.x += (object.vx * step.dt) / steps;
     object.y += (object.vy * step.dt) / steps;
     const hit = resolveTerrain(object, step);
     impact = Math.max(impact, hit.impact);
     ground = hit.normal ?? ground;
+    free = hit.free;
   }
-  return { impact, ground };
+  return { impact, ground, free };
 }
 
 /**

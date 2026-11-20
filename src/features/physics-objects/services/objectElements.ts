@@ -1,7 +1,7 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { TerrainGrid } from "@/features/arena/api/arenaApi";
-import type { FireState } from "@/features/fire/api/fireApi";
+import { burningCount, type FireState } from "@/features/fire/api/fireApi";
 import type { IceState } from "@/features/ice/api/iceApi";
 import {
   burningGroundNear,
@@ -88,10 +88,12 @@ export interface ObjectElementsArgs {
 /** Catching: torch rays, burning ground, burning blobs touching it. */
 function catchFlames(args: ObjectElementsArgs): void {
   const { now, terrain, sink } = args;
+  // No search for burning ground near each object while nothing burns (most steps).
+  const groundBurning = burningCount(args.fire) > 0;
   for (const object of args.objects) {
     const spray = args.fire.sprays.find((beam) => rayReaches(object, beam));
     if (spray) light(object, { now, bySlot: spray.slot }, sink);
-    if (object.state.kind === "burning" || !burns(object)) continue;
+    if (object.state.kind === "burning" || !burns(object) || !groundBurning) continue;
     const reach = object.radius + terrain.cellSize;
     if (burningGroundNear(args.fire, terrain, { world: object, reach, now })) {
       light(object, { now, bySlot: null }, sink);
