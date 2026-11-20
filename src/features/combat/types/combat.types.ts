@@ -92,8 +92,10 @@ export type CombatEventBody =
       source: HitSource;
       kind: HitKind;
       zone: HitZone;
-      /** Chunks removed (0 = a configured bounce-only hit). */
+      /** Chunks removed (0 = a configured bounce-only hit), bonus damage included. */
       damage: number;
+      /** Set when the hit took `bonusDamage` (a shattered ice block): reads as a hard hit. */
+      bonus?: true;
       healthLeft: number;
       x: number;
       y: number;
@@ -171,6 +173,12 @@ export interface CombatState {
   events: CombatEvent[];
   /** Held beams ending each other this step (beam-clash D1), for the steam and its sound. */
   beamClashes: BeamClash[];
+  /**
+   * Extra chunks the next direct hit takes this step, by victim slot (used up by that hit; not
+   * fire: it melts, it does not break). The match fills it each step from the elements (a frozen blob's block shatters:
+   * `ice.blob.shatterDamage`); combat only reads it.
+   */
+  bonusDamage: Map<number, number>;
   nextSeq: number;
   nextEntityId: number;
 }

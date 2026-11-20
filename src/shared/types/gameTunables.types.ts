@@ -319,10 +319,19 @@ export interface GameTunables {
      * `frozenSeconds`. The block brakes at `slideGrip` of normal, breaks on jump press number
      * `cracksToBreak`, and its blob gathers no chill for `graceSeconds` after it ends. Effects
      * show each moment for `momentSeconds`.
+     *
+     * Freeze-ray buff: chill slows the run by up to `chillSlowMax` (and raises gravity by the same
+     * share) as it fills; it holds `chillHoldSeconds` after the beam leaves before it drains;
+     * it fills `slipperyChillScale` × as fast on slippery ground (ice or frozen); a direct hit on
+     * a frozen block takes `shatterDamage` chunks more.
      */
     blob: {
       freezeSeconds: number;
       crouchChillScale: number;
+      chillSlowMax: number;
+      chillHoldSeconds: number;
+      slipperyChillScale: number;
+      shatterDamage: number;
       frozenSeconds: number;
       cracksToBreak: number;
       slideGrip: number;

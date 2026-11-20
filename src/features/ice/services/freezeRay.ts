@@ -65,7 +65,7 @@ export function sprayFreezeRay(ice: IceState, args: FreezeRayArgs): void {
   pushAlongAim(hits, { accel: ray.push, dt: args.dt });
   for (const blob of hits.bodies) {
     if (args.canChill && !args.canChill(blob)) continue;
-    chillBlob(ice, blob, { now: args.now, dt: args.dt, tunables });
+    chillBlob(ice, blob, { now: args.now, dt: args.dt, terrain, tunables });
   }
   ice.rays = ice.rays.filter((beam) => beam.slot !== holder.slot);
   ice.rays.push({

@@ -76,7 +76,8 @@ type HitEvent = Extract<CombatEvent, { type: "playerHit" }>;
 
 function noteHit(state: FeelState, event: HitEvent, frame: FeelFrame): void {
   const { feel, nowMs } = frame;
-  const hard = event.zone === "back";
+  // A shattered ice block lands as hard as a back hit (freeze-ray buff B: heavy tier).
+  const hard = event.zone === "back" || event.bonus === true;
   const shake = feel.shake.hit;
   kickCameraShake(frame.shake, {
     px: shake.px * (hard ? feel.shake.hardHitScale : 1),

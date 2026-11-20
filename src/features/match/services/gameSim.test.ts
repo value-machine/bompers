@@ -523,7 +523,12 @@ describe("gameSim — ice blocks (ice-frozen-blobs D1–D7)", () => {
   const withFrozenBlob = () => {
     const state = stepFor(newGame(), 3);
     const player = state.players[0]!;
-    const chill = { now: state.timeSeconds, dt: B.freezeSeconds, tunables: state.tunables };
+    const chill = {
+      now: state.timeSeconds,
+      dt: B.freezeSeconds,
+      terrain: state.arena.terrain,
+      tunables: state.tunables,
+    };
     chillBlob(state.ice, player, chill);
     return { state, player };
   };
@@ -561,6 +566,24 @@ describe("gameSim — ice blocks (ice-frozen-blobs D1–D7)", () => {
     );
   });
 
+  it("should take the shatter damage on top when a hit lands on a frozen blob", () => {
+    const { state, player } = withFrozenBlob();
+    stepGame(state, keys(), dt);
+    const result = applyHit(
+      { ...state, players: state.players },
+      {
+        victimSlot: 0,
+        attackerSlot: 1,
+        kind: "contact",
+        source: "dive",
+        contactPoint: { x: player.x, y: player.y },
+        direction: { x: -player.facing, y: 0 },
+      }
+    );
+    const C = DEFAULT_GAME_TUNABLES.combat;
+    expect(result.damage).toBe(C.hitDamage.contact.front + B.shatterDamage);
+  });
+
   it("should melt the block and not leave the blob burning when fire touches a frozen blob", () => {
     const { state, player } = withFrozenBlob();
     catchFire(state.blobFire, player, { now: state.timeSeconds, fromX: player.x - 50, bySlot: 1 });
@@ -574,7 +597,12 @@ describe("gameSim — ice blocks (ice-frozen-blobs D1–D7)", () => {
     const state = stepFor(newGame(), 3);
     const player = state.players[0]!;
     catchFire(state.blobFire, player, { now: state.timeSeconds, fromX: player.x - 50, bySlot: 1 });
-    chillBlob(state.ice, player, { now: state.timeSeconds, dt, tunables: state.tunables });
+    chillBlob(state.ice, player, {
+      now: state.timeSeconds,
+      dt,
+      terrain: state.arena.terrain,
+      tunables: state.tunables,
+    });
     stepGame(state, keys(), dt);
     expect(state.blobFire.blobs.size).toBe(0);
     expect(isIced(state.ice, player)).toBe(false);
