@@ -54,6 +54,10 @@ export function fireRocket(ctx: CombatContext, shooter: PlayerState, kind: Rocke
 function touchesSomething(ctx: CombatContext, rocket: RocketState, point: Vec2): boolean {
   if (!rectContains(ctx.bounds, point)) return true;
   if (isSolidAt(ctx.terrain, point.x, point.y)) return true;
+  const hitsBody = (ctx.roundBodies ?? []).some(
+    (body) => Math.hypot(point.x - body.center.x, point.y - body.center.y) <= body.radius
+  );
+  if (hitsBody) return true;
   const margin = ctx.tunables.combat.rocket.radius;
   return ctx.players.some(
     (player) =>

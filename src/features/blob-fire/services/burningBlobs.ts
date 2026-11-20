@@ -179,27 +179,41 @@ function douseBurning(blobFire: BlobFireState, args: StepBurningBlobsArgs): void
 }
 
 /**
- * A blob touching a burning sample of any body (the ground or a moving part) catches; the fire
- * came from that sample. A part is searched in its own frame, around the blob's centre there.
+ * Where a round body at `world` touching burning ground of any body (the static terrain or a
+ * moving part) would catch from: the world point of the first burning sample within `reach`, or
+ * null. A part is searched in its own frame, around the body's centre there. Shared by burning
+ * blobs and physics objects (physics-objects lap).
  */
-function catchFromTerrain(blobFire: BlobFireState, args: StepBurningBlobsArgs): void {
-  const { terrain, now } = args;
+export function burningGroundNear(
+  fire: FireState,
+  terrain: TerrainGrid,
+  near: { world: Vec2; reach: number; now: number }
+): Vec2 | null {
   const bodies = terrainBodies(terrain);
   const grids = bodyGrids(terrain);
-  for (const player of args.players) {
-    const world = hurtCenter(player);
-    const reach = reachOf(terrain, player);
-    bodies.some(({ toLocal }, body) => {
-      const ground = args.fire.grounds[body];
-      const grid = grids[body];
-      const center = toLocal ? toLocal(world) : world;
-      if (!ground || !grid || !center || blobFire.blobs.has(player.id)) return false;
-      return someSampleNear(grid, { center, reach }, (index, at) => {
-        if ((ground.igniteAt[index] ?? Infinity) > now) return false;
-        const fromX = bodyWorldPoint(terrain, body, at).x;
-        return catchFire(blobFire, player, { now, fromX, bySlot: null });
-      });
+  let found: Vec2 | null = null;
+  bodies.some(({ toLocal }, body) => {
+    const ground = fire.grounds[body];
+    const grid = grids[body];
+    const center = toLocal ? toLocal(near.world) : near.world;
+    if (!ground || !grid || !center) return false;
+    return someSampleNear(grid, { center, reach: near.reach }, (index, at) => {
+      if ((ground.igniteAt[index] ?? Infinity) > near.now) return false;
+      found = bodyWorldPoint(terrain, body, at);
+      return true;
     });
+  });
+  return found;
+}
+
+/** A blob touching a burning sample of any body catches; the fire came from that sample. */
+function catchFromTerrain(blobFire: BlobFireState, args: StepBurningBlobsArgs): void {
+  const { terrain, now } = args;
+  for (const player of args.players) {
+    if (blobFire.blobs.has(player.id)) continue;
+    const near = { world: hurtCenter(player), reach: reachOf(terrain, player), now };
+    const from = burningGroundNear(args.fire, terrain, near);
+    if (from) catchFire(blobFire, player, { now, fromX: from.x, bySlot: null });
   }
 }
 

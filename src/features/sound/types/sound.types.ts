@@ -80,6 +80,10 @@ export interface SoundWorldSnapshot {
   beamClashes: number;
   /** Weapon-crate landings over the match (monotonic; pickup-juice D2). */
   crateLandings: number;
+  /** Physics-object moments made over the match (monotonic; the next one's `seq`). */
+  objectMomentCount: number;
+  /** Recent physics-object moments with a sound (bounce, catch, freeze, pop…), by `seq`. */
+  objectSounds: readonly { seq: number; soundId: string; gain: number }[];
 }
 
 /**

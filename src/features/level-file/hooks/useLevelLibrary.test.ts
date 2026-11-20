@@ -66,6 +66,7 @@ describe("useLevelLibrary", () => {
       ["/levels/crystal-gap.html", "Crystal Gap", "Bompers team"],
       ["/levels/slush-bowl.html", "Slush Bowl", "Bompers team"],
       ["/levels/tree-grove.html", "Tree Grove", "Bompers team"],
+      ["/levels/beach-court.html", "Beach Court", "Bompers team"],
     ]);
   });
 });

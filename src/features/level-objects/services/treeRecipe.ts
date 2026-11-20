@@ -11,7 +11,7 @@ import {
 } from "@/features/level-objects/services/objectParts";
 import type {
   ObjectPart,
-  ObjectRecipe,
+  TerrainObjectRecipe,
   ObjectVariant,
 } from "@/features/level-objects/types/levelObject.types";
 
@@ -314,8 +314,9 @@ const VARIANTS: readonly ObjectVariant[] = [
   },
 ];
 
-export const TREE_RECIPE: ObjectRecipe = {
+export const TREE_RECIPE: TerrainObjectRecipe = {
   kind: "tree",
+  objectClass: "terrain",
   label: "Tree",
   // 96 keeps every part at least two samples thick; 480 is a third of a 1440-tall world (D11).
   height: { min: 96, max: 480 },

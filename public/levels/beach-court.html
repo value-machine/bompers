@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Beach Court — Bompers level</title>
+    <!-- Optional preview kit: legend, labels, grid. The level works without it. -->
+    <link rel="stylesheet" href="/level-kit/v2/preview.css" />
+    <script src="/level-kit/v2/preview.js" defer></script>
+  </head>
+  <body>
+    <svg
+      id="level"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 2400 1100"
+      data-level-format="2"
+      data-level-id="beach-court"
+      data-title="Beach Court"
+      data-author="Bompers team"
+      data-agent="claude"
+      data-description="A court of physics objects: four beach balls of three sizes on a stone floor between two ramps, one on a sliding platform, a cardboard strip to set alight and an ice patch to slide on, with torch, freeze-ray and rocket drops."
+      data-cell-size="4"
+      data-gravity="1"
+      data-match-duration="180"
+      data-weapons="torch freeze-ray rocket-launcher"
+      style="display: block; width: 100%; height: auto; background: #cfeaf7"
+    >
+      <title>Beach Court</title>
+
+      <!-- In-bounds area: leaving it eliminates the player (and pops a ball, which comes back). -->
+      <rect data-role="bounds" x="0" y="0" width="2400" height="1100" fill="none" stroke="#d24b3a" />
+
+      <!-- Ground: a stone floor with a ramp at each end, a cardboard strip that burns and an ice patch. -->
+      <rect data-role="terrain" data-material="stone" x="80" y="840" width="2240" height="96" fill="#5a3f7a" />
+      <polygon data-role="terrain" data-material="stone" points="80,600 480,840 80,840" fill="#5a3f7a" />
+      <polygon data-role="terrain" data-material="stone" points="2320,600 2320,840 1920,840" fill="#5a3f7a" />
+      <rect data-role="terrain" data-material="cardboard" x="1040" y="824" width="320" height="16" fill="#c99a62" />
+      <rect data-role="terrain" data-material="ice" data-color="frost" x="600" y="832" width="240" height="8" fill="#a8cfe6" />
+
+      <!-- A sliding platform; the ball above it lands on it and rides along. -->
+      <g data-motion="slide 320,0 4s">
+        <rect data-role="terrain" data-material="stone" x="1000" y="560" width="240" height="24" fill="#5a3f7a" />
+      </g>
+
+      <!-- Beach balls: the rect is a square, its side the diameter; a ball rests on the rect's bottom. -->
+      <rect id="ramp-ball" data-role="object" data-kind="ball" data-variant="beach" x="120" y="576" width="48" height="48" fill="#5f8f3e" />
+      <rect id="big-ball" data-role="object" data-kind="ball" data-variant="beach" x="1640" y="768" width="72" height="72" fill="#5f8f3e" />
+      <rect id="small-ball" data-role="object" data-kind="ball" data-variant="beach" x="880" y="808" width="32" height="32" fill="#5f8f3e" />
+      <rect id="riding-ball" data-role="object" data-kind="ball" data-variant="beach" x="1096" y="496" width="48" height="48" fill="#5f8f3e" />
+
+      <!-- Spawns: on the floor between the balls. -->
+      <circle data-role="spawn" cx="560" cy="816" r="14" fill="#3f8f5f" />
+      <circle data-role="spawn" cx="1000" cy="816" r="14" fill="#3f8f5f" />
+      <circle data-role="spawn" cx="1480" cy="816" r="14" fill="#3f8f5f" />
+      <circle data-role="spawn" cx="1840" cy="816" r="14" fill="#3f8f5f" />
+
+      <!-- Weapon crates: torch, freeze ray and rockets. -->
+      <circle data-role="drop" cx="600" cy="120" r="12" fill="#c94f7c" />
+      <circle data-role="drop" cx="1200" cy="120" r="12" fill="#c94f7c" />
+      <circle data-role="drop" cx="1800" cy="120" r="12" fill="#c94f7c" />
+    </svg>
+  </body>
+</html>

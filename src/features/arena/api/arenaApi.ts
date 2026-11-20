@@ -37,6 +37,7 @@ export {
   moversDistanceAt,
   rectHitsSolid,
   surfaceBelow,
+  FIELD_BAND_SAMPLES,
 } from "@/features/arena/services/terrainGrid";
 export { isFrozenSample, setSampleFrozen, thawAround } from "@/features/arena/services/terrainGrid";
 export { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";

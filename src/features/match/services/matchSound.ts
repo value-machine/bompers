@@ -82,6 +82,13 @@ export function soundWorldOf(state: GameState): SoundWorldSnapshot {
     frozenVersion: frozenVersionOf(state.arena.terrain),
     beamClashes: state.combat.beamClashes.length,
     crateLandings: state.collectibles.crates.landCount,
+    objectMomentCount: state.physicsObjects.momentCount,
+    objectSounds: state.physicsObjects.moments.map((moment) => ({
+      seq: moment.seq,
+      soundId: moment.soundId,
+      // A bounce is as loud as it was hard (never silent once heard); other moments at full.
+      gain: moment.kind === "bounce" ? 0.35 + 0.65 * moment.strength : 1,
+    })),
   };
 }
 

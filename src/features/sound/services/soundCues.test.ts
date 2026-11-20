@@ -48,6 +48,8 @@ const world = (patch: Partial<SoundWorldSnapshot> = {}): SoundWorldSnapshot => (
   thawedSamples: 0,
   frozenVersion: 0,
   beamClashes: 0,
+  objectMomentCount: 0,
+  objectSounds: [],
   crateLandings: 0,
   ...patch,
 });
@@ -284,6 +286,33 @@ describe("readSoundCues — weapon crates", () => {
     expect(cuesAfter(frame)).toEqual([
       { soundId: CRATE_LAND_SOUND, slot: null, gain: SOUND_MIX.crouchGain },
     ]);
+  });
+});
+
+describe("readSoundCues — physics objects", () => {
+  it("should play each new object moment's sound unpitched when objects bounce or catch fire", () => {
+    const frame = snapshot({
+      world: world({
+        objectMomentCount: 3,
+        objectSounds: [
+          { seq: 0, soundId: "tumble-bounce", gain: 0.5 },
+          { seq: 1, soundId: "tumble-bounce", gain: 0.8 },
+          { seq: 2, soundId: "catch-fire", gain: 1 },
+        ],
+      }),
+    });
+    const previous = readSoundCues(null, snapshot({ world: world({ objectMomentCount: 1 }) }));
+    expect(readSoundCues(previous.cursor, frame).cues).toEqual([
+      { soundId: "tumble-bounce", slot: null, gain: 0.8 },
+      { soundId: "catch-fire", slot: null, gain: 1 },
+    ]);
+  });
+
+  it("should stay silent when an object moment has no sound", () => {
+    const frame = snapshot({
+      world: world({ objectMomentCount: 1, objectSounds: [{ seq: 0, soundId: "none", gain: 1 }] }),
+    });
+    expect(cuesAfter(frame)).toEqual([]);
   });
 });
 

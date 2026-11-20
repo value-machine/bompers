@@ -5,10 +5,12 @@ import { isWeaponItemId } from "@/shared/config/weaponItems";
 import { cuePointsPassed, motionCuePoints } from "@/shared/utils/levelMotion";
 import {
   createArenaState,
+  FIELD_BAND_SAMPLES,
   fieldNormalAt,
   moverAt,
   moversDistanceAt,
   type ArenaState,
+  type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
 import {
   inheritOnLeave,
@@ -57,6 +59,14 @@ import {
   type IceState,
 } from "@/features/ice/api/iceApi";
 import {
+  createPhysicsObjectsState,
+  objectsInPlay,
+  popObject,
+  stepPhysicsObjects,
+  type ObjectBlast,
+  type PhysicsObjectsState,
+} from "@/features/physics-objects/api/physicsObjectsApi";
+import {
   createCollectiblesState,
   stepCollectibles,
   stepDiveRefills,
@@ -104,6 +114,10 @@ import {
  *                        unarmed fire goes through its `unarmedAttack` hook to the dive, a held
  *                        torch through its `sprayAttack` hook to the fire feature's `sprayTorch`,
  *                        a held freeze ray to the ice feature's `sprayFreezeRay`
+ *   3g. stepPhysicsObjects — physics-objects feature: balls come back, move, bump blobs and each
+ *                        other, take this step's blasts, torch, freeze ray and burning ground
+ *                        (whole object), pop when stuck, burnt through or out of the kill zone.
+ *                        Rockets explode on them in step 3; moving parts carry them in step 1b
  *   3e. stepIce        — ice feature: frozen samples whose time is over thaw (the ray itself
  *                        freezes inside step 3; this runs before 3c, so freezing puts fire out)
  *   3f. frozen blobs   — ice feature: before step 2 `icedInputs` empties a frozen blob's
@@ -172,6 +186,8 @@ export interface GameState {
   ice: IceState;
   /** Each rider's carry velocity last step: a body leaving a moving part keeps it once (movers). */
   moverCarry: CarryMemory;
+  /** Moving bodies the level placed (balls), whole-object fire and frost. */
+  physicsObjects: PhysicsObjectsState;
   /** Sky drops: point orbs falling onto the collectible points, weapon crates from the drop points. */
   collectibles: CollectiblesState;
   /** Scores and the respawn queue. */
@@ -218,6 +234,7 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
     players: [],
     combat: createCombatState(),
     dive: createDiveState(),
+    physicsObjects: createPhysicsObjectsState(normalized.level),
     collectibles: createCollectiblesState(matchTunables, normalized.level.collectibles),
     rules: createMatchRulesState(matchTunables.match.maxPlayers),
     round: {
@@ -272,10 +289,36 @@ function stepMovingParts(state: GameState, players: PlayerState[], dt: number): 
   if (terrain.movers.length === 0) return;
   stepMoverPoses(terrain, state.timeSeconds + dt);
   playPartSounds(state, dt);
+  const crateBodies = crateRiders(state);
+  const objects = objectsInPlay(state.physicsObjects);
+  const objectBodies = objects.map((object) => riderOf(object, terrain));
+  const bodies: MovingRider[] = [...players, ...crateBodies, ...objectBodies];
+  const ride = rideMovers(terrain, bodies, {
+    crushGapFraction: state.tunables.player.crushGapFraction,
+  });
+  const wasCarried = state.moverCarry;
+  state.moverCarry = inheritOnLeave(state.moverCarry, bodies, { ride, dt });
+  // Squeezed but alive: the player shrinks to fit for its own step and recovers when it opens.
+  players.forEach((player, i) => {
+    player.squeeze = ride.squeezed[i] ?? null;
+  });
+  crushPinnedPlayers(state, players, ride.pinned);
+  syncCrates(state.collectibles.crates.list, crateBodies);
+  rideObjects(state, {
+    objects,
+    objectBodies,
+    pinned: ride.pinned,
+    first: bodies.length - objects.length,
+    carried: ride.carried,
+    wasCarried,
+    dt,
+  });
+}
+
+/** Crates as riders. They have no horizontal speed: what they keep on leaving a part is its vertical speed. */
+function crateRiders(state: GameState): MovingRider[] {
   const size = state.tunables.combat.drops.size;
-  const crates = state.collectibles.crates.list;
-  // Crates have no horizontal speed: what they keep on leaving a part is its vertical speed.
-  const crateBodies = crates.map((crate) => ({
+  return state.collectibles.crates.list.map((crate) => ({
     id: `crate-${crate.id}`,
     x: crate.x,
     y: crate.y,
@@ -284,22 +327,96 @@ function stepMovingParts(state: GameState, players: PlayerState[], dt: number): 
     vx: 0,
     vy: crate.vy,
   }));
-  const bodies: MovingRider[] = [...players, ...crateBodies];
-  const ride = rideMovers(terrain, bodies, {
-    crushGapFraction: state.tunables.player.crushGapFraction,
-  });
-  state.moverCarry = inheritOnLeave(state.moverCarry, bodies, { ride, dt });
-  // Squeezed but alive: the player shrinks to fit for its own step and recovers when it opens.
-  players.forEach((player, i) => {
-    player.squeeze = ride.squeezed[i] ?? null;
-  });
-  crushPinnedPlayers(state, players, ride.pinned);
+}
+
+/** Crates take their carried position and vertical speed back from their rider bodies. */
+function syncCrates(
+  crates: GameState["collectibles"]["crates"]["list"],
+  bodies: readonly MovingRider[]
+): void {
   crates.forEach((crate, i) => {
-    const body = crateBodies[i]!;
+    const body = bodies[i]!;
     crate.x = body.x;
     crate.y = body.y;
     crate.vy = body.vy;
   });
+}
+
+/**
+ * A physics object as a moving-part rider: a circle at its bottom no wider than the terrain
+ * field's band (the ride reads round bodies on the field, which is exact only within the band),
+ * so a big ball is carried by its feet like a blob. Its own step resolves the rest of its body.
+ */
+function riderOf(
+  object: PhysicsObjectsState["objects"][number],
+  terrain: TerrainGrid
+): MovingRider {
+  const proxy = Math.min(object.radius, FIELD_BAND_SAMPLES * terrain.cellSize * 0.75);
+  return {
+    id: object.id,
+    x: object.x,
+    y: object.y + object.radius,
+    width: proxy * 2,
+    height: proxy * 2,
+    vx: object.vx,
+    vy: object.vy,
+  };
+}
+
+/**
+ * A ball's own speed stays relative to the part it rides: leaving a part it keeps the part's
+ * speed once (`inheritOnLeave`, like a blob) and remembers it; landing back on a part takes that
+ * speed off again, so a bouncing ball never stacks the part's speed on top of the carry. Landing
+ * on plain ground forgets it.
+ */
+function keepRelativeSpeed(
+  object: PhysicsObjectsState["objects"][number],
+  step: { body: MovingRider; by: Vec2 | null; wasCarried: boolean }
+): void {
+  const kept = { x: step.body.vx - object.vx, y: step.body.vy - object.vy };
+  object.vx = step.body.vx;
+  object.vy = step.body.vy;
+  if (kept.x !== 0 || kept.y !== 0) object.heldCarry = kept;
+  if (step.by && !step.wasCarried && object.heldCarry) {
+    object.vx -= object.heldCarry.x;
+    object.heldCarry = null;
+  } else if (!step.by && object.grounded) {
+    object.heldCarry = null;
+  }
+}
+
+/**
+ * Physics objects after the parts moved (step 1b): they take their carried position and speed;
+ * one a part pins against terrain pops and comes back (it never crushes, physics-objects D3).
+ */
+function rideObjects(
+  state: GameState,
+  ride: {
+    objects: readonly PhysicsObjectsState["objects"][number][];
+    objectBodies: readonly MovingRider[];
+    pinned: readonly PinnedBody[];
+    first: number;
+    carried: readonly (Vec2 | null)[];
+    wasCarried: CarryMemory;
+    dt: number;
+  }
+): void {
+  ride.objects.forEach((object, i) => {
+    const body = ride.objectBodies[i]!;
+    const by = ride.carried[ride.first + i] ?? null;
+    keepRelativeSpeed(object, { body, by, wasCarried: ride.wasCarried.has(object.id) });
+    object.x = body.x;
+    object.y = body.y - object.radius;
+  });
+  for (const pin of ride.pinned) {
+    const object = ride.objects[pin.index - ride.first];
+    if (!object) continue;
+    popObject(state.physicsObjects, object, {
+      now: state.timeSeconds,
+      tunables: state.tunables,
+      soundId: "thwap",
+    });
+  }
 }
 
 /**
@@ -434,6 +551,40 @@ function openSpawns(state: GameState): readonly Vec2[] {
   );
   return open.length > 0 ? open : level.spawns;
 }
+
+/** This step's explosions, as physics objects feel them (power back from the logged reach). */
+function blastsThisStep(state: GameState): ObjectBlast[] {
+  const { reachPerPower } = state.tunables.combat.blast;
+  return state.combat.events.flatMap((event) =>
+    event.type === "explosion" && event.timeSeconds === state.timeSeconds && reachPerPower > 0
+      ? [{ at: { x: event.x, y: event.y }, power: event.radius / reachPerPower }]
+      : []
+  );
+}
+
+/** Step 3g: physics objects, after combat so this step's blasts and sprays reach them. */
+function stepObjects(state: GameState, players: readonly PlayerState[], dt: number): void {
+  stepPhysicsObjects(state.physicsObjects, {
+    terrain: state.arena.terrain,
+    players,
+    killZone: state.killZone,
+    blasts: blastsThisStep(state),
+    fire: state.fire,
+    ice: state.ice,
+    blobFire: state.blobFire,
+    isDiving: (player) => isDiving(state, player),
+    now: state.timeSeconds,
+    dt,
+    tunables: state.tunables,
+  });
+}
+
+/** Rockets explode on the physics objects in play (step 3). */
+const roundBodiesOf = (state: GameState) =>
+  objectsInPlay(state.physicsObjects).map((object) => ({
+    center: { x: object.x, y: object.y },
+    radius: object.radius,
+  }));
 
 /** Step 3a: right after combat, so a player eliminated by a rocket this step cannot collect. */
 function stepCratePickups(state: GameState, dt: number): void {
@@ -614,11 +765,12 @@ interface ContactStep {
 }
 
 /**
- * Steps 3e, 3f, 3c, 3d: ice before fire, so a burning sample frozen this step is out before the
+ * Steps 3g, 3e, 3f, 3c, 3d: physics objects first (this step's blasts and sprays reach them); ice before fire, so a burning sample frozen this step is out before the
  * fire spreads again; then the blobs' ice and fire, which cancel on a blob that has both.
  */
 function stepElements(state: GameState, step: ContactStep): void {
   const { tunables, timeSeconds } = state;
+  stepObjects(state, step.players, step.dt);
   stepIce(state.ice, state.arena.terrain, { now: timeSeconds });
   stepFrozenBlobs(state.ice, { players: step.players, now: timeSeconds, dt: step.dt, tunables });
   stepBlobsOnFire(state, step);
@@ -667,6 +819,7 @@ function stepPlay(state: GameState, rawInputs: PlayerInputs, dt: number): void {
     tunables,
     timeSeconds,
     dt,
+    roundBodies: roundBodiesOf(state),
     unarmedAttack: ({ attacker }) => requestDive(state.dive, attacker, tunables),
     sprayAttack: ({ attacker, itemId, reach }) => {
       const spray = { terrain, players, holder: attacker, tunables, now: timeSeconds, dt, reach };

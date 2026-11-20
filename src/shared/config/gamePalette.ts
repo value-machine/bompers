@@ -75,6 +75,12 @@ export const GAME_PALETTE = {
     steam: 0xffffff,
     smoke: 0x6e6378,
   },
+  /**
+   * Physics-object panels (DESIGN_LANGUAGE § 1 Effects, physics-objects Q1): the beach ball's
+   * wedges in the helmet cream, the rose and frost swatches and the rocket flame's sun orange;
+   * never a player hue. A variant names its panels by these keys.
+   */
+  objectPanels: { cream: 0xfff4e2, rose: 0xc95a86, frost: 0xa8cfe6, sun: 0xffb21a },
   /** Lost health chunk (DESIGN_LANGUAGE § 7). */
   healthLost: 0xe9dfd0,
   /** Point orb: bubblegum star (DESIGN_LANGUAGE § 1 Effects). */

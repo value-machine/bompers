@@ -110,6 +110,18 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       breathSeconds: 1.6,
     },
   },
+  // Physics objects (physics-objects lap, starting values): a popped ball comes back after 3 s
+  // (owner Q2); impacts under 60 units / s rest instead of bouncing; a frozen ball keeps 95 % of
+  // its slide each second; a diving blob kicks a ball 500 units / s harder than a plain bump.
+  physicsObjects: {
+    respawnSeconds: 3,
+    restingSpeed: 60,
+    bounceSoundMinSpeed: 120,
+    bounceSoundFullSpeed: 700,
+    frozenDrag: 0.05,
+    maxSpeed: 1600,
+    divePush: 500,
+  },
   bodyCollision: { restitution: 0.9, restingSpeed: 140, maxImpulse: 1100 },
   // A full-speed dive hit gives about 1000 units / s: 0.8 s out of control. A 200 shove: 0.16 s.
   // Rolling friction 200 + 1.5 × speed: a 1000 roll on the flat stops in ≈ 1.4 s (≈ 480 units);

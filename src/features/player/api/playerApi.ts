@@ -5,9 +5,11 @@ export {
   hurtBox,
   hurtCenter,
   hurtHeight,
+  moveAxis,
   placePlayer,
   playerBody,
   stepPlayers,
+  type ContactArgs,
   type StepPlayersArgs,
 } from "@/features/player/services/playerController";
 export {

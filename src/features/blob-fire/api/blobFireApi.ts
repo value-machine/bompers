@@ -5,6 +5,7 @@ export type {
   BurningBlob,
 } from "@/features/blob-fire/types/blobFire.types";
 export {
+  burningGroundNear,
   catchFire,
   createBlobFireState,
   douseBlob,
