@@ -31,9 +31,14 @@ export function useSoundSettings(engine: AudioEngine): SoundSettings {
   return useSyncExternalStore(engine.subscribe, engine.settings);
 }
 
-/** What the sound-status chip shows: `blocked` while a gamepad press could not start the sound. */
+/**
+ * What the sound-status chip shows: `muted` while the M mute is on (it wins: one tap on the chip
+ * unmutes and starts blocked sound alike), `blocked` while a gamepad press could not start the sound.
+ */
 export function useSoundStatus(): SoundStatus | null {
   const engine = useAudioEngine();
+  const muted = useSyncExternalStore(engine.subscribe, engine.isMuted);
   const needsGesture = useSyncExternalStore(engine.subscribeStatus, engine.needsGesture);
+  if (muted) return "muted";
   return needsGesture ? "blocked" : null;
 }

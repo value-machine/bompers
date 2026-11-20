@@ -1,5 +1,5 @@
 import { SoundStatusChip } from "@/features/sound/components/SoundStatusChip";
-import { useSoundStatus } from "@/features/sound/hooks/useAudioEngine";
+import { useAudioEngine, useSoundStatus } from "@/features/sound/hooks/useAudioEngine";
 import { cn } from "@/shared/utils/cn";
 
 const PLACEMENT = {
@@ -15,11 +15,15 @@ export interface SoundStatusCornerProps {
 
 /**
  * The app's one place for the sound-status chip (lobby and match render the same thing). Place it
- * inside a `relative` container; a tap anywhere starts blocked sound.
+ * inside a `relative` container; a tap anywhere starts blocked sound, a tap on the muted chip unmutes.
  */
-export const SoundStatusCorner = ({ placement }: SoundStatusCornerProps) => (
-  <SoundStatusChip
-    status={useSoundStatus()}
-    className={cn("absolute z-20", PLACEMENT[placement])}
-  />
-);
+export const SoundStatusCorner = ({ placement }: SoundStatusCornerProps) => {
+  const engine = useAudioEngine();
+  return (
+    <SoundStatusChip
+      status={useSoundStatus()}
+      onUnmute={engine.toggleMute}
+      className={cn("absolute z-20", PLACEMENT[placement])}
+    />
+  );
+};
