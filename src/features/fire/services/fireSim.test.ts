@@ -15,6 +15,7 @@ import type { LevelDefinition, TerrainPiece } from "@/features/level/api/levelAp
 import { createPlayer } from "@/features/player/api/playerApi";
 import {
   createFireView,
+  flameBlocks,
   syncFireView,
   type FireFrame,
 } from "@/features/fire/services/fireRenderer";
@@ -444,5 +445,59 @@ describe("fire layers per body (mover-materials-l2 D3, D4)", () => {
     terrain.movers[0]!.pose = { dx: 0, dy: -60, angle: 0 };
     syncFireView(view, frame);
     expect(layer.position.y - layer.pivot.y).toBeCloseTo(-60, 6);
+  });
+});
+
+describe("flames on a turned part (fire-on-rotating-parts)", () => {
+  /** The whole part burning, turned half round about its pivot: its rest-pose top is now its bottom. */
+  function turnedPart(angle: number) {
+    const { terrain, frame } = burningPart();
+    const ground = frame.fire.grounds[1]!;
+    const field = bodyGrids(terrain)[1]!;
+    ground.lit = [];
+    field.cells.forEach((slot, index) => {
+      if (slot === 0) return;
+      ground.lit.push(index);
+      ground.igniteAt[index] = 0;
+    });
+    ground.litHead = 0;
+    ground.dueOut = [];
+    ground.version += 1;
+    terrain.movers[0]!.pose = { dx: 0, dy: 0, angle };
+    return { terrain, frame };
+  }
+  // The slab is x 240–360, y 100–140 in the world, turned or not (it turns about its middle).
+  const TOP = 100;
+  const BOTTOM = 140;
+
+  it("should root the flames on the part's world top edge when the part is turned half round", () => {
+    for (const angle of [0, Math.PI]) {
+      const { terrain, frame } = turnedPart(angle);
+      const blocks = flameBlocks({
+        fire: frame.fire.grounds[1]!,
+        world: terrain,
+        body: 1,
+        timeSeconds: frame.timeSeconds,
+      });
+      const tops = [...blocks.values()].filter(
+        (block) => !blocks.has((block.by - 1) * terrain.widthCells + block.bx)
+      );
+      expect(tops.length).toBeGreaterThan(0);
+      for (const block of tops) {
+        expect(block.y).toBeGreaterThan(TOP - 1);
+        expect(block.y).toBeLessThan(TOP + 2 * terrain.cellSize);
+      }
+    }
+  });
+
+  it("should make the flames rise world-up from a part turned half round, not hang below it", () => {
+    const { frame } = turnedPart(Math.PI);
+    const view = createFireView();
+    syncFireView(view, frame);
+    const bounds = view.grounds[1]!.flames.getBounds();
+    expect(bounds.height).toBeGreaterThan(0);
+    // Above the part's top edge, never down past its middle or out under its bottom.
+    expect(bounds.minY).toBeLessThan(TOP);
+    expect(bounds.maxY).toBeLessThan((TOP + BOTTOM) / 2);
   });
 });

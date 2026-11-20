@@ -2,13 +2,13 @@ import { readFileSync } from "node:fs";
 import { buildLine, type Container, type Graphics } from "pixi.js";
 import { describe, expect, it } from "vitest";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
+import { bodyEdgeAbove } from "@/features/arena/services/terrainBodies";
 import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 import { burnOut, clearCrater, fieldBand } from "@/features/arena/services/terrainGrid";
 import { parseLevelFile } from "@/features/level-file/api/levelFileApi";
 import { createTerrainView, syncTerrainView } from "@/features/arena/services/terrainRenderer";
 import {
   belowLipRegion,
-  edgeAbove,
   markedRegion,
   outlineRingIssue,
   slotLayerBoxes,
@@ -212,16 +212,21 @@ describe("terrainContour limited to marked samples (a burning or frozen part)", 
   });
 });
 
-describe("edgeAbove", () => {
+/** World centre of static-terrain sample (column `cx`, row `cy`). */
+const centreOf = (grid: { cellSize: number }, cx: number, cy: number) => ({
+  x: (cx + 0.5) * grid.cellSize,
+  y: (cy + 0.5) * grid.cellSize,
+});
+
+describe("bodyEdgeAbove on the static terrain", () => {
   it("should give the slab's top where a sample has air above it and null where it has terrain", () => {
     const grid = buildTerrainFromLevel(level);
     const firstRow = [...Array(grid.heightCells).keys()].find(
       (cy) => grid.cells[cy * grid.widthCells + 50] !== 0
     )!;
-    const top = firstRow * grid.widthCells + 50;
-    expect(edgeAbove(grid, top)).toBeCloseTo(101, 0);
-    expect(edgeAbove(grid, top + grid.widthCells)).toBeNull();
-    expect(edgeAbove(grid, top - grid.widthCells)).toBeNull();
+    expect(bodyEdgeAbove(grid, 0, centreOf(grid, 50, firstRow))).toBeCloseTo(101, 0);
+    expect(bodyEdgeAbove(grid, 0, centreOf(grid, 50, firstRow + 1))).toBeNull();
+    expect(bodyEdgeAbove(grid, 0, centreOf(grid, 50, firstRow - 1))).toBeNull();
   });
 
   it("should move with the terrain when a blast cuts it", () => {
@@ -233,7 +238,7 @@ describe("edgeAbove", () => {
     const first = [...Array(grid.heightCells).keys()].find(
       (cy) => grid.cells[cy * grid.widthCells + column] !== 0
     )!;
-    expect(edgeAbove(grid, first * grid.widthCells + column)).toBeCloseTo(101 + 34, 0);
+    expect(bodyEdgeAbove(grid, 0, centreOf(grid, column, first))).toBeCloseTo(101 + 34, 0);
   });
 });
 
