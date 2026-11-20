@@ -281,6 +281,13 @@ export interface GameTunables {
     /** Seconds a hit victim steers at `staggerSteerScale` (keeps the knockback readable). */
     staggerSeconds: number;
     staggerSteerScale: number;
+    /**
+     * Aim magnetism (owner pick B, dash-aim lap): at the press, the other blob the aim points at
+     * within `coneDegrees` and `range` units bends the dash to where that blob will be when the
+     * dash arrives (its speed and gravity over wind-up + travel time). Invisible; the dash stays
+     * straight. `coneDegrees` 0 turns it off.
+     */
+    magnet: { coneDegrees: number; range: number };
   };
   /**
    * Fire on the terrain field (blast-power D5, D6): it spreads through touching fuel at

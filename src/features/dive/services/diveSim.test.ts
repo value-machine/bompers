@@ -651,3 +651,80 @@ describe("dash press reliability (dash-feel lap)", () => {
     expect(sim.phaseOf(player)).toBe("windup");
   });
 });
+
+describe("dash aim magnetism (dash-aim lap, owner pick B)", () => {
+  /** Today's dash: the magnet switched off. */
+  const NO_MAGNET: GameTunables = { ...T, dive: { ...D, magnet: { ...D.magnet, coneDegrees: 0 } } };
+
+  interface DashCase {
+    /** Target (standing on the floor) offset from the dasher, feet to feet; y is down. */
+    offset: { x: number; y: number };
+    aim: InputPatch;
+    /** Target velocity given at the press (a jump). */
+    launch?: { vx: number; vy: number };
+  }
+
+  /** Dashes at the target (the dasher hangs `offset.y` above the floor) and reports a landed hit. */
+  const dashAt = (c: DashCase, tunables: GameTunables = T): boolean => {
+    const sim = createSim([100, 100 + c.offset.x], tunables);
+    const [dasher, target] = [sim.players[0]!, sim.players[1]!];
+    if (c.offset.y > 0) Object.assign(dasher, { y: FLOOR_Y - c.offset.y, vy: 0, grounded: false });
+    if (c.launch) Object.assign(target, { ...c.launch, y: FLOOR_Y - 1, grounded: false });
+    sim.step([{ fire: true, ...c.aim }]);
+    sim.step([c.aim], frames(D.windupSeconds + D.travelSeconds) + 2);
+    return sim.hits.some((hit) => hit.attackerSlot === 0);
+  };
+
+  const aimAt = (x: number, y: number): InputPatch => {
+    const length = Math.hypot(x, y);
+    return { aimX: x / length, aimY: y / length };
+  };
+
+  it("should land on a target between two of the 16 directions when the stick aims right at it", () => {
+    const offAngle: DashCase = { offset: { x: 149, y: 101 }, aim: aimAt(149, 101) };
+    expect(dashAt(offAngle, NO_MAGNET)).toBe(false);
+    expect(dashAt(offAngle)).toBe(true);
+  });
+
+  it("should land on a target that jumps as the dash starts when the stick aims at where it stood", () => {
+    const jumper: DashCase = {
+      offset: { x: 145, y: 0 },
+      aim: { aimX: 1 },
+      launch: { vx: 0, vy: -380 },
+    };
+    expect(dashAt(jumper, NO_MAGNET)).toBe(false);
+    expect(dashAt(jumper)).toBe(true);
+  });
+
+  it("should land with keyboard aim (8 ways) on a target 12° off the straight line", () => {
+    const keyboard: DashCase = { offset: { x: 176, y: 37 }, aim: { aimX: 1 } };
+    expect(dashAt(keyboard, NO_MAGNET)).toBe(false);
+    expect(dashAt(keyboard)).toBe(true);
+  });
+
+  it("should keep the snapped direction when the target is outside the cone", () => {
+    const sim = createSim([100, 230]);
+    const target = sim.players[1]!;
+    const pin = () => Object.assign(target, { y: FLOOR_Y - 75, vx: 0, vy: 0, grounded: false });
+    pin();
+    sim.step([{ fire: true, aimX: 1 }]);
+    while (sim.phaseOf(sim.players[0]!) !== "travel") {
+      pin();
+      sim.step([{ aimX: 1 }]);
+    }
+    expect(sim.players[0]!.vy).toBe(0);
+  });
+
+  it("should keep the snapped direction when the target is out of range", () => {
+    const sim = createSim([100, 100 + D.magnet.range + 40]);
+    const target = sim.players[1]!;
+    const pin = () => Object.assign(target, { y: FLOOR_Y - 30, vx: 0, vy: 0, grounded: false });
+    pin();
+    sim.step([{ fire: true, aimX: 1 }]);
+    while (sim.phaseOf(sim.players[0]!) !== "travel") {
+      pin();
+      sim.step([{ aimX: 1 }]);
+    }
+    expect(sim.players[0]!.vy).toBe(0);
+  });
+});

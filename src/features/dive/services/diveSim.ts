@@ -13,6 +13,7 @@ import {
 import type { DiveHit, DiveMotion, DiveState, DiveTrigger } from "@/features/dive/types/dive.types";
 import { applyHit, type CombatState } from "@/features/combat/api/combatApi";
 import { directHitPush } from "@/shared/utils/blastPower";
+import { magnetDirection } from "@/features/dive/services/diveMagnet";
 
 /**
  * Dive headbutt system (sim step 3b, after players, body contacts and combat). Unarmed fire
@@ -159,9 +160,21 @@ function launchSpeedFor(player: PlayerState, direction: Vec2, d: DiveTunables): 
   return Math.max(d.launchSpeed, Math.min(along, d.rollCarryMax));
 }
 
+/**
+ * The locked dash direction: the 16-way aim, bent by the aim magnet toward a blob in its cone
+ * (owner pick B, dash-aim lap). An aim-less jump dive is a bashing double jump straight up: no
+ * magnet (D17).
+ */
+function aimedDirection(player: PlayerState, start: DiveStart): Vec2 {
+  const snapped = diveDirection(player, start.trigger);
+  if (start.trigger === "jump" && !player.aimHeld) return snapped;
+  const { players, tunables } = start.args;
+  return magnetDirection({ dasher: player, snapped, players, tunables });
+}
+
 function startWindup(motion: DiveMotion, player: PlayerState, start: DiveStart): void {
   const { d, trigger } = start;
-  const direction = diveDirection(player, trigger);
+  const direction = aimedDirection(player, start);
   motion.dirX = direction.x;
   motion.dirY = direction.y;
   motion.trigger = trigger;
@@ -268,6 +281,8 @@ function tickTimers(motion: DiveMotion, dt: number): void {
 interface DiveStart {
   d: DiveTunables;
   trigger: DiveTrigger;
+  /** The step: the other players, for the aim magnet. */
+  args: StepDivesArgs;
 }
 
 /**
@@ -390,7 +405,7 @@ function stepPhase(motion: DiveMotion, player: PlayerState, args: StepDivesArgs)
   const active = motion.phase === "windup" || motion.phase === "travel";
   if (player.grounded && !active) motion.charged = true;
   // Idle, or a recovery the blob may cut short (on its feet, not bonked): a press can start here.
-  const started = !active && startIfReady(motion, player, { d, jumpRequest });
+  const started = !active && startIfReady(motion, player, { d, jumpRequest, args });
   if (motion.phase === "travel") stepTravel(motion, player, args);
   else if (!started && motion.phase !== "idle") motion.phaseSeconds += args.dt;
   handOverPhase(motion, player, d);
@@ -401,10 +416,10 @@ function stepPhase(motion: DiveMotion, player: PlayerState, args: StepDivesArgs)
 function startIfReady(
   motion: DiveMotion,
   player: PlayerState,
-  ctx: { d: DiveTunables; jumpRequest: boolean }
+  ctx: { d: DiveTunables; jumpRequest: boolean; args: StepDivesArgs }
 ): boolean {
   const trigger = readyTrigger(motion, player, ctx);
-  if (trigger) startWindup(motion, player, { d: ctx.d, trigger });
+  if (trigger) startWindup(motion, player, { d: ctx.d, trigger, args: ctx.args });
   return trigger !== null;
 }
 
