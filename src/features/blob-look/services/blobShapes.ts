@@ -284,6 +284,20 @@ export function drawEye(u: number): { white: Graphics; pupil: Graphics } {
 }
 
 /**
+ * A squeezed-shut eye, the "ouch" of getting hurt (owner, hurt-feedback D1): an ink chevron
+ * pointing at the nose (`side` −1 for the left eye, 1 for the right), as wide as the eye white.
+ */
+export function drawShutEye(u: number, side: -1 | 1): Graphics {
+  const w = 4.5 * u;
+  const h = 5 * u;
+  return new Graphics()
+    .moveTo(-side * w, -h)
+    .lineTo(side * w * 0.8, 0)
+    .lineTo(-side * w, h)
+    .stroke({ width: 2.4 * u, color: GAME_PALETTE.ink, cap: "round", join: "round" });
+}
+
+/**
  * A helmet off the blob (knockout): ink pass, gradient dome, gloss and emblem in one container,
  * centred on the dome so it can spin as a loose piece.
  */

@@ -303,12 +303,13 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     zoomOutRate: 8,
     edgeMargin: 24,
   },
-  // DESIGN_LANGUAGE § 6: hit = 3 frames of white + 3 px shake for 80 ms; explosion = 6 px for 120 ms.
+  // DESIGN_LANGUAGE § 6: hit = 4 frames of white fading over 150 ms + 3 px shake for 80 ms; explosion = 6 px for 120 ms.
   // Strengths come from the juice tiers (GAME_JUICE.md); durations stay inside its windows (tested).
   feel: {
     hitFlash: {
-      holdSeconds: 0.05,
-      fadeSeconds: 0.08,
+      // Longest the windows allow, so every hurt reads (owner, hurt-feedback D1).
+      holdSeconds: 0.07,
+      fadeSeconds: 0.15,
       front: JUICE_TIERS.medium.flash,
       back: JUICE_TIERS.heavy.flash,
       reducedMotionScale: 0.5,
@@ -357,6 +358,14 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     },
     // About 3 frames at 60 fps.
     hitStop: { seconds: JUICE_TIERS.heavy.hitStopSeconds },
+    // Owner's pick from the hurt-feedback options page (D1: all of A–D).
+    hurt: {
+      squash: { sx: 1.2, sy: 0.83, seconds: 0.15 },
+      eyesShutSeconds: 0.2,
+      chunkSeconds: 0.45,
+      barPopSeconds: 0.6,
+      lowHealth: { chunks: 1, pulseSeconds: 1.2 },
+    },
     // Owner's pick from the knockout demo rounds (elimination-goo lap, 2026-11-16).
     knockout: {
       hardContactSpeed: 200,

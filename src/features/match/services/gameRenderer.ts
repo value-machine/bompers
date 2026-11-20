@@ -50,10 +50,12 @@ import {
 import {
   createEffectsView,
   createFeelState,
+  hurtBlobPoses,
   readFeelCues,
   syncEffectsView,
   type EffectsView,
   type FeelState,
+  type HurtTunables,
 } from "@/features/effects/api/effectsApi";
 import { prefersReducedMotion } from "@/shared/utils/reducedMotion";
 import { blastReach } from "@/shared/utils/blastPower";
@@ -100,13 +102,14 @@ const createElementViews = () => ({
  *   │  ├─ terrain   (arena: solid slabs, breakable tiles)
  *   │  ├─ contact shadows: weapon crates (collectibles), rockets (combat), players (player)
  *   │  ├─ weapon crates, headbutt resets, point orbs (collectibles)
- *   │  ├─ effects (debris, explosions, rocket-hit pops — effects)
+ *   │  ├─ effects (debris, explosions, rocket-hit pops, blocked rings, lost chunks — effects)
  *   │  ├─ knockouts (goo droplets, loose helmets and tubes — knockout; its goo stains sit right above the terrain)
  *   │  ├─ rockets (+ trails — combat)
  *   │  ├─ dive effects (dive impact pops)   (dive)
+ *   │  ├─ low health (pulsing outline + sweat under a blob at 1 chunk — combat)
  *   │  ├─ players   (player; above effects so they never cover a player outline; protected
  *   │  │             players blink inside a dashed ring)
- *   │  └─ combat overlay (health chunks above each player)
+ *   │  └─ combat overlay (health chunks above each player, popping on a loss)
  *   └─ hud     (screen units: timer card, player cards, round-result banner — hudRenderer)
  * Players waiting to respawn are not drawn and not framed by the camera. A knocked-out blob that is
  * still flying or squashing (knockout feature) is drawn by the player layer under its own id.
@@ -172,6 +175,8 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     knockouts.layer,
     combat.rockets,
     dive.effects,
+    // The low-health pulse rings the blob from under it, never over its outline.
+    combat.lowHealth,
     players.container,
     fire.sprayLayer,
     blobFire.layer,
@@ -244,10 +249,29 @@ const respawnHolds = (state: GameState): Map<string, number> => {
   return holds;
 };
 
+/**
+ * The hurt pose (hurt-feedback D1) lies over whatever the blob already wears (a burning hop, a
+ * dive, a squeeze): its squash multiplies in and the eyes squeeze shut.
+ */
+function addHurtPoses(
+  overlays: Map<string, BlobPoseOverlay>,
+  frame: { hits: FeelState["hits"]; nowMs: number; hurt: HurtTunables }
+): void {
+  for (const [id, hurt] of hurtBlobPoses(frame.hits, frame)) {
+    const base = overlays.get(id) ?? { rotation: 0, sx: 1, sy: 1 };
+    overlays.set(id, {
+      ...base,
+      sx: base.sx * hurt.sx,
+      sy: base.sy * hurt.sy,
+      eyesShut: hurt.eyesShut,
+    });
+  }
+}
+
 /** Pose overlays: a burning blob's panic hop, under the dive's pose when it dives (that puts it out). */
 const blobOverlays = (
   state: GameState,
-  frame: { inPlay: readonly PlayerState[]; nowMs: number }
+  frame: { inPlay: readonly PlayerState[]; nowMs: number; hits: FeelState["hits"] }
 ): Map<string, BlobPoseOverlay> => {
   const overlays = burningBlobPoses(state.blobFire, { players: frame.inPlay, nowMs: frame.nowMs });
   for (const [id, pose] of diveBlobPoses(state.dive, state.tunables)) overlays.set(id, pose);
@@ -261,6 +285,7 @@ const blobOverlays = (
     if (player.squeeze && !overlays.has(player.id))
       overlays.set(player.id, squeezePose(player.squeeze));
   }
+  addHurtPoses(overlays, { hits: frame.hits, nowMs: frame.nowMs, hurt: state.tunables.feel.hurt });
   return overlays;
 };
 
@@ -333,7 +358,7 @@ interface BlobFrame {
 function blobFrame(renderer: GameRenderer, state: GameState, frame: LayerFrame): BlobFrame {
   const blobs: BlobFrame = {
     players: [...frame.inPlay],
-    overlays: blobOverlays(state, { inPlay: frame.inPlay, nowMs: frame.nowMs }),
+    overlays: blobOverlays(state, { inPlay: frame.inPlay, nowMs: frame.nowMs, hits: frame.hits }),
     weapons: blobWeapons(state),
     hits: new Map(frame.hits),
   };
@@ -440,6 +465,7 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     players: frame.inPlay,
     timeSeconds: state.timeSeconds,
     maxHealth: state.tunables.combat.maxHealth,
+    hurt: state.tunables.feel.hurt,
     terrain: state.arena.terrain,
     zoom,
   });
@@ -447,6 +473,7 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     events: state.combat.events,
     timeSeconds: state.timeSeconds,
     zoom,
+    chunkSeconds: state.tunables.feel.hurt.chunkSeconds,
   });
 }
 

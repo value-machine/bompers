@@ -95,10 +95,18 @@ export function isJuiceSquash(pose: { sx: number; sy: number }): boolean {
  * `minGain` for a gentle touch, rising linearly to full gain at the moment's full speed. Each
  * moment owns its full speed (the sound bank's `SOUND_MIX.landingFullSpeed` / `hitFullSpeed`).
  */
-export const JUICE_VOLUME = { minGain: 0.35 } as const;
+export const JUICE_VOLUME = { minGain: 0.35, hurtMinGain: 0.8 } as const;
 
 /** Effect gain for an impact `speed` against the moment's `fullSpeed` (units / s). */
 export function intensityGain(speed: number, fullSpeed: number): number {
   const t = Math.min(1, Math.max(0, speed / fullSpeed));
   return JUICE_VOLUME.minGain + (1 - JUICE_VOLUME.minGain) * t;
+}
+
+/**
+ * Gain of a hit that takes a chunk: by intensity, but never below `hurtMinGain`, so a hurt with
+ * no push (a burn tick) is as clear as a shove (owner, hurt-feedback D1).
+ */
+export function hurtGain(speed: number, fullSpeed: number): number {
+  return Math.max(JUICE_VOLUME.hurtMinGain, intensityGain(speed, fullSpeed));
 }

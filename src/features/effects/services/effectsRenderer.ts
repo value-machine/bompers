@@ -17,6 +17,10 @@ export interface EffectsView {
   layer: Container;
   blasts: Map<number, Container>;
   pops: Map<number, Container>;
+  /** Grey rings where a hit took nothing (crouched: blocked). */
+  blocks: Map<number, Container>;
+  /** Health chunks flying off a hurt blob, one per damage point. */
+  chunks: Map<number, Container>;
   debris: Map<number, Container>;
 }
 
@@ -24,6 +28,8 @@ export interface EffectsFrame {
   events: readonly CombatEvent[];
   timeSeconds: number;
   zoom: number;
+  /** How long a lost chunk flies (`feel.hurt.chunkSeconds`). */
+  chunkSeconds: number;
 }
 
 type EventOf<T extends CombatEvent["type"]> = Extract<CombatEvent, { type: T }>;
@@ -38,6 +44,8 @@ export function createEffectsView(): EffectsView {
     layer: new Container({ label: "effects" }),
     blasts: new Map(),
     pops: new Map(),
+    blocks: new Map(),
+    chunks: new Map(),
     debris: new Map(),
   };
 }
@@ -68,6 +76,52 @@ const drawPop = (width: number): Container =>
     .poly(starPoints(8, POP.radius, POP.radius * 0.55))
     .fill(GAME_PALETTE.hitFlash)
     .stroke(inkStroke(width));
+
+/**
+ * Blocked (hurt-feedback D1): a grey ring where a hit took nothing, so a crouched hit never
+ * reads as a hurt. It widens and fades over the pop's time.
+ */
+const BLOCK_RADIUS = 14 * DESIGN_SCALE;
+const drawBlock = (width: number): Container =>
+  new Graphics()
+    .circle(0, 0, BLOCK_RADIUS)
+    .stroke({ width: width * 1.5, color: GAME_PALETTE.hud.caption });
+
+/** A lost health chunk (hurt-feedback D1): the over-head pip's shape, big, in the victim's colour. */
+const CHUNK = { w: 11 * DESIGN_SCALE, h: 9 * DESIGN_SCALE, speed: 220, gravity: 1100, spin: 7 };
+const drawChunks = (event: EventOf<"playerHit">, width: number): Container => {
+  const root = new Container();
+  const color = GAME_PALETTE.players[event.victimSlot % GAME_PALETTE.players.length]!;
+  for (let i = 0; i < event.damage; i += 1) {
+    root.addChild(
+      new Graphics()
+        .roundRect(-CHUNK.w / 2, -CHUNK.h / 2, CHUNK.w, CHUNK.h, CHUNK.h * 0.3)
+        .fill(color)
+        .stroke(inkStroke(width))
+    );
+  }
+  return root;
+};
+
+/** Pops each chunk up and out of the hit, falling and spinning; fades over the last third. */
+function placeChunks(
+  root: Container,
+  event: EventOf<"playerHit">,
+  at: { age: number; seconds: number }
+): void {
+  const { age } = at;
+  root.position.set(event.x, event.y);
+  root.alpha = Math.min(1, 3 * (1 - age / at.seconds));
+  const middle = (root.children.length - 1) / 2;
+  root.children.forEach((piece, i) => {
+    const angle = -Math.PI / 2 + (i - middle) * 0.7 + (noise(event.seq, i) - 0.5) * 0.6;
+    piece.position.set(
+      Math.cos(angle) * CHUNK.speed * age,
+      Math.sin(angle) * CHUNK.speed * age + 0.5 * CHUNK.gravity * age * age
+    );
+    piece.rotation = (noise(event.seq, i + 7) - 0.5) * CHUNK.spin * age * 2;
+  });
+}
 
 /** Deterministic 0..1 noise from an event seq and a piece index (no RNG in render). */
 const noise = (seq: number, i: number): number => {
@@ -140,7 +194,9 @@ export function syncEffectsView(view: EffectsView, frame: EffectsFrame): void {
   });
   syncDisplayById(view.pops, view.layer, {
     // Dive hits draw their own pop (features/dive); this one marks rocket and blast hits.
-    list: liveEvents(frame, "playerHit", POP.seconds).filter((event) => event.source !== "dive"),
+    list: liveEvents(frame, "playerHit", POP.seconds).filter(
+      (event) => event.source !== "dive" && event.damage > 0
+    ),
     key: (event) => event.seq,
     create: () => drawPop(width),
     place: (sprite, event) => {
@@ -150,5 +206,23 @@ export function syncEffectsView(view: EffectsView, frame: EffectsFrame): void {
       sprite.rotation = t * 0.6;
       sprite.alpha = 1 - t * t;
     },
+  });
+  syncDisplayById(view.blocks, view.layer, {
+    list: liveEvents(frame, "playerHit", POP.seconds).filter((event) => event.damage === 0),
+    key: (event) => event.seq,
+    create: () => drawBlock(width),
+    place: (sprite, event) => {
+      const t = age(event) / POP.seconds;
+      sprite.position.set(event.x, event.y);
+      sprite.scale.set(1 + t);
+      sprite.alpha = 1 - t;
+    },
+  });
+  syncDisplayById(view.chunks, view.layer, {
+    list: liveEvents(frame, "playerHit", frame.chunkSeconds).filter((event) => event.damage > 0),
+    key: (event) => event.seq,
+    create: (event) => drawChunks(event, width),
+    place: (sprite, event) =>
+      placeChunks(sprite, event, { age: age(event), seconds: frame.chunkSeconds }),
   });
 }

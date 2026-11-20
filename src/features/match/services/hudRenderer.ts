@@ -26,7 +26,7 @@ interface PlayerCard {
   root: Container;
   pips: Graphics;
   /** The chunk that was just lost, popping out (scale 1.3 → 0). */
-  pop: Graphics;
+  pop: Container;
   poppedAt: number;
   score: Text;
   /** Score last shown and when it last went up (the score pop, pickup-juice D1). */
@@ -95,9 +95,8 @@ function createPlayerCard(slot: number): PlayerCard {
   label.position.set(PIP.x, 10);
   const { score, caption } = drawScore();
   const pips = new Graphics();
-  const pop = new Graphics()
-    .roundRect(-PIP.w / 2, -PIP.h / 2, PIP.w, PIP.h, PIP.radius)
-    .fill(slotColor(slot));
+  // One popping chunk per health point lost (hurt-feedback D1: a back hit shows two).
+  const pop = new Container({ label: "chunk-pop" });
   pop.visible = false;
   const card = new Graphics()
     .roundRect(0, 0, CARD.w, CARD.h, CARD.radius)
@@ -162,7 +161,14 @@ interface PipsLook {
 function drawPips(card: PlayerCard, { slot, health, max, timeSeconds }: PipsLook): void {
   if (card.shown.health === health && card.shown.max === max) return;
   if (card.shown.max === max && health < card.shown.health && health >= 0) {
-    card.pop.position.set(PIP.x + health * (PIP.w + PIP.gap) + PIP.w / 2, PIP.y + PIP.h / 2);
+    for (const old of card.pop.removeChildren()) old.destroy();
+    for (let i = health; i < card.shown.health; i += 1) {
+      const chunk = new Graphics()
+        .roundRect(-PIP.w / 2, -PIP.h / 2, PIP.w, PIP.h, PIP.radius)
+        .fill(slotColor(slot));
+      chunk.position.set(PIP.x + i * (PIP.w + PIP.gap) + PIP.w / 2, PIP.y + PIP.h / 2);
+      card.pop.addChild(chunk);
+    }
     card.poppedAt = timeSeconds;
   }
   card.shown = { health, max };
@@ -193,7 +199,8 @@ function syncScore(card: PlayerCard, score: number, timeSeconds: number): void {
 function syncPop(card: PlayerCard, timeSeconds: number): void {
   const t = (timeSeconds - card.poppedAt) / PIP.popSeconds;
   card.pop.visible = t >= 0 && t < 1;
-  if (card.pop.visible) card.pop.scale.set(1.3 * (1 - t));
+  if (!card.pop.visible) return;
+  for (const chunk of card.pop.children) chunk.scale.set(1.3 * (1 - t));
 }
 
 function createTimer(): HudView["timer"] {

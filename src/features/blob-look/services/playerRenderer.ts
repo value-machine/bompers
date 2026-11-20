@@ -42,6 +42,7 @@ import {
   drawBodyGloss,
   drawBodyInk,
   drawEye,
+  drawShutEye,
   drawFootFill,
   drawFootInk,
   drawHelmetDetails,
@@ -133,6 +134,8 @@ interface BlobSprite {
   tubeKey: string | null;
   eyes: [Container, Container];
   pupils: [Graphics, Graphics];
+  /** Squeezed-shut eyes of the hurt pose, shown instead of the white and pupil. */
+  shutEyes: [Graphics, Graphics];
   shadow: Graphics;
   anim: BlobAnim;
   wobble: HelmetWobble;
@@ -281,10 +284,12 @@ function buildHelmet(
 function buildEyes(u: number) {
   const left = drawEye(u);
   const right = drawEye(u);
+  const shut: [Graphics, Graphics] = [drawShutEye(u, -1), drawShutEye(u, 1)];
+  for (const eye of shut) eye.visible = false;
   const eyes: [Container, Container] = [new Container(), new Container()];
-  eyes[0].addChild(left.white, left.pupil);
-  eyes[1].addChild(right.white, right.pupil);
-  return { eyes, pupils: [left.pupil, right.pupil] as [Graphics, Graphics] };
+  eyes[0].addChild(left.white, left.pupil, shut[0]);
+  eyes[1].addChild(right.white, right.pupil, shut[1]);
+  return { eyes, pupils: [left.pupil, right.pupil] as [Graphics, Graphics], shut };
 }
 
 /** Empty tube graphics; their shape and muzzle light are drawn per held weapon (`syncTube`). */
@@ -330,7 +335,7 @@ function buildTorso(
     Container,
   ];
   torso.ink.addChild(sprite.inks.body, helmetInk);
-  const { eyes, pupils } = buildEyes(m.u);
+  const { eyes, pupils, shut } = buildEyes(m.u);
   const flash = drawBodyFlash(new Graphics(), m);
   flash.visible = false;
   const bodyFill = drawBodyFill(new Graphics(), m, { slot });
@@ -346,7 +351,7 @@ function buildTorso(
   ]);
   sprite.body.ink.addChild(torso.ink);
   sprite.body.fill.addChild(torso.fill);
-  return { eyes, pupils, helmet, flash, bodyFill, gloss, tubeFill, muzzle };
+  return { eyes, pupils, shutEyes: shut, helmet, flash, bodyFill, gloss, tubeFill, muzzle };
 }
 
 function createBlobSprite(player: PlayerState): BlobSprite {
@@ -360,7 +365,7 @@ function createBlobSprite(player: PlayerState): BlobSprite {
   const feet: [PartPair, PartPair] = [pair(), pair()];
   const body = pair();
   const tube = pair();
-  const { eyes, pupils, helmet, flash, bodyFill, gloss, tubeFill, muzzle } = buildTorso(
+  const { eyes, pupils, shutEyes, helmet, flash, bodyFill, gloss, tubeFill, muzzle } = buildTorso(
     { body, tube, inks },
     player.slot,
     m
@@ -398,6 +403,7 @@ function createBlobSprite(player: PlayerState): BlobSprite {
     pop: { lastReady: 1, startMs: Number.NEGATIVE_INFINITY },
     eyes,
     pupils,
+    shutEyes,
     shadow: new Graphics().ellipse(0, 0, 1, 1).fill(inkColor("other")),
     anim: createBlobAnim(player),
     wobble: createHelmetWobble(),
@@ -576,6 +582,8 @@ function placeFeet(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
 interface EyeLook {
   sink: CrouchSink;
   pupilScale: number;
+  /** Squeezed shut (the hurt pose's "ouch"). */
+  shut: boolean;
   /** The body's scale this frame; the eyes undo it (owner, squish-eyes). */
   bodyScale: { sx: number; sy: number };
 }
@@ -587,7 +595,7 @@ interface EyeLook {
  * body's scale, so they keep their size and shape (owner, squish-eyes).
  */
 function placeEyes(sprite: BlobSprite, player: PlayerState, look: EyeLook): void {
-  const { sink, pupilScale, bodyScale } = look;
+  const { sink, pupilScale, bodyScale, shut } = look;
   const { r, u } = sprite.metrics;
   const y = crouchEyeY(sprite.metrics, sink) + player.aimY * 2 * u;
   sprite.eyes.forEach((eye, i) => {
@@ -597,6 +605,9 @@ function placeEyes(sprite: BlobSprite, player: PlayerState, look: EyeLook): void
     eye.zIndex = eyesUnderHelmet(sink) ? EYES_UNDER_HELMET : EYES_OVER_HELMET;
     sprite.pupils[i]!.position.set(player.aimX * 1.6 * u, 1.5 * u + player.aimY * 1.2 * u);
     sprite.pupils[i]!.scale.set(pupilScale);
+    eye.children.forEach((part) => {
+      part.visible = (part === sprite.shutEyes[i]) === shut;
+    });
   });
 }
 
@@ -627,6 +638,7 @@ function applyPose(sprite: BlobSprite, player: PlayerState, frame: PoseFrame): v
   placeEyes(sprite, player, {
     sink: pose.crouch,
     pupilScale: frame.overlay?.pupilScale ?? 1,
+    shut: frame.overlay?.eyesShut === true,
     bodyScale: bodyScale(frame),
   });
   placeFace(sprite, player, frame.armed);

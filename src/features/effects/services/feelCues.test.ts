@@ -107,6 +107,22 @@ describe("readFeelCues", () => {
     expect(state.hitStopUntilMs).toBe(0);
   });
 
+  it("should neither flash nor shake the victim when a hit takes no chunk", () => {
+    const state = createFeelState();
+    const blocked = { ...hit(1, "back"), damage: 0 } as CombatEvent;
+    const f = frame({ events: [blocked] });
+    readFeelCues(state, f);
+    expect(state.hits.size).toBe(0);
+    expect(liveKicks(f)).toEqual([]);
+    expect(state.hitStopUntilMs).toBe(0);
+  });
+
+  it("should remember the chunks taken when a hit lands", () => {
+    const state = createFeelState();
+    readFeelCues(state, frame({ events: [hit(1, "back")] }));
+    expect(state.hits.get("p2")?.damage).toBe(2);
+  });
+
   it("should scale explosion shake by blast radius when a blast goes off", () => {
     const state = createFeelState();
     const f = frame({ events: [blast(1, 32)] });
