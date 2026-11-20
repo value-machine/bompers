@@ -11,6 +11,7 @@ A level file with `<circle data-role="object" data-kind="ball" …>` (exact elem
 ## In scope
 - A general **physics object** mechanism (`physics-objects` feature): round rigid bodies on the terrain field, whole-object state (burning / frozen / none), level-file placement and size, catalog + level prompt entry with example.
 - First kind: the ball, variants per owner pick.
+- Done gate (owner rule, DOC_APP_VISION § Levels): the ball is a kind in the object registry (`features/level-objects`, physics class beside the terrain recipes), so level-kit generates its catalog row and prompt entry with an example (`levelPromptObjects.test.ts`), and its attributes are documented in `documentation/game/LEVEL_FORMAT.md`. The car later registers the same way.
 - Interactions: blob bump (mass-weighted body contact), blast and rocket push (impulse ÷ mass), dive hit, slopes and moving parts (rideMovers rider), fire and freeze whole-object, leaving the kill zone (owner pick).
 - Never-stuck: the escape search in `player/services/solidEscape.ts` becomes a shared resolver that takes a "hits solid" probe; players and physics objects both use it. A physics object is never solid to a player's terrain query, so it can never trap one; a stuck object pops and respawns.
 
