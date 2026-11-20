@@ -66,6 +66,7 @@ export function readSoundCues(
     ...burstCues(frame, lastBurst),
     ...elements.cues,
     ...crateCues(cursor?.world, frame.world),
+    ...objectCues(cursor?.world, frame.world),
   ];
   return {
     cues,
@@ -183,6 +184,21 @@ function crateCues(
 ): SoundCue[] {
   if (!previous || world.crateLandings <= previous.crateLandings) return [];
   return [cue(CRATE_LAND_SOUND, null, SOUND_MIX.crouchGain)];
+}
+
+/**
+ * Physics-object moments made since the last frame (physics-objects lap), each with the sound
+ * the object's sim picked (the variant's bounce sound, catch-fire, freeze-solid, ice-shatter…),
+ * unpitched; a bounce at its impact gain.
+ */
+function objectCues(
+  previous: SoundWorldSnapshot | undefined,
+  world: SoundWorldSnapshot
+): SoundCue[] {
+  if (!previous) return [];
+  return world.objectSounds
+    .filter((sound) => sound.seq >= previous.objectMomentCount && sound.soundId !== "none")
+    .map((sound) => cue(sound.soundId, null, sound.gain));
 }
 
 function roundCues(cursor: SoundCursor | null, frame: SoundSnapshot): SoundCue[] {

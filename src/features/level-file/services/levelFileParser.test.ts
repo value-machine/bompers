@@ -34,6 +34,7 @@ const BUILT_INS = [
   "crystal-gap",
   "slush-bowl",
   "tree-grove",
+  "beach-court",
 ].map((id) => ({
   id,
   text: readRepoFile(`public/levels/${id}.html`),
@@ -645,6 +646,17 @@ describe("parseLevelFile — level objects", () => {
       const pieces = object.terrainIndices.map((i) => def.terrain[i]!);
       expect(pieces.every((p) => p.materialId && p.colorId)).toBe(true);
     }
+  });
+
+  it("should import a ball as a physics object with no terrain pieces when the level places one", () => {
+    const ball =
+      '<rect data-role="object" data-kind="ball" data-variant="beach" x="380" y="352" width="48" height="48" />';
+    const { level: def, warnings } = okLevel(parseLevelFile(level(VALID_BODY + ball)));
+    expect(warnings).toEqual([]);
+    expect(def.objects).toEqual([
+      expect.objectContaining({ kind: "ball", variant: "beach", terrainIndices: [] }),
+    ]);
+    expect(def.objects![0]!.box).toMatchObject({ w: 48, h: 48 });
   });
 
   it("should put an object inside a moving group into that part without W13 when it rides a platform", () => {

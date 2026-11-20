@@ -27,6 +27,8 @@ export interface CombatContext {
   bounds: Rect;
   tunables: GameTunables;
   timeSeconds: number;
+  /** Round bodies rockets explode on besides terrain and players (physics objects); none = []. */
+  roundBodies?: readonly { center: Vec2; radius: number }[];
 }
 
 export function createCombatState(): CombatState {

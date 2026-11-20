@@ -73,6 +73,11 @@ import {
 } from "@/features/dive/api/diveApi";
 import { createFireView, syncFireView, type FireView } from "@/features/fire/api/fireApi";
 import {
+  createPhysicsObjectsView,
+  syncPhysicsObjectsView,
+  type PhysicsObjectsView,
+} from "@/features/physics-objects/api/physicsObjectsApi";
+import {
   burningBlobPoses,
   createBlobFireView,
   syncBlobFireView,
@@ -102,6 +107,7 @@ const createElementViews = () => ({
  *   │  ├─ terrain   (arena: solid slabs, breakable tiles)
  *   │  ├─ contact shadows: weapon crates (collectibles), rockets (combat), players (player)
  *   │  ├─ weapon crates, headbutt resets, point orbs (collectibles)
+ *   │  ├─ physics objects: balls with their shadows, flames, frost, pop rings (physics-objects)
  *   │  ├─ effects (debris, explosions, rocket-hit pops, blocked rings, lost chunks — effects)
  *   │  ├─ knockouts (goo droplets, loose helmets and tubes — knockout; its goo stains sit right above the terrain)
  *   │  ├─ rockets (+ trails — combat)
@@ -137,6 +143,7 @@ export interface GameRenderer {
   fire: FireView;
   blobFire: BlobFireView;
   ice: IceView;
+  physicsObjects: PhysicsObjectsView;
   hud: HudView;
   camera: CameraView | null;
   feel: FeelState;
@@ -157,6 +164,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const collectibles = createCollectiblesView();
   const dive = createDiveView();
   const { fire, blobFire, ice } = createElementViews();
+  const physicsObjects = createPhysicsObjectsView();
   world.addChild(
     terrain.container,
     // Goo stains colour the terrain itself; frozen ground and fire are drawn over them.
@@ -171,6 +179,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     collectibles.refills.container,
     collectibles.orbs,
     collectibles.bursts,
+    physicsObjects.container,
     effects.layer,
     knockouts.layer,
     combat.rockets,
@@ -200,6 +209,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     fire,
     blobFire,
     ice,
+    physicsObjects,
     hud,
     camera: null,
     feel: createFeelState(),
@@ -450,6 +460,13 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     crouch: state.tunables.player.crouch,
   });
   syncDiveView(renderer.dive, state.dive);
+  syncPhysicsObjectsView(renderer.physicsObjects, {
+    state: state.physicsObjects,
+    terrain: state.arena.terrain,
+    timeSeconds: state.timeSeconds,
+    nowMs,
+    zoom,
+  });
   syncCollectiblesView(renderer.collectibles, {
     collectibles: state.collectibles,
     size: state.tunables.collectibles.size,

@@ -300,6 +300,7 @@
   "object": [
     {
       "kind": "tree",
+      "objectClass": "terrain",
       "label": "Tree",
       "height": {
         "min": 96,
@@ -351,6 +352,27 @@
             "max": 1.1
           },
           "madeOf": "bare cardboard trunk and branches in bark colour: one spark burns the whole tree"
+        }
+      ]
+    },
+    {
+      "kind": "ball",
+      "objectClass": "physics",
+      "label": "Ball",
+      "height": {
+        "min": 32,
+        "max": 96
+      },
+      "defaultVariant": "beach",
+      "variants": [
+        {
+          "id": "beach",
+          "label": "Beach ball",
+          "aspect": {
+            "min": 1,
+            "max": 1
+          },
+          "madeOf": "light and bouncy (half a blob's weight); rolls downhill, rides moving parts, blobs and blasts knock it around; burns as a whole and pops, then comes back"
         }
       ]
     }

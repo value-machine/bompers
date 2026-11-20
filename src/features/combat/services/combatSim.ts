@@ -1,6 +1,6 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import type { PlayerInputs } from "@/shared/types/gameInput.types";
-import type { Rect } from "@/shared/types/gameGeometry.types";
+import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
 import type { TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import {
@@ -37,11 +37,21 @@ export interface StepCombatArgs {
   unarmedAttack?: UnarmedAttackHook;
   /** Held spray weapons (the fire feature's torch). Omitted: spraying only drains fuel. */
   sprayAttack?: SprayAttackHook;
+  /** Round bodies rockets explode on (physics objects). Omitted: none. */
+  roundBodies?: readonly { center: Vec2; radius: number }[];
 }
 
 export function stepCombat(args: StepCombatArgs): void {
   const { combat, players, inputs, terrain, bounds, tunables, timeSeconds, dt } = args;
-  const ctx: CombatContext = { combat, players, terrain, bounds, tunables, timeSeconds };
+  const ctx: CombatContext = {
+    combat,
+    players,
+    terrain,
+    bounds,
+    tunables,
+    timeSeconds,
+    roundBodies: args.roundBodies ?? [],
+  };
   pruneCombatEvents(combat, timeSeconds - tunables.combat.eventRetentionSeconds);
   for (const player of players) fighterFor(combat, player, tunables);
   stepAttacks(ctx, inputs, {

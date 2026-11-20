@@ -1199,3 +1199,63 @@ describe("gameSim — respawn on purpose (owner, never-stuck)", () => {
     expect(state.rules.scores[0]).toBe(0);
   });
 });
+
+describe("gameSim — physics objects", () => {
+  const ballLevel: LevelDefinition = {
+    ...level,
+    settings: { ...level.settings, cellSize: 4 },
+    objects: [
+      {
+        kind: "ball",
+        variant: "beach",
+        box: { x: 376, y: 272, w: 48, h: 48 },
+        seed: 1,
+        terrainIndices: [],
+      },
+    ],
+  };
+  const newBallGame = () => createGameState({ level: ballLevel, tunables: DEFAULT_GAME_TUNABLES });
+
+  it("should import and run the Beach Court level with its four balls in play when the match runs", () => {
+    const text = readFileSync(path.join(process.cwd(), "public/levels/beach-court.html"), "utf8");
+    const parsed = parseLevelFile(text);
+    if (!parsed.ok) throw new Error("beach-court did not import");
+    expect(parsed.warnings).toEqual([]);
+    const state = createGameState({ level: parsed.level, tunables: DEFAULT_GAME_TUNABLES });
+    stepFor(state, 3);
+    expect(state.physicsObjects.objects).toHaveLength(4);
+    expect(state.physicsObjects.objects.every((ball) => ball.goneUntil === null)).toBe(true);
+    // The ramp ball rolled down off its ramp; the riding ball still rides the platform's height.
+    const [ramp, , , riding] = state.physicsObjects.objects;
+    expect(ramp!.x).toBeGreaterThan(300);
+    expect(riding!.y).toBeLessThan(560);
+  });
+
+  it("should spawn the level's ball and keep it resting on the floor when the match runs", () => {
+    const state = stepFor(newBallGame(), 1);
+    expect(state.physicsObjects.objects).toHaveLength(1);
+    expect(state.physicsObjects.objects[0]).toMatchObject({ goneUntil: null, grounded: true });
+    expect(state.physicsObjects.objects[0]!.y).toBeCloseTo(296, 0);
+  });
+
+  it("should explode a rocket on the ball and knock the ball away when the rocket reaches it", () => {
+    const state = stepGame(newBallGame(), keys(), dt);
+    state.combat.rockets.push({
+      id: 99,
+      kind: "rocket",
+      targetId: null,
+      ownerSlot: 1,
+      ownerId: "p1",
+      x: 300,
+      y: 296,
+      dirX: 1,
+      dirY: 0,
+      age: 0.1,
+    });
+    stepFor(state, 0.2);
+    expect(state.combat.events).toContainEqual(expect.objectContaining({ type: "explosion" }));
+    const explosion = state.combat.events.find((event) => event.type === "explosion");
+    expect(explosion && "x" in explosion ? explosion.x : 0).toBeLessThan(400);
+    expect(state.physicsObjects.objects[0]!.x).toBeGreaterThan(400);
+  });
+});

@@ -23,4 +23,10 @@ describe("levelPromptObjects", () => {
     expect(prompt).toContain("### Objects (optional)");
     expect(prompt).toContain('data-role="object" data-kind="tree"');
   });
+
+  it("should show an example rect of each object class when the objects section is built", () => {
+    const text = renderObjects(4);
+    expect(text).toContain('data-role="object" data-kind="ball" data-variant="beach"');
+    expect(text).toContain("**Physics objects**");
+  });
 });

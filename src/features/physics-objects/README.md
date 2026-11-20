@@ -1,0 +1,40 @@
+# physics-objects
+
+## Purpose
+
+Moving bodies a level places (`<rect data-role="object">` of a physics kind, the first being the `ball`): they fall, bounce, roll down slopes, ride moving parts, are pushed by blobs, blasts and dives, and take fire and frost **as a whole object** (owner, level-objects "object classes"). Their kinds and variants live in the object registry (`level-objects`), so the level prompt and catalog learn them with no code here.
+
+## Structure
+
+| Layer    | Path                                | Purpose                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Types    | `types/physicsObject.types.ts`      | `PhysicsObject` (centre, velocity, turn, `home`, `goneUntil`, whole-object `state`, chill, `heldCarry`), `WholeObjectState` (none / burning / frozen), `ObjectMoment` (bounce, pop, back, caught, frozen, shatter, melt; with `seq` and `soundId`), `PhysicsObjectsState`, `ObjectBlobContact`                                                                                                     |
+| Services | `services/objectMotion.ts`          | `circleContact` (deepest overlap with terrain and moving parts; probe circles on the shell when the ball is wider than the field band), `stepObjectMotion` (gravity, sub-steps of half a cell, push-out, bounce by `restitution`, rolling drag and turn; frozen slides without turning), `freeStuckObject` (the shared `nearestFreeOffset`), `moveObjectSafely` (a push that never enters terrain) |
+| Services | `services/objectContacts.ts`        | `bumpObjectsAndBlobs` (mass-weighted blob bump; the object gives way first, the blob takes only what is left with its own terrain-safe move; a diving blob kicks `physicsObjects.divePush`), `bumpObjects` (object on object), `pushObjectsByBlasts` (`blastHitPushAt` ÷ mass)                                                                                                                     |
+| Services | `services/objectElements.ts`        | Whole-object fire and frost from this step's torch sprays, freeze rays, burning ground (`burningGroundNear`) and burning blobs; a burning object lights blobs only (owner Q3); frozen after `ice.blob.freezeSeconds`, thaws after `ice.blob.frozenSeconds`, a hit breaks the ice (Q4); fire and ice cancel                                                                                         |
+| Services | `services/physicsObjects.ts`        | `createPhysicsObjectsState(level)` (from `level.objects` of a physics kind), `stepPhysicsObjects` (come back, move, bump, blasts, elements, pop), `popObject` (comes back after `physicsObjects.respawnSeconds`, owner Q2), `objectsInPlay`                                                                                                                                                        |
+| Services | `services/physicsObjectRenderer.ts` | Ball layer: panel wedges turned by the roll, ink outline (prop width), fixed gloss, contact shadow while airborne, bounce squash, pop-in, flames, frost, smoke rings (DESIGN_LANGUAGE § 1 "Beach ball", GAME_JUICE ledger)                                                                                                                                                                         |
+| API      | `api/physicsObjectsApi.ts`          | Public seam                                                                                                                                                                                                                                                                                                                                                                                        |
+
+Seams for later work:
+
+- **A new ball:** one data line in `level-objects/services/ballRecipe.ts` (weight, bounce, drag, burn time, bounce sound, panels), then `pnpm level-kit:sync`. No code here.
+- **The car (later lap):** a new `PhysicsBodySpec.shape` and recipe in `level-objects`; its wheels are this feature's round bodies, the chassis a body held to them by a spring step in `stepPhysicsObjects` after `moveAll`. Driving would read a player's inputs through a new hook from the match, like combat's attack hooks.
+
+## Dependencies
+
+- `arena` (field queries, `FIELD_BAND_SAMPLES`), `player` (`moveAxis`, `PlayerState`), `blob-fire` (`burningGroundNear`, `catchFire`, `isBurning`), `fire` and `ice` (types: this step's sprays and rays), `level-objects` (`findPhysicsVariant`), `level` (types).
+- `src/shared/types/physicsBody.types.ts` (`PhysicsBodySpec`, written by the registry), `src/shared/utils/freeSpotSearch.ts` (the never-stuck search, shared with `player/solidEscape.ts`), `src/shared/utils/blastPower.ts`, `src/shared/utils/contactShadowLayer.ts`.
+- Consumed by `match`: step 1b (moving parts carry them as riders; a pinned one pops), step 3 (rockets explode on them, combat's `roundBodies`), step 3g (`stepPhysicsObjects`), the render layer above the collectibles, and sound (`objectSounds` in the world snapshot).
+
+## Decisions
+
+- **D1 — our own sim, no package (agent, spec-reuse-package):** matter-js, planck.js and rapier2d all need polygon colliders rebuilt after every crater and burn-out; a round body on the field is the math the blobs already use. Owner confirmed.
+- **D2 — the object always gives way (agent; owner confirmed):** an object is never terrain to a blob. A bump moves the object first with a move that never enters terrain; only the rest moves the blob, with its own terrain-safe move. So an object can never trap a blob and `freeStuckPlayers` is unchanged.
+- **D3 — never stuck, objects too:** an object left in solid moves to the nearest free spot by the shared search (`nearestFreeOffset`); with none in reach, or pinned by a moving part, it pops and comes back.
+- **D4 — whole-object state (owner):** none / burning / frozen, one timer; no per-sample state, so the terrain fire and ice systems are untouched (they are only read).
+- **Owner picks (options page "Ball Options", 2026-11-20):** Q1 the beach ball only (bowling, hay and gum stay off the registry; each would be one data line); Q2 a popped ball comes back after 3 s at its spot; Q3 a burning ball lights blobs only, never the ground; Q4 a frozen ball slides, a hit breaks the ice, it thaws after the blob freeze time.
+- **D5 — wide balls on the field (agent):** the field is exact only within its band (5 samples), so a ball wider than that is read as probe circles on its shell, and the moving-part ride gets a circle at the ball's bottom no wider than the band.
+- **D6 — speed relative to a part (agent):** leaving a part a ball keeps the part's speed (like a blob); landing back on a part takes it off again (`heldCarry`), so a bouncing ball never stacks the part's speed on the carry.
+- **D7 — moment sounds (agent, existing takes only):** bounce the variant's sound; caught `catch-fire`, frozen `freeze-solid`, ice breaks `ice-shatter`, melted `steam-hiss` (the blob takes); burnt through `burn-out`, stuck or pinned `thwap`, back `respawn`; off-screen pops are silent.
+- **D8 — idle steps stay cheap (agent, CI timing):** the never-stuck search runs only when a ball's own motion left it in solid (`stepObjectMotion` reports `stuck`), the probe for ground below only when it touched none this step, and the burning-ground search only while something burns.

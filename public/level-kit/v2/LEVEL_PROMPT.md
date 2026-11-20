@@ -66,7 +66,7 @@ Root attributes:
 |---|---|---|---|
 | `bounds` | `<rect>` | exactly 1 | The play area, inside the viewBox. Falling below its **bottom** edge eliminates a player. The **side and top edges are open**: the kill lines there lie far beyond the bounds, so players can be launched out and fly back. Suggested `fill="none" stroke="#d24b3a"`. |
 | `terrain` | rect, polygon, circle | ≥ 1 | Ground. `data-material` = behaviour (default `stone`), `data-color` = looks (optional, default = the material's colour). Optional `data-effect`, `data-sound`, `data-label`, `id`. Later shapes paint over earlier ones where they overlap. |
-| `object` | `<rect>` | ≥ 0 | A ready-made object built inside the rect (§ 3 Objects): `data-kind` (`tree`), optional `data-variant`, `data-seed`. It is solid ground made of catalog materials. `fill="#5f8f3e"`. |
+| `object` | `<rect>` | ≥ 0 | A ready-made object built inside the rect (§ 3 Objects): `data-kind` (`tree`, `ball`), optional `data-variant`, `data-seed`. A terrain object is solid ground made of catalog materials; a physics object (a ball) moves. `fill="#5f8f3e"`. |
 | `spawn` | `<circle>` | ≥ 4 | Player start (the centre counts, `r="14"`). Inside bounds, never inside terrain, centre ~`24` above a solid surface, not over a pit. `fill="#3f8f5f"`. |
 | `drop` | `<circle>` | ≥ 1 | Weapon crates fall from here (`r="12"`); place high up. The game picks each crate's weapon. `fill="#c94f7c"`. |
 | `collectible` | `<circle>` | ≥ 0 | A pickup point (`r="10"`), `data-item` = one collectible item (§ 4). `point-orb`: point orbs fall from the sky onto it. `dive-reset`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns 2.5 s after use) — hang them in the air between platforms and off edges for headbutt chains. `fill="#e0b62c"`. |
@@ -101,23 +101,29 @@ Wrap terrain shapes in `<g data-motion="…">` to move them as one part. Draw th
 
 ### Objects (optional)
 
-Place ready-made objects with one `<rect data-role="object">` each. The game builds the object inside the rect from catalog materials, so it behaves like terrain: players stand on it, blasts crater its breakable parts, fire burns its cardboard parts away, cold freezes its trunk and leaves.
+Place ready-made objects with one `<rect data-role="object">` each. There are two classes:
 
-- The object stands on the rect's **bottom centre** and fills its **height**: draw the rect with its bottom edge on a surface. The width is the object's spread; it is kept inside the variant's width range below.
+- **Terrain objects** (trees): the game builds the object inside the rect from catalog materials, so it behaves like terrain: players stand on it, blasts crater its breakable parts, fire burns its cardboard parts away, cold freezes its trunk and leaves. It never moves (except inside a moving part).
+- **Physics objects** (balls): one moving body. It falls, bounces, rolls downhill and rides moving parts; blobs bump it and blasts and headbutts knock it away. Fire and frost always take the whole object (a burning ball sets blobs it touches alight, a frozen one slides). It is never cut or chipped. If it leaves the arena or burns through, it comes back at its spot after 3 s. Players can't stand on it like ground: it gives way.
+
+- The object stands on the rect's **bottom centre** and fills its **height**: draw the rect with its bottom edge on a surface. For a terrain object the width is its spread, kept inside the variant's width range below; a physics ball's rect is a square whose side is the ball's diameter.
 - `data-kind` — REQUIRED, one kind below. `data-variant` — optional; leave it out for a varied pick. `data-seed` — optional whole number; the same seed gives the same shape. Without a seed every object still differs and looks the same on every load; give the rect an `id` to keep its shape when you add objects before it.
 - Sizes outside a kind's height range or a variant's width range are clamped (with a warning). Snap `x`, `y`, `width`, `height` to multiples of `4`; keep `data-cell-size` at `4` so thin branches stay solid.
-- Like terrain, later shapes paint over earlier ones: put objects after the ground they stand on. An object inside a `<g data-motion>` moves with that part. Spawns go beside or on top of objects, never inside one.
-- Rotating an object (optional): objects stand upright by default. To rotate one, add `transform="rotate(a cx cy)"` to the object rect itself (degrees, clockwise, about the point `cx cy`; the only transform allowed). The object is built upright in the rect and the whole object is rotated with it.
+- Like terrain, later shapes paint over earlier ones: put terrain objects after the ground they stand on. A terrain object inside a `<g data-motion>` moves with that part. Spawns go beside or on top of objects, never inside one; leave a physics object room to roll.
+- Rotating a terrain object (optional): objects stand upright by default. To rotate one, add `transform="rotate(a cx cy)"` to the object rect itself (degrees, clockwise, about the point `cx cy`; the only transform allowed). The object is built upright in the rect and the whole object is rotated with it. A physics object ignores the rotation (it turns as it rolls).
 
-- `tree` (Tree): height `96`–`480`; default variant `oak`. Variants:
+- `tree` (Tree, terrain object: solid ground that never moves): height `96`–`480`; default variant `oak`. Variants:
   - `oak` (Round oak): width 0.6–1.2 × height; earth trunk in bark colour (craters, only scorches) under a cardboard canopy in moss (burns away).
   - `pine` (Pine): width 0.35–0.75 × height; earth trunk in bark colour under stacked cardboard needle tiers in mint (burn away).
   - `snowy-pine` (Snowy pine): width 0.35–0.75 × height; a pine with ice caps in frost on each tier (needles touching ice never catch fire).
   - `palm` (Palm): width 0.5–1.1 × height; bending earth trunk in cardboard colour, cardboard fronds in moss and two nuts (burn away).
   - `dead` (Dead tree): width 0.5–1.1 × height; bare cardboard trunk and branches in bark colour: one spark burns the whole tree.
+- `ball` (Ball, physics object: moves; the height is its diameter, draw a square rect): height `32`–`96`; default variant `beach`. Variants:
+  - `beach` (Beach ball): width 1–1 × height; light and bouncy (half a blob's weight); rolls downhill, rides moving parts, blobs and blasts knock it around; burns as a whole and pops, then comes back.
 
 ```svg
 <rect data-role="object" data-kind="tree" data-variant="pine" x="800" y="400" width="120" height="208" fill="#5f8f3e" />
+<rect data-role="object" data-kind="ball" data-variant="beach" x="1000" y="560" width="48" height="48" fill="#5f8f3e" />
 ```
 
 ## 4. Valid catalog IDs (v2)

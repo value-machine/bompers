@@ -180,6 +180,26 @@ export interface GameTunables {
       breathSeconds: number;
     };
   };
+  /**
+   * Physics objects (physics-objects lap): moving bodies placed by the level (a ball). A body's
+   * own weight, bounce and burn time are data on its variant (level-objects registry); these are
+   * the rules every physics object shares.
+   */
+  physicsObjects: {
+    /** Seconds a popped object (out of the arena, burnt through, stuck) waits to come back (owner Q2). */
+    respawnSeconds: number;
+    /** Impacts slower than this do not bounce, so a resting ball stays calm, units / s. */
+    restingSpeed: number;
+    /** Impact speed at which the bounce sound is quietest / loudest, units / s. */
+    bounceSoundMinSpeed: number;
+    bounceSoundFullSpeed: number;
+    /** Rolling speed lost per second while frozen (sliding like ice), as a fraction. */
+    frozenDrag: number;
+    /** Speed cap, units / s, so a stack of pushes cannot fling a ball through the map. */
+    maxSpeed: number;
+    /** Extra push (units / s) a ball takes from a diving blob, on top of the bump. */
+    divePush: number;
+  };
   /** Blob-vs-blob contact (equal mass, circle bodies). */
   bodyCollision: {
     /** Bounciness along the contact normal: 1 = velocities swap, 0 = both keep the average. */

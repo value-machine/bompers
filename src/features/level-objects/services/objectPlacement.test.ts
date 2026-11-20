@@ -94,4 +94,15 @@ describe("placeObject", () => {
     });
     expect(placed).toEqual(placeObject({ kind: "tree", box, seed: 3 }));
   });
+
+  it("should place a ball as a square physics body with no parts when its rect is not square", () => {
+    const placed = placeObject({ kind: "ball", box: { x: 100, y: 100, w: 80, h: 48 }, seed: 1 });
+    expect(placed).toMatchObject({
+      ok: true,
+      objectClass: "physics",
+      variant: "beach",
+      box: { x: 116, y: 100, w: 48, h: 48 },
+      parts: [],
+    });
+  });
 });

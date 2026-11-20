@@ -9,7 +9,6 @@ import type {
   ObjectPlacement,
   ObjectPlacementRequest,
   ObjectRecipe,
-  ObjectVariant,
 } from "@/features/level-objects/types/levelObject.types";
 
 /**
@@ -22,11 +21,17 @@ import type {
 const clamp = (v: number, min: number, max: number): number => Math.min(max, Math.max(min, v));
 const round = (n: number): number => Math.round(n * 100) / 100;
 
-function chooseVariant(
-  recipe: ObjectRecipe,
+/** What placing needs of a variant, whatever its class. */
+interface PlacedVariant {
+  id: string;
+  aspect: { min: number; max: number };
+}
+
+function chooseVariant<V extends PlacedVariant>(
+  recipe: { kind: string; defaultVariant: string; variants: readonly V[] },
   request: ObjectPlacementRequest,
   notes: string[]
-): ObjectVariant {
+): V {
   const fallback = findObjectVariant(recipe, recipe.defaultVariant) ?? recipe.variants[0]!;
   if (request.variant === undefined) {
     const pick = Math.floor(seededRandom(request.seed ^ 0x9e3779b9)() * recipe.variants.length);
@@ -41,7 +46,7 @@ function chooseVariant(
 /** The box clamped to the recipe's height and the variant's aspect, on the same bottom centre. */
 function clampBox(
   box: Rect,
-  limits: { recipe: ObjectRecipe; variant: ObjectVariant },
+  limits: { recipe: ObjectRecipe; variant: PlacedVariant },
   notes: string[]
 ): Rect {
   const { height } = limits.recipe;
@@ -59,19 +64,24 @@ export function placeObject(request: ObjectPlacementRequest): ObjectPlacement {
   const recipe = findObjectRecipe(request.kind);
   if (!recipe) return { ok: false, reason: "unknown-kind" };
   const notes: string[] = [];
+  const base = { ok: true as const, kind: recipe.kind, seed: request.seed, notes };
+  if (recipe.objectClass === "physics") {
+    // A physics object is a body, not terrain: no parts, and it turns as it moves (no rotation).
+    const variant = chooseVariant(recipe, request, notes);
+    const box = clampBox(request.box, { recipe, variant }, notes);
+    return { ...base, objectClass: "physics", variant: variant.id, box, parts: [] };
+  }
   const variant = chooseVariant(recipe, request, notes);
   const box = clampBox(request.box, { recipe, variant }, notes);
   const upright = variant.build(box, seededRandom(request.seed));
   const { rotation } = request;
   const turned = rotation !== undefined && rotation.degrees % 360 !== 0;
   return {
-    ok: true,
-    kind: recipe.kind,
+    ...base,
+    objectClass: "terrain",
     variant: variant.id,
     box,
-    seed: request.seed,
     ...(turned && { rotation }),
     parts: turned ? rotateParts(upright, rotation) : upright,
-    notes,
   };
 }
