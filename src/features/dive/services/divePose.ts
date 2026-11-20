@@ -56,8 +56,34 @@ function reactionPose(motion: DiveMotion, staggerSeconds: number): BlobPoseOverl
   return { rotation: 0, ...mixScale(HIT_SQUASH, UPRIGHT, sinceHit / HIT_SQUASH_SECONDS) };
 }
 
+/**
+ * A dash press that could not start a dive (dash-feel lap, light tier): a quick "no" head shake,
+ * two wobbles fading out over 180 ms (squash window). Rotation only, so the volume stays put.
+ */
+export const DENIED_SHAKE_SECONDS = 0.18;
+const DENIED_SHAKE_RADIANS = 0.2;
+const DENIED_SHAKE_WOBBLES = 2;
+
+/** The head-shake rotation `sinceDenied` seconds after a denied press (0 once it is over). */
+export function deniedShake(sinceDenied: number): number {
+  if (sinceDenied >= DENIED_SHAKE_SECONDS) return 0;
+  const t = sinceDenied / DENIED_SHAKE_SECONDS;
+  return DENIED_SHAKE_RADIANS * Math.sin(t * Math.PI * 2 * DENIED_SHAKE_WOBBLES) * (1 - t);
+}
+
 /** The overlay for one player this frame, or null for the plain movement pose. */
 export function diveBlobPose(
+  motion: DiveMotion,
+  tunables: Pick<GameTunables["dive"], "staggerSeconds">
+): BlobPoseOverlay | null {
+  const pose = phasePose(motion, tunables);
+  const shake = deniedShake(motion.sinceDenied);
+  if (shake === 0) return pose;
+  const base = pose ?? { rotation: 0, ...UPRIGHT };
+  return { ...base, rotation: base.rotation + shake };
+}
+
+function phasePose(
   motion: DiveMotion,
   tunables: Pick<GameTunables["dive"], "staggerSeconds">
 ): BlobPoseOverlay | null {

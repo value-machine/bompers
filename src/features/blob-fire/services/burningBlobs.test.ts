@@ -96,6 +96,7 @@ const input = (patch: Partial<PlayerInput> = {}): PlayerInput => ({
   fire: false,
   pause: false,
   crouch: false,
+  respawn: false,
   ...patch,
 });
 

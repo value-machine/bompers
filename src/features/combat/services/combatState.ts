@@ -35,6 +35,7 @@ export function createCombatState(): CombatState {
     rockets: [],
     events: [],
     beamClashes: [],
+    bonusDamage: new Map(),
     nextSeq: 1,
     nextEntityId: 1,
   };
@@ -193,7 +194,11 @@ export const crouchDamage = (damage: number, scale: number): number => Math.floo
 const playerInSlot = (world: HitWorld, slot: number): PlayerState | undefined =>
   world.players.find((player) => player.slot === slot);
 
-function emitHit(world: HitWorld, hit: Hit, result: HitResult & { healthLeft: number }): void {
+function emitHit(
+  world: HitWorld,
+  hit: Hit,
+  result: HitResult & { healthLeft: number; bonus: number }
+): void {
   emitCombatEvent(
     world.combat,
     {
@@ -205,6 +210,7 @@ function emitHit(world: HitWorld, hit: Hit, result: HitResult & { healthLeft: nu
       zone: result.zone,
       damage: result.damage,
       healthLeft: result.healthLeft,
+      ...(result.bonus > 0 ? { bonus: true as const } : {}),
       x: hit.contactPoint.x,
       y: hit.contactPoint.y,
     },
@@ -256,6 +262,19 @@ function takeDamage(
 }
 
 /**
+ * Chunks a hit takes: the table's for its kind and zone, halved while crouching (not fire:
+ * fire-burn D5), plus the slot's `bonusDamage` (not fire either: it melts, it does not break).
+ */
+function damageOf(world: HitWorld, hit: Hit, at: { victim: PlayerState; zone: HitZone }) {
+  const { combat } = world.tunables;
+  const base = hitDamageFor(combat.hitDamage, hit.kind, at.zone);
+  if (hit.kind === "burn") return { damage: base, bonus: 0 };
+  const bonus = world.combat.bonusDamage.get(hit.victimSlot) ?? 0;
+  const own = at.victim.crouching ? crouchDamage(base, combat.crouchDamageScale) : base;
+  return { damage: own + bonus, bonus };
+}
+
+/**
  * Applies one hit to the player in `hit.victimSlot`. Respects `invulnerableUntil`, records the
  * attacker for elimination credit, and at 0 health flags the fighter eliminated (match step 4
  * respawns it) with a `playerEliminated` event.
@@ -265,18 +284,15 @@ export function applyHit(world: HitWorld, hit: Hit): HitResult {
   const victim = playerInSlot(world, hit.victimSlot);
   const zone = victim ? classifyHitZone(victim.facing, hit.direction) : "front";
   if (!victim) return { landed: false, zone, damage: 0 };
-  const baseDamage = hitDamageFor(tunables.combat.hitDamage, hit.kind, zone);
-  // Ducking doesn't stop fire (fire-burn D5).
-  const damage =
-    victim.crouching && hit.kind !== "burn"
-      ? crouchDamage(baseDamage, tunables.combat.crouchDamageScale)
-      : baseDamage;
+  const { damage, bonus } = damageOf(world, hit, { victim, zone });
   const fighter = fighterFor(combat, victim, tunables);
   if (fighter.eliminated || timeSeconds < fighter.invulnerableUntil) {
     return { landed: false, zone, damage: 0 };
   }
   const overkill = takeDamage(fighter, { damage, attackerSlot: hit.attackerSlot, timeSeconds });
-  emitHit(world, hit, { landed: true, zone, damage, healthLeft: fighter.health });
+  // One shatter per block: a second hit in the same step takes no bonus.
+  if (bonus > 0) combat.bonusDamage.delete(hit.victimSlot);
+  emitHit(world, hit, { landed: true, zone, damage, healthLeft: fighter.health, bonus });
   if (fighter.health === 0) eliminate(world, { hit, fighter, victim, overkill });
   return { landed: true, zone, damage };
 }

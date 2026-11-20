@@ -37,6 +37,10 @@ describe("level prompt ability numbers", () => {
       n(T.ice.frozenSeconds),
       n(T.ice.blob.frozenSeconds),
       n(T.ice.blob.slideGrip),
+      n(T.ice.blob.freezeSeconds / T.ice.blob.slipperyChillScale),
+      n(T.ice.blob.shatterDamage),
+      n(T.ice.blob.chillHoldSeconds),
+      n(Math.round(T.ice.blob.chillSlowMax * 100)),
       n(MOTION_LIMITS.rideSpeed),
     ];
     for (const text of expected) expect(prompt).toContain(text);

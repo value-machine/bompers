@@ -7,7 +7,24 @@ import {
   mapKeyboardInput,
   mapMenuInputs,
   mapPlayerInputs,
+  mergeButtonPresses,
+  EMPTY_PLAYER_INPUT,
 } from "@/shared/utils/gameInputMapping";
+
+describe("mergeButtonPresses", () => {
+  it("should keep a fire press from a frame that ran no step when the next frame has it released", () => {
+    const earlier = [{ ...EMPTY_PLAYER_INPUT, fire: true, aimX: 1 }];
+    const later = [{ ...EMPTY_PLAYER_INPUT, aimX: -1 }];
+    const [merged] = mergeButtonPresses(earlier, later);
+    expect(merged?.fire).toBe(true);
+    expect(merged?.aimX).toBe(-1);
+  });
+
+  it("should leave the later input alone when the earlier frame has no such slot", () => {
+    const later = [{ ...EMPTY_PLAYER_INPUT, jump: true }];
+    expect(mergeButtonPresses([], later)).toEqual(later);
+  });
+});
 
 const pad = (axes: number[], pressedButtons: number[] = []) => ({
   axes,
@@ -26,6 +43,7 @@ describe("gameInputMapping", () => {
       fire: true,
       pause: false,
       crouch: false,
+      respawn: false,
     });
   });
 
@@ -140,5 +158,16 @@ describe("gameInputMapping", () => {
       expect(inputs[0]?.pause).toBe(true);
       expect(inputs[1]?.pause).toBe(true);
     });
+  });
+});
+
+describe("gameInputMapping — respawn button (never-stuck)", () => {
+  // Ground truth: never-stuck lap — Q / Backspace / pad Back (View) are the held respawn buttons.
+  it("should report the respawn button held when Q, Backspace or the pad's Back is held", () => {
+    expect(mapKeyboardInput(new Set(["KeyQ"]), "left").respawn).toBe(true);
+    expect(mapKeyboardInput(new Set(["Backspace"]), "right").respawn).toBe(true);
+    expect(mapKeyboardInput(new Set(["KeyQ"]), "right").respawn).toBe(false);
+    expect(mapGamepadInput(pad([0, 0, 0, 0], [8])).respawn).toBe(true);
+    expect(mapGamepadInput(pad([0, 0, 0, 0], [9])).respawn).toBe(false);
   });
 });

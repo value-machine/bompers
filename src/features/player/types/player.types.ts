@@ -142,6 +142,11 @@ export interface PlayerState {
    * Set by the movers step each sim step; null when free.
    */
   squeeze: { scale: number; nx: number; ny: number } | null;
+  /**
+   * Seconds the respawn button has been held without a break (owner, never-stuck); match counts
+   * it, respawns the player at `match.selfRespawnHoldSeconds` and the renderer draws the fill.
+   */
+  respawnHoldSeconds: number;
 }
 
 /**

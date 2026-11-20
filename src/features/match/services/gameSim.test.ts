@@ -8,8 +8,9 @@ import { applyHit } from "@/features/combat/api/combatApi";
 import { catchFire } from "@/features/blob-fire/api/blobFireApi";
 import { chillBlob, isFrozen, isIced } from "@/features/ice/api/iceApi";
 import { parseLevelFile } from "@/features/level-file/api/levelFileApi";
-import { hurtHeight } from "@/features/player/api/playerApi";
-import { createGameState, stepGame } from "@/features/match/services/gameSim";
+import { escapeSolid, hurtHeight, type PlayerState } from "@/features/player/api/playerApi";
+import type { TerrainGrid } from "@/features/arena/api/arenaApi";
+import { createGameState, playersInPlay, stepGame } from "@/features/match/services/gameSim";
 
 const level: LevelDefinition = {
   formatVersion: 1,
@@ -523,7 +524,12 @@ describe("gameSim — ice blocks (ice-frozen-blobs D1–D7)", () => {
   const withFrozenBlob = () => {
     const state = stepFor(newGame(), 3);
     const player = state.players[0]!;
-    const chill = { now: state.timeSeconds, dt: B.freezeSeconds, tunables: state.tunables };
+    const chill = {
+      now: state.timeSeconds,
+      dt: B.freezeSeconds,
+      terrain: state.arena.terrain,
+      tunables: state.tunables,
+    };
     chillBlob(state.ice, player, chill);
     return { state, player };
   };
@@ -561,6 +567,24 @@ describe("gameSim — ice blocks (ice-frozen-blobs D1–D7)", () => {
     );
   });
 
+  it("should take the shatter damage on top when a hit lands on a frozen blob", () => {
+    const { state, player } = withFrozenBlob();
+    stepGame(state, keys(), dt);
+    const result = applyHit(
+      { ...state, players: state.players },
+      {
+        victimSlot: 0,
+        attackerSlot: 1,
+        kind: "contact",
+        source: "dive",
+        contactPoint: { x: player.x, y: player.y },
+        direction: { x: -player.facing, y: 0 },
+      }
+    );
+    const C = DEFAULT_GAME_TUNABLES.combat;
+    expect(result.damage).toBe(C.hitDamage.contact.front + B.shatterDamage);
+  });
+
   it("should melt the block and not leave the blob burning when fire touches a frozen blob", () => {
     const { state, player } = withFrozenBlob();
     catchFire(state.blobFire, player, { now: state.timeSeconds, fromX: player.x - 50, bySlot: 1 });
@@ -574,7 +598,12 @@ describe("gameSim — ice blocks (ice-frozen-blobs D1–D7)", () => {
     const state = stepFor(newGame(), 3);
     const player = state.players[0]!;
     catchFire(state.blobFire, player, { now: state.timeSeconds, fromX: player.x - 50, bySlot: 1 });
-    chillBlob(state.ice, player, { now: state.timeSeconds, dt, tunables: state.tunables });
+    chillBlob(state.ice, player, {
+      now: state.timeSeconds,
+      dt,
+      terrain: state.arena.terrain,
+      tunables: state.tunables,
+    });
     stepGame(state, keys(), dt);
     expect(state.blobFire.blobs.size).toBe(0);
     expect(isIced(state.ice, player)).toBe(false);
@@ -979,5 +1008,194 @@ describe("gameSim — headbutt vs direct rocket on the shipped levels (bash-matc
     expect(offMap("bash")).toBe(offMap("rocket"));
     expect(average("bash")).toBeGreaterThan(average("rocket") * 0.95);
     expect(average("bash")).toBeLessThan(average("rocket") * 1.05);
+  });
+});
+
+/** Seeded uniform [0, 1) (LCG), so a failing fuzz case replays. */
+function seededRandom(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return s / 2 ** 32;
+  };
+}
+
+type FuzzMotion = NonNullable<LevelDefinition["movers"]>[number]["motion"];
+
+/** A random part (slide, spin or swing; thin to thick, slow to fast) by a wall under a ceiling. */
+function fuzzMoverLevel(random: () => number): LevelDefinition {
+  const w = 16 + random() * 160;
+  const h = 6 + random() * 70;
+  const cx = 200 + random() * 300;
+  const cy = 180 + random() * 120;
+  const periodS = 1 + random() * 3;
+  const kinds = ["slide", "spin", "swing"] as const;
+  const kind = kinds[Math.floor(random() * kinds.length)]!;
+  const motion: FuzzMotion =
+    kind === "slide"
+      ? {
+          kind,
+          offset: { x: (random() - 0.5) * 360, y: (random() - 0.5) * 240 },
+          periodS,
+          phase: 0,
+        }
+      : kind === "spin"
+        ? { kind, direction: 1, periodS, phase: 0 }
+        : { kind, degrees: 30 + random() * 150, direction: -1, periodS, phase: 0 };
+  const stoneRect = (x: number, y: number, size: { w: number; h: number }) =>
+    ({ shape: { type: "rect", x, y, ...size }, materialId: "stone" }) as const;
+  return {
+    ...level,
+    formatVersion: 2,
+    terrain: [
+      ...level.terrain,
+      stoneRect(520 + random() * 80, 120, { w: 32, h: 200 }),
+      stoneRect(60, 90 + random() * 50, { w: 680, h: 16 }),
+      stoneRect(cx - w / 2, cy - h / 2, { w, h }),
+    ],
+    spawns: [
+      { x: 150 + random() * 150, y: 320 },
+      { x: 300 + random() * 200, y: 320 },
+    ],
+    movers: [
+      {
+        motion,
+        pivot: kind === "slide" ? { x: cx, y: cy } : { x: cx - w / 2 + random() * w, y: cy },
+        terrainIndices: [3],
+      },
+    ],
+  };
+}
+
+const FUZZ_KEYS = [
+  ["KeyA", "KeyD", "KeyW", "Space", "KeyS"],
+  ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"],
+];
+
+/** Overlap the controller's own ground moves can leave (launching off a part's edge); the next step's escape absorbs it. */
+const CONTACT_NOISE = 1;
+
+/** How far the escape has to move the player (0 when free; Infinity when trapped). */
+function stuckDepth(player: PlayerState, terrain: TerrainGrid): number {
+  const copy = structuredClone(player);
+  const minScale = DEFAULT_GAME_TUNABLES.player.crushGapFraction;
+  const result = escapeSolid(copy, terrain, { minScale });
+  if (result === "trapped") return Infinity;
+  return Math.hypot(copy.x - player.x, copy.y - player.y);
+}
+
+describe("gameSim — never stuck in solid (owner, never-stuck)", () => {
+  // Ground truth: the owner's report — a moving part pushed a blob against something and it ended
+  // stuck inside the part. Invariant: no player in play ever ends a step inside solid deeper than
+  // contact noise, whatever the parts and the inputs do.
+  it("should leave no player in play inside terrain or a part when parts push them around", () => {
+    const stuck: string[] = [];
+    for (let seed = 1; seed <= 60; seed += 1) {
+      const random = seededRandom(seed);
+      const state = createGameState({
+        level: fuzzMoverLevel(random),
+        tunables: DEFAULT_GAME_TUNABLES,
+      });
+      let inputs = keys();
+      for (let step = 0; step < 360; step += 1) {
+        if (step % 20 === 0) {
+          inputs = keys(...FUZZ_KEYS.flatMap((pool) => pool.filter(() => random() < 0.35)));
+        }
+        stepGame(state, inputs, dt);
+        for (const player of playersInPlay(state)) {
+          const depth = stuckDepth(player, state.arena.terrain);
+          if (depth > CONTACT_NOISE) stuck.push(`seed ${seed} step ${step} ${player.id} ${depth}`);
+        }
+      }
+    }
+    expect(stuck).toEqual([]);
+  });
+
+  /** A still block (a part with a 30 s spin, so it barely turns) at x 300–380, y 260–320. */
+  const blockLevel = (): LevelDefinition => ({
+    ...level,
+    formatVersion: 2,
+    terrain: [
+      ...level.terrain,
+      { shape: { type: "rect", x: 300, y: 260, w: 80, h: 60 }, materialId: "stone" },
+    ],
+    movers: [
+      {
+        motion: { kind: "spin", periodS: 30, phase: 0, direction: 1 },
+        pivot: { x: 340, y: 290 },
+        terrainIndices: [1],
+      },
+    ],
+  });
+
+  it("should move a player a part left half inside it out to the nearest free side", () => {
+    const state = stepGame(
+      createGameState({ level: blockLevel(), tunables: DEFAULT_GAME_TUNABLES }),
+      keys(),
+      dt
+    );
+    const player = state.players[0]!;
+    // Feet on the floor, the body's right half inside the block's left face.
+    player.x = 300;
+    player.y = 320;
+    stepGame(state, keys(), dt);
+    expect(state.combat.fighters.get(player.id)?.eliminated).toBe(false);
+    expect(stuckDepth(player, state.arena.terrain)).toBe(0);
+    expect(player.x).toBeLessThan(300 - 13);
+    // And it walks away on its own.
+    stepFor(state, 0.3, keys("KeyA"));
+    expect(player.x).toBeLessThan(270);
+  });
+
+  it("should crush a player with no free spot within a body width", () => {
+    const state = stepGame(
+      createGameState({ level: blockLevel(), tunables: DEFAULT_GAME_TUNABLES }),
+      keys(),
+      dt
+    );
+    const player = state.players[0]!;
+    // Deep inside the block: the nearest free spot is more than a body width away.
+    player.x = 340;
+    player.y = 306;
+    stepGame(state, keys(), dt);
+    expect(state.combat.events).toContainEqual(
+      expect.objectContaining({ type: "playerEliminated", victimSlot: 0, cause: "crush" })
+    );
+  });
+});
+
+describe("gameSim — respawn on purpose (owner, never-stuck)", () => {
+  const hold = DEFAULT_GAME_TUNABLES.match.selfRespawnHoldSeconds;
+
+  it("should respawn a player who holds the respawn button for the full hold, as a fall", () => {
+    const state = stepGame(newGame(), keys(), dt);
+    const player = state.players[0]!;
+    stepFor(state, hold + 2 * dt, keys("KeyQ"));
+    expect(state.combat.events).toContainEqual(
+      expect.objectContaining({ type: "playerEliminated", victimSlot: 0, cause: "self" })
+    );
+    // Nobody hit it: it costs the fall penalty, like falling off alone (match-rules D1).
+    expect(state.rules.scores[0]).toBe(-DEFAULT_GAME_TUNABLES.match.scoring.fallPenalty);
+    expect(player.respawnHoldSeconds).toBe(0);
+  });
+
+  it("should do nothing when the respawn button is let go before the hold is full", () => {
+    const state = stepGame(newGame(), keys(), dt);
+    stepFor(state, hold * 0.8, keys("Backspace"));
+    stepFor(state, dt, keys());
+    stepFor(state, hold * 0.8, keys("Backspace"));
+    const eliminated = state.combat.events.some((event) => event.type === "playerEliminated");
+    expect(eliminated).toBe(false);
+    expect(state.players[1]!.respawnHoldSeconds).toBeGreaterThan(0);
+  });
+
+  it("should credit a recent hitter with the kill when a hit player respawns on purpose", () => {
+    const state = stepGame(newGame(), keys(), dt);
+    const fighter = state.combat.fighters.get("p0")!;
+    fighter.lastHitBySlot = 1;
+    fighter.lastHitAt = state.timeSeconds;
+    stepFor(state, hold + 2 * dt, keys("KeyQ"));
+    expect(state.rules.scores[1]).toBe(DEFAULT_GAME_TUNABLES.match.scoring.kill);
+    expect(state.rules.scores[0]).toBe(0);
   });
 });

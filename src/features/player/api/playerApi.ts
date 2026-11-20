@@ -15,6 +15,7 @@ export {
   type BodyContact,
   type ResolveBodyContactsArgs,
 } from "@/features/player/services/bodyCollision";
+export { escapeSolid, type EscapeResult } from "@/features/player/services/solidEscape";
 export {
   endRoll,
   isRolling,

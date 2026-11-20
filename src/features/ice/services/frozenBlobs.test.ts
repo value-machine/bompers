@@ -21,9 +21,10 @@ import {
 } from "@/features/ice/services/blobIceRenderer";
 import { sprayFreezeRay } from "@/features/ice/services/freezeRay";
 import {
+  chillSlow,
   CRACK_HOP_SECONDS,
-  frozenInputs,
-  holdFrozenBlobs,
+  icedInputs,
+  holdIcedBlobs,
   isFrozen,
   isIced,
   releaseBlob,
@@ -49,8 +50,11 @@ const level: LevelDefinition = {
 };
 
 /** A holder aiming right at a victim 60 units away, both standing on the floor. */
-function scene() {
-  const terrain = buildTerrainFromLevel(level);
+function scene(floor = "stone") {
+  const terrain = buildTerrainFromLevel({
+    ...level,
+    terrain: level.terrain.map((piece) => ({ ...piece, materialId: floor })),
+  });
   const ice = createIceState(terrain);
   const holder = createPlayer(0, { x: 200, y: FLOOR }, TUNABLES);
   holder.aimX = 1;
@@ -73,7 +77,7 @@ function scene() {
     const inputs = raw.map((input, slot) =>
       slot === 1 ? { ...input, connected: true, jump, moveX: 1, fire: true } : input
     );
-    return frozenInputs(ice, players, { inputs, now: world.time, tunables: TUNABLES });
+    return icedInputs(ice, players, { inputs, now: world.time, tunables: TUNABLES });
   };
   return { terrain, ice, holder, victim, players, world, step, press };
 }
@@ -90,13 +94,41 @@ describe("frozen blobs (ice-frozen-blobs D1)", () => {
     expect(isIced(s.ice, s.holder)).toBe(false);
   });
 
-  it("should not freeze a blob when the ray only sweeps over it twice", () => {
+  it("should freeze a blob when two short sweeps land within the chill hold", () => {
     const s = scene();
     s.step(0.3, true);
-    s.step(0.4, false);
+    s.step(B.chillHoldSeconds - 0.1, false);
+    expect(isIced(s.ice, s.victim)).toBe(true);
+    s.step(0.3, true);
+    expect(isFrozen(s.ice, s.victim)).toBe(true);
+  });
+
+  it("should not freeze a blob when its sweeps are further apart than the hold and drain", () => {
+    const s = scene();
+    s.step(0.3, true);
+    s.step(B.chillHoldSeconds + 0.4, false);
     expect(isIced(s.ice, s.victim)).toBe(false);
     s.step(0.3, true);
     expect(isFrozen(s.ice, s.victim)).toBe(false);
+  });
+
+  it("should slow the run input and raise gravity by the chill share when a blob is chilled", () => {
+    const s = scene();
+    s.step(B.freezeSeconds / 2, true);
+    const slow = B.chillSlowMax / 2;
+    expect(chillSlow(s.ice, s.victim, TUNABLES)).toBeCloseTo(slow, 2);
+    expect(s.press(false)[1]!.moveX).toBeCloseTo(1 - slow, 2);
+    s.victim.gravityScale = 1;
+    holdIcedBlobs(s.ice, s.players, TUNABLES);
+    expect(s.victim.gravityScale).toBeCloseTo(1 + slow, 2);
+    expect(s.holder.gravityScale).toBe(1);
+  });
+
+  it("should freeze a blob faster when it stands on slippery ground", () => {
+    const s = scene("ice");
+    s.victim.grounded = true;
+    s.step(B.freezeSeconds / B.slipperyChillScale + dt, true);
+    expect(isFrozen(s.ice, s.victim)).toBe(true);
   });
 
   it("should take twice as long to freeze when the blob is crouching", () => {
@@ -194,7 +226,7 @@ describe("ice block: how it ends and slides", () => {
     stepPlayers({ players: settle, inputs: idle, terrain: s.terrain, tunables: TUNABLES, dt });
     for (const blob of settle) blob.vx = 300;
     for (let i = 0; i < 120; i += 1) {
-      holdFrozenBlobs(s.ice, settle, TUNABLES);
+      holdIcedBlobs(s.ice, settle, TUNABLES);
       stepPlayers({ players: settle, inputs: idle, terrain: s.terrain, tunables: TUNABLES, dt });
     }
     expect(s.victim.jumpLocked).toBe(true);

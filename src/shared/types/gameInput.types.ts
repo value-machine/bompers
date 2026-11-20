@@ -23,6 +23,12 @@ export interface PlayerInput {
    * on the ground; in the air down is just aim (`aimY`).
    */
   crouch: boolean;
+  /**
+   * Respawn on purpose (owner, never-stuck: the fallback when a blob is really stuck), held:
+   * keyboard Q / Backspace, pad Back (View / Select). It counts only after a full hold
+   * (`match.selfRespawnHoldSeconds`), so a stray press does nothing.
+   */
+  respawn: boolean;
 }
 
 /** Inputs for all player slots, index = slot (0–3). */

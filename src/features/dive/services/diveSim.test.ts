@@ -184,15 +184,18 @@ describe("stepDives timeline", () => {
     expect(sim.phaseOf(sim.players[0]!)).toBe("idle");
   });
 
-  it("should wait for the cooldown before the next dive when fire is pressed again at once", () => {
+  it("should wait for the cooldown before the next dive when the blob is airborne with its charge", () => {
     const sim = createSim([100]);
+    const player = sim.players[0]!;
     sim.step([RIGHT]);
-    while (sim.phaseOf(sim.players[0]!) !== "idle") sim.step();
+    while (sim.phaseOf(player) !== "idle") sim.step();
+    // Off the ground with the charge (walked off a ledge): the cooldown still counts.
+    liftTo(player, 100);
+    player.coyoteTimer = 0;
+    player.vy = 0;
     sim.step([RIGHT]);
-    expect(sim.phaseOf(sim.players[0]!)).toBe("idle");
-    sim.step([], frames(D.cooldownSeconds));
-    sim.step([RIGHT]);
-    expect(sim.phaseOf(sim.players[0]!)).toBe("windup");
+    expect(sim.phaseOf(player)).toBe("idle");
+    expect(sim.dive.deniedCounts[player.id]).toBe(1);
   });
 
   it("should allow only one dive per airtime when diving upward", () => {
@@ -519,5 +522,132 @@ describe("refillDive (headbutt reset)", () => {
     refillDive(sim.dive, player);
     resetDive(sim.dive, player);
     expect(sim.dive.refillCounts[player.id]).toBe(1);
+  });
+});
+
+describe("dash press reliability (dash-feel lap)", () => {
+  /** Dashes right along the floor and steps until that dash is in `phase`. */
+  const dashUntil = (sim: ReturnType<typeof createSim>, phase: DivePhase) => {
+    sim.step([RIGHT]);
+    sim.step();
+    while (sim.phaseOf(sim.players[0]!) !== phase) sim.step();
+  };
+
+  it("should start the next dash at once when the blob stands on the ground after a dash", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    dashUntil(sim, "idle");
+    expect(player.grounded).toBe(true);
+    sim.step([RIGHT]);
+    expect(sim.phaseOf(player)).toBe("windup");
+  });
+
+  it("should cut the recovery short and dash when fire is pressed on the ground during it", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    dashUntil(sim, "recovery");
+    sim.step([RIGHT]);
+    sim.step();
+    expect(sim.phaseOf(player)).toBe("windup");
+    expect(sim.dive.deniedCounts[player.id] ?? 0).toBe(0);
+  });
+
+  it("should chain the next dash when fire is pressed again just before a ground dash ends", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    sim.step([RIGHT]);
+    sim.step();
+    while (sim.phaseOf(player) !== "travel") sim.step();
+    sim.step([], frames(D.travelSeconds) - frames(0.1));
+    sim.step([RIGHT]);
+    let steps = 0;
+    while (sim.phaseOf(player) !== "windup" && steps < frames(D.fireBufferSeconds)) {
+      sim.step();
+      steps += 1;
+    }
+    expect(sim.phaseOf(player)).toBe("windup");
+    expect(sim.dive.deniedCounts[player.id] ?? 0).toBe(0);
+  });
+
+  it("should deny at once when fire is pressed early in a dash", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    sim.step([RIGHT]);
+    sim.step();
+    sim.step([RIGHT]);
+    expect(sim.dive.deniedCounts[player.id]).toBe(1);
+  });
+
+  it("should dash on touchdown when fire was pressed just before landing with the dive spent", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    liftTo(player, 40);
+    sim.step([{ fire: true, aimY: -1 }]);
+    while (sim.phaseOf(player) !== "idle") sim.step();
+    expect(isDiveSpent(sim.dive, player)).toBe(true);
+    // Fall until about 60 ms before touchdown, then press.
+    while (player.y + player.vy * 0.06 < FLOOR_Y) sim.step();
+    sim.step([RIGHT]);
+    let steps = 0;
+    while (sim.phaseOf(player) === "idle" && steps < frames(D.fireBufferSeconds) + 1) {
+      sim.step();
+      steps += 1;
+    }
+    expect(sim.phaseOf(player)).toBe("windup");
+    expect(sim.dive.deniedCounts[player.id] ?? 0).toBe(0);
+  });
+
+  it("should deny the press once when the buffer runs out in the air with the dive spent", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    liftTo(player, 20);
+    sim.step([{ fire: true, aimY: -1 }]);
+    while (sim.phaseOf(player) !== "idle") sim.step();
+    sim.step([RIGHT]);
+    sim.step([], frames(D.fireBufferSeconds) + 2);
+    expect(player.grounded).toBe(false);
+    expect(sim.phaseOf(player)).toBe("idle");
+    expect(sim.dive.deniedCounts[player.id]).toBe(1);
+    expect(sim.dive.motions[player.id]!.sinceDenied).toBeLessThan(0.05);
+  });
+
+  it("should deny a mid-air jump press when the dive is spent", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    liftTo(player, 20);
+    sim.step([{ fire: true, aimY: -1 }]);
+    while (sim.phaseOf(player) !== "idle") sim.step();
+    sim.step([{ jump: true }]);
+    sim.step();
+    expect(sim.dive.deniedCounts[player.id]).toBe(1);
+  });
+
+  it("should deny at once and not dash later when pressed early in a hit stagger", () => {
+    const sim = createSim([100, 150]);
+    const victim = sim.players[1]!;
+    victim.facing = -1;
+    sim.step([RIGHT]);
+    while (sim.hits.length === 0) sim.step();
+    sim.step([{}, { fire: true, aimX: -1 }]);
+    expect(sim.dive.deniedCounts[victim.id]).toBe(1);
+    sim.step([], frames(D.staggerSeconds));
+    expect(sim.phaseOf(victim)).toBe("idle");
+  });
+
+  it("should never deny a press that starts a dash", () => {
+    const sim = createSim([100]);
+    sim.step([RIGHT]);
+    expect(sim.dive.deniedCounts[sim.players[0]!.id] ?? 0).toBe(0);
+  });
+
+  it("should dash unarmed right after the last rocket when the launcher ran empty", () => {
+    const sim = createSim([100]);
+    const player = sim.players[0]!;
+    sim.combat.fighters.get(player.id)!.weapon = { itemId: "rocket-launcher", ammo: 1 };
+    sim.step([RIGHT]);
+    expect(sim.combat.fighters.get(player.id)!.weapon).toBeNull();
+    sim.step();
+    sim.step([RIGHT]);
+    expect(sim.phaseOf(player)).toBe("windup");
   });
 });

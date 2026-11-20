@@ -4,6 +4,7 @@ import type {
   KeyboardLayoutId,
   MenuInput,
   PlayerInput,
+  PlayerInputs,
   SlotSources,
 } from "@/shared/types/gameInput.types";
 
@@ -20,6 +21,8 @@ interface KeyboardLayout {
   fire: readonly string[];
   /** Match only: pause / start (both halves share Escape). */
   pause: readonly string[];
+  /** Match only, held: respawn on purpose (the menu's back key; unused in play). */
+  respawn: readonly string[];
   /** Menu only: join / choose / start. */
   confirm: readonly string[];
   /** Menu only: leave / back to the lobby. */
@@ -35,6 +38,7 @@ export const KEYBOARD_LAYOUTS: Record<KeyboardLayoutId, KeyboardLayout> = {
     jump: ["KeyW", "Space"],
     fire: ["KeyF"],
     pause: ["Escape"],
+    respawn: ["KeyQ"],
     confirm: ["Space", "KeyF"],
     back: ["KeyQ"],
   },
@@ -46,6 +50,7 @@ export const KEYBOARD_LAYOUTS: Record<KeyboardLayoutId, KeyboardLayout> = {
     jump: ["ArrowUp"],
     fire: ["Slash", "Numpad0", "Enter"],
     pause: ["Escape"],
+    respawn: ["Backspace"],
     confirm: ["Enter", "Slash", "Numpad0"],
     back: ["Backspace"],
   },
@@ -92,6 +97,7 @@ const PAD_BUTTON = {
   x: 2,
   rb: 5,
   rt: 7,
+  back: 8,
   start: 9,
   dpadUp: 12,
   dpadDown: 13,
@@ -114,6 +120,7 @@ export const EMPTY_PLAYER_INPUT: PlayerInput = {
   fire: false,
   pause: false,
   crouch: false,
+  respawn: false,
 };
 
 const anyHeld = (held: ReadonlySet<string>, codes: readonly string[]): boolean =>
@@ -140,6 +147,7 @@ export function mapKeyboardInput(
     fire: anyHeld(held, layout.fire),
     pause: anyHeld(held, layout.pause),
     crouch: down,
+    respawn: anyHeld(held, layout.respawn),
   };
 }
 
@@ -180,6 +188,7 @@ export function mapGamepadInput(pad: GamepadSnapshot | null): PlayerInput {
     fire: fireButtons.some((button) => pressed(pad, button)),
     pause: pressed(pad, PAD_BUTTON.start),
     crouch: pressed(pad, PAD_BUTTON.dpadDown) || stickCrouches(move),
+    respawn: pressed(pad, PAD_BUTTON.back),
   };
 }
 
@@ -203,6 +212,24 @@ export function mapPlayerInputs(
     return source.kind === "keyboard"
       ? mapKeyboardInput(raw.heldKeys, source.layout)
       : mapGamepadInput(raw.gamepads[source.padIndex] ?? null);
+  });
+}
+
+/**
+ * Keeps button presses of a frame that ran no sim step (a display faster than the 120 Hz sim):
+ * `later` with jump, fire and crouch also held where `earlier` held them, so a press seen only on
+ * that frame still reaches the sim on the next one (dash-feel lap). Sticks come from `later`.
+ */
+export function mergeButtonPresses(earlier: PlayerInputs, later: PlayerInputs): PlayerInput[] {
+  return later.map((input, slot) => {
+    const before = earlier[slot];
+    if (!before) return input;
+    return {
+      ...input,
+      jump: input.jump || before.jump,
+      fire: input.fire || before.fire,
+      crouch: input.crouch || before.crouch,
+    };
   });
 }
 
