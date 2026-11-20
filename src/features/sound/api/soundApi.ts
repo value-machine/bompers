@@ -1,6 +1,5 @@
 /** Public seam of the sound feature: frame → cues, the app's audio engine, music and settings. */
 export type {
-  MusicTrackId,
   SoundBurst,
   SoundChannel,
   SoundCue,
@@ -20,7 +19,6 @@ export {
   type AudioEngine,
   type SoundHost,
 } from "@/features/sound/services/audioEngine";
-export { musicTrackFor, FINAL_MUSIC_SECONDS } from "@/features/sound/services/musicBank";
 export {
   VOLUME_STEPS,
   isChannelEnabled,

@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createAudioEngine, type AudioEngine } from "@/features/sound/services/audioEngine";
-import type { MusicTrackId, SoundSettings } from "@/features/sound/types/sound.types";
+import type { MusicTrackId } from "@/features/music/api/musicApi";
+import type { SoundSettings } from "@/features/sound/types/sound.types";
 
 /** One engine for the app lifetime: browsers allow few AudioContexts, and music must not restart. */
 let sharedEngine: AudioEngine | null = null;

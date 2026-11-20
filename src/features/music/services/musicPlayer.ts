@@ -1,5 +1,5 @@
-import { MUSIC_FADE_SECONDS, MUSIC_TRACKS } from "@/features/sound/services/musicBank";
-import type { MusicTrackId } from "@/features/sound/types/sound.types";
+import { MUSIC_FADE_SECONDS, MUSIC_TRACKS } from "@/features/music/services/musicBank";
+import type { MusicTrackId } from "@/features/music/types/music.types";
 
 /** Plays one music track at a time and crossfades when the track changes. */
 export interface MusicPlayer {

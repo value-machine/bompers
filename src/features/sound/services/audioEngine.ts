@@ -5,19 +5,18 @@ import {
   pickTakeIndex,
   playbackRateFor,
 } from "@/features/sound/services/soundBank";
-import { MUSIC_TRACKS } from "@/features/sound/services/musicBank";
-import { createMusicPlayer, type MusicPlayer } from "@/features/sound/services/musicPlayer";
+import {
+  MUSIC_TRACKS,
+  createMusicPlayer,
+  type MusicPlayer,
+  type MusicTrackId,
+} from "@/features/music/api/musicApi";
 import {
   busGains,
   readSoundSettings,
   writeSoundSettings,
 } from "@/features/sound/services/soundSettings";
-import type {
-  MusicTrackId,
-  SoundCue,
-  SoundLoop,
-  SoundSettings,
-} from "@/features/sound/types/sound.types";
+import type { SoundCue, SoundLoop, SoundSettings } from "@/features/sound/types/sound.types";
 
 /** Key that toggles mute in game (not used by any keyboard layout). */
 export const MUTE_KEY_CODE = "KeyM";
