@@ -1,4 +1,4 @@
-/** Public seam of the level-objects feature: the object registry, placing an object and its footing. */
+/** Public seam of the level-objects feature: the object registry and placing an object. */
 export type {
   ExportedObjectRecipe,
   ObjectPart,
@@ -13,8 +13,3 @@ export {
   findObjectRecipe,
 } from "@/features/level-objects/services/objectRegistry";
 export { placeObject } from "@/features/level-objects/services/objectPlacement";
-export {
-  footingIssue,
-  objectFooting,
-  type ObjectFootingIssue,
-} from "@/features/level-objects/services/objectFooting";

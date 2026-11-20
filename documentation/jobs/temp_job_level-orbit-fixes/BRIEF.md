@@ -16,3 +16,7 @@ Repro: an AI-written "rotating planet with trees" level (`<g data-motion="spin 2
 - **D3 W24 footing:** an object whose base is > 12 units off / inside the terrain shapes, or leans > 30° from the surface's outward direction, warns with the `rotate(a x y)` that fits. Validation the AI can act on.
 - **D4 Joining:** joining players also skip spawns a moving part covers.
 - **D5 W14 spawns:** one warning per covered spawn, naming it and what the game does; spin / swing name the clearing distance from the pivot. Prompt: spawns never ride a part; for spinning parts put spawns outside the circle the farthest carried object sweeps.
+
+## Change round (owner, after #129) — drop-footing
+
+- **drop-footing D1 (owner):** "Warning and suggested rotation seem over-engineering … we should just write in the level editor prompt how in editing a level the agent can rotate objects. We shouldn't suggest orientations, especially not different orientations than the normal one." W24 (footing check + suggested `rotate(…)`) is removed from the importer, codes, tests and docs; `objectFooting.ts` is gone. The prompt and AUTHORING only say how to rotate an object and that upright is the default — no advice to turn objects to face a surface, no rotated example. Kept: objects honour their own `rotate(a cx cy)` (D1), the pivot fix (D2), joining skips covered spawns (D4), W14 naming (D5). `orbit-test-level.html` keeps its rotated trees as a fixture of the syntax only.
