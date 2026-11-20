@@ -1,12 +1,12 @@
 /** Public seam of the sound feature: frame → cues, the app's audio engine, music and settings. */
 export type {
-  MusicTrackId,
   SoundBurst,
   SoundChannel,
   SoundCue,
   SoundLoop,
   SoundPlayerSnapshot,
   SoundSettings,
+  SoundStatus,
   SoundWorldSnapshot,
 } from "@/features/sound/types/sound.types";
 export {
@@ -20,7 +20,6 @@ export {
   type AudioEngine,
   type SoundHost,
 } from "@/features/sound/services/audioEngine";
-export { musicTrackFor, FINAL_MUSIC_SECONDS } from "@/features/sound/services/musicBank";
 export {
   VOLUME_STEPS,
   isChannelEnabled,
@@ -30,6 +29,9 @@ export {
 export {
   useAudioEngine,
   useMusicTrack,
+  useSoundStatus,
   useSoundSettings,
 } from "@/features/sound/hooks/useAudioEngine";
+export { SoundStatusChip } from "@/features/sound/components/SoundStatusChip";
+export { SoundStatusCorner } from "@/features/sound/components/SoundStatusCorner";
 export { PLAYER_PITCH_SEMITONES, SOUND_FILES } from "@/features/sound/services/soundBank";

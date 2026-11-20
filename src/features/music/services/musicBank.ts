@@ -1,4 +1,4 @@
-import type { MusicTrackId } from "@/features/sound/types/sound.types";
+import type { MusicTrackId } from "@/features/music/types/music.types";
 
 /**
  * The music bank (DESIGN_LANGUAGE § 8): which file plays for each track and whether it loops.
