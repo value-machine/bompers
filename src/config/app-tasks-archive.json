@@ -528,5 +528,25 @@
     "title": "Loose terrain falls",
     "description": "Owner idea 2026-11-16 (future, not scheduled): terrain cut off from its support by a blast or burnt-out fuel breaks loose and falls. On the distance field: flood-fill the touched region for islands not connected to anchored material or the level edge, lift each island out as a contour polygon into a falling body (simple custom body or a physics library — a new dependency is an owner choice), and stamp it back into the field when it settles; falling chunks can hit players. Precedent: Noita (pixel islands become rigid bodies). Waits on the distance field (a2) and collision on the field (a3). Game design SSOT: documentation/game/GAME_DESIGN_DOCUMENT.md; product reading: documentation/DOC_APP_VISION.md. Note from the distance-field lap (#45): only unbreakable samples and the bottom row are anchored, so all-breakable floating platforms have no anchor — this lap needs its own rule for which piece stays put. ",
     "status": "done"
+  },
+  {
+    "title": "Buff the freeze ray",
+    "description": "Owner: the ice beam needs to be more effective. First an options page with different additions that make it stronger (owner picks), then build. In progress (thread: ice-beam-buff).",
+    "status": "done"
+  },
+  {
+    "title": "Never stuck in geometry + respawn button",
+    "description": "Owner: players got stuck inside a moving platform after it pushed them against something; this must never happen. Plus a self-eliminate/respawn button as a fallback. In progress (thread: unstuck).",
+    "status": "done"
+  },
+  {
+    "title": "Level themes: backgrounds (lighting later)",
+    "description": "Owner: new level backgrounds, chosen by setting a theme in the level file; the background changes with it. Lighting per theme maybe later. Options page first. In progress (thread: level-themes).",
+    "status": "done"
+  },
+  {
+    "title": "Hurt feedback: players always know when they are hurt",
+    "description": "Owner picked all of A-D: hit-sound floor 0.8 for chunk-losing hits, longer flash, blocked hit = clink + grey ring, ouch squash + squeezed eyes, every lost pip pops, chunks fly off, health bar pop, low-health pulse + sweat. No new sound. PR #137.",
+    "status": "done"
   }
 ]

@@ -1,22 +1,7 @@
 [
   {
-    "title": "Buff the freeze ray",
-    "description": "Owner: the ice beam needs to be more effective. First an options page with different additions that make it stronger (owner picks), then build. In progress (thread: ice-beam-buff).",
-    "status": "in-progress"
-  },
-  {
     "title": "Dash: easier to aim, always registers, cooldown feedback",
-    "description": "Owner: the bash/dive attack is so hard to aim that players almost never land it; sometimes the input does not register. A blob with its feet on the ground must always be able to dash. Pressing it on cooldown must give a juice notice (visual + sound) that the press was seen but cannot be used yet. In progress (thread: dash-feel).",
-    "status": "in-progress"
-  },
-  {
-    "title": "Never stuck in geometry + respawn button",
-    "description": "Owner: players got stuck inside a moving platform after it pushed them against something; this must never happen. Plus a self-eliminate/respawn button as a fallback. In progress (thread: unstuck).",
-    "status": "in-progress"
-  },
-  {
-    "title": "Level themes: backgrounds (lighting later)",
-    "description": "Owner: new level backgrounds, chosen by setting a theme in the level file; the background changes with it. Lighting per theme maybe later. Options page first. In progress (thread: level-themes).",
+    "description": "Owner: the bash/dive attack is so hard to aim that players almost never land it; sometimes the input does not register. A blob with its feet on the ground must always be able to dash. Pressing it on cooldown must give a juice notice (visual + sound) that the press was seen but cannot be used yet. Magnetism with lead (B) + cooldown clink landed; owner tests it, then a bigger dash hit reach is added or combined if aiming is still too hard (thread: dash-feel).",
     "status": "in-progress"
   },
   {
@@ -67,6 +52,11 @@
   {
     "title": "Physics objects (whole-object state)",
     "description": "Owner rule (#125, level-objects README): terrain objects (trees) are partially destructible but never move; physics objects move and fall but burn/freeze/damage apply to the whole object, never per sample. Build the first physics objects (e.g. crate, ball, log) as rigid bodies with whole-object state. Feasibility numbers from the tree-physics check are in the README. Size M. Later.",
+    "status": "to-do"
+  },
+  {
+    "title": "Crates use the shared never-stuck collision",
+    "description": "Never-stuck lap note: crates still resolve collision on their own path, so the freeStuckPlayers guarantee does not cover a player pinned by a crate. Route crates through the shared resolver. Size S.",
     "status": "to-do"
   }
 ]
