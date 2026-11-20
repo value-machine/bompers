@@ -37,6 +37,10 @@ const readGamepads = (): (GamepadSnapshot | null)[] => {
 /** Starts listening on `target` (usually `window`); `sources` maps devices to slots. */
 export function createGameInputReader(target: Window, sources?: SlotSources): GameInputReader {
   const heldKeys = new Set<string>();
+  // Keys pressed since each read (dash-feel lap): a tap that goes down and up between two frames
+  // still counts as held for one read instead of vanishing.
+  const tappedForPlay = new Set<string>();
+  const tappedForMenus = new Set<string>();
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!GAME_KEY_CODES.has(event.code)) return;
@@ -45,27 +49,38 @@ export function createGameInputReader(target: Window, sources?: SlotSources): Ga
     // only auto-repeats; it counts once it is pressed again.
     if (event.repeat) return;
     heldKeys.add(event.code);
+    tappedForPlay.add(event.code);
+    tappedForMenus.add(event.code);
   };
   const onKeyUp = (event: KeyboardEvent): void => {
     heldKeys.delete(event.code);
   };
   // Keys released while the window is unfocused never fire keyup.
-  const onBlur = (): void => heldKeys.clear();
+  const onBlur = (): void => {
+    heldKeys.clear();
+    tappedForPlay.clear();
+    tappedForMenus.clear();
+  };
 
-  const raw = (): RawInputState => ({ heldKeys, gamepads: readGamepads() });
+  /** Held keys plus the ones tapped since this read's last call, which it then forgets. */
+  const raw = (tapped: Set<string>): RawInputState => {
+    const keys = new Set([...heldKeys, ...tapped]);
+    tapped.clear();
+    return { heldKeys: keys, gamepads: readGamepads() };
+  };
 
   target.addEventListener("keydown", onKeyDown);
   target.addEventListener("keyup", onKeyUp);
   target.addEventListener("blur", onBlur);
 
   return {
-    sample: () => mapPlayerInputs(raw(), sources),
-    sampleMenus: () => mapMenuInputs(raw(), INPUT_DEVICES),
+    sample: () => mapPlayerInputs(raw(tappedForPlay), sources),
+    sampleMenus: () => mapMenuInputs(raw(tappedForMenus), INPUT_DEVICES),
     dispose: () => {
       target.removeEventListener("keydown", onKeyDown);
       target.removeEventListener("keyup", onKeyUp);
       target.removeEventListener("blur", onBlur);
-      heldKeys.clear();
+      onBlur();
     },
   };
 }

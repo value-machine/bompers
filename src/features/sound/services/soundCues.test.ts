@@ -6,6 +6,7 @@ import {
   readSoundLoops,
   CRATE_LAND_SOUND,
   WALL_BONK_SOUND,
+  DASH_DENIED_SOUND,
   type SoundSnapshot,
 } from "@/features/sound/services/soundCues";
 import type { SoundPlayerSnapshot, SoundWorldSnapshot } from "@/features/sound/types/sound.types";
@@ -28,6 +29,7 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   speed: 0,
   terrainHitSpeed: 0,
   diveRefillCount: 0,
+  diveDeniedCount: 0,
   orbCount: 0,
   catchFireCount: 0,
   iceDouseCount: 0,
@@ -242,6 +244,15 @@ describe("readSoundCues — headbutt reset", () => {
   it("should play the pickup sound pitched by the collector when a player takes a headbutt reset", () => {
     const frame = snapshot({ players: [player(0), player(1, { diveRefillCount: 1 })] });
     expect(cuesAfter(frame)).toEqual([{ soundId: "pickup", slot: 1, gain: 1 }]);
+  });
+});
+
+describe("readSoundCues — denied dash", () => {
+  it("should play the soft denied click pitched by the player when a dash press is denied", () => {
+    const frame = snapshot({ players: [player(0, { diveDeniedCount: 1 }), player(1)] });
+    expect(cuesAfter(frame)).toEqual([
+      { soundId: DASH_DENIED_SOUND, slot: 0, gain: SOUND_MIX.crouchGain },
+    ]);
   });
 });
 

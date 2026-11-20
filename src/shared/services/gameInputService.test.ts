@@ -20,6 +20,22 @@ describe("gameInputService", () => {
     expect(reader.sample()[0]?.moveX).toBe(0);
   });
 
+  it("should report a tap once when the key goes down and up between two reads", () => {
+    reader = createGameInputReader(window);
+    press("keydown", "KeyF");
+    press("keyup", "KeyF");
+    expect(reader.sample()[0]?.fire).toBe(true);
+    expect(reader.sample()[0]?.fire).toBe(false);
+  });
+
+  it("should give the menus their own copy of a tap when play read it first", () => {
+    reader = createGameInputReader(window);
+    press("keydown", "Space");
+    press("keyup", "Space");
+    reader.sample();
+    expect(reader.sampleMenus()[0]?.confirm).toBe(true);
+  });
+
   it("should release all keys when the window loses focus", () => {
     reader = createGameInputReader(window);
     press("keydown", "ArrowLeft");

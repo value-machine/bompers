@@ -48,8 +48,10 @@ export interface DiveMotion {
   charged: boolean;
   /** Seconds until the next dive may start. */
   cooldown: number;
-  /** Seconds a fire press is still remembered. */
+  /** Seconds a fire press is still remembered (the input buffer); 0 = no press waiting. */
   fireBuffer: number;
+  /** Seconds since a press last could not start a dive (the "denied" head shake); Infinity = never. */
+  sinceDenied: number;
   /** The current recovery is a head-on terrain bonk (stun). */
   bonked: boolean;
   /** Seconds left of reduced steering after being hit. */
@@ -78,6 +80,11 @@ export interface DiveState {
    * Outside `motions` so a respawn never replays old presses.
    */
   airJumpPressesRead: Record<string, number>;
+  /**
+   * Dash presses that could not start a dive, per player id over the match (monotonic: the denied
+   * sound cue counts its rises). Outside `motions` so a respawn never makes it go back.
+   */
+  deniedCounts: Record<string, number>;
   /** Hits made on the last step (also emitted by combat as `playerHit` events). */
   hits: DiveHit[];
   recentHits: RecentHit[];

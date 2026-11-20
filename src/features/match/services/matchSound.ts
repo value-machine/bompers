@@ -60,6 +60,12 @@ const iceBlockCounts = (state: GameState, id: string) => ({
   iceShatterCount: state.ice.shatterCounts[id] ?? 0,
 });
 
+/** The dive's monotonic per-player counts: headbutt resets taken, dash presses denied. */
+const diveCounts = (state: GameState, id: string) => ({
+  diveRefillCount: state.dive.refillCounts[id] ?? 0,
+  diveDeniedCount: state.dive.deniedCounts[id] ?? 0,
+});
+
 /**
  * Fire and ice as sound hears them: who sprays what this step, how much burns, how much has
  * thawed by itself (the ice FIFO's head only moves forward) and the frozen-flag version.
@@ -108,7 +114,7 @@ export function soundSnapshotOf(
           : "none",
         speed: Math.hypot(player.vx, player.vy),
         terrainHitSpeed: Math.max(player.terrainHitSpeedX, player.terrainHitSpeedY),
-        diveRefillCount: state.dive.refillCounts[player.id] ?? 0,
+        ...diveCounts(state, player.id),
         orbCount: state.collectibles.orbCounts[player.slot] ?? 0,
         catchFireCount: state.blobFire.caughtCounts[player.id] ?? 0,
         iceDouseCount: state.blobFire.dousedCounts[player.id] ?? 0,
