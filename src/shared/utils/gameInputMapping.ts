@@ -20,6 +20,8 @@ interface KeyboardLayout {
   fire: readonly string[];
   /** Match only: pause / start (both halves share Escape). */
   pause: readonly string[];
+  /** Match only, held: respawn on purpose (the menu's back key; unused in play). */
+  respawn: readonly string[];
   /** Menu only: join / choose / start. */
   confirm: readonly string[];
   /** Menu only: leave / back to the lobby. */
@@ -35,6 +37,7 @@ export const KEYBOARD_LAYOUTS: Record<KeyboardLayoutId, KeyboardLayout> = {
     jump: ["KeyW", "Space"],
     fire: ["KeyF"],
     pause: ["Escape"],
+    respawn: ["KeyQ"],
     confirm: ["Space", "KeyF"],
     back: ["KeyQ"],
   },
@@ -46,6 +49,7 @@ export const KEYBOARD_LAYOUTS: Record<KeyboardLayoutId, KeyboardLayout> = {
     jump: ["ArrowUp"],
     fire: ["Slash", "Numpad0", "Enter"],
     pause: ["Escape"],
+    respawn: ["Backspace"],
     confirm: ["Enter", "Slash", "Numpad0"],
     back: ["Backspace"],
   },
@@ -92,6 +96,7 @@ const PAD_BUTTON = {
   x: 2,
   rb: 5,
   rt: 7,
+  back: 8,
   start: 9,
   dpadUp: 12,
   dpadDown: 13,
@@ -114,6 +119,7 @@ export const EMPTY_PLAYER_INPUT: PlayerInput = {
   fire: false,
   pause: false,
   crouch: false,
+  respawn: false,
 };
 
 const anyHeld = (held: ReadonlySet<string>, codes: readonly string[]): boolean =>
@@ -140,6 +146,7 @@ export function mapKeyboardInput(
     fire: anyHeld(held, layout.fire),
     pause: anyHeld(held, layout.pause),
     crouch: down,
+    respawn: anyHeld(held, layout.respawn),
   };
 }
 
@@ -180,6 +187,7 @@ export function mapGamepadInput(pad: GamepadSnapshot | null): PlayerInput {
     fire: fireButtons.some((button) => pressed(pad, button)),
     pause: pressed(pad, PAD_BUTTON.start),
     crouch: pressed(pad, PAD_BUTTON.dpadDown) || stickCrouches(move),
+    respawn: pressed(pad, PAD_BUTTON.back),
   };
 }
 

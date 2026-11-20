@@ -29,6 +29,8 @@ export interface GameTunables {
     spawnProtectionSeconds: number;
     /** Seconds after the round ends before a jump press restarts it (no accidental skip). */
     restartLockSeconds: number;
+    /** Seconds the respawn button is held before a player respawns on purpose (never-stuck). */
+    selfRespawnHoldSeconds: number;
     /** Points (GDD § 5). Knock-off credit uses `combat.killCreditSeconds`. */
     scoring: {
       /** Eliminating another player (incl. knocking them out of bounds). */

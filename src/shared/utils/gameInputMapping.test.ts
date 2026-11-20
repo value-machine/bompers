@@ -26,6 +26,7 @@ describe("gameInputMapping", () => {
       fire: true,
       pause: false,
       crouch: false,
+      respawn: false,
     });
   });
 
@@ -140,5 +141,16 @@ describe("gameInputMapping", () => {
       expect(inputs[0]?.pause).toBe(true);
       expect(inputs[1]?.pause).toBe(true);
     });
+  });
+});
+
+describe("gameInputMapping — respawn button (never-stuck)", () => {
+  // Ground truth: never-stuck lap — Q / Backspace / pad Back (View) are the held respawn buttons.
+  it("should report the respawn button held when Q, Backspace or the pad's Back is held", () => {
+    expect(mapKeyboardInput(new Set(["KeyQ"]), "left").respawn).toBe(true);
+    expect(mapKeyboardInput(new Set(["Backspace"]), "right").respawn).toBe(true);
+    expect(mapKeyboardInput(new Set(["KeyQ"]), "right").respawn).toBe(false);
+    expect(mapGamepadInput(pad([0, 0, 0, 0], [8])).respawn).toBe(true);
+    expect(mapGamepadInput(pad([0, 0, 0, 0], [9])).respawn).toBe(false);
   });
 });

@@ -26,6 +26,9 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     respawnDelaySeconds: 2.0,
     spawnProtectionSeconds: 2.5,
     restartLockSeconds: 2,
+    // Hold the respawn button this long to respawn on purpose (owner, never-stuck): long enough
+    // that a stray press never fires, short enough for a stuck blob.
+    selfRespawnHoldSeconds: 1,
     // A kill outweighs an orb; falling off alone costs a point (match-rules D1).
     scoring: { kill: 2, orb: 1, fallPenalty: 1 },
   },

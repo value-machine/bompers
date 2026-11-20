@@ -102,6 +102,8 @@ interface BlobSprite {
   root: Container;
   /** Dashed spawn-protection ring (DESIGN_LANGUAGE § 6), hidden unless protected. */
   ring: Graphics;
+  /** Respawn-hold fill: the protection ring's ink, solid, growing clockwise from the top. */
+  holdRing: Graphics;
   /** The fill tree (blinks while protected). */
   fills: Container;
   /** Feet-point origin: scaling squashes onto the ground. */
@@ -157,6 +159,8 @@ export interface SyncPlayersOptions {
   squash?: SquashTunables;
   /** Players under spawn protection: they blink and wear the dashed ring (GDD § 6). */
   protectedIds?: ReadonlySet<string>;
+  /** Respawn-button holds by player id, 0–1 of the hold (owner, never-stuck): the fill ring. */
+  respawnHolds?: ReadonlyMap<string, number>;
   /** Ability poses by player id (e.g. the dive's headfirst turn), laid over the movement pose. */
   overlays?: ReadonlyMap<string, BlobPoseOverlay>;
   /** Held weapons by player id: they wear that weapon's tube with its ready light. */
@@ -212,6 +216,33 @@ function drawProtectionRing(m: BlobMetrics): Graphics {
   ring.position.set(0, -m.bodyLift);
   ring.visible = false;
   return ring;
+}
+
+/**
+ * The respawn hold as a solid arc on the protection ring's circle, in its ink and width, from the
+ * top clockwise: full when the hold respawns the blob (owner, never-stuck).
+ */
+function applyRespawnHold(sprite: BlobSprite, fraction: number): void {
+  const { holdRing, metrics: m } = sprite;
+  holdRing.visible = fraction > 0;
+  if (!holdRing.visible) return;
+  const radius = 1.5 * m.r;
+  const start = -Math.PI / 2;
+  holdRing.clear();
+  holdRing.moveTo(Math.cos(start) * radius, Math.sin(start) * radius);
+  holdRing.arc(0, 0, radius, start, start + Math.min(1, fraction) * Math.PI * 2);
+  holdRing.stroke({ width: 3.5 * m.u, color: GAME_PALETTE.ink, cap: "round" });
+  holdRing.position.set(0, -m.bodyLift);
+}
+
+/** The spawn-protection ring and blink, and the respawn-hold fill. */
+function applyRings(
+  sprite: BlobSprite,
+  id: string,
+  frame: { options: SyncPlayersOptions; nowMs: number }
+): void {
+  applyProtection(sprite, frame.options.protectedIds?.has(id) === true, frame.nowMs);
+  applyRespawnHold(sprite, frame.options.respawnHolds?.get(id) ?? 0);
 }
 
 /** Blink the fill between full and 45 % alpha at 8 Hz while protected (DESIGN_LANGUAGE § 6). */
@@ -345,11 +376,11 @@ function createBlobSprite(player: PlayerState): BlobSprite {
   inkTree.addChild(body.ink);
   fills.addChild(body.fill);
   const root = new Container({ label: player.id });
-  const ring = drawProtectionRing(m);
-  root.addChild(ring, inkTree, fills);
+  const rings = { ring: drawProtectionRing(m), holdRing: new Graphics({ visible: false }) };
+  root.addChild(rings.ring, rings.holdRing, inkTree, fills);
   return {
     root,
-    ring,
+    ...rings,
     fills,
     body,
     feet,
@@ -721,7 +752,7 @@ export function syncPlayersView(
       nowMs,
       crouchDrop: pose.crouch.helmetSink + pose.crouch.drop,
     });
-    applyProtection(sprite, options.protectedIds?.has(player.id) === true, nowMs);
+    applyRings(sprite, player.id, { options, nowMs });
   }
   pruneSprites(view, new Set(players.map((player) => player.id)));
 }

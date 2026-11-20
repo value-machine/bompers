@@ -99,6 +99,7 @@ export function createPlayer(slot: number, at: Vec2, tunables: GameTunables): Pl
     groundAngle: 0,
     groundVelocity: { x: 0, y: 0 },
     squeeze: null,
+    respawnHoldSeconds: 0,
   };
 }
 
@@ -110,7 +111,6 @@ export function placePlayer(player: PlayerState, at: Vec2): void {
   player.vy = 0;
   player.grounded = false;
   player.groundAngle = 0;
-  player.squeeze = null;
   player.jumpRising = false;
   player.coyoteTimer = 0;
   player.jumpBufferTimer = 0;
@@ -121,8 +121,10 @@ export function placePlayer(player: PlayerState, at: Vec2): void {
   resetRoll(player);
 }
 
-/** Plain movement again: no ability modifiers, no crouch, no carried speed. */
+/** Plain movement again: no ability modifiers, crouch, squeeze, respawn hold or carried speed. */
 function resetStance(player: PlayerState): void {
+  player.squeeze = null;
+  player.respawnHoldSeconds = 0;
   player.airCarrySpeed = 0;
   player.groundVelocity = { x: 0, y: 0 };
   player.steerScale = 1;
@@ -190,7 +192,8 @@ function headBox(player: PlayerState, terrain: TerrainGrid): Rect {
   };
 }
 
-function bodyHitsSolid(player: PlayerState, terrain: TerrainGrid): boolean {
+/** The body (round bottom + head box) overlaps terrain or a moving part. */
+export function bodyHitsSolid(player: PlayerState, terrain: TerrainGrid): boolean {
   if (circleHitsSolid(terrain, { center: bodyCenter(player), radius: bodyRadius(player) })) {
     return true;
   }
@@ -228,7 +231,7 @@ function slideUpSlope(player: PlayerState, dx: number, args: ContactArgs): boole
   );
   if (settled.kind !== "ground") return false;
   const startY = player.y;
-  player.y = settled.centerY + player.height / 2;
+  player.y = settled.centerY + (player.y - bodyCenter(player).y);
   if (!rectHitsSolid(args.terrain, headBox(player, args.terrain))) return true;
   player.y = startY;
   return false;
@@ -697,7 +700,8 @@ function restingY(player: PlayerState, at: { x: number; reach: number }, terrain
     }
   );
   if (settled.kind !== "ground") return settled.kind;
-  const y = settled.centerY + player.height / 2;
+  // The feet sit this far under the circle's centre (less while a moving part squeezes the blob).
+  const y = settled.centerY + (player.y - bodyCenter(player).y);
   const head = headBox({ ...player, x: at.x, y }, terrain);
   return rectHitsSolid(terrain, head) ? "blocked" : y;
 }
