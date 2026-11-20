@@ -46,7 +46,7 @@ Root attributes:
 - `data-gravity` — optional number > 0, multiplier on the game's gravity; default `1`, `0.6` = floaty.
 - `data-match-duration` — optional whole seconds, default `180`.
 - `data-weapons` — optional; leave it out so crates hold every weapon (the player's lobby choice). Only to limit a level: space-separated weapons (`rocket-launcher`, `homing-launcher`, `torch`, `freeze-ray`) or `none`.
-- `data-theme` — optional background look (sky, distant scenery, particles); default `meadow`. Pick the one that fits the map: `meadow` (Sunny sky, drifting clouds, soft green hills (the default).), `night-sky` (Violet night sky, a cream moon, twinkling stars, dark hills.), `lava-cave` (Dark cave glowing orange from below, stalactites, rock spires, rising embers.), `snowy-peaks` (Pale winter sky, snow-capped mountains, slow falling snow.).
+- `data-theme` — optional background look (sky, distant scenery, particles); default `meadow`. Pick the one that fits the map: `meadow` (Sunny sky, drifting clouds, soft green hills (the default).), `night-sky` (Violet night sky, a cream moon, twinkling stars, dark hills.), `lava-cave` (Dark cave glowing orange from below, stalactites, rock spires, rising embers.), `snowy-peaks` (Pale winter sky, snow-capped mountains, slow falling snow.), `underwater` (Sunlit water fading to deep blue, rocks and kelp, bubbles rising.), `city-rooftops` (Dusk over a skyline with lit windows, pink clouds, chimneys up close.).
 - `data-author`, `data-agent` (your name, e.g. `gemini`), `data-description` — optional metadata.
 - The default terrain colour fills are in § 4; e.g. stone `#5a3f7a`.
 

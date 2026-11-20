@@ -10,7 +10,7 @@ import {
   syncBackdropView,
   type BackdropView,
 } from "@/features/backdrop/api/backdropApi";
-import { resolveBackdropTheme } from "@/features/backdrop/api/backdropThemesApi";
+import { resolveBackdropTheme } from "@/features/backdrop-themes/api/backdropThemesApi";
 import {
   createPlayersView,
   PANIC_PUPIL_SCALE,

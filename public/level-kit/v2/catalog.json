@@ -391,6 +391,24 @@
         "top": "#9cc4ee",
         "bottom": "#eef5fc"
       }
+    },
+    {
+      "id": "underwater",
+      "label": "Underwater",
+      "description": "Sunlit water fading to deep blue, rocks and kelp, bubbles rising.",
+      "sky": {
+        "top": "#62d2ea",
+        "bottom": "#1d5c98"
+      }
+    },
+    {
+      "id": "city-rooftops",
+      "label": "City rooftops",
+      "description": "Dusk over a skyline with lit windows, pink clouds, chimneys up close.",
+      "sky": {
+        "top": "#5a4a9a",
+        "bottom": "#ffc9a0"
+      }
     }
   ]
 }

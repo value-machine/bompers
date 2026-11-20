@@ -123,6 +123,21 @@ export const GAME_PALETTE = {
       capsNear: 0xeef5ff,
       snow: [0xffffff],
     },
+    underwater: {
+      sky: { top: 0x62d2ea, bottom: 0x1d5c98 },
+      rocksFar: 0x2c7aa8,
+      kelpNear: 0x1b5a84,
+      bubbles: [0xe8fbff, 0xbfefff],
+    },
+    cityRooftops: {
+      sky: { top: 0x5a4a9a, bottom: 0xffc9a0 },
+      sun: 0xffc48f,
+      skylineFar: 0x8a6aa8,
+      windows: 0xffe9a8,
+      roofsNear: 0x5e4683,
+      cloud: 0xffd0d6,
+      cloudEdge: 0xf3a6b8,
+    },
   },
   /** Ice surface cue: gloss streaks and the inner rim (DESIGN_LANGUAGE § 2). */
   iceGloss: 0xffffff,

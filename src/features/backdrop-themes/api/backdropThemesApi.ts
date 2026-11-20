@@ -8,8 +8,13 @@ export {
   exportBackdropThemes,
   isBackdropThemeId,
   resolveBackdropTheme,
-} from "@/features/backdrop/services/backdropThemeRegistry";
+} from "@/features/backdrop-themes/services/backdropThemeRegistry";
 export type {
+  BackdropAmbient,
+  BackdropAmbientKind,
+  BackdropBand,
+  BackdropCeiling,
+  BackdropDisc,
   BackdropTheme,
   ExportedBackdropTheme,
-} from "@/features/backdrop/types/backdropTheme.types";
+} from "@/features/backdrop-themes/types/backdropTheme.types";

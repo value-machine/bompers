@@ -1,5 +1,5 @@
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
-import type { BackdropTheme } from "@/features/backdrop/types/backdropTheme.types";
+import type { BackdropTheme } from "@/features/backdrop-themes/types/backdropTheme.types";
 
 const LAVA = GAME_PALETTE.backdropThemes.lavaCave;
 

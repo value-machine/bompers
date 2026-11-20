@@ -1,12 +1,14 @@
 import { toCssColor } from "@/shared/config/gamePalette";
-import { LAVA_CAVE_THEME } from "@/features/backdrop/services/lavaCaveTheme";
-import { MEADOW_THEME } from "@/features/backdrop/services/meadowTheme";
-import { NIGHT_SKY_THEME } from "@/features/backdrop/services/nightSkyTheme";
-import { SNOWY_PEAKS_THEME } from "@/features/backdrop/services/snowyPeaksTheme";
+import { LAVA_CAVE_THEME } from "@/features/backdrop-themes/services/lavaCaveTheme";
+import { MEADOW_THEME } from "@/features/backdrop-themes/services/meadowTheme";
+import { NIGHT_SKY_THEME } from "@/features/backdrop-themes/services/nightSkyTheme";
+import { SNOWY_PEAKS_THEME } from "@/features/backdrop-themes/services/snowyPeaksTheme";
+import { UNDERWATER_THEME } from "@/features/backdrop-themes/services/underwaterTheme";
+import { CITY_ROOFTOPS_THEME } from "@/features/backdrop-themes/services/cityRooftopsTheme";
 import type {
   BackdropTheme,
   ExportedBackdropTheme,
-} from "@/features/backdrop/types/backdropTheme.types";
+} from "@/features/backdrop-themes/types/backdropTheme.types";
 
 /**
  * The theme registry: every backdrop theme a level may pick with `data-theme`, the single source
@@ -18,6 +20,8 @@ export const BACKDROP_THEMES: Readonly<Record<string, BackdropTheme>> = {
   [NIGHT_SKY_THEME.id]: NIGHT_SKY_THEME,
   [LAVA_CAVE_THEME.id]: LAVA_CAVE_THEME,
   [SNOWY_PEAKS_THEME.id]: SNOWY_PEAKS_THEME,
+  [UNDERWATER_THEME.id]: UNDERWATER_THEME,
+  [CITY_ROOFTOPS_THEME.id]: CITY_ROOFTOPS_THEME,
 };
 
 /** The theme of a level that names none (or an unknown one). */

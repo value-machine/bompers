@@ -10,7 +10,7 @@ import { terrainSwatch, toCssColor } from "@/shared/config/gamePalette";
 import {
   DEFAULT_BACKDROP_THEME_ID,
   exportBackdropThemes,
-} from "@/features/backdrop/api/backdropThemesApi";
+} from "@/features/backdrop-themes/api/backdropThemesApi";
 import { blastPushAt, blastReach, craterReach } from "@/shared/utils/blastPower";
 import { MOTION_DEFAULTS, MOTION_LIMITS, MOTION_PIVOTS } from "@/shared/utils/levelMotion";
 import {

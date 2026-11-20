@@ -11,7 +11,7 @@ import type {
   BackdropCeiling,
   BackdropDisc,
   BackdropTheme,
-} from "@/features/backdrop/types/backdropTheme.types";
+} from "@/features/backdrop-themes/api/backdropThemesApi";
 
 /**
  * Screen-space backdrop behind the world (DESIGN_LANGUAGE § 1 World, § 5 steps 1–2), drawn from

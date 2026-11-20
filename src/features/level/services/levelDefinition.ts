@@ -1,6 +1,6 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { isWeaponItemId } from "@/shared/config/weaponItems";
-import { isBackdropThemeId } from "@/features/backdrop/api/backdropThemesApi";
+import { isBackdropThemeId } from "@/features/backdrop-themes/api/backdropThemesApi";
 import {
   CATALOG_DEFAULTS,
   LEVEL_FORMAT_VERSION,

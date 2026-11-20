@@ -2,7 +2,7 @@ import { memo, useId } from "react";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/types/levelDefinition.types";
 import { useThumbnailFrame } from "@/features/level/hooks/useThumbnailFrame";
 import { GAME_PALETTE, terrainSwatch, toCssColor } from "@/shared/config/gamePalette";
-import { resolveBackdropTheme } from "@/features/backdrop/api/backdropThemesApi";
+import { resolveBackdropTheme } from "@/features/backdrop-themes/api/backdropThemesApi";
 
 /** Outline width as a share of the frame width (reads as the in-game ink line at card size). */
 const OUTLINE_SHARE = 1 / 110;

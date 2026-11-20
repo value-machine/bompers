@@ -3,7 +3,7 @@ import { isWeaponItemId } from "@/shared/config/weaponItems";
 import {
   DEFAULT_BACKDROP_THEME_ID,
   isBackdropThemeId,
-} from "@/features/backdrop/api/backdropThemesApi";
+} from "@/features/backdrop-themes/api/backdropThemesApi";
 import {
   DEFAULT_LEVEL_SETTINGS,
   LEVEL_FORMAT_VERSION,

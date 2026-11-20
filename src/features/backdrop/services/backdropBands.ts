@@ -1,6 +1,9 @@
 import { Graphics } from "pixi.js";
 import { randomBetween, seededRandom } from "@/shared/utils/seededRandom";
-import type { BackdropBand, BackdropCeiling } from "@/features/backdrop/types/backdropTheme.types";
+import type {
+  BackdropBand,
+  BackdropCeiling,
+} from "@/features/backdrop-themes/api/backdropThemesApi";
 
 /**
  * One period of a backdrop band, drawn once and baked by the renderer (level-themes D1). The tile
@@ -17,7 +20,9 @@ export function bandTile(band: BackdropBand): Graphics {
   if (band.shape === "hills") hills(g, band, height);
   else if (band.shape === "peaks") peaks(g, band, { height, random });
   else if (band.shape === "spires") spires(g, band, { height, random });
+  else if (band.shape === "skyline" || band.shape === "roofs") blocks(g, band, { height, random });
   else rocks(g, band, { height, random });
+  if (band.shape === "kelp") kelp(g, band, { height, random });
   return g;
 }
 
@@ -59,9 +64,9 @@ function peaks(g: Graphics, band: BackdropBand, { height, random }: ShapeArgs): 
   g.lineTo(band.period, height + 1)
     .closePath()
     .fill(band.color);
-  const { capColor } = band;
-  if (capColor === undefined) return;
-  for (const tip of tips) snowCap(g, { tip, step, height, color: capColor });
+  const { accentColor } = band;
+  if (accentColor === undefined) return;
+  for (const tip of tips) snowCap(g, { tip, step, height, color: accentColor });
 }
 
 interface Tip {
@@ -117,6 +122,72 @@ function rocks(g: Graphics, band: BackdropBand, { height, random }: ShapeArgs): 
   g.lineTo(band.period, height + 1)
     .closePath()
     .fill(band.color);
+}
+
+const KELP_PER_TILE = 5;
+const KELP_SEGMENTS = 6;
+
+/** Tall wavy kelp stalks standing on the rocks, reaching up to the top of the tile. */
+function kelp(g: Graphics, band: BackdropBand, { height, random }: ShapeArgs): void {
+  const step = band.period / KELP_PER_TILE;
+  for (let k = 0; k < KELP_PER_TILE; k += 1) {
+    const x = step * (k + randomBetween(random, 0.3, 0.7));
+    const top = height * randomBetween(random, 0, 0.35);
+    g.moveTo(x, height);
+    for (let i = 1; i <= KELP_SEGMENTS; i += 1) {
+      g.lineTo(x + Math.sin(i * 1.3 + k) * 7, height + ((top - height) * i) / KELP_SEGMENTS);
+    }
+    g.stroke({ color: band.color, width: 8, cap: "round", join: "round" });
+  }
+}
+
+/**
+ * Buildings of uneven height side by side. `skyline`: flat tops with lit windows (accent colour);
+ * `roofs`: lower blocks with pitched roofs and the odd chimney.
+ */
+function blocks(g: Graphics, band: BackdropBand, { height, random }: ShapeArgs): void {
+  const skyline = band.shape === "skyline";
+  for (let x = 0; x < band.period; ) {
+    const width = Math.min(band.period - x, randomBetween(random, 50, 120));
+    const top =
+      height * (skyline ? randomBetween(random, 0.05, 0.6) : randomBetween(random, 0.4, 0.75));
+    g.rect(x, top, width + 0.5, height + 1 - top).fill(band.color);
+    if (!skyline) roof(g, { x, top, width, color: band.color, chimney: random() > 0.4 });
+    else if (band.accentColor !== undefined) {
+      windows(g, { x, top, width, bottom: height, color: band.accentColor, random });
+    }
+    x += width;
+  }
+}
+
+function roof(
+  g: Graphics,
+  r: { x: number; top: number; width: number; color: number; chimney: boolean }
+) {
+  g.moveTo(r.x - 2, r.top)
+    .lineTo(r.x + r.width / 2, r.top - 24)
+    .lineTo(r.x + r.width + 2, r.top)
+    .closePath()
+    .fill(r.color);
+  if (r.chimney) g.rect(r.x + r.width * 0.68, r.top - 32, 12, 26).fill(r.color);
+}
+
+interface WindowArgs {
+  x: number;
+  top: number;
+  width: number;
+  bottom: number;
+  color: number;
+  random: () => number;
+}
+
+/** About a third of the window grid is lit. */
+function windows(g: Graphics, w: WindowArgs): void {
+  for (let y = w.top + 14; y < w.bottom - 10; y += 20) {
+    for (let x = w.x + 8; x < w.x + w.width - 12; x += 16) {
+      if (w.random() > 0.62) g.rect(x, y, 7, 9).fill(w.color);
+    }
+  }
 }
 
 const DRIPS_PER_TILE = 6;

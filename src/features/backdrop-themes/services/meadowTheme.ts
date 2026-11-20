@@ -1,5 +1,5 @@
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
-import type { BackdropTheme } from "@/features/backdrop/types/backdropTheme.types";
+import type { BackdropTheme } from "@/features/backdrop-themes/types/backdropTheme.types";
 
 /** The default theme: the sunny meadow every level had before themes (DESIGN_LANGUAGE § 1 World). */
 export const MEADOW_THEME: BackdropTheme = {

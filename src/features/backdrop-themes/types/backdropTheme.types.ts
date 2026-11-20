@@ -5,14 +5,24 @@
  * renamed or reused once shipped.
  */
 
-/** Silhouette of a tiled band: rolling hills, snow-capped peaks, pointed spires, jagged rocks. */
-export type BackdropBandShape = "hills" | "peaks" | "spires" | "rocks";
+/**
+ * Silhouette of a tiled band: rolling hills, snow-capped peaks, pointed spires, jagged rocks,
+ * rocks with swaying kelp stalks, a city skyline, pitched roofs with chimneys.
+ */
+export type BackdropBandShape =
+  | "hills"
+  | "peaks"
+  | "spires"
+  | "rocks"
+  | "kelp"
+  | "skyline"
+  | "roofs";
 
 export interface BackdropBand {
   shape: BackdropBandShape;
   color: number;
-  /** Snow caps on `peaks`. */
-  capColor?: number;
+  /** Detail colour: snow caps on `peaks`, lit windows on `skyline`. */
+  accentColor?: number;
   /** Width of one baked tile (px). */
   period: number;
   /** Bump height (px); the tile is twice this tall. */
@@ -41,7 +51,7 @@ export interface BackdropDisc {
   radius: number;
 }
 
-export type BackdropAmbientKind = "stars" | "snow" | "embers";
+export type BackdropAmbientKind = "stars" | "snow" | "embers" | "bubbles";
 
 /** Screen-space particles, drawn behind the world (never over players). */
 export interface BackdropAmbient {

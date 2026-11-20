@@ -99,6 +99,8 @@ Link the preview kit in `<head>` (works offline without it):
 | theme | `night-sky` | Night sky | Violet night sky, a cream moon, twinkling stars, dark hills. |
 | theme | `lava-cave` | Lava cave | Dark cave glowing orange from below, stalactites, rock spires, rising embers. |
 | theme | `snowy-peaks` | Snowy peaks | Pale winter sky, snow-capped mountains, slow falling snow. |
+| theme | `underwater` | Underwater | Sunlit water fading to deep blue, rocks and kelp, bubbles rising. |
+| theme | `city-rooftops` | City rooftops | Dusk over a skyline with lit windows, pink clouds, chimneys up close. |
 <!-- level-kit:catalog-ids:end -->
 
 ## Minimal valid level

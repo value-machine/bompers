@@ -1,5 +1,5 @@
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
-import type { BackdropTheme } from "@/features/backdrop/types/backdropTheme.types";
+import type { BackdropTheme } from "@/features/backdrop-themes/types/backdropTheme.types";
 
 const SNOW = GAME_PALETTE.backdropThemes.snowyPeaks;
 
@@ -14,7 +14,7 @@ export const SNOWY_PEAKS_THEME: BackdropTheme = {
   far: {
     shape: "peaks",
     color: SNOW.peaksFar,
-    capColor: SNOW.capsFar,
+    accentColor: SNOW.capsFar,
     period: 900,
     amplitude: 130,
     parallax: 0.2,
@@ -23,7 +23,7 @@ export const SNOWY_PEAKS_THEME: BackdropTheme = {
   near: {
     shape: "peaks",
     color: SNOW.peaksNear,
-    capColor: SNOW.capsNear,
+    accentColor: SNOW.capsNear,
     period: 620,
     amplitude: 70,
     parallax: 0.4,

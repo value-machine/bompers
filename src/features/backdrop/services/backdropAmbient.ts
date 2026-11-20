@@ -3,10 +3,10 @@ import { seededRandom } from "@/shared/utils/seededRandom";
 import type {
   BackdropAmbient,
   BackdropAmbientKind,
-} from "@/features/backdrop/types/backdropTheme.types";
+} from "@/features/backdrop-themes/api/backdropThemesApi";
 
 /**
- * Ambient particles of a theme (stars, snow, embers), in screen space behind the world. One baked
+ * Ambient particles of a theme (stars, snow, embers, bubbles), in screen space behind the world. One baked
  * dot texture shared by every particle; a frame only moves, fades and scales sprites, and each
  * particle's place is a pure function of time and camera, so no state is kept between frames.
  */
@@ -48,6 +48,7 @@ const LOOK = {
   stars: { parallax: 0.05, speed: 0, radius: 0.35 },
   snow: { parallax: 0.3, speed: 22, radius: 0.55 },
   embers: { parallax: 0.25, speed: 0.1, radius: 0.45 },
+  bubbles: { parallax: 0.3, speed: 0.06, radius: 0.6 },
 } as const;
 
 const wrap = (value: number, period: number): number => ((value % period) + period) % period;
@@ -90,14 +91,28 @@ export function ambientPose(
       scale,
     };
   }
-  // Embers rise from the bottom, flicker and fade out on the way up.
+  return risingPose(kind === "embers", seed, { ...screen, scale });
+}
+
+/**
+ * Embers and bubbles rise from the bottom and wrap. Embers flicker and fade on the way up;
+ * bubbles wobble and stay half see-through.
+ */
+function risingPose(
+  ember: boolean,
+  seed: AmbientSeed,
+  screen: AmbientScreen & { scale: number }
+): AmbientPose {
+  const s = screen.nowMs / 1000;
+  const look = ember ? LOOK.embers : LOOK.bubbles;
   const life = wrap(seed.y + s * look.speed * seed.size, 1);
+  const sway = Math.sin(s * (ember ? 1.5 : 2) + seed.phase) * (ember ? 8 : 4);
   const flicker = 0.6 + 0.4 * Math.sin(s * 9 + seed.phase);
   return {
-    x: wrap(seed.x * width + Math.sin(s * 1.5 + seed.phase) * 8 - cameraX * look.parallax, width),
-    y: height * (1 - life),
-    alpha: Math.min(1, (1 - life) * 1.6) * flicker,
-    scale,
+    x: wrap(seed.x * screen.width + sway - screen.cameraX * look.parallax, screen.width),
+    y: screen.height * (1 - life),
+    alpha: ember ? Math.min(1, (1 - life) * 1.6) * flicker : 0.65,
+    scale: screen.scale,
   };
 }
 

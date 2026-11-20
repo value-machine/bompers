@@ -6,7 +6,7 @@ import {
   type ContentKind,
 } from "@/features/content-catalog/api/contentCatalogApi";
 import { exportObjectCatalog } from "@/features/level-objects/api/levelObjectsApi";
-import { exportBackdropThemes } from "@/features/backdrop/api/backdropThemesApi";
+import { exportBackdropThemes } from "@/features/backdrop-themes/api/backdropThemesApi";
 import { buildLevelPrompt } from "@/features/level-kit/services/levelPrompt";
 import { terrainSwatch, toCssColor } from "@/shared/config/gamePalette";
 
