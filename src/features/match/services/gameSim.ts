@@ -3,7 +3,13 @@ import type { PlayerInputs } from "@/shared/types/gameInput.types";
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
 import { isWeaponItemId } from "@/shared/config/weaponItems";
 import { cuePointsPassed, motionCuePoints } from "@/shared/utils/levelMotion";
-import { createArenaState, moversDistanceAt, type ArenaState } from "@/features/arena/api/arenaApi";
+import {
+  createArenaState,
+  fieldNormalAt,
+  moverAt,
+  moversDistanceAt,
+  type ArenaState,
+} from "@/features/arena/api/arenaApi";
 import {
   inheritOnLeave,
   rideMovers,
@@ -20,6 +26,7 @@ import {
 import {
   applyHit,
   eliminateFighter,
+  type EliminateArgs,
   reportPartSound,
   createCombatState,
   reportTerrainDestroyed,
@@ -58,6 +65,7 @@ import {
 } from "@/features/collectibles/api/collectiblesApi";
 import {
   createPlayer,
+  escapeSolid,
   reactToHit,
   resolveBodyContacts,
   stepPlayers,
@@ -340,11 +348,75 @@ function crushPinnedPlayers(
   }
 }
 
-/** Steps 1 and 1b: new players join, then moving parts carry and push the players in play. */
+/**
+ * Step 1c, the never-stuck invariant (owner, never-stuck): no player starts its own step inside
+ * terrain or a moving part. A body something left overlapping solid (a part's push, a squeeze
+ * letting go, terrain that grew around it) moves to the nearest free spot; where it fits only
+ * smaller it is squeezed for this step, and where it fits nowhere above the crush size it is
+ * trapped and the crush rule takes it like a pinned body.
+ */
+function freeStuckPlayers(state: GameState, players: readonly PlayerState[]): void {
+  const { terrain } = state.arena;
+  for (const player of players) {
+    if (state.combat.fighters.get(player.id)?.eliminated === true) continue;
+    const minScale = state.tunables.player.crushGapFraction;
+    if (escapeSolid(player, terrain, { minScale }) !== "trapped") continue;
+    eliminateFighter({
+      combat: state.combat,
+      player,
+      cause: "crush",
+      ...trappedSqueeze(state, player),
+      tunables: state.tunables,
+      timeSeconds: state.timeSeconds,
+    });
+  }
+}
+
+/** The squeeze a trapped player's pancake follows: the part it is deepest in, if any. */
+function trappedSqueeze(state: GameState, player: PlayerState): Pick<EliminateArgs, "squeeze"> {
+  const { terrain } = state.arena;
+  const center = { x: player.x, y: player.y - player.height / 2 };
+  const inside = moverAt(terrain, center);
+  if (!inside || inside.distance <= -player.width / 2) return {};
+  const normal = fieldNormalAt(terrain, center);
+  const mover = terrain.movers.indexOf(inside.mover);
+  return { squeeze: { nx: normal.x, ny: normal.y, mover } };
+}
+
+/**
+ * Step 1d, respawn on purpose (owner, never-stuck: the fallback when a blob is really stuck): a
+ * player holding the respawn button for `selfRespawnHoldSeconds` without a break is eliminated
+ * with cause `self` (the normal knockout: goo, splat, pop). Scored like a fall: a recent hitter
+ * gets the kill, else it costs the player the fall penalty, so it never dodges a kill. Raw inputs:
+ * a frozen blob can still bail out.
+ */
+function holdToRespawn(
+  state: GameState,
+  step: { players: readonly PlayerState[]; inputs: PlayerInputs; dt: number }
+): void {
+  const { tunables } = state;
+  for (const player of step.players) {
+    const held = step.inputs[player.slot]?.respawn === true;
+    player.respawnHoldSeconds = held ? player.respawnHoldSeconds + step.dt : 0;
+    if (player.respawnHoldSeconds < tunables.match.selfRespawnHoldSeconds) continue;
+    player.respawnHoldSeconds = 0;
+    eliminateFighter({
+      combat: state.combat,
+      player,
+      cause: "self",
+      tunables,
+      timeSeconds: state.timeSeconds,
+    });
+  }
+}
+
+/** Steps 1–1d: join, moving parts carry and push, none left stuck, respawn holds. */
 function joinAndRideParts(state: GameState, inputs: PlayerInputs, dt: number): PlayerState[] {
   joinSlots(state, inputs);
   const players = playersInPlay(state);
   stepMovingParts(state, players, dt);
+  freeStuckPlayers(state, players);
+  holdToRespawn(state, { players, inputs, dt });
   return players;
 }
 

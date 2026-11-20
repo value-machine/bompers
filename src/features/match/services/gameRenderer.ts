@@ -230,6 +230,16 @@ const protectedIds = (state: GameState): Set<string> => {
   return ids;
 };
 
+/** How far each holding player is into the respawn hold, 0–1 (owner, never-stuck). */
+const respawnHolds = (state: GameState): Map<string, number> => {
+  const holds = new Map<string, number>();
+  const full = state.tunables.match.selfRespawnHoldSeconds;
+  for (const player of state.players) {
+    if (player.respawnHoldSeconds > 0) holds.set(player.id, player.respawnHoldSeconds / full);
+  }
+  return holds;
+};
+
 /** Pose overlays: a burning blob's panic hop, under the dive's pose when it dives (that puts it out). */
 const blobOverlays = (
   state: GameState,
@@ -399,6 +409,7 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
   syncPlayersView(renderer.players, blobs.players, {
     nowMs,
     protectedIds: protectedIds(state),
+    respawnHolds: respawnHolds(state),
     overlays: blobs.overlays,
     weapons: blobs.weapons,
     zoom,

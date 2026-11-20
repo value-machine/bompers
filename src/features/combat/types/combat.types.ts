@@ -56,7 +56,8 @@ export interface RocketState {
 /** What dealt a hit. The dive lap owns "dive"; new attacks add their source here. */
 export type HitSource = "rocket" | "dive" | "fire";
 /** `crush`: squeezed between a moving part and terrain (LEVEL_FORMAT § 11, moving-parts D13). */
-export type EliminationCause = HitSource | "out-of-bounds" | "crush";
+/** `self`: the player held the respawn button (owner, never-stuck), scored like a fall. */
+export type EliminationCause = HitSource | "out-of-bounds" | "crush" | "self";
 
 /** Which way a crush squeezed the victim: the unit normal out of the part, and which part. */
 export interface CrushSqueeze {
