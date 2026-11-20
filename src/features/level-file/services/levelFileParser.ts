@@ -10,7 +10,7 @@ import {
   type LevelObject,
   type TerrainPiece,
 } from "@/features/level/api/levelApi";
-import { placeObject } from "@/features/level-objects/api/levelObjectsApi";
+import { footingIssue, placeObject } from "@/features/level-objects/api/levelObjectsApi";
 import { checkMoverSweeps, collectMovers } from "@/features/level-file/services/levelFileMotion";
 import {
   checkPointBehavior,
@@ -26,6 +26,7 @@ import {
   readShape,
   rectContainsPoint,
   rectContainsRect,
+  footingWarning,
 } from "@/features/level-file/services/levelFileGeometry";
 import {
   addError,
@@ -64,6 +65,8 @@ interface TerrainRead {
   /** The element of each piece (an object's element once per piece, so movers find them). */
   els: Element[];
   objects: LevelObject[];
+  /** Each placed object with its readable name, for the footing check (W24). */
+  named: { object: LevelObject; name: string }[];
 }
 
 /**
@@ -74,14 +77,14 @@ function addObject(
   item: RoleElement,
   ctx: { levelId: string; ordinal: number; log: LevelIssueLog },
   read: TerrainRead
-): void {
+): LevelObject | null {
   const box = readRect(item, ctx.log);
   const request = box && readObjectRequest(item, ctx, ctx.log);
-  if (!box || !request) return;
+  if (!box || !request) return null;
   const placed = placeObject({ ...request, box });
   if (!placed.ok) {
     addWarning(ctx.log, "W22", `${item.name}: unknown object kind "${request.kind}"; ignored.`);
-    return;
+    return null;
   }
   for (const note of placed.notes) addWarning(ctx.log, "W23", `${item.name}: ${note}.`);
   const first = read.pieces.length;
@@ -89,9 +92,16 @@ function addObject(
     read.pieces.push({ shape, materialId, colorId });
     read.els.push(item.el);
   }
-  const terrainIndices = placed.parts.map((_, i) => first + i);
-  const { kind, variant, seed } = placed;
-  read.objects.push({ kind, variant, box: placed.box, seed, terrainIndices });
+  const object: LevelObject = {
+    kind: placed.kind,
+    variant: placed.variant,
+    box: placed.box,
+    seed: placed.seed,
+    ...(placed.rotation && { rotation: placed.rotation }),
+    terrainIndices: placed.parts.map((_, i) => first + i),
+  };
+  read.objects.push(object);
+  return object;
 }
 
 /**
@@ -102,12 +112,13 @@ function readTerrain(
   items: readonly RoleElement[],
   ctx: { levelId: string; log: LevelIssueLog }
 ): TerrainRead {
-  const read: TerrainRead = { pieces: [], els: [], objects: [] };
+  const read: TerrainRead = { pieces: [], els: [], objects: [], named: [] };
   let ordinal = 0;
   for (const item of ofRole(items, "terrain", "object")) {
     if (item.role === "object") {
       ordinal += 1;
-      addObject(item, { ...ctx, ordinal }, read);
+      const object = addObject(item, { ...ctx, ordinal }, read);
+      if (object) read.named.push({ object, name: item.name });
       continue;
     }
     const shape = readShape(item, ctx.log);
@@ -283,11 +294,23 @@ function readMovers(
   return movers.map(({ mover }) => mover);
 }
 
+/** W24 for every placed object; objects stand on the terrain shapes, not on each other (level-orbit D3). */
+function checkFooting(read: TerrainRead, log: LevelIssueLog): void {
+  const ground = read.pieces.flatMap((piece, i) =>
+    read.els[i]?.getAttribute("data-role") === "object" ? [] : [piece.shape]
+  );
+  for (const { object, name } of read.named) {
+    const issue = footingIssue(object, ground);
+    if (issue) addWarning(log, "W24", footingWarning(name, issue));
+  }
+}
+
 function readContent(args: ContentArgs): LevelContent {
   const { root, world, log } = args;
   const items = collectRoleElements(root, log);
   const terrainRead = readTerrain(items, { levelId: args.levelId, log });
   const terrain = terrainRead.pieces;
+  checkFooting(terrainRead, log);
   if (terrain.length === 0) {
     addError(log, "E6", "No valid terrain: add at least one platform or destructible shape.");
   }

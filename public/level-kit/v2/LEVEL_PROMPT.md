@@ -73,7 +73,7 @@ Collectible items: `point-orb`, `dive-reset`.
 
 ### Moving parts (optional)
 
-Wrap terrain shapes in `<g data-motion="…">` to move them as one part. Draw the shapes where the part **rests**, in normal absolute coordinates; the motion is relative to that place. Never use `transform`.
+Wrap terrain shapes in `<g data-motion="…">` to move them as one part. Draw the shapes where the part **rests**, in normal absolute coordinates; the motion is relative to that place. Never put `transform` on the `<g>` or on terrain (only an object rect may carry its own `rotate`, § Objects).
 
 `data-motion="<kind> <args> [Ns] [@phase] [pivot] [ccw]"` (any order after the kind):
 
@@ -82,7 +82,8 @@ Wrap terrain shapes in `<g data-motion="…">` to move them as one part. Draw th
 - `spin` — one full turn per period about the pivot (default `center`), clockwise; `ccw` reverses.
 - `swing deg` — pendulum ± `deg` (≤ 180) about the pivot (default `top`).
 - `Ns` = seconds per cycle, default `4s`, 1–30. `@f` starts `f` of a cycle ahead (0–1): equal period and phase move in lockstep, `@0.5` moves opposite.
-- Pivot = a point of the part's bounding box: `center` `top` `bottom` `left` `right` `top-left` `top-right` `bottom-left` `bottom-right`.
+- Pivot = a point of the bounding box of the part's terrain shapes (objects riding it don't count, so a planet ringed with trees spins about the planet's centre): `center` `top` `bottom` `left` `right` `top-left` `top-right` `bottom-left` `bottom-right`.
+- Spawns and spinning parts: spawns never ride a part. Anything a spinning part carries (trees too) sweeps a full circle as far out as its farthest point, so put spawns outside that circle (above a planet, higher than its tallest tree) and let players drop onto it; the game skips a spawn while a part covers it.
 - Sounds (optional; parts are silent by default): `data-move-sound="<sound id>"` plays as the part passes its fastest point (a woosh: halfway along a slide or path leg, through the bottom of a swing, once per spin); `data-end-sound="<sound id>"` plays at each turning point (both ends of a slide, each path waypoint, each swing extreme). IDs from `data-sound` in § 4; put both on the `<g>`.
 - Rules: only terrain moves (spawns, drops and pickups inside stay still); a moving part is made of its material like any terrain (blasts crater `earth` and `cardboard` parts, fire burns `cardboard` parts away, `stone` and `ice` parts stay whole); offsets on multiples of `4`; over the whole cycle the part stays inside bounds, never overlaps other terrain (touching is fine anywhere in the cycle: end a slide flush against a wall to make a crusher; a player caught in a gap under `5.6` units is knocked out, in a wider gap only squeezed) and stays ≥ `14` from spawn centres; its fastest point moves ≤ `340` units/s (slide ≈ 3.14 × length ÷ period, spin ≈ 6.28 × radius ÷ period); at most 16 parts; no nested `data-motion`.
 
@@ -104,6 +105,7 @@ Place ready-made objects with one `<rect data-role="object">` each. The game bui
 - `data-kind` — REQUIRED, one kind below. `data-variant` — optional; leave it out for a varied pick. `data-seed` — optional whole number; the same seed gives the same shape. Without a seed every object still differs and looks the same on every load; give the rect an `id` to keep its shape when you add objects before it.
 - Sizes outside a kind's height range or a variant's width range are clamped (with a warning). Snap `x`, `y`, `width`, `height` to multiples of `4`; keep `data-cell-size` at `4` so thin branches stay solid.
 - Like terrain, later shapes paint over earlier ones: put objects after the ground they stand on. An object inside a `<g data-motion>` moves with that part. Spawns go beside or on top of objects, never inside one.
+- **Turning an object** (slopes, walls, round worlds): add `transform="rotate(a cx cy)"` to the object rect only (degrees, clockwise; the one transform allowed, on the rect itself). The object is built upright in the rect, then turned as a whole about `(cx, cy)`, so its top points where the rect's top points. Easiest on a round planet: draw every tree upright on the planet's **top** (bottom edge on the top of the circle) and turn each one about the **planet centre**: `rotate(a planetCx planetCy)`, with `a` = how far round the planet it stands (90 = right side, 180 = underneath, -90 = left side). An object standing off its ground or leaning more than 30° from it gets a warning that names the `rotate(…)` that fits.
 
 - `tree` (Tree): height `96`–`480`; default variant `oak`. Variants:
   - `oak` (Round oak): width 0.6–1.2 × height; earth trunk in bark colour (craters, only scorches) under a cardboard canopy in moss (burns away).
@@ -114,6 +116,7 @@ Place ready-made objects with one `<rect data-role="object">` each. The game bui
 
 ```svg
 <rect data-role="object" data-kind="tree" data-variant="pine" x="800" y="400" width="120" height="208" fill="#5f8f3e" />
+<rect data-role="object" data-kind="tree" data-variant="pine" x="876" y="244" width="48" height="96" transform="rotate(60 900 680)" fill="#5f8f3e" /> <!-- on a planet: circle cx 900 cy 680 r 340, 60° round from the top -->
 ```
 
 ## 4. Valid catalog IDs (v2)

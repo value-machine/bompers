@@ -343,6 +343,34 @@ describe("gameSim — moving parts (LEVEL_FORMAT § 11)", () => {
   });
 });
 
+describe("gameSim — joining next to a moving part (level-orbit D4)", () => {
+  it("should join a player at an open spawn when a moving part covers its slot spawn", () => {
+    // A slow spinning block sits over the slot-0 spawn (100, 200) at time 0 (moving-parts D15).
+    const block = {
+      shape: { type: "rect", x: 60, y: 140, w: 80, h: 80 },
+      materialId: "stone",
+    } as const;
+    const state = createGameState({
+      level: {
+        ...level,
+        terrain: [...level.terrain, block],
+        movers: [
+          {
+            motion: { kind: "spin", periodS: 20, phase: 0, direction: 1 },
+            pivot: { x: 100, y: 180 },
+            terrainIndices: [1],
+          },
+        ],
+      },
+      tunables: DEFAULT_GAME_TUNABLES,
+    });
+    stepGame(state, keys(), dt);
+    const player = state.players.find((p) => p.slot === 0)!;
+    // Both keyboard players share the one open spawn, so the first step's bump moves them apart.
+    expect(Math.abs(player.x - 600)).toBeLessThan(30);
+  });
+});
+
 describe("gameSim — moving parts squeeze and crush (owner D13, change round on #64)", () => {
   it("should eliminate a player a moving part squeezes against a wall (crush)", () => {
     // Slot 0 spawns at x 100 between a slider (x 0–60) and a wall (x 180–220); the slider runs

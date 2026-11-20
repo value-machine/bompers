@@ -3,7 +3,7 @@
  * level-file shape (rect / polygon / circle) made of a catalog material and colour, so placed
  * objects become ordinary terrain pieces and every terrain system applies to them.
  */
-import type { Rect, Shape2D } from "@/shared/types/gameGeometry.types";
+import type { Rect, Shape2D, Vec2 } from "@/shared/types/gameGeometry.types";
 
 /** What a part is to its object (for tests, docs and the later physics lap). */
 export type ObjectPartRole = "trunk" | "branch" | "leaves" | "cap" | "nut";
@@ -44,6 +44,16 @@ export interface ObjectRecipe {
   variants: readonly ObjectVariant[];
 }
 
+/**
+ * A turn of the placed object about a world point (SVG `rotate(degrees cx cy)`, clockwise in
+ * y-down coordinates): the object is built upright in its box, then turned as a whole, so its
+ * "up" follows the box's top (level-orbit D1).
+ */
+export interface ObjectRotation {
+  degrees: number;
+  about: Vec2;
+}
+
 /** A request to place an object: what the level file says, before clamping. */
 export interface ObjectPlacementRequest {
   kind: string;
@@ -51,6 +61,8 @@ export interface ObjectPlacementRequest {
   variant?: string;
   box: Rect;
   seed: number;
+  /** Omitted = upright. */
+  rotation?: ObjectRotation;
 }
 
 /** A placed object: the box and variant actually used, its parts, and each correction made. */
@@ -62,6 +74,8 @@ export type ObjectPlacement =
       variant: string;
       box: Rect;
       seed: number;
+      /** Present when the object is turned (the box is the upright box before the turn). */
+      rotation?: ObjectRotation;
       parts: ObjectPart[];
       /** Readable corrections (unknown variant, clamped size), for import warnings. */
       notes: string[];

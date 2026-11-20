@@ -63,4 +63,35 @@ describe("placeObject", () => {
     const picks = new Set(Array.from({ length: 40 }, (_, i) => pick(i)));
     expect(picks.size).toBeGreaterThan(2);
   });
+
+  it("should turn every part about the rotation point when a rotation is given", () => {
+    const upright = placeObject({ kind: "tree", variant: "oak", box, seed: 7 });
+    const turned = placeObject({
+      kind: "tree",
+      variant: "oak",
+      box,
+      seed: 7,
+      rotation: { degrees: 180, about: { x: 160, y: 300 } },
+    });
+    if (!upright.ok || !turned.ok) throw new Error("expected placements");
+    expect(turned.rotation).toEqual({ degrees: 180, about: { x: 160, y: 300 } });
+    const ys = (parts: typeof upright.parts): number[] =>
+      parts.flatMap(({ shape }) => {
+        if (shape.type === "circle") return [shape.cy];
+        return shape.type === "polygon" ? shape.points.map((p) => p.y) : [];
+      });
+    // Upside down about its base: everything that stood above y 300 now hangs below it.
+    expect(Math.max(...ys(upright.parts))).toBeLessThanOrEqual(300.01);
+    expect(Math.min(...ys(turned.parts))).toBeGreaterThanOrEqual(299.99);
+  });
+
+  it("should leave the parts upright when the rotation is a whole turn", () => {
+    const placed = placeObject({
+      kind: "tree",
+      box,
+      seed: 3,
+      rotation: { degrees: 360, about: { x: 0, y: 0 } },
+    });
+    expect(placed).toEqual(placeObject({ kind: "tree", box, seed: 3 }));
+  });
 });
