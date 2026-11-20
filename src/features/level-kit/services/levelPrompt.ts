@@ -7,6 +7,10 @@ import {
 import { RECOMMENDED_SPAWNS, spawnLift } from "@/features/level-file/api/levelFileApi";
 import { DEFAULT_GAME_TUNABLES, type GameTunables } from "@/shared/config/gameTunables";
 import { terrainSwatch, toCssColor } from "@/shared/config/gamePalette";
+import {
+  DEFAULT_BACKDROP_THEME_ID,
+  exportBackdropThemes,
+} from "@/features/backdrop-themes/api/backdropThemesApi";
 import { blastPushAt, blastReach, craterReach } from "@/shared/utils/blastPower";
 import { MOTION_DEFAULTS, MOTION_LIMITS, MOTION_PIVOTS } from "@/shared/utils/levelMotion";
 import {
@@ -91,6 +95,7 @@ function renderFileContract({ catalog, cell }: PromptContext): string {
     `      data-cell-size="${cell}"`,
     `      data-gravity="${CATALOG_DEFAULTS.gravity}"`,
     `      data-match-duration="${CATALOG_DEFAULTS.matchDuration}"`,
+    `      data-theme="${DEFAULT_BACKDROP_THEME_ID}"`,
     '      style="display: block; width: 100%; height: auto; background: #cfeaf7"',
     "    >",
     "      <!-- Optional decoration (NO data-role) first; game shapes (WITH data-role) after -->",
@@ -109,6 +114,7 @@ function renderFileContract({ catalog, cell }: PromptContext): string {
     `- \`data-gravity\` — optional number > 0, multiplier on the game's gravity; default \`${CATALOG_DEFAULTS.gravity}\`, \`0.6\` = floaty.`,
     `- \`data-match-duration\` — optional whole seconds, default \`${CATALOG_DEFAULTS.matchDuration}\`.`,
     `- \`data-weapons\` — optional; leave it out so crates hold every weapon (the player's lobby choice). Only to limit a level: space-separated weapons (${codeList(itemIds(catalog, "drop"))}) or \`none\`.`,
+    `- \`data-theme\` — optional background look (sky, distant scenery, particles); default \`${DEFAULT_BACKDROP_THEME_ID}\`. Pick the one that fits the map: ${themeList()}.`,
     "- `data-author`, `data-agent` (your name, e.g. `gemini`), `data-description` — optional metadata.",
     `- The default terrain colour fills are in § 4; e.g. stone \`${materialFill(catalog, CATALOG_DEFAULTS.material)}\`.`,
   ].join("\n");
@@ -381,6 +387,12 @@ function renderMinimalLevel({ catalog, tunables }: PromptContext): string {
     "```",
   ].join("\n");
 }
+
+/** Every backdrop theme as `id` (description), from the theme registry. */
+const themeList = (): string =>
+  exportBackdropThemes()
+    .map((theme) => `\`${theme.id}\` (${theme.description})`)
+    .join(", ");
 
 function renderMapRequest(): string {
   return [

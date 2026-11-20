@@ -1,37 +1,45 @@
 import { Container, Graphics, Sprite, Texture, TilingSprite, type Renderer } from "pixi.js";
-import { GAME_PALETTE } from "@/shared/config/gamePalette";
+import { toCssColor } from "@/shared/config/gamePalette";
+import {
+  createAmbientView,
+  syncAmbientView,
+  type AmbientView,
+} from "@/features/backdrop/services/backdropAmbient";
+import { bandTile, ceilingTile } from "@/features/backdrop/services/backdropBands";
+import type {
+  BackdropBand,
+  BackdropCeiling,
+  BackdropDisc,
+  BackdropTheme,
+} from "@/features/backdrop-themes/api/backdropThemesApi";
 
 /**
- * Screen-space backdrop behind the world (DESIGN_LANGUAGE § 1 World, § 5 steps 1–2): vertical sky
- * gradient, flat sun, far hills + clouds at parallax 0.2, near hills at parallax 0.4.
+ * Screen-space backdrop behind the world (DESIGN_LANGUAGE § 1 World, § 5 steps 1–2), drawn from
+ * the level's theme (level-themes D1): vertical sky gradient, sun or moon, an optional hanging
+ * ceiling, far band + clouds at parallax 0.2, near band at 0.4, ambient particles.
  *
  * Everything is baked once into textures and shown as sprites, so a frame only moves quads:
- * the sky is a 2 × 256 gradient stretched to the screen; each hill band is one period baked and
+ * the sky is a 2 × 256 gradient stretched to the screen; each band is one period baked and
  * repeated by a `TilingSprite` (only the bumpy top strip has transparent pixels), with an opaque
  * flat-colour sprite below it down to the screen bottom; clouds are one baked cloud texture
- * reused by a few sprites. No layer is a full-screen alpha layer.
+ * reused by a few sprites; particles share one baked dot. No layer is a full-screen alpha layer.
  */
 export interface BackdropView {
   root: Container;
+  theme: BackdropTheme;
   sky: Sprite;
-  sun: Sprite;
-  far: HillBand;
-  clouds: Container;
-  near: HillBand;
+  disc: { sprite: Sprite; look: BackdropDisc } | null;
+  ceiling: { sprite: TilingSprite; look: BackdropCeiling } | null;
+  far: BandView;
+  clouds: Container | null;
+  near: BandView;
+  ambient: AmbientView | null;
 }
 
-interface HillBand {
+interface BandView {
   top: TilingSprite;
   base: Sprite;
-  look: HillLook;
-}
-
-interface HillLook {
-  period: number;
-  amplitude: number;
-  parallax: number;
-  /** Baseline as a fraction of the screen height. */
-  base: number;
+  look: BackdropBand;
 }
 
 export interface BackdropFrame {
@@ -42,9 +50,6 @@ export interface BackdropFrame {
   nowMs: number;
 }
 
-const toCss = (color: number): string => `#${color.toString(16).padStart(6, "0")}`;
-const FAR: HillLook = { period: 960, amplitude: 70, parallax: 0.2, base: 0.56 };
-const NEAR: HillLook = { period: 720, amplitude: 46, parallax: 0.4, base: 0.7 };
 const CLOUDS = { period: 1400, parallax: 0.2, driftPxPerSecond: 6, edge: 3, copies: 4 };
 /** Puffs of one cloud: [dx, dy, r] (px). */
 const CLOUD_PUFFS: readonly (readonly [number, number, number])[] = [
@@ -59,17 +64,24 @@ const CLOUD_SPOTS: readonly (readonly [number, number, number])[] = [
   [560, 70, 0.8],
   [980, 150, 1.15],
 ];
-const SUN_RADIUS = 56;
+/** Moon craters: [dx, dy, r] as fractions of the moon's radius. */
+const MOON_CRATERS: readonly (readonly [number, number, number])[] = [
+  [-0.3, -0.2, 0.22],
+  [0.25, 0.18, 0.17],
+  [-0.08, 0.4, 0.12],
+];
+/** Screen width at which the sun or moon is drawn at full size. */
+const DISC_FULL_WIDTH = 1280;
 
-function skyTexture(): Texture {
+function skyTexture(sky: BackdropTheme["sky"]): Texture {
   const canvas = document.createElement("canvas");
   canvas.width = 2;
   canvas.height = 256;
   const ctx = canvas.getContext("2d");
   if (ctx) {
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, toCss(GAME_PALETTE.sky.top));
-    gradient.addColorStop(1, toCss(GAME_PALETTE.sky.bottom));
+    gradient.addColorStop(0, toCssColor(sky.top));
+    gradient.addColorStop(1, toCssColor(sky.bottom));
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
@@ -83,40 +95,24 @@ function bake(renderer: Renderer, graphics: Graphics): Texture {
   return texture;
 }
 
-/** One period of rolling hills (a big and a small bump), from the peaks down to the baseline. */
-function hillTile(look: HillLook, color: number): Graphics {
-  const half = look.period / 2;
-  const height = look.amplitude * 2;
-  // A transparent 1-px frame keeps the baked tile exactly one period wide.
-  const g = new Graphics().rect(0, 0, look.period, height + 1).fill({ color, alpha: 0 });
-  g.moveTo(0, height + 1).lineTo(0, height);
-  g.quadraticCurveTo(half / 2, 0, half, height);
-  g.quadraticCurveTo(half * 1.5, height - look.amplitude * 0.9, look.period, height);
-  return g
-    .lineTo(look.period, height + 1)
-    .closePath()
-    .fill(color);
-}
-
-function hillBand(renderer: Renderer, look: HillLook, color: number): HillBand {
-  const texture = bake(renderer, hillTile(look, color));
+function bandView(renderer: Renderer, look: BackdropBand): BandView {
+  const texture = bake(renderer, bandTile(look));
   const top = new TilingSprite({ texture, width: 1, height: texture.height });
-  const base = new Sprite({ texture: Texture.WHITE, tint: color });
+  const base = new Sprite({ texture: Texture.WHITE, tint: look.color });
   return { top, base, look };
 }
 
 /** One cloud with a soft edge colour instead of ink, so it reads as background. */
-function cloudGraphic(): Graphics {
+function cloudGraphic(look: NonNullable<BackdropTheme["clouds"]>): Graphics {
   const g = new Graphics();
-  const { cloud, cloudEdge } = GAME_PALETTE.backdrop;
   for (const [dx, dy, r] of CLOUD_PUFFS) g.circle(dx, dy, r + CLOUDS.edge);
-  g.fill(cloudEdge);
+  g.fill(look.edge);
   for (const [dx, dy, r] of CLOUD_PUFFS) g.circle(dx, dy, r);
-  return g.fill(cloud);
+  return g.fill(look.color);
 }
 
-function cloudLayer(renderer: Renderer): Container {
-  const texture = bake(renderer, cloudGraphic());
+function cloudLayer(renderer: Renderer, look: NonNullable<BackdropTheme["clouds"]>): Container {
+  const texture = bake(renderer, cloudGraphic(look));
   const layer = new Container({ label: "clouds" });
   for (let copy = 0; copy < CLOUDS.copies; copy += 1) {
     for (const [x, y, scale] of CLOUD_SPOTS) {
@@ -129,18 +125,54 @@ function cloudLayer(renderer: Renderer): Container {
   return layer;
 }
 
-export function createBackdropView(renderer: Renderer): BackdropView {
-  const root = new Container({ label: "backdrop" });
-  const sky = new Sprite(skyTexture());
-  const sun = new Sprite(
-    bake(renderer, new Graphics().circle(0, 0, SUN_RADIUS).fill(GAME_PALETTE.backdrop.sun))
-  );
-  sun.anchor.set(0.5);
-  const far = hillBand(renderer, FAR, GAME_PALETTE.backdrop.hillsFar);
-  const clouds = cloudLayer(renderer);
-  const near = hillBand(renderer, NEAR, GAME_PALETTE.backdrop.hillsNear);
-  root.addChild(sky, sun, far.top, far.base, clouds, near.top, near.base);
-  return { root, sky, sun, far, clouds, near };
+/** A flat disc, no outline; the moon gets a few flat craters. */
+function discGraphic(look: BackdropDisc): Graphics {
+  const g = new Graphics().circle(0, 0, look.radius).fill(look.color);
+  if (look.kind !== "moon" || look.craterColor === undefined) return g;
+  for (const [dx, dy, r] of MOON_CRATERS)
+    g.circle(dx * look.radius, dy * look.radius, r * look.radius);
+  return g.fill(look.craterColor);
+}
+
+function discView(renderer: Renderer, look: BackdropDisc | null): BackdropView["disc"] {
+  if (!look) return null;
+  const sprite = new Sprite(bake(renderer, discGraphic(look)));
+  sprite.anchor.set(0.5);
+  return { sprite, look };
+}
+
+function ceilingView(renderer: Renderer, look: BackdropCeiling | null): BackdropView["ceiling"] {
+  if (!look) return null;
+  const texture = bake(renderer, ceilingTile(look));
+  return { sprite: new TilingSprite({ texture, width: 1, height: texture.height }), look };
+}
+
+export function createBackdropView(renderer: Renderer, theme: BackdropTheme): BackdropView {
+  const root = new Container({ label: `backdrop:${theme.id}` });
+  const sky = new Sprite(skyTexture(theme.sky));
+  const disc = discView(renderer, theme.disc);
+  const ceiling = ceilingView(renderer, theme.ceiling);
+  const far = bandView(renderer, theme.far);
+  const clouds = theme.clouds ? cloudLayer(renderer, theme.clouds) : null;
+  const near = bandView(renderer, theme.near);
+  const ambient = theme.ambient ? createAmbientView(renderer, theme.ambient) : null;
+  // Stars hang behind the hills; snow and embers float in front of them (still behind the world).
+  const stars = ambient?.kind === "stars" ? ambient.layer : null;
+  const floating = ambient && ambient.kind !== "stars" ? ambient.layer : null;
+  const layers = [
+    sky,
+    disc?.sprite,
+    stars,
+    ceiling?.sprite,
+    far.top,
+    far.base,
+    clouds,
+    near.top,
+    near.base,
+    floating,
+  ].filter((layer): layer is Container => layer !== null && layer !== undefined);
+  root.addChild(...layers);
+  return { root, theme, sky, disc, ceiling, far, clouds, near, ambient };
 }
 
 const wrap = (value: number, period: number): number => ((value % period) + period) % period;
@@ -149,7 +181,7 @@ const wrap = (value: number, period: number): number => ((value % period) + peri
  * Slides a band by its parallax and fills below it with its flat colour, down to `bottom` (where
  * the next opaque layer starts), so no pixel is painted twice.
  */
-function placeBand(band: HillBand, frame: BackdropFrame, args: { lift: number; bottom: number }) {
+function placeBand(band: BandView, frame: BackdropFrame, args: { lift: number; bottom: number }) {
   const { viewport, camera } = frame;
   const { look, top, base } = band;
   const y = viewport.height * look.base - args.lift * look.parallax - top.height;
@@ -163,9 +195,41 @@ function placeBand(band: HillBand, frame: BackdropFrame, args: { lift: number; b
   return { top: y, bottom: y + top.height };
 }
 
+/** Slides the ceiling; it rises out of view as the camera looks down, never leaving a gap above. */
+function placeCeiling(
+  ceiling: NonNullable<BackdropView["ceiling"]>,
+  args: { width: number; scrollX: number; lift: number }
+): void {
+  const { sprite, look } = ceiling;
+  sprite.width = args.width;
+  sprite.position.set(0, Math.min(0, -args.lift * look.parallax));
+  sprite.tilePosition.x = -wrap(args.scrollX * look.parallax, look.period);
+}
+
+function placeSkyDetails(view: BackdropView, frame: BackdropFrame, lift: number): void {
+  const { viewport, camera, nowMs } = frame;
+  const scrollX = camera.centerX * camera.zoom;
+  if (view.disc) {
+    const { sprite, look } = view.disc;
+    sprite.position.set(viewport.width * look.at.x, viewport.height * look.at.y);
+    sprite.scale.set(Math.min(1, viewport.width / DISC_FULL_WIDTH));
+  }
+  if (view.ceiling) placeCeiling(view.ceiling, { width: viewport.width, scrollX, lift });
+  if (view.clouds) {
+    const drift = (nowMs / 1000) * CLOUDS.driftPxPerSecond;
+    view.clouds.position.set(
+      -wrap(scrollX * CLOUDS.parallax + drift, CLOUDS.period),
+      -lift * CLOUDS.parallax * 0.5
+    );
+  }
+  if (view.ambient) {
+    syncAmbientView(view.ambient, { ...viewport, cameraX: scrollX, nowMs });
+  }
+}
+
 /** Positions the backdrop for this frame's viewport and camera. */
 export function syncBackdropView(view: BackdropView, frame: BackdropFrame): void {
-  const { viewport, camera, worldHeight, nowMs } = frame;
+  const { viewport, camera, worldHeight } = frame;
   // Vertical parallax: hills sink as the camera looks higher than the arena middle.
   const lift = (camera.centerY - worldHeight / 2) * camera.zoom;
   // Front to back, each layer stops where the opaque part of the one in front begins.
@@ -173,11 +237,5 @@ export function syncBackdropView(view: BackdropView, frame: BackdropFrame): void
   const far = placeBand(view.far, frame, { lift, bottom: Math.max(near.bottom, 0) });
   view.sky.width = viewport.width;
   view.sky.height = Math.min(viewport.height, Math.max(0, far.bottom));
-  view.sun.position.set(viewport.width * 0.82, viewport.height * 0.16);
-  view.sun.scale.set(Math.min(1, viewport.width / 1280));
-  const drift = (nowMs / 1000) * CLOUDS.driftPxPerSecond;
-  view.clouds.position.set(
-    -wrap(camera.centerX * camera.zoom * CLOUDS.parallax + drift, CLOUDS.period),
-    -lift * CLOUDS.parallax * 0.5
-  );
+  placeSkyDetails(view, frame, lift);
 }

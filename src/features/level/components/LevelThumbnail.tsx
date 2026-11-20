@@ -2,6 +2,7 @@ import { memo, useId } from "react";
 import type { LevelDefinition, TerrainPiece } from "@/features/level/types/levelDefinition.types";
 import { useThumbnailFrame } from "@/features/level/hooks/useThumbnailFrame";
 import { GAME_PALETTE, terrainSwatch, toCssColor } from "@/shared/config/gamePalette";
+import { resolveBackdropTheme } from "@/features/backdrop-themes/api/backdropThemesApi";
 
 /** Outline width as a share of the frame width (reads as the in-game ink line at card size). */
 const OUTLINE_SHARE = 1 / 110;
@@ -47,13 +48,14 @@ export interface LevelThumbnailProps {
 }
 
 /**
- * A small picture of a level's layout, drawn from its `LevelDefinition`: the sky gradient, sun
- * and far hill of the backdrop, then every terrain piece in its swatch colour with the ink
- * outline (DESIGN_LANGUAGE § 1), framed to the level bounds. Moving parts show at rest. Pure:
- * a new `level` (a re-read file) redraws it.
+ * A small picture of a level's layout, drawn from its `LevelDefinition`: the sky gradient, sun or
+ * moon and far band colour of the level's backdrop theme, then every terrain piece in its swatch
+ * colour with the ink outline (DESIGN_LANGUAGE § 1), framed to the level bounds. Moving parts
+ * show at rest. Pure: a new `level` (a re-read file) redraws it.
  */
 export const LevelThumbnail = memo(({ level, className }: LevelThumbnailProps) => {
   const skyId = `sky-${useId()}`;
+  const theme = resolveBackdropTheme(level.settings.themeId);
   const frame = useThumbnailFrame(level.bounds);
   const outline = frame.w * OUTLINE_SHARE;
   return (
@@ -66,23 +68,25 @@ export const LevelThumbnail = memo(({ level, className }: LevelThumbnailProps) =
     >
       <defs>
         <linearGradient id={skyId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" style={{ stopColor: css(GAME_PALETTE.sky.top) }} />
-          <stop offset="1" style={{ stopColor: css(GAME_PALETTE.sky.bottom) }} />
+          <stop offset="0" style={{ stopColor: css(theme.sky.top) }} />
+          <stop offset="1" style={{ stopColor: css(theme.sky.bottom) }} />
         </linearGradient>
       </defs>
       <rect x={frame.x} y={frame.y} width={frame.w} height={frame.h} fill={`url(#${skyId})`} />
-      <circle
-        cx={frame.x + frame.w * 0.85}
-        cy={frame.y + frame.h * 0.18}
-        r={frame.w * 0.05}
-        style={{ fill: css(GAME_PALETTE.backdrop.sun) }}
-      />
+      {theme.disc && (
+        <circle
+          cx={frame.x + frame.w * theme.disc.at.x}
+          cy={frame.y + frame.h * theme.disc.at.y}
+          r={frame.w * 0.05}
+          style={{ fill: css(theme.disc.color) }}
+        />
+      )}
       <ellipse
         cx={frame.x + frame.w * 0.3}
         cy={frame.y + frame.h * 1.02}
         rx={frame.w * 0.45}
         ry={frame.h * 0.22}
-        style={{ fill: css(GAME_PALETTE.backdrop.hillsFar) }}
+        style={{ fill: css(theme.far.color) }}
       />
       {level.terrain.map((piece, i) => (
         <TerrainShapeView key={i} piece={piece} outline={outline} />
