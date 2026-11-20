@@ -9,7 +9,10 @@ import { buildTerrainFromLevel } from "@/features/arena/services/terrainRaster";
 export type { MoverBody, TerrainCellSlot, TerrainGrid } from "@/features/arena/types/arena.types";
 export { EMPTY_CELL } from "@/features/arena/types/arena.types";
 export {
+  bodyDistanceAt,
+  bodyEdgeAbove,
   bodyGrids,
+  bodyLocalPoint,
   bodyWorldPoint,
   clearCraterOnBodies,
   frozenVersionOf,
@@ -50,7 +53,6 @@ export {
   boxesMeet,
   drawContour,
   drawOutline,
-  edgeAbove,
   markedRegion,
   surfaceTiles,
   terrainContour,

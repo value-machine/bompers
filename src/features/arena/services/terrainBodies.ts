@@ -5,6 +5,8 @@ import type { MoverBody, TerrainGrid } from "@/features/arena/types/arena.types"
 import {
   clearCrater,
   fieldBand,
+  gridDistanceAt,
+  moverDistanceAt,
   partGridPoint,
   partLocalPoint,
   type ClearedCells,
@@ -51,6 +53,30 @@ export function bodyWorldPoint(grid: TerrainGrid, body: number, local: Vec2): Ve
   if (!mover) return local;
   const rest = { x: local.x + mover.origin.x, y: local.y + mover.origin.y };
   return posePoint(mover.pose, mover.pivot, rest);
+}
+
+/** The point in body `body`'s own grid that is at world point `world` this step (inverse of `bodyWorldPoint`). */
+export function bodyLocalPoint(grid: TerrainGrid, body: number, world: Vec2): Vec2 {
+  const mover = grid.movers[body - 1];
+  return mover ? partGridPoint(mover, world) : world;
+}
+
+/** Signed distance of body `body` alone at a world point (positive inside), in its pose now. */
+export function bodyDistanceAt(grid: TerrainGrid, body: number, world: Vec2): number {
+  const mover = grid.movers[body - 1];
+  return mover ? moverDistanceAt(mover, world) : gridDistanceAt(grid, world);
+}
+
+/**
+ * World y of body `body`'s edge right above world point `world` (within one sample spacing,
+ * world-up whatever the body's turn): where its distance crosses zero going up. Null when the
+ * point is outside the body or the body goes on above it (the same crossing the contour draws).
+ */
+export function bodyEdgeAbove(grid: TerrainGrid, body: number, world: Vec2): number | null {
+  const own = bodyDistanceAt(grid, body, world);
+  const over = bodyDistanceAt(grid, body, { x: world.x, y: world.y - grid.cellSize });
+  if (over > 0 || own <= 0) return null;
+  return world.y - (grid.cellSize * own) / (own - over);
 }
 
 /** What a blast removed over all bodies: the looks pooled, for the debris and the sound. */

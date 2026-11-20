@@ -5,10 +5,12 @@ import { inkColor } from "@/shared/utils/debugInk";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import {
   EMPTY_CELL,
+  bodyDistanceAt,
+  bodyEdgeAbove,
   bodyGrids,
+  bodyLocalPoint,
   bodyWorldPoint,
   createPoseLayer,
-  edgeAbove,
   placePoseLayer,
   type MoverBody,
   type TerrainGrid,
@@ -50,7 +52,10 @@ import type { FireState, GroundFire } from "@/features/fire/types/fire.types";
  *   blob-fire feature, on its own layer above this one).
  * Every body of the arena has its own set of terrain layers (mover-materials-l2 D3, D4): the
  * static terrain's in world coordinates, a moving part's in the part's own frame, following its
- * pose, so a part's fire rides and turns with it. Smoke is in world coordinates for all.
+ * pose, so a part's fire rides and turns with it. Its flames are placed in the world (which
+ * burning blocks face up, where they are rooted, which way they rise) and only then mapped into
+ * the part's layer, so they rise world-up on a turned part as on the ground. Smoke is in world
+ * coordinates for all.
  * All render only: nothing here feeds back into the sim.
  */
 export interface FireView {
@@ -83,12 +88,13 @@ interface GroundFireView {
   dueSample: number[];
 }
 
-/** What one body's fire is drawn from: its view, its ground fire and its own grid. */
+/** What one body's fire is drawn from: its view, its ground fire, its own grid and its index. */
 interface GroundDraw {
   view: GroundFireView;
   fire: GroundFire;
   terrain: TerrainGrid;
   frame: FireFrame;
+  body: number;
 }
 
 interface TorchMemo {
@@ -205,38 +211,56 @@ function drawScorch({ view, fire, terrain }: GroundDraw): void {
   view.scorchVersion = fire.version;
 }
 
-/**
- * Where a block's flame is rooted: a little under the terrain's edge in the block's column, so
- * flames stand on a slope or a crater rim; the block's middle when terrain covers it.
- */
-function flameRootY(terrain: TerrainGrid, block: { cx: number; by: number }): number {
-  const size = terrain.cellSize * 2;
-  for (const cy of [block.by * 2, block.by * 2 + 1]) {
-    const edge = edgeAbove(terrain, cy * terrain.widthCells + block.cx);
-    if (edge !== null) return edge + FLAME_LOOK.cluster.flameRoot * size;
-  }
-  return (block.by + 0.5) * size;
+/** Body `body`'s burning samples, for `flameBlocks`: in the arena `world`, at sim time `timeSeconds`. */
+export interface BodyFlames {
+  fire: GroundFire;
+  world: TerrainGrid;
+  body: number;
+  timeSeconds: number;
 }
 
-/** The 2 × 2 blocks of burning samples, by `by * widthCells + bx`. */
-function flameBlocks({ terrain, fire, frame }: GroundDraw): Map<number, FlameBlock> {
-  const size = terrain.cellSize * 2;
+/**
+ * Where a block's flame is rooted: a little under the body's edge right above the burning
+ * sample at world point `at`, in the block's top or bottom row (so flames stand on a slope or a
+ * crater rim); the block's middle when the body covers both.
+ */
+function flameRootY(on: BodyFlames, at: { x: number; by: number }): number {
+  const { world, body } = on;
+  const size = world.cellSize * 2;
+  for (const row of [0.5, 1.5]) {
+    const y = at.by * size + row * world.cellSize;
+    const edge = bodyEdgeAbove(world, body, { x: at.x, y });
+    if (edge !== null) return edge + FLAME_LOOK.cluster.flameRoot * size;
+  }
+  return (at.by + 0.5) * size;
+}
+
+/**
+ * The world-aligned 2 × 2 blocks of a body's burning samples, by `by * widthCells + bx`. Each
+ * sample goes to the block its centre is in in the world this frame, so on a turned part the
+ * blocks facing world-up carry the flames, as on the ground (fire-on-rotating-parts).
+ */
+export function flameBlocks(on: BodyFlames): Map<number, FlameBlock> {
+  const { fire, world, body } = on;
+  const own = bodyGrids(world)[body];
   const blocks = new Map<number, FlameBlock>();
+  if (!own) return blocks;
+  const size = world.cellSize * 2;
   for (const index of burningSamples(fire)) {
-    if (!isSolid(terrain, index)) continue;
-    const cx = index % terrain.widthCells;
-    const bx = Math.floor(cx / 2);
-    const by = Math.floor(Math.floor(index / terrain.widthCells) / 2);
-    const key = by * terrain.widthCells + bx;
-    if (blocks.has(key)) continue;
-    const above = (by * 2 - 1) * terrain.widthCells + cx;
+    if (!isSolid(own, index)) continue;
+    const at = bodyWorldPoint(world, body, sampleCentre(own, index));
+    const bx = Math.floor(at.x / size);
+    const by = Math.floor(at.y / size);
+    const key = by * world.widthCells + bx;
+    if (bx < 0 || by < 0 || blocks.has(key)) continue;
+    const above = { x: at.x, y: by * size - world.cellSize / 2 };
     blocks.set(key, {
       bx,
       by,
       x: (bx + 0.5) * size,
-      y: flameRootY(terrain, { cx, by }),
-      age: Math.max(0, frame.timeSeconds - (fire.igniteAt[index] ?? frame.timeSeconds)),
-      open: by === 0 || !isSolid(terrain, above),
+      y: flameRootY(on, { x: at.x, by }),
+      age: Math.max(0, on.timeSeconds - (fire.igniteAt[index] ?? on.timeSeconds)),
+      open: by === 0 || bodyDistanceAt(world, body, above) <= 0,
       key,
     });
   }
@@ -252,9 +276,32 @@ const heart = (tongue: Tongue, k: number): Tongue => ({
   sway: tongue.sway * k,
 });
 
-/** Adds each tongue to the pending shapes; returns whether there was any. */
-function tongues(g: Graphics, list: readonly Tongue[], grow = 0): boolean {
-  for (const tongue of list) g.poly(tonguePoints(tongue, grow));
+/** Maps a flat x, y list of world points into a frame (a body's own grid). */
+type FrameMap = (points: number[]) => number[];
+
+const WORLD_FRAME: FrameMap = (points) => points;
+
+/** World points into body `body`'s own grid this frame: where its layer's shapes are drawn. */
+function bodyFrame(world: TerrainGrid, body: number): FrameMap {
+  if (body === 0) return WORLD_FRAME;
+  return (points) => {
+    const out: number[] = [];
+    for (let i = 0; i + 1 < points.length; i += 2) {
+      const p = bodyLocalPoint(world, body, { x: points[i]!, y: points[i + 1]! });
+      out.push(p.x, p.y);
+    }
+    return out;
+  };
+}
+
+/** Adds each tongue to the pending shapes (in `frame`); returns whether there was any. */
+function tongues(
+  g: Graphics,
+  list: readonly Tongue[],
+  look: { grow?: number; frame?: FrameMap } = {}
+): boolean {
+  const frame = look.frame ?? WORLD_FRAME;
+  for (const tongue of list) g.poly(frame(tonguePoints(tongue, look.grow)));
   return list.length > 0;
 }
 
@@ -265,31 +312,34 @@ function circles(g: Graphics, list: readonly Circle[], look: { grow?: number; sc
 
 /**
  * The flames on the fire's top edge (owner fire-clusters D1–D2): in ink under the body's fill,
- * then in ember with their amber and pale hearts on top of it.
+ * then in ember with their amber and pale hearts on top of it. Shaped in the world (they rise
+ * world-up) and mapped into the body's layer.
  */
 function drawFlames(draw: GroundDraw, ink: number): void {
-  const { view, terrain, frame } = draw;
+  const { view, fire, frame, body } = draw;
   const g = view.flames.clear();
   view.flameInk.clear();
-  const blocks = flameBlocks(draw);
+  const world = frame.terrain;
+  const blocks = flameBlocks({ fire, world, body, timeSeconds: frame.timeSeconds });
   if (blocks.size === 0) return;
   const flames = clusterFlames(blocks, {
-    size: terrain.cellSize * 2,
-    stride: terrain.widthCells,
+    size: world.cellSize * 2,
+    stride: world.widthCells,
     timeSeconds: frame.nowMs / 1000,
     burnSeconds: frame.burnSeconds,
   });
-  if (tongues(view.flameInk, flames, ink)) view.flameInk.fill(FLAME_INK);
-  if (tongues(g, flames)) g.fill(COLORS.outer);
+  const inFrame = bodyFrame(world, body);
+  if (tongues(view.flameInk, flames, { grow: ink, frame: inFrame })) view.flameInk.fill(FLAME_INK);
+  if (tongues(g, flames, { frame: inFrame })) g.fill(COLORS.outer);
   const ambers = flames.map((tongue) => heart(tongue, 0.6));
-  if (tongues(g, ambers)) g.fill(COLORS.mid);
+  if (tongues(g, ambers, { frame: inFrame })) g.fill(COLORS.mid);
   const cores = flames.filter((flame) => flame.age < 0.4).map((tongue) => heart(tongue, 0.3));
-  if (tongues(g, cores)) g.fill(COLORS.core);
+  if (tongues(g, cores, { frame: inFrame })) g.fill(COLORS.core);
 }
 
 /** Remembers a few of the samples about to burn out; when the batch goes, they puff smoke. */
-function trackBurnOuts(puffs: SmokePuff[], draw: GroundDraw, body: number): void {
-  const { view, fire, terrain, frame } = draw;
+function trackBurnOuts(puffs: SmokePuff[], draw: GroundDraw): void {
+  const { view, fire, terrain, frame, body } = draw;
   const due = fire.dueOut;
   if (due.length < view.dueCount) {
     for (const index of view.dueSample) {
@@ -326,7 +376,7 @@ function drawSprayInk(g: Graphics, flame: SprayFlame, ink: number): void {
     .stroke({ width: ink * 2, color: INK, join: "round" });
   circles(g, flame.layers[0].lobes, { grow: ink });
   circles(g, flame.splashes, { grow: ink });
-  tongues(g, flame.shed, ink);
+  tongues(g, flame.shed, { grow: ink });
   g.fill(INK);
 }
 
@@ -412,7 +462,7 @@ export function syncFireView(view: FireView, frame: FireFrame): void {
   bodyGrids(frame.terrain).forEach((terrain, body) => {
     const fire = frame.fire.grounds[body];
     if (!fire) return;
-    const draw = { view: groundView(view, frame.terrain, body), fire, terrain, frame };
+    const draw = { view: groundView(view, frame.terrain, body), fire, terrain, frame, body };
     const mover = frame.terrain.movers[body - 1];
     if (mover) placePoseLayer(draw.view.layer, mover);
     if (draw.view.scorchVersion !== fire.version) drawScorch(draw);
@@ -425,7 +475,7 @@ export function syncFireView(view: FireView, frame: FireFrame): void {
       inkColor: BODY_INK,
     });
     drawFlames(draw, ink);
-    trackBurnOuts(view.puffs, draw, body);
+    trackBurnOuts(view.puffs, draw);
   });
   drawSmoke(view, frame);
   view.sprays.clear();

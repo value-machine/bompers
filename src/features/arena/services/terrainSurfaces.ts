@@ -290,21 +290,6 @@ export function markedRegion(grid: TerrainGrid, samples: Iterable<number>): Samp
   return { value, box: found.box };
 }
 
-/**
- * World y of the terrain's edge right above a solid sample: where the distance crosses zero
- * between it and the empty sample over it (the same crossing the contour draws). Null when the
- * sample is empty or has terrain above it.
- */
-export function edgeAbove(grid: TerrainGrid, index: number): number | null {
-  if (!isSolidSample(grid, index)) return null;
-  const above = index - grid.widthCells;
-  const own = grid.distance[index] ?? 0;
-  const over = above >= 0 ? (grid.distance[above] ?? -fieldBand(grid)) : -fieldBand(grid);
-  if (over > 0 || own <= 0) return null;
-  const row = Math.floor(index / grid.widthCells);
-  return (row + 0.5 - own / (own - over)) * grid.cellSize;
-}
-
 /** Field value of a sample for this contour (+ grow); samples outside it read as far outside. */
 function contourValue(pass: ContourPass, cx: number, cy: number): number {
   const { grid, grow, region } = pass;
