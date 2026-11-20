@@ -653,8 +653,13 @@ describe("dash press reliability (dash-feel lap)", () => {
 });
 
 describe("dash aim magnetism (dash-aim lap, owner pick B)", () => {
-  /** Today's dash: the magnet switched off. */
-  const NO_MAGNET: GameTunables = { ...T, dive: { ...D, magnet: { ...D.magnet, coneDegrees: 0 } } };
+  /** The dash with option B (magnet) and option A (hit reach) set as given. */
+  const withAim = (magnet: boolean, hitReach: number): GameTunables => ({
+    ...T,
+    dive: { ...D, hitReach, magnet: { ...D.magnet, enabled: magnet } },
+  });
+  /** Today's dash: no magnet, touch-only reach. */
+  const NO_MAGNET = withAim(false, D.hitReach);
 
   interface DashCase {
     /** Target (standing on the floor) offset from the dasher, feet to feet; y is down. */
@@ -700,6 +705,38 @@ describe("dash aim magnetism (dash-aim lap, owner pick B)", () => {
     const keyboard: DashCase = { offset: { x: 176, y: 37 }, aim: { aimX: 1 } };
     expect(dashAt(keyboard, NO_MAGNET)).toBe(false);
     expect(dashAt(keyboard)).toBe(true);
+  });
+
+  const DEMO_CASES: DashCase[] = [
+    { offset: { x: 149, y: 101 }, aim: aimAt(149, 101) },
+    { offset: { x: 145, y: 0 }, aim: { aimX: 1 }, launch: { vx: 0, vy: -380 } },
+    { offset: { x: 176, y: 37 }, aim: { aimX: 1 } },
+  ];
+
+  it("should be today's touch-only dash with the shipped defaults for the hit reach", () => {
+    expect(D.magnet.enabled).toBe(true);
+    expect(D.hitReach).toBe(T.player.width);
+  });
+
+  it("should land all three demo cases when the magnet and a 48-unit hit reach are both on (A+B)", () => {
+    expect(DEMO_CASES.map((c) => dashAt(c, withAim(true, 48)))).toEqual([true, true, true]);
+  });
+
+  it("should land only the keyboard near miss with a 48-unit hit reach alone (A only)", () => {
+    // The off-angle dash snaps to 45° down and meets the floor 48 units short of the target; the
+    // jumper is well above the dash line by the time it passes.
+    expect(DEMO_CASES.map((c) => dashAt(c, withAim(false, 48)))).toEqual([false, false, true]);
+  });
+
+  it("should not strike from a distance when the reach is the body width", () => {
+    const sim = createSim([100, 100 + 176]);
+    sim.step([{ fire: true, aimX: 1 }]);
+    const target = sim.players[1]!;
+    for (let i = 0; i < frames(D.windupSeconds + D.travelSeconds); i += 1) {
+      Object.assign(target, { y: FLOOR_Y - 37, vx: 0, vy: 0 });
+      sim.step([{ aimX: 1 }]);
+    }
+    expect(sim.hits).toHaveLength(0);
   });
 
   it("should keep the snapped direction when the target is outside the cone", () => {

@@ -32,7 +32,8 @@ const angleBetween = (a: number, b: number): number =>
 /** The blob closest to the aim line inside the cone and range, or null. */
 function pickTarget(args: MagnetArgs): Candidate | null {
   const { dasher, players, tunables } = args;
-  const { coneDegrees, range } = tunables.dive.magnet;
+  const { enabled, coneDegrees, range } = tunables.dive.magnet;
+  if (!enabled) return null;
   const cone = (coneDegrees * Math.PI) / 180;
   const aim = Math.atan2(dasher.aimY, dasher.aimX);
   let best: Candidate | null = null;
