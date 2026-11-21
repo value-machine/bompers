@@ -364,6 +364,10 @@ function riderOf(
   };
 }
 
+/** A part carried or pushed the ball this step (its rider body moved): a sleeping ball wakes. */
+const partMoved = (object: PhysicsObjectsState["objects"][number], body: MovingRider): boolean =>
+  Math.abs(body.x - object.x) > 1e-6 || Math.abs(body.y - object.radius - object.y) > 1e-6;
+
 /**
  * A ball's own speed stays relative to the part it rides: leaving a part it keeps the part's
  * speed once (`inheritOnLeave`, like a blob) and remembers it; landing back on a part takes that
@@ -374,11 +378,7 @@ function keepRelativeSpeed(
   object: PhysicsObjectsState["objects"][number],
   step: { body: MovingRider; by: Vec2 | null; wasCarried: boolean }
 ): void {
-  // A part carried or pushed it: a sleeping ball wakes to follow.
-  const moved =
-    Math.abs(step.body.x - object.x) > 1e-6 ||
-    Math.abs(step.body.y - object.radius - object.y) > 1e-6;
-  if (step.by || moved) wakeObject(object);
+  if (step.by || partMoved(object, step.body)) wakeObject(object);
   const kept = { x: step.body.vx - object.vx, y: step.body.vy - object.vy };
   object.vx = step.body.vx;
   object.vy = step.body.vy;
