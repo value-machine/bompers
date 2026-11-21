@@ -35,6 +35,7 @@ const BUILT_INS = [
   "slush-bowl",
   "tree-grove",
   "beach-court",
+  "ball-playground",
 ].map((id) => ({
   id,
   text: readRepoFile(`public/levels/${id}.html`),
