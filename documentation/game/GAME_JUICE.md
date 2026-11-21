@@ -142,7 +142,7 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Kart: lands | light | each wheel's bounce: `land`, gain 0.35–1 by impact | chassis sinks by the landing speed and springs back (`settle`) | — | — | — | — | — |
 | Kart hits a blob (above `karts.hitSpeed`) | medium | combat's `hit` (hurt floor, victim pitch) | the victim's hurt pose and roll | front / back hit tier (combat) | yes (combat) | — | combat's hit pop and chunk pops | — |
 | Kart burns / freezes / pops / comes back | light | as the ball: `catch-fire`, `freeze-solid`, `ice-shatter`, `steam-hiss`, `burn-out`, `thwap`, `respawn` | pop-in on coming back 220 ms (`effect`) | — | — | — | flames all along the tub / frost sheet over it; white smoke rings at the wheels | — |
-| Kart engine (driven) | — | `kart-idle` + `kart-drive` loops crossfaded by speed, driver pitch (owner pick pending: silent until the takes are added) | — | — | — | — | — | — |
+| Kart engine (driven) | — | `kart-idle` + `kart-drive` loops crossfaded by speed, driver pitch (owner pick: take 3; drive = the same take 1.4× faster) | — | — | — | — | — | — |
 
 Rows marked **gap** break § 1 today; the lap that builds the missing channel fills the row.
 

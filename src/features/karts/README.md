@@ -19,7 +19,7 @@ Drivable go-karts a level places (`<rect data-role="object" data-kind="kart">`, 
 Seams for later work:
 
 - **Another car:** one data line in `kartRecipe.ts` (size shares, weight, drive, hop, spring, colours), then `pnpm level-kit:sync`.
-- **Engine hum:** `kart-idle` and `kart-drive` loops (sound `KART_ENGINE_SOUNDS`) play once their takes are in the sound bank and the content catalog.
+- **Engine hum:** `kart-idle` and `kart-drive` loops (sound `KART_ENGINE_SOUNDS`; owner pick take 3, drive = the same take resampled 1.4×). Another car's engine would be its own pair of loops.
 
 ## Dependencies
 

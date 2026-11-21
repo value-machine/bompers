@@ -129,6 +129,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
     "ice-shatter": { id: "ice-shatter", label: "Ice shatter" },
     // Taking a point orb (owner pick A1, pickup-juice D8).
     "orb-collect": { id: "orb-collect", label: "Orb collect" },
+    "kart-idle": { id: "kart-idle", label: "Kart engine idle (loop)" },
+    "kart-drive": { id: "kart-drive", label: "Kart engine driving (loop)" },
   },
   behavior: {},
   item: {

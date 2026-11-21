@@ -83,6 +83,8 @@ Link the preview kit in `<head>` (works offline without it):
 | sound | `ice-crack` | Ice crack |  |
 | sound | `ice-shatter` | Ice shatter |  |
 | sound | `orb-collect` | Orb collect |  |
+| sound | `kart-idle` | Kart engine idle (loop) |  |
+| sound | `kart-drive` | Kart engine driving (loop) |  |
 | behavior | — | none yet; leave it out | |
 | item | `rocket-launcher` | Rocket launcher | use: drop |
 | item | `homing-launcher` | Homing launcher | use: drop |

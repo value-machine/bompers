@@ -262,6 +262,14 @@
     {
       "id": "orb-collect",
       "label": "Orb collect"
+    },
+    {
+      "id": "kart-idle",
+      "label": "Kart engine idle (loop)"
+    },
+    {
+      "id": "kart-drive",
+      "label": "Kart engine driving (loop)"
     }
   ],
   "behavior": [],

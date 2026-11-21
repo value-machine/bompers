@@ -48,6 +48,10 @@ export const SOUND_FILES: Readonly<Record<string, readonly string[]>> = {
   "ice-shatter": takes("ice-shatter", 1),
   // Taking a point orb (owner pick A1, pickup-juice D8).
   "orb-collect": takes("orb-collect", 1),
+  // The kart engine (owner pick, kart lap Q4: take 3; drive = the same take resampled 1.4×).
+  // Loops, crossfaded by speed (`readSoundLoops`).
+  "kart-idle": takes("kart-idle", 1),
+  "kart-drive": takes("kart-drive", 1),
 };
 
 /** Semitone offset per player slot (P1 0, P2 +2, P3 −2, P4 +4), so four blobs never sound alike. */
