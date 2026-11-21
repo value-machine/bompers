@@ -136,6 +136,13 @@ Every built game moment with its tier and channels. Add a row for each new momen
 | Ball catches fire / frozen / ice breaks / melted | light | `catch-fire` / `freeze-solid` / `ice-shatter` / `steam-hiss` (the blob takes) | — | — | — | — | flame tongues round the whole ball / frost disc and gloss streak | — |
 | Ball pops (burnt through, stuck, pinned, out of the arena) | light | `burn-out` (burnt through), `thwap` (stuck, pinned), none off-screen | — | — | — | — | white smoke ring 220 ms (`effect`) | — |
 | Ball comes back (3 s later) | light | `respawn` | pop-in back-out 220 ms (`effect`) | — | — | — | white smoke ring 220 ms (`effect`) | — |
+| Kart: get in (kart lap) | light | `land`, unpitched | chassis sinks on its spring and settles ≈ 0.3 s (`settle`), tub squash up to 1.14 × 0.88 | — | — | — | driver seated in the tub | — |
+| Kart: get out | light | `jump`, unpitched | chassis springs up and settles (`settle`) | — | — | — | the blob hops out beside it | — |
+| Kart: hop | light | `jump`, unpitched | the chassis lags down on the take-off, stretches back (`settle`) | — | — | — | — | — |
+| Kart: lands | light | each wheel's bounce: `land`, gain 0.35–1 by impact | chassis sinks by the landing speed and springs back (`settle`) | — | — | — | — | — |
+| Kart hits a blob (above `karts.hitSpeed`) | medium | combat's `hit` (hurt floor, victim pitch) | the victim's hurt pose and roll | front / back hit tier (combat) | yes (combat) | — | combat's hit pop and chunk pops | — |
+| Kart burns / freezes / pops / comes back | light | as the ball: `catch-fire`, `freeze-solid`, `ice-shatter`, `steam-hiss`, `burn-out`, `thwap`, `respawn` | pop-in on coming back 220 ms (`effect`) | — | — | — | flames all along the tub / frost sheet over it; white smoke rings at the wheels | — |
+| Kart engine (driven) | — | `kart-idle` + `kart-drive` loops crossfaded by speed, driver pitch (owner pick: take 3; drive = the same take 1.4× faster) | — | — | — | — | — | — |
 
 Rows marked **gap** break § 1 today; the lap that builds the missing channel fills the row.
 

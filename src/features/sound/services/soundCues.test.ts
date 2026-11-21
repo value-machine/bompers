@@ -7,10 +7,11 @@ import {
   CRATE_LAND_SOUND,
   WALL_BONK_SOUND,
   DASH_DENIED_SOUND,
+  KART_ENGINE_SOUNDS,
   type SoundSnapshot,
 } from "@/features/sound/services/soundCues";
 import type { SoundPlayerSnapshot, SoundWorldSnapshot } from "@/features/sound/types/sound.types";
-import { SOUND_MIX } from "@/features/sound/services/soundBank";
+import { SOUND_FILES, SOUND_MIX } from "@/features/sound/services/soundBank";
 
 const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPlayerSnapshot => ({
   slot,
@@ -50,6 +51,7 @@ const world = (patch: Partial<SoundWorldSnapshot> = {}): SoundWorldSnapshot => (
   beamClashes: 0,
   objectMomentCount: 0,
   objectSounds: [],
+  kartEngines: [],
   crateLandings: 0,
   ...patch,
 });
@@ -400,6 +402,19 @@ describe("readSoundLoops", () => {
       ["torch-2", "torch-loop", 2],
       ["freeze-1", "freeze-loop", 1],
     ]);
+  });
+
+  it("should stay silent for a driven kart while its engine takes are not in the sound bank", () => {
+    const engines = [{ key: "kart-0", slot: 1, speed: 0.5 }];
+    const loops = readSoundLoops(world({ kartEngines: engines }));
+    const hasTakes = Object.values(KART_ENGINE_SOUNDS).every((id) => SOUND_FILES[id]);
+    if (hasTakes) {
+      // Once wired: idle and drive both pitched by the driver, crossfaded at equal power.
+      expect(loops.map((loop) => loop.slot)).toEqual([1, 1]);
+      expect(loops[0]!.gain ** 2 + loops[1]!.gain ** 2).toBeCloseTo(1, 5);
+    } else {
+      expect(loops).toEqual([]);
+    }
   });
 
   it("should make the fire crackle louder when more burns", () => {

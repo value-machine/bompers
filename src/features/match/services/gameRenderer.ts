@@ -77,6 +77,7 @@ import {
   syncPhysicsObjectsView,
   type PhysicsObjectsView,
 } from "@/features/physics-objects/api/physicsObjectsApi";
+import { createKartsView, syncKartsView, type KartsView } from "@/features/karts/api/kartsApi";
 import {
   burningBlobPoses,
   createBlobFireView,
@@ -144,6 +145,7 @@ export interface GameRenderer {
   blobFire: BlobFireView;
   ice: IceView;
   physicsObjects: PhysicsObjectsView;
+  karts: KartsView;
   hud: HudView;
   camera: CameraView | null;
   feel: FeelState;
@@ -164,7 +166,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const collectibles = createCollectiblesView();
   const dive = createDiveView();
   const { fire, blobFire, ice } = createElementViews();
-  const physicsObjects = createPhysicsObjectsView();
+  const [physicsObjects, karts] = [createPhysicsObjectsView(), createKartsView()];
   world.addChild(
     terrain.container,
     // Goo stains colour the terrain itself; frozen ground and fire are drawn over them.
@@ -187,6 +189,8 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     // The low-health pulse rings the blob from under it, never over its outline.
     combat.lowHealth,
     players.container,
+    // Karts over the blobs: a seated driver's lower half sits inside the open tub (kart Q1).
+    karts.container,
     fire.sprayLayer,
     blobFire.layer,
     ice.beamLayer,
@@ -210,6 +214,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     blobFire,
     ice,
     physicsObjects,
+    karts,
     hud,
     camera: null,
     feel: createFeelState(),
@@ -466,6 +471,14 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     timeSeconds: state.timeSeconds,
     nowMs,
     zoom,
+  });
+  syncKartsView(renderer.karts, {
+    karts: state.karts,
+    physics: state.physicsObjects,
+    timeSeconds: state.timeSeconds,
+    nowMs,
+    zoom,
+    springTravel: state.tunables.karts.springTravel,
   });
   syncCollectiblesView(renderer.collectibles, {
     collectibles: state.collectibles,

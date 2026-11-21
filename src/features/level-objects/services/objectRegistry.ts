@@ -1,4 +1,5 @@
 import { BALL_RECIPE } from "@/features/level-objects/services/ballRecipe";
+import { KART_RECIPE } from "@/features/level-objects/services/kartRecipe";
 import { TREE_RECIPE } from "@/features/level-objects/services/treeRecipe";
 import type {
   ExportedObjectRecipe,
@@ -14,6 +15,7 @@ import type {
 export const OBJECT_RECIPES: Readonly<Record<string, ObjectRecipe>> = {
   [TREE_RECIPE.kind]: TREE_RECIPE,
   [BALL_RECIPE.kind]: BALL_RECIPE,
+  [KART_RECIPE.kind]: KART_RECIPE,
 };
 
 /** The recipe for a kind (own keys only, so `toString` is unknown), or null. */

@@ -1,6 +1,6 @@
 import { hurtGain, intensityGain } from "@/shared/config/gameJuice";
 import type { CombatEvent } from "@/features/combat/api/combatApi";
-import { SOUND_MIX } from "@/features/sound/services/soundBank";
+import { SOUND_FILES, SOUND_MIX } from "@/features/sound/services/soundBank";
 import type {
   SoundBurst,
   SoundCue,
@@ -129,7 +129,29 @@ export function readSoundLoops(world: SoundWorldSnapshot): SoundLoop[] {
     const gain = intensityGain(fire, SOUND_MIX.fireFullSamples);
     loops.push({ key: "fire", soundId: "fire-crackle", slot: null, gain });
   }
-  return loops;
+  return [...loops, ...kartEngineLoops(world)];
+}
+
+/** The kart engine's two loops (kart K9): idle at rest, drive at speed. */
+export const KART_ENGINE_SOUNDS = { idle: "kart-idle", drive: "kart-drive" } as const;
+
+/**
+ * Each driven kart's engine: the idle and drive loops crossfaded by its speed (equal power),
+ * pitched by its driver. A loop whose file is not in the sound bank yet is left out, so the
+ * engine is silent until the owner's picked takes are added (kart lap Q4).
+ */
+function kartEngineLoops(world: SoundWorldSnapshot): SoundLoop[] {
+  const { idle, drive } = KART_ENGINE_SOUNDS;
+  return world.kartEngines.flatMap((engine) => {
+    const turn = (Math.min(1, Math.max(0, engine.speed)) * Math.PI) / 2;
+    const layers = [
+      { soundId: idle, gain: Math.cos(turn) },
+      { soundId: drive, gain: Math.sin(turn) },
+    ];
+    return layers
+      .filter((layer) => SOUND_FILES[layer.soundId] !== undefined)
+      .map((layer) => ({ key: `${engine.key}-${layer.soundId}`, slot: engine.slot, ...layer }));
+  });
 }
 
 /** Frozen ground changed while only a torch sprays and nothing thawed by itself: the torch melted it. */

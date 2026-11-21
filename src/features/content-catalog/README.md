@@ -30,3 +30,4 @@ Seams for later work:
 - Field names follow the level kit's `catalog.json` so the file is generated from code (game-engine-foundation D13).
 - Lookups use own keys only, so prototype names (`toString`) are unknown IDs.
 - The `orb-collect` sound ID (owner pick A1, pickup-juice D8): taking a point orb; file and wiring in the sound feature.
+- The `kart-idle` and `kart-drive` sound IDs (kart lap Q4, K9): a driven kart's engine, two held loops crossfaded by speed; files and wiring in the sound feature.

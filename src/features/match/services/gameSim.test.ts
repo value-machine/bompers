@@ -1268,7 +1268,7 @@ describe("gameSim — physics objects", () => {
     expect(riding!.y).toBeLessThan(560);
   });
 
-  it("should run the Ball Playground with all 26 balls in play and half of them asleep when left alone", () => {
+  it("should run the Ball Playground with all 26 balls and 3 karts in play and half the balls asleep when left alone", () => {
     const text = readFileSync(
       path.join(process.cwd(), "public/levels/ball-playground.html"),
       "utf8"
@@ -1278,11 +1278,12 @@ describe("gameSim — physics objects", () => {
     expect(parsed.warnings).toEqual([]);
     const state = createGameState({ level: parsed.level, tunables: DEFAULT_GAME_TUNABLES });
     stepFor(state, 4);
-    const balls = state.physicsObjects.objects;
+    const balls = state.physicsObjects.objects.filter((object) => object.kind === "ball");
     expect(balls).toHaveLength(26);
+    expect(state.karts.karts).toHaveLength(3);
     // None placed inside terrain or another ball (that would pop it), none fell out.
     expect(state.physicsObjects.moments.filter((moment) => moment.kind === "pop")).toEqual([]);
-    expect(balls.every((ball) => ball.goneUntil === null)).toBe(true);
+    expect(state.physicsObjects.objects.every((object) => object.goneUntil === null)).toBe(true);
     // Resting balls sleep (the riding ones and those still rolling or rocking stay awake).
     expect(balls.filter((ball) => ball.sleepShape !== null).length).toBeGreaterThanOrEqual(13);
   });
@@ -1313,5 +1314,150 @@ describe("gameSim — physics objects", () => {
     const explosion = state.combat.events.find((event) => event.type === "explosion");
     expect(explosion && "x" in explosion ? explosion.x : 0).toBeLessThan(400);
     expect(state.physicsObjects.objects[0]!.x).toBeGreaterThan(400);
+  });
+});
+
+// A 64 × 32 go-kart resting on the floor (top y = 320), middle x = 408; p0 spawns at x 100.
+const kartLevel: LevelDefinition = {
+  ...level,
+  settings: { ...level.settings, cellSize: 4 },
+  worldSize: { w: 1600, h: 400 },
+  terrain: [{ shape: { type: "rect", x: 0, y: 320, w: 1600, h: 32 }, materialId: "stone" }],
+  spawns: [
+    { x: 100, y: 300 },
+    { x: 700, y: 300 },
+  ],
+  bounds: { x: -100, y: -100, w: 1800, h: 600 },
+  objects: [
+    {
+      kind: "kart",
+      variant: "go-kart",
+      box: { x: 376, y: 288, w: 64, h: 32 },
+      seed: 1,
+      terrainIndices: [],
+    },
+  ],
+};
+const newKartGame = () => {
+  const state = createGameState({ level: kartLevel, tunables: DEFAULT_GAME_TUNABLES });
+  stepFor(state, 0.5);
+  return state;
+};
+const player = (state: ReturnType<typeof createGameState>, id: string): PlayerState =>
+  state.players.find((candidate) => candidate.id === id)!;
+/** Puts p0 on the floor just left of the kart and presses down once. */
+const boardKart = (state: ReturnType<typeof createGameState>) => {
+  const p0 = player(state, "p0");
+  Object.assign(p0, { x: 362, y: 320, vx: 0, vy: 0 });
+  stepFor(state, 0.1);
+  stepGame(state, keys("KeyS"), dt);
+  stepGame(state, keys(), dt);
+  return p0;
+};
+const kartHits = (state: ReturnType<typeof createGameState>) =>
+  state.combat.events.filter((event) => event.type === "playerHit" && event.source === "kart");
+
+describe("gameSim — karts", () => {
+  it("should rest the kart's two wheels on the floor with the chassis above them when the match runs", () => {
+    const state = newKartGame();
+    const [kart] = state.karts.karts;
+    expect(kart!.wheels).toHaveLength(2);
+    for (const wheel of kart!.wheels) {
+      expect(wheel).toMatchObject({ goneUntil: null, grounded: true });
+      expect(wheel.y).toBeCloseTo(312, 0);
+    }
+    expect(state.physicsObjects.objects.every((object) => object.kind === "kart")).toBe(true);
+  });
+
+  it("should seat a blob that touches the kart and presses down, and drive it right while D is held", () => {
+    const state = newKartGame();
+    const p0 = boardKart(state);
+    const [kart] = state.karts.karts;
+    expect(kart!.driverId).toBe("p0");
+    expect(p0.crouching).toBe(false);
+    const startX = kart!.wheels[0].x;
+    stepFor(state, 0.8, keys("KeyD"));
+    expect(kart!.wheels[0].x).toBeGreaterThan(startX + 150);
+    // The driver rides on the seat, inside the tub above the wheels.
+    expect(Math.abs(p0.x - (kart!.wheels[0].x + kart!.wheels[1].x) / 2)).toBeLessThan(20);
+    expect(p0.y).toBeLessThan(kart!.wheels[0].y);
+  });
+
+  it("should put the driver out beside the kart, free of terrain, on the next fresh press of down", () => {
+    const state = newKartGame();
+    const p0 = boardKart(state);
+    stepGame(state, keys("KeyS"), dt);
+    expect(state.karts.karts[0]!.driverId).toBeNull();
+    expect(escapeSolid(p0, state.arena.terrain, { minScale: 1 })).toBe("free");
+    const kartMid = (state.karts.karts[0]!.wheels[0].x + state.karts.karts[0]!.wheels[1].x) / 2;
+    expect(Math.abs(p0.x - kartMid)).toBeGreaterThan(40);
+    // Holding down afterwards crouches on foot and does not get back in.
+    stepFor(state, 0.3, keys("KeyS"));
+    expect(state.karts.karts[0]!.driverId).toBeNull();
+  });
+
+  it("should hop the kart when its driver presses jump", () => {
+    const state = newKartGame();
+    boardKart(state);
+    stepGame(state, keys("KeyW"), dt);
+    const [kart] = state.karts.karts;
+    expect(kart!.wheels.every((wheel) => wheel.vy < -300)).toBe(true);
+    expect(state.physicsObjects.moments.some((moment) => moment.kind === "hop")).toBe(true);
+  });
+});
+
+describe("gameSim — kart hits, riders and whole-object state", () => {
+  it("should hit a blob for one chunk when the driven kart runs into it fast, and never its driver", () => {
+    const state = newKartGame();
+    const p0 = boardKart(state);
+    const p1 = player(state, "p1");
+    Object.assign(p1, { x: 760, y: 320, vx: 0, vy: 0 });
+    const before = state.combat.fighters.get("p1")!.health;
+    stepFor(state, 1.2, keys("KeyD"));
+    const hits = kartHits(state);
+    expect(hits.length).toBeGreaterThanOrEqual(1);
+    expect(hits[0]).toMatchObject({ victimSlot: 1, byPlayerSlot: 0, kind: "contact" });
+    expect(state.combat.fighters.get("p1")!.health).toBeLessThan(before);
+    expect(hits.some((hit) => hit.type === "playerHit" && hit.victimSlot === p0.slot)).toBe(false);
+  });
+
+  it("should push but not hurt a blob that walks into a parked kart", () => {
+    const state = newKartGame();
+    const p0 = player(state, "p0");
+    Object.assign(p0, { x: 320, y: 320, vx: 0, vy: 0 });
+    stepFor(state, 1, keys("KeyD"));
+    expect(kartHits(state)).toEqual([]);
+    expect(state.karts.karts[0]!.wheels[0].x).toBeGreaterThan(388);
+  });
+
+  it("should let a blob stand on top of the kart instead of falling through it", () => {
+    const state = newKartGame();
+    const p1 = player(state, "p1");
+    Object.assign(p1, { x: 408, y: 280, vx: 0, vy: 0 });
+    stepFor(state, 0.6);
+    expect(p1.y).toBeLessThan(300);
+  });
+
+  it("should burn the whole kart and put its driver out when one wheel catches fire", () => {
+    const state = newKartGame();
+    boardKart(state);
+    const [kart] = state.karts.karts;
+    kart!.wheels[0].state = { kind: "burning", since: state.timeSeconds, bySlot: null };
+    stepGame(state, keys(), dt);
+    expect(kart!.wheels.map((wheel) => wheel.state.kind)).toEqual(["burning", "burning"]);
+    expect(kart!.driverId).toBeNull();
+  });
+
+  it("should put the driver out and pop the whole kart when it leaves the arena, then bring it back at its spot", () => {
+    const state = newKartGame();
+    boardKart(state);
+    const [kart] = state.karts.karts;
+    for (const wheel of kart!.wheels) wheel.y = 5000;
+    stepGame(state, keys(), dt);
+    expect(kart!.driverId).toBeNull();
+    expect(kart!.wheels.every((wheel) => wheel.goneUntil !== null)).toBe(true);
+    stepFor(state, DEFAULT_GAME_TUNABLES.physicsObjects.respawnSeconds + 0.2);
+    expect(kart!.wheels.every((wheel) => wheel.goneUntil === null)).toBe(true);
+    expect((kart!.wheels[0].x + kart!.wheels[1].x) / 2).toBeCloseTo(408, -1);
   });
 });

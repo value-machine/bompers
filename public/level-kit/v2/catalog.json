@@ -262,6 +262,14 @@
     {
       "id": "orb-collect",
       "label": "Orb collect"
+    },
+    {
+      "id": "kart-idle",
+      "label": "Kart engine idle (loop)"
+    },
+    {
+      "id": "kart-drive",
+      "label": "Kart engine driving (loop)"
     }
   ],
   "behavior": [],
@@ -373,6 +381,27 @@
             "max": 1
           },
           "madeOf": "light and bouncy (half a blob's weight); rolls downhill, rides moving parts, blobs and blasts knock it around; burns as a whole and pops, then comes back"
+        }
+      ]
+    },
+    {
+      "kind": "kart",
+      "objectClass": "physics",
+      "label": "Kart",
+      "height": {
+        "min": 32,
+        "max": 48
+      },
+      "defaultVariant": "go-kart",
+      "variants": [
+        {
+          "id": "go-kart",
+          "label": "Go-kart",
+          "aspect": {
+            "min": 2,
+            "max": 2
+          },
+          "madeOf": "a low open kart on two wheels (2 blobs' weight), springy; a blob presses down beside it to get in and drives it (jump hops), pressing down again gets out; it rams blobs at speed, burns as a whole and pops, then comes back"
         }
       ]
     }

@@ -1,5 +1,5 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
-import type { PhysicsBodySpec } from "@/shared/types/physicsBody.types";
+import type { RoundBodySpec } from "@/shared/types/physicsBody.types";
 
 /**
  * Whole-object state (owner, level-objects "object classes"): a physics object is burning, frozen
@@ -11,13 +11,13 @@ export type WholeObjectState =
   | { kind: "burning"; since: number; bySlot: number | null }
   | { kind: "frozen"; since: number };
 
-/** One moving body a level placed (a ball). Centre position, world units, y down. */
+/** One moving round body a level placed (a ball, a kart's wheel). Centre position, world units, y down. */
 export interface PhysicsObject {
   /** Stable for the match: `object-<ordinal>` in level order. */
   id: string;
   kind: string;
   variant: string;
-  body: PhysicsBodySpec;
+  body: RoundBodySpec;
   radius: number;
   /** Where it was placed and comes back to (centre). */
   home: Vec2;
@@ -50,7 +50,18 @@ export interface PhysicsObject {
  */
 export interface ObjectMoment {
   seq: number;
-  kind: "bounce" | "pop" | "back" | "caught" | "frozen" | "shatter" | "melt";
+  /** `board`, `leave`, `hop`: a kart's own moments (kart lap; `objectId` is the kart's id). */
+  kind:
+    | "bounce"
+    | "pop"
+    | "back"
+    | "caught"
+    | "frozen"
+    | "shatter"
+    | "melt"
+    | "board"
+    | "leave"
+    | "hop";
   objectId: string;
   at: Vec2;
   atSeconds: number;

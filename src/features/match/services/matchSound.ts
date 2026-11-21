@@ -14,6 +14,7 @@ import { burningCount } from "@/features/fire/api/fireApi";
 import { thawedCount } from "@/features/ice/api/iceApi";
 import { resolveCatalogEntry } from "@/features/content-catalog/api/contentCatalogApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
+import { kartEngines } from "@/features/karts/api/kartsApi";
 import { isInPlay } from "@/features/match/services/matchRules";
 import type { GameState } from "@/features/match/services/gameSim";
 
@@ -88,6 +89,7 @@ export function soundWorldOf(state: GameState): SoundWorldSnapshot {
       // A bounce is as loud as it was hard (never silent once heard); other moments at full.
       gain: moment.kind === "bounce" ? 0.35 + 0.65 * moment.strength : 1,
     })),
+    kartEngines: kartEngines(state.karts, { players: state.players, tunables: state.tunables }),
   };
 }
 

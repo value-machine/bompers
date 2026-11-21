@@ -1,4 +1,5 @@
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
+import type { RoundBodySpec } from "@/shared/types/physicsBody.types";
 import type { GameTunables } from "@/shared/types/gameTunables.types";
 import { boxShapeVersion, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { FireState } from "@/features/fire/api/fireApi";
@@ -90,47 +91,72 @@ const MOMENT_SECONDS = 1;
 /** Bounces closer together than this on one object make one moment (rolling chatter). */
 const BOUNCE_GAP_SECONDS = 0.12;
 
-/** The objects a level placed, at rest in their rects (a ball rests on the rect's bottom). */
+/** A round body to add: what it is, its feel, its size and where it rests (centre). */
+export interface RoundBodyPlacement {
+  kind: string;
+  variant: string;
+  body: RoundBodySpec;
+  radius: number;
+  home: Vec2;
+}
+
+/**
+ * Adds one round body at rest at its spot and returns it (balls here; a kart's wheels from the
+ * karts feature, kart K2). Ids are `object-<ordinal>` in the order bodies are added.
+ */
+export function addRoundBody(
+  state: PhysicsObjectsState,
+  placement: RoundBodyPlacement
+): PhysicsObject {
+  const { home } = placement;
+  const object: PhysicsObject = {
+    id: `object-${state.objects.length}`,
+    ...placement,
+    x: home.x,
+    y: home.y,
+    vx: 0,
+    vy: 0,
+    angle: 0,
+    grounded: false,
+    goneUntil: null,
+    state: { kind: "none" },
+    chill: 0,
+    chilledAt: -Infinity,
+    heldCarry: null,
+    restSeconds: 0,
+    sleepShape: null,
+  };
+  state.objects.push(object);
+  return object;
+}
+
+/**
+ * The balls a level placed, at rest in their rects (a ball rests on the rect's bottom). Other
+ * physics kinds (the kart) add their own bodies (`addRoundBody`).
+ */
 export function createPhysicsObjectsState(level: LevelDefinition): PhysicsObjectsState {
-  const objects: PhysicsObject[] = [];
-  (level.objects ?? []).forEach((placed) => {
-    const variant = findPhysicsVariant(placed.kind, placed.variant);
-    if (!variant) return;
+  const state: PhysicsObjectsState = { objects: [], moments: [], momentCount: 0 };
+  for (const placed of level.objects ?? []) {
+    const body = findPhysicsVariant(placed.kind, placed.variant)?.body;
+    if (body?.shape !== "ball") continue;
     const radius = placed.box.h / 2;
     const home = { x: placed.box.x + placed.box.w / 2, y: placed.box.y + placed.box.h - radius };
-    objects.push({
-      id: `object-${objects.length}`,
-      kind: placed.kind,
-      variant: placed.variant,
-      body: variant.body,
-      radius,
-      home,
-      x: home.x,
-      y: home.y,
-      vx: 0,
-      vy: 0,
-      angle: 0,
-      grounded: false,
-      goneUntil: null,
-      state: { kind: "none" },
-      chill: 0,
-      chilledAt: -Infinity,
-      heldCarry: null,
-      restSeconds: 0,
-      sleepShape: null,
-    });
-  });
-  return { objects, moments: [], momentCount: 0 };
+    addRoundBody(state, { kind: placed.kind, variant: placed.variant, body, radius, home });
+  }
+  return state;
 }
 
 /** Objects in play (not popped and waiting to come back). */
 export const objectsInPlay = (state: PhysicsObjectsState): PhysicsObject[] =>
   state.objects.filter((object) => object.goneUntil === null);
 
-/** Records a moment for the renderer and sound. */
-function addMoment(
+/**
+ * Records a moment for the renderer and sound (also a kart's own moments, kart lap: `object` is
+ * then the kart, by its id and place).
+ */
+export function addMoment(
   state: PhysicsObjectsState,
-  object: PhysicsObject,
+  object: { id: string; x: number; y: number },
   moment: Pick<ObjectMoment, "kind" | "soundId" | "atSeconds"> & { strength?: number; at?: Vec2 }
 ): void {
   state.moments.push({
