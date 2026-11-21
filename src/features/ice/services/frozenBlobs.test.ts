@@ -220,14 +220,32 @@ describe("ice block: how it ends and slides", () => {
   it("should slide several times further than a free blob when a frozen blob is shoved", () => {
     const s = scene();
     s.step(B.freezeSeconds, true);
+    // The free blob runs on ground the beam never froze (the frost fan's low rays freeze the
+    // floor in front of the holder), so it compares a block with a blob on plain ground.
+    const plain = scene();
     const free = createPlayer(2, { x: 260, y: FLOOR }, TUNABLES);
     const idle = mapPlayerInputs({ heldKeys: new Set(), gamepads: [] });
-    const settle = [s.victim, free];
-    stepPlayers({ players: settle, inputs: idle, terrain: s.terrain, tunables: TUNABLES, dt });
-    for (const blob of settle) blob.vx = 300;
+    const both = (): void => {
+      stepPlayers({
+        players: [s.victim],
+        inputs: idle,
+        terrain: s.terrain,
+        tunables: TUNABLES,
+        dt,
+      });
+      stepPlayers({
+        players: [free],
+        inputs: idle,
+        terrain: plain.terrain,
+        tunables: TUNABLES,
+        dt,
+      });
+    };
+    both();
+    for (const blob of [s.victim, free]) blob.vx = 300;
     for (let i = 0; i < 120; i += 1) {
-      holdIcedBlobs(s.ice, settle, TUNABLES);
-      stepPlayers({ players: settle, inputs: idle, terrain: s.terrain, tunables: TUNABLES, dt });
+      holdIcedBlobs(s.ice, [s.victim, free], TUNABLES);
+      both();
     }
     expect(s.victim.jumpLocked).toBe(true);
     expect(s.victim.x - 260).toBeGreaterThan(3 * (free.x - 260));
