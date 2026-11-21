@@ -84,6 +84,11 @@ export interface SoundWorldSnapshot {
   objectMomentCount: number;
   /** Recent physics-object moments with a sound (bounce, catch, freeze, pop…), by `seq`. */
   objectSounds: readonly { seq: number; soundId: string; gain: number }[];
+  /**
+   * Driven karts this frame (kart lap K9): one engine each, keyed per kart, pitched by its
+   * driver's slot, `speed` 0–1 of the speed at which the drive loop has taken over.
+   */
+  kartEngines: readonly { key: string; slot: number; speed: number }[];
 }
 
 /**

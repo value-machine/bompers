@@ -68,6 +68,18 @@ import {
   type PhysicsObjectsState,
 } from "@/features/physics-objects/api/physicsObjectsApi";
 import {
+  createKartsState,
+  driverIds,
+  driveKarts,
+  kartRoundBodies,
+  seatDrivers,
+  seatedInputs,
+  stepKarts,
+  stepSeats,
+  type KartHit,
+  type KartsState,
+} from "@/features/karts/api/kartsApi";
+import {
   createCollectiblesState,
   stepCollectibles,
   stepDiveRefills,
@@ -119,6 +131,14 @@ import {
  *                        other, take this step's blasts, torch, freeze ray and burning ground
  *                        (whole object), pop when stuck, burnt through or out of the kill zone.
  *                        Rockets explode on them in step 3; moving parts carry them in step 1b
+ *   3h. stepKarts      — karts feature (kart lap): drivers' sticks and hops work on their karts
+ *                        before 3g (`driveKarts`); after it each kart stays whole (fire, frost,
+ *                        pops), its wheels are held together, the chassis springs, blobs stand
+ *                        on or bump karts and fast karts hit blobs (combat's `applyHit`). Seats:
+ *                        before step 2 `stepSeats` gets blobs in and out on a fresh down press;
+ *                        seated drivers lose their stick, jump and down to the kart
+ *                        (`seatedInputs`), skip blob contacts and step 1c, and sit on the seat
+ *                        after step 2 and after 3h
  *   3e. stepIce        — ice feature: frozen samples whose time is over thaw (the ray itself
  *                        freezes inside step 3; this runs before 3c, so freezing puts fire out)
  *   3f. frozen blobs   — ice feature: before step 2 `icedInputs` empties a frozen blob's
@@ -189,6 +209,8 @@ export interface GameState {
   moverCarry: CarryMemory;
   /** Moving bodies the level placed (balls), whole-object fire and frost. */
   physicsObjects: PhysicsObjectsState;
+  /** Karts the level placed (their wheels are in `physicsObjects`), seats and kart hits. */
+  karts: KartsState;
   /** Sky drops: point orbs falling onto the collectible points, weapon crates from the drop points. */
   collectibles: CollectiblesState;
   /** Scores and the respawn queue. */
@@ -221,6 +243,8 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
   const normalized = normalizeLevelDefinition(level);
   const matchTunables = applyLevelSettings(tunables, normalized.level.settings);
   const arena = createArenaState(normalized.level);
+  const physicsObjects = createPhysicsObjectsState(normalized.level);
+  const karts = createKartsState(normalized.level, physicsObjects);
   return {
     tick: 0,
     timeSeconds: 0,
@@ -235,7 +259,8 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
     players: [],
     combat: createCombatState(),
     dive: createDiveState(),
-    physicsObjects: createPhysicsObjectsState(normalized.level),
+    physicsObjects,
+    karts,
     collectibles: createCollectiblesState(matchTunables, normalized.level.collectibles),
     rules: createMatchRulesState(matchTunables.match.maxPlayers),
     round: {
@@ -480,8 +505,11 @@ function crushPinnedPlayers(
  */
 function freeStuckPlayers(state: GameState, players: readonly PlayerState[]): void {
   const { terrain } = state.arena;
+  // A seated driver sits where its kart puts it; getting out frees it (kart K6).
+  const seated = driverIds(state.karts);
   for (const player of players) {
     if (state.combat.fighters.get(player.id)?.eliminated === true) continue;
+    if (seated.has(player.id)) continue;
     const minScale = state.tunables.player.crushGapFraction;
     if (escapeSolid(player, terrain, { minScale }) !== "trapped") continue;
     eliminateFighter({
@@ -568,29 +596,74 @@ function blastsThisStep(state: GameState): ObjectBlast[] {
   );
 }
 
-/** Step 3g: physics objects, after combat so this step's blasts and sprays reach them. */
-function stepObjects(state: GameState, players: readonly PlayerState[], dt: number): void {
+/**
+ * Steps 3g and 3h: drivers work their karts, physics objects move (after combat so this step's
+ * blasts and sprays reach them; seated drivers are part of their kart, not bumped), then karts
+ * stay whole and meet the blobs; their hits go through combat's `applyHit`.
+ */
+function stepObjects(
+  state: GameState,
+  step: { players: readonly PlayerState[]; inputs: PlayerInputs; dt: number }
+): void {
+  const { players, dt } = step;
+  const seated = driverIds(state.karts);
+  const now = state.timeSeconds;
+  driveKarts(state.karts, { ...step, physics: state.physicsObjects, now });
   stepPhysicsObjects(state.physicsObjects, {
     terrain: state.arena.terrain,
-    players,
+    players: players.filter((player) => !seated.has(player.id)),
     killZone: state.killZone,
     blasts: blastsThisStep(state),
     fire: state.fire,
     ice: state.ice,
     blobFire: state.blobFire,
     isDiving: (player) => isDiving(state, player),
-    now: state.timeSeconds,
+    now,
     dt,
     tunables: state.tunables,
   });
+  const hits = stepKarts(state.karts, {
+    physics: state.physicsObjects,
+    terrain: state.arena.terrain,
+    players,
+    now,
+    dt,
+    tunables: state.tunables,
+  });
+  applyKartHits(state, { players, hits });
 }
 
-/** Rockets explode on the physics objects in play (step 3). */
-const roundBodiesOf = (state: GameState) =>
-  objectsInPlay(state.physicsObjects).map((object) => ({
+/**
+ * Kart hits (owner Q3, kart K7): one chunk like a headbutt through combat's `applyHit` (so the
+ * hurt feedback follows), credited to the driver, and the victim rolls as hard as it was pushed.
+ */
+function applyKartHits(
+  state: GameState,
+  step: { players: readonly PlayerState[]; hits: readonly KartHit[] }
+): void {
+  const { tunables, timeSeconds } = state;
+  const world = { combat: state.combat, players: [...step.players], tunables, timeSeconds };
+  for (const hit of step.hits) {
+    applyHit(world, {
+      victimSlot: hit.victim.slot,
+      attackerSlot: hit.attackerSlot,
+      kind: "contact",
+      source: "kart",
+      contactPoint: hit.at,
+      direction: hit.direction,
+    });
+    reactToHit(hit.victim, { impulse: hit.impulse }, tunables);
+  }
+}
+
+/** Rockets explode on the physics objects in play and on karts' chassis (step 3). */
+const roundBodiesOf = (state: GameState) => [
+  ...objectsInPlay(state.physicsObjects).map((object) => ({
     center: { x: object.x, y: object.y },
     radius: object.radius,
-  }));
+  })),
+  ...kartRoundBodies(state.karts),
+];
 
 /** Step 3a: right after combat, so a player eliminated by a rocket this step cannot collect. */
 function stepCratePickups(state: GameState, dt: number): void {
@@ -774,9 +847,9 @@ interface ContactStep {
  * Steps 3g, 3e, 3f, 3c, 3d: physics objects first (this step's blasts and sprays reach them); ice before fire, so a burning sample frozen this step is out before the
  * fire spreads again; then the blobs' ice and fire, which cancel on a blob that has both.
  */
-function stepElements(state: GameState, step: ContactStep): void {
+function stepElements(state: GameState, step: ContactStep & { inputs: PlayerInputs }): void {
   const { tunables, timeSeconds } = state;
-  stepObjects(state, step.players, step.dt);
+  stepObjects(state, step);
   stepIce(state.ice, state.arena.terrain, { now: timeSeconds });
   stepFrozenBlobs(state.ice, { players: step.players, now: timeSeconds, dt: step.dt, tunables });
   stepBlobsOnFire(state, step);
@@ -802,20 +875,38 @@ function stepDivesAndBlocks(state: GameState, step: ContactStep & { inputs: Play
   stepIceBlocks(state, step.players);
 }
 
+/**
+ * Seats, then step 2 and 2b: blobs get in and out of karts on a fresh down press (this step's
+ * inputs), seated drivers give their stick, jump and down to the kart and sit on the seat after
+ * moving, and only blobs on foot bounce off each other. Returns the drivers' own inputs (aim and
+ * fire kept, for combat and the dive) and the body contacts.
+ */
+function movePlayers(
+  state: GameState,
+  step: { players: PlayerState[]; inputs: PlayerInputs; dt: number }
+): { own: PlayerInputs; contacts: readonly BodyContact[] } {
+  const { tunables, timeSeconds } = state;
+  const { terrain } = state.arena;
+  const { players, inputs, dt } = step;
+  const seats = { physics: state.physicsObjects, terrain, tunables, now: timeSeconds };
+  stepSeats(state.karts, { ...seats, players, inputs });
+  const own = seatedInputs(state.karts, players, inputs);
+  // A burning blob with no move input runs from the fire (fire-burn D2); combat keeps the real inputs.
+  const moving = seatedInputs(state.karts, players, panicInputs(state.blobFire, players, inputs));
+  stepPlayers({ players, inputs: moving, terrain, tunables, dt });
+  seatDrivers(state.karts, players);
+  const seated = driverIds(state.karts);
+  const onFoot = players.filter((player) => !seated.has(player.id));
+  return { own, contacts: resolveBodyContacts({ players: onFoot, terrain, tunables }) };
+}
+
 function stepPlay(state: GameState, rawInputs: PlayerInputs, dt: number): void {
   const { tunables, timeSeconds } = state;
   const { level, terrain } = state.arena;
   const players = joinAndRideParts(state, rawInputs, dt);
-  const inputs = iceStepStart(state, players, rawInputs);
-  // A burning blob with no move input runs from the fire (fire-burn D2); combat keeps the real inputs.
-  stepPlayers({
-    players,
-    inputs: panicInputs(state.blobFire, players, inputs),
-    terrain,
-    tunables,
-    dt,
-  });
-  const contacts = resolveBodyContacts({ players, terrain, tunables });
+  const iced = iceStepStart(state, players, rawInputs);
+  const { own: inputs, contacts } = movePlayers(state, { players, inputs: iced, dt });
+  const seated = driverIds(state.karts);
   stepCombat({
     combat: state.combat,
     players,
@@ -826,14 +917,17 @@ function stepPlay(state: GameState, rawInputs: PlayerInputs, dt: number): void {
     timeSeconds,
     dt,
     roundBodies: roundBodiesOf(state),
-    unarmedAttack: ({ attacker }) => requestDive(state.dive, attacker, tunables),
+    // A seated driver fires its weapon from the seat; unarmed it has no dive (it would leave the seat).
+    unarmedAttack: ({ attacker }) =>
+      seated.has(attacker.id) ? undefined : requestDive(state.dive, attacker, tunables),
     sprayAttack: ({ attacker, itemId, reach }) => {
       const spray = { terrain, players, holder: attacker, tunables, now: timeSeconds, dt, reach };
       if (itemId !== "freeze-ray") torchBlobs(state, attacker, sprayTorch(state.fire, spray));
       else sprayFreezeRay(state.ice, { ...spray, canChill: (blob) => canChill(state, blob) });
     },
   });
-  stepElements(state, { players, contacts, dt });
+  // The karts read their drivers' stick and jump (the inputs before the seat took them).
+  stepElements(state, { players, contacts, inputs: iced, dt });
   stepCratePickups(state, dt);
   stepDivesAndBlocks(state, { players, contacts, inputs, dt });
   stepHeadbuttResets(state, dt);

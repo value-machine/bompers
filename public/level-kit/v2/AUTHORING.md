@@ -96,6 +96,7 @@ Link the preview kit in `<head>` (works offline without it):
 | object | `tree` / `palm` | Palm | height 96–480, width 0.5–1.1 × height |
 | object | `tree` / `dead` | Dead tree | height 96–480, width 0.5–1.1 × height |
 | object | `ball` / `beach` | Beach ball | height 32–96, width 1–1 × height, default variant |
+| object | `kart` / `go-kart` | Go-kart | height 32–48, width 2–2 × height, default variant |
 | theme | `meadow` | Sunny meadow | Sunny sky, drifting clouds, soft green hills (the default). |
 | theme | `night-sky` | Night sky | Violet night sky, a cream moon, twinkling stars, dark hills. |
 | theme | `lava-cave` | Lava cave | Dark cave glowing orange from below, stalactites, rock spires, rising embers. |

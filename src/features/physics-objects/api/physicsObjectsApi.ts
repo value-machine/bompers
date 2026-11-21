@@ -7,13 +7,20 @@ export type {
   WholeObjectState,
 } from "@/features/physics-objects/types/physicsObject.types";
 export {
+  addMoment,
+  addRoundBody,
   createPhysicsObjectsState,
   objectsInPlay,
   popObject,
   stepPhysicsObjects,
   wakeObject,
+  type RoundBodyPlacement,
   type StepPhysicsObjectsArgs,
 } from "@/features/physics-objects/services/physicsObjects";
+export {
+  freeStuckObject,
+  moveObjectSafely,
+} from "@/features/physics-objects/services/objectMotion";
 export type { ObjectBlast } from "@/features/physics-objects/services/objectContacts";
 export {
   createPhysicsObjectsView,

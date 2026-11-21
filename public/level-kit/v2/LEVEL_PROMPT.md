@@ -66,7 +66,7 @@ Root attributes:
 |---|---|---|---|
 | `bounds` | `<rect>` | exactly 1 | The play area, inside the viewBox. Falling below its **bottom** edge eliminates a player. The **side and top edges are open**: the kill lines there lie far beyond the bounds, so players can be launched out and fly back. Suggested `fill="none" stroke="#d24b3a"`. |
 | `terrain` | rect, polygon, circle | ≥ 1 | Ground. `data-material` = behaviour (default `stone`), `data-color` = looks (optional, default = the material's colour). Optional `data-effect`, `data-sound`, `data-label`, `id`. Later shapes paint over earlier ones where they overlap. |
-| `object` | `<rect>` | ≥ 0 | A ready-made object built inside the rect (§ 3 Objects): `data-kind` (`tree`, `ball`), optional `data-variant`, `data-seed`. A terrain object is solid ground made of catalog materials; a physics object (a ball) moves. `fill="#5f8f3e"`. |
+| `object` | `<rect>` | ≥ 0 | A ready-made object built inside the rect (§ 3 Objects): `data-kind` (`tree`, `ball`, `kart`), optional `data-variant`, `data-seed`. A terrain object is solid ground made of catalog materials; a physics object (a ball, a kart) moves. `fill="#5f8f3e"`. |
 | `spawn` | `<circle>` | ≥ 4 | Player start (the centre counts, `r="14"`). Inside bounds, never inside terrain, centre ~`24` above a solid surface, not over a pit. `fill="#3f8f5f"`. |
 | `drop` | `<circle>` | ≥ 1 | Weapon crates fall from here (`r="12"`); place high up. The game picks each crate's weapon. `fill="#c94f7c"`. |
 | `collectible` | `<circle>` | ≥ 0 | A pickup point (`r="10"`), `data-item` = one collectible item (§ 4). `point-orb`: point orbs fall from the sky onto it. `dive-reset`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns 2.5 s after use) — hang them in the air between platforms and off edges for headbutt chains. `fill="#e0b62c"`. |
@@ -105,8 +105,9 @@ Place ready-made objects with one `<rect data-role="object">` each. There are tw
 
 - **Terrain objects** (trees): the game builds the object inside the rect from catalog materials, so it behaves like terrain: players stand on it, blasts crater its breakable parts, fire burns its cardboard parts away, cold freezes its trunk and leaves. It never moves (except inside a moving part).
 - **Physics objects** (balls): one moving body. It falls, bounces, rolls downhill and rides moving parts; blobs bump it and blasts and headbutts knock it away. Fire and frost always take the whole object (a burning ball sets blobs it touches alight, a frozen one slides). It is never cut or chipped. If it leaves the arena or burns through, it comes back at its spot after 3 s. Players can't stand on it like ground: it gives way.
+- **Karts** (a physics object players drive): a blob standing beside a kart presses down to get in and down again to get out; left and right drive, jump hops, and the driver keeps firing its weapon. Other blobs push it, stand on it and blast it; a kart driven fast into a blob knocks off a chunk. Give a kart a flat run of at least 4 kart lengths and keep it out of narrow gaps.
 
-- The object stands on the rect's **bottom centre** and fills its **height**: draw the rect with its bottom edge on a surface. For a terrain object the width is its spread, kept inside the variant's width range below; a physics ball's rect is a square whose side is the ball's diameter.
+- The object stands on the rect's **bottom centre** and fills its **height**: draw the rect with its bottom edge on a surface. For a terrain object the width is its spread, kept inside the variant's width range below; a physics ball's rect is a square whose side is the ball's diameter, a kart's rect is twice as wide as it is tall (64 × 32).
 - `data-kind` — REQUIRED, one kind below. `data-variant` — optional; leave it out for a varied pick. `data-seed` — optional whole number; the same seed gives the same shape. Without a seed every object still differs and looks the same on every load; give the rect an `id` to keep its shape when you add objects before it.
 - Sizes outside a kind's height range or a variant's width range are clamped (with a warning). Snap `x`, `y`, `width`, `height` to multiples of `4`; keep `data-cell-size` at `4` so thin branches stay solid.
 - Like terrain, later shapes paint over earlier ones: put terrain objects after the ground they stand on. A terrain object inside a `<g data-motion>` moves with that part. Spawns go beside or on top of objects, never inside one; leave a physics object room to roll.
@@ -118,12 +119,15 @@ Place ready-made objects with one `<rect data-role="object">` each. There are tw
   - `snowy-pine` (Snowy pine): width 0.35–0.75 × height; a pine with ice caps in frost on each tier (needles touching ice never catch fire).
   - `palm` (Palm): width 0.5–1.1 × height; bending earth trunk in cardboard colour, cardboard fronds in moss and two nuts (burn away).
   - `dead` (Dead tree): width 0.5–1.1 × height; bare cardboard trunk and branches in bark colour: one spark burns the whole tree.
-- `ball` (Ball, physics object: moves; the height is its diameter, draw a square rect): height `32`–`96`; default variant `beach`. Variants:
+- `ball` (Ball, physics object: moves; keep the rect inside the variant's width range below): height `32`–`96`; default variant `beach`. Variants:
   - `beach` (Beach ball): width 1–1 × height; light and bouncy (half a blob's weight); rolls downhill, rides moving parts, blobs and blasts knock it around; burns as a whole and pops, then comes back.
+- `kart` (Kart, physics object: moves; keep the rect inside the variant's width range below): height `32`–`48`; default variant `go-kart`. Variants:
+  - `go-kart` (Go-kart): width 2–2 × height; a low open kart on two wheels (2 blobs' weight), springy; a blob presses down beside it to get in and drives it (jump hops), pressing down again gets out; it rams blobs at speed, burns as a whole and pops, then comes back.
 
 ```svg
 <rect data-role="object" data-kind="tree" data-variant="pine" x="800" y="400" width="120" height="208" fill="#5f8f3e" />
 <rect data-role="object" data-kind="ball" data-variant="beach" x="1000" y="560" width="48" height="48" fill="#5f8f3e" />
+<rect data-role="object" data-kind="kart" data-variant="go-kart" x="1080" y="576" width="64" height="32" fill="#5f8f3e" />
 ```
 
 ## 4. Valid catalog IDs (v2)

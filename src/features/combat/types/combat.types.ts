@@ -54,7 +54,8 @@ export interface RocketState {
 }
 
 /** What dealt a hit. The dive lap owns "dive"; new attacks add their source here. */
-export type HitSource = "rocket" | "dive" | "fire";
+/** `kart`: a kart ran into the blob at speed (kart lap K7; a contact hit like a headbutt). */
+export type HitSource = "rocket" | "dive" | "fire" | "kart";
 /** `crush`: squeezed between a moving part and terrain (LEVEL_FORMAT § 11, moving-parts D13). */
 /** `self`: the player held the respawn button (owner, never-stuck), scored like a fall. */
 export type EliminationCause = HitSource | "out-of-bounds" | "crush" | "self";

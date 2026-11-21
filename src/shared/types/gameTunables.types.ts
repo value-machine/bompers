@@ -200,6 +200,22 @@ export interface GameTunables {
     /** Extra push (units / s) a ball takes from a diving blob, on top of the bump. */
     divePush: number;
   };
+  /** Karts (kart lap): the rules every kart shares; a variant's own feel is its recipe line. */
+  karts: {
+    /**
+     * Closing speed along the contact (units / s) above which a kart hits a blob for one chunk
+     * (owner Q3; kart K7: above the blob run speed 340, below the go-kart's top speed 520).
+     */
+    hitSpeed: number;
+    /** Seconds before the same kart can hit the same blob again. */
+    hitCooldownSeconds: number;
+    /** Upward speed of a blob getting out, units / s. */
+    exitHopSpeed: number;
+    /** Farthest the chassis may lag from its rest place on the spring, × kart height. */
+    springTravel: number;
+    /** Speed (units / s) at which the drive loop has fully taken over from the idle loop. */
+    humFullSpeed: number;
+  };
   /** Blob-vs-blob contact (equal mass, circle bodies). */
   bodyCollision: {
     /** Bounciness along the contact normal: 1 = velocities swap, 0 = both keep the average. */

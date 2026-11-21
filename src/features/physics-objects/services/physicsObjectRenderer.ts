@@ -8,6 +8,7 @@ import {
   syncContactShadows,
   type ContactShadowLayer,
 } from "@/shared/utils/contactShadowLayer";
+import type { BallBodySpec } from "@/shared/types/physicsBody.types";
 import { surfaceBelow, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import type {
   ObjectMoment,
@@ -63,8 +64,10 @@ export function createPhysicsObjectsView(): PhysicsObjectsView {
   return { container, shadows, balls, sprites: new Map(), overlay };
 }
 
+type Ball = PhysicsObject & { body: BallBodySpec };
+
 /** One ball: an outer container (position, squash) holding the turning panels and the fixed gloss. */
-function buildBall(object: PhysicsObject, outline: number): Container {
+function buildBall(object: Ball, outline: number): Container {
   const r = object.radius;
   const outer = new Container();
   const panels = new Graphics();
@@ -167,8 +170,12 @@ function drawRings(g: Graphics, frame: PhysicsObjectsFrame): void {
   }
 }
 
+/** A ball in play (a kart's wheels are drawn by the karts feature). */
+const isBall = (object: PhysicsObject): object is Ball =>
+  object.goneUntil === null && object.body.shape === "ball";
+
 export function syncPhysicsObjectsView(view: PhysicsObjectsView, frame: PhysicsObjectsFrame): void {
-  const inPlay = frame.state.objects.filter((object) => object.goneUntil === null);
+  const inPlay = frame.state.objects.filter(isBall);
   // A ball is a round body beside the blobs: the character width, as blobs and terrain have.
   const outline = outlineWidth("character", frame.zoom);
   syncDisplayById(view.sprites, view.balls, {

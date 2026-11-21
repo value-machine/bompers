@@ -19,13 +19,13 @@ Moving bodies a level places (`<rect data-role="object">` of a physics kind, the
 Seams for later work:
 
 - **A new ball:** one data line in `level-objects/services/ballRecipe.ts` (weight, bounce, drag, burn time, bounce sound, panels), then `pnpm level-kit:sync`. No code here.
-- **The car (later lap):** a new `PhysicsBodySpec.shape` and recipe in `level-objects`; its wheels are this feature's round bodies, the chassis a body held to them by a spring step in `stepPhysicsObjects` after `moveAll`. Driving would read a player's inputs through a new hook from the match, like combat's attack hooks.
+- **The kart (kart lap, `karts` feature):** `PhysicsBodySpec` is a union (`ball` | `kart`); a kart's wheels are this feature's round bodies (`WheelBodySpec`, shape `wheel`, added with `addRoundBody`), so they move, bump, ride parts, take blasts and fire and frost here. `createPhysicsObjectsState` spawns balls only, the renderer draws balls only, and `ObjectMoment` also carries the kart's own moments (`board`, `leave`, `hop`, through `addMoment`).
 
 ## Dependencies
 
 - `arena` (field queries, `FIELD_BAND_SAMPLES`), `player` (`moveAxis`, `PlayerState`), `blob-fire` (`burningGroundNear`, `catchFire`, `isBurning`), `fire` and `ice` (types: this step's sprays and rays), `level-objects` (`findPhysicsVariant`), `level` (types).
 - `src/shared/types/physicsBody.types.ts` (`PhysicsBodySpec`, written by the registry), `src/shared/utils/freeSpotSearch.ts` (the never-stuck search, shared with `player/solidEscape.ts`), `src/shared/utils/blastPower.ts`, `src/shared/utils/contactShadowLayer.ts`.
-- Consumed by `match`: step 1b (moving parts carry them as riders; a pinned one pops), step 3 (rockets explode on them, combat's `roundBodies`), step 3g (`stepPhysicsObjects`), the render layer above the collectibles, and sound (`objectSounds` in the world snapshot).
+- Consumed by `karts` (wheels, moments, pops) and by `match`: step 1b (moving parts carry them as riders; a pinned one pops), step 3 (rockets explode on them, combat's `roundBodies`), step 3g (`stepPhysicsObjects`), the render layer above the collectibles, and sound (`objectSounds` in the world snapshot).
 
 ## Decisions
 

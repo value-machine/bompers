@@ -122,6 +122,13 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     maxSpeed: 1600,
     divePush: 500,
   },
+  karts: {
+    hitSpeed: 380,
+    hitCooldownSeconds: 0.5,
+    exitHopSpeed: 360,
+    springTravel: 0.35,
+    humFullSpeed: 520,
+  },
   bodyCollision: { restitution: 0.9, restingSpeed: 140, maxImpulse: 1100 },
   // A full-speed dive hit gives about 1000 units / s: 0.8 s out of control. A 200 shove: 0.16 s.
   // Rolling friction 200 + 1.5 × speed: a 1000 roll on the flat stops in ≈ 1.4 s (≈ 480 units);
