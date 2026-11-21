@@ -1,7 +1,6 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
-import { inkColor } from "@/shared/utils/debugInk";
-import { outlineWidth } from "@/shared/utils/outlineWidth";
+import { inkStroke, outlineWidth } from "@/shared/utils/outlineWidth";
 import { popInScale } from "@/shared/utils/easing";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 import {
@@ -70,7 +69,8 @@ function buildBall(object: PhysicsObject, outline: number): Container {
   const outer = new Container();
   const panels = new Graphics();
   const colors = object.body.panels.map((key) => GAME_PALETTE.objectPanels[key]);
-  panels.circle(0, 0, r).stroke({ width: outline * 2, color: inkColor("other") });
+  // The silhouette line blobs use (shared `inkStroke`, owner: consistent with other outlines).
+  panels.circle(0, 0, r).stroke(inkStroke(outline));
   const wedge = (Math.PI * 2) / Math.max(1, colors.length);
   colors.forEach((color, i) => {
     panels
@@ -169,7 +169,8 @@ function drawRings(g: Graphics, frame: PhysicsObjectsFrame): void {
 
 export function syncPhysicsObjectsView(view: PhysicsObjectsView, frame: PhysicsObjectsFrame): void {
   const inPlay = frame.state.objects.filter((object) => object.goneUntil === null);
-  const outline = outlineWidth("prop", frame.zoom);
+  // A ball is a round body beside the blobs: the character width, as blobs and terrain have.
+  const outline = outlineWidth("character", frame.zoom);
   syncDisplayById(view.sprites, view.balls, {
     list: inPlay,
     key: (object) => `${object.id}:${outline.step}`,
