@@ -63,6 +63,7 @@ import {
   objectsInPlay,
   popObject,
   stepPhysicsObjects,
+  wakeObject,
   type ObjectBlast,
   type PhysicsObjectsState,
 } from "@/features/physics-objects/api/physicsObjectsApi";
@@ -373,6 +374,11 @@ function keepRelativeSpeed(
   object: PhysicsObjectsState["objects"][number],
   step: { body: MovingRider; by: Vec2 | null; wasCarried: boolean }
 ): void {
+  // A part carried or pushed it: a sleeping ball wakes to follow.
+  const moved =
+    Math.abs(step.body.x - object.x) > 1e-6 ||
+    Math.abs(step.body.y - object.radius - object.y) > 1e-6;
+  if (step.by || moved) wakeObject(object);
   const kept = { x: step.body.vx - object.vx, y: step.body.vy - object.vy };
   object.vx = step.body.vx;
   object.vy = step.body.vy;

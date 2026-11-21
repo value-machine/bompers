@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
-import { createArenaState } from "@/features/arena/api/arenaApi";
+import { clearCrater, createArenaState } from "@/features/arena/api/arenaApi";
 import { createFireState } from "@/features/fire/api/fireApi";
 import { createIceState } from "@/features/ice/api/iceApi";
 import { createBlobFireState, isBurning } from "@/features/blob-fire/api/blobFireApi";
@@ -20,7 +20,7 @@ const dt = 1 / 120;
 const FLOOR = 320;
 const R = 24;
 
-/** A flat stone floor at y = 320, a wall on the left, a 45° ramp on the right; one beach ball. */
+/** A flat floor at y = 320 (stone, an earth patch at 440–560), a wall on the left, a 45° ramp on the right; one beach ball. */
 function makeLevel(ball: { x: number; bottom: number }): LevelDefinition {
   return {
     formatVersion: 1,
@@ -28,7 +28,10 @@ function makeLevel(ball: { x: number; bottom: number }): LevelDefinition {
     settings: { cellSize: 4, gravity: 1 },
     worldSize: { w: 1200, h: 400 },
     terrain: [
-      { shape: { type: "rect", x: 0, y: FLOOR, w: 1200, h: 40 }, materialId: "stone" },
+      { shape: { type: "rect", x: 0, y: FLOOR, w: 440, h: 40 }, materialId: "stone" },
+      // An earth patch under the ball's spot, so a crater can open beneath it.
+      { shape: { type: "rect", x: 440, y: FLOOR, w: 120, h: 40 }, materialId: "earth" },
+      { shape: { type: "rect", x: 560, y: FLOOR, w: 640, h: 40 }, materialId: "stone" },
       { shape: { type: "rect", x: 0, y: 0, w: 40, h: FLOOR }, materialId: "stone" },
       {
         shape: {
@@ -128,6 +131,28 @@ describe("physicsObjects", () => {
     w.run(2);
     expect(w.ball().x).toBeLessThan(900);
     expect(w.ball().angle).not.toBe(0);
+  });
+
+  it("should fall asleep at rest and wake when a blob bumps it", () => {
+    const w = world();
+    w.run(0.5);
+    expect(w.ball().sleepShape).not.toBeNull();
+    const blob = blobAt({ x: 500 - R - 10, y: FLOOR });
+    blob.vx = 300;
+    w.players.push(blob);
+    w.run(2 * dt);
+    expect(w.ball().sleepShape).toBeNull();
+    expect(w.ball().vx).toBeGreaterThan(100);
+  });
+
+  it("should wake and fall when the ground under a sleeping ball is cleared", () => {
+    const w = world();
+    w.run(0.5);
+    expect(w.ball().sleepShape).not.toBeNull();
+    clearCrater(w.arena.terrain, { x: 500, y: FLOOR + 8, reach: 60, shape: "round" });
+    w.run(0.3);
+    expect(w.ball().sleepShape).toBeNull();
+    expect(w.ball().y).toBeGreaterThan(FLOOR - R + 4);
   });
 
   it("should be knocked away when a running blob bumps into it", () => {

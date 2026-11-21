@@ -1,6 +1,6 @@
 import type { Rect, Vec2 } from "@/shared/types/gameGeometry.types";
 import type { GameTunables } from "@/shared/types/gameTunables.types";
-import type { TerrainGrid } from "@/features/arena/api/arenaApi";
+import { boxShapeVersion, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { FireState } from "@/features/fire/api/fireApi";
 import type { IceState } from "@/features/ice/api/iceApi";
 import type { BlobFireState } from "@/features/blob-fire/api/blobFireApi";
@@ -37,6 +37,54 @@ import type {
  * then pop when stuck, burnt through or out of the arena. Pure TS, mutates its slice.
  */
 
+/**
+ * Sleeping (physics-objects D9, the common rigid-body practice): a ball resting on the ground
+ * almost still for `SLEEP_AFTER_SECONDS` stops simulating its motion, which is most of its cost.
+ * It wakes when it has speed again (a bump, blast or dive set it), when a moving part moved it
+ * (`wakeObject`) or when the terrain under it changed (a crater, a burn-out).
+ */
+const SLEEP_AFTER_SECONDS = 0.25;
+/** Slower than this (units / s) counts as still. */
+const REST_SPEED = 4;
+
+/** The terrain shape version of the chunks around an object (changes when terrain there does). */
+function shapeUnder(object: PhysicsObject, terrain: TerrainGrid): number {
+  const reach = (object.radius + terrain.cellSize * 2) / terrain.cellSize;
+  const cx = object.x / terrain.cellSize;
+  const cy = object.y / terrain.cellSize;
+  return boxShapeVersion(terrain, {
+    minX: cx - reach,
+    minY: cy - reach,
+    maxX: cx + reach,
+    maxY: cy + reach,
+  });
+}
+
+/** Wakes a sleeping object (something outside its own step moved it). */
+export function wakeObject(object: PhysicsObject): void {
+  object.sleepShape = null;
+  object.restSeconds = 0;
+}
+
+/** Still asleep: no speed and the terrain under it unchanged; otherwise it wakes. */
+function staysAsleep(object: PhysicsObject, terrain: TerrainGrid): boolean {
+  if (object.sleepShape === null) return false;
+  const still = Math.hypot(object.vx, object.vy) < REST_SPEED;
+  if (still && shapeUnder(object, terrain) === object.sleepShape) return true;
+  wakeObject(object);
+  return false;
+}
+
+/** After its own motion: count rest on the ground and fall asleep once it lasted. */
+function settle(object: PhysicsObject, step: { terrain: TerrainGrid; dt: number }): void {
+  const still = object.grounded && Math.hypot(object.vx, object.vy) < REST_SPEED;
+  object.restSeconds = still ? object.restSeconds + step.dt : 0;
+  if (object.restSeconds < SLEEP_AFTER_SECONDS) return;
+  object.vx = 0;
+  object.vy = 0;
+  object.sleepShape = shapeUnder(object, step.terrain);
+}
+
 /** Seconds a moment is kept for the renderer (longer than every effect it drives). */
 const MOMENT_SECONDS = 1;
 /** Bounces closer together than this on one object make one moment (rolling chatter). */
@@ -68,6 +116,8 @@ export function createPhysicsObjectsState(level: LevelDefinition): PhysicsObject
       chill: 0,
       chilledAt: -Infinity,
       heldCarry: null,
+      restSeconds: 0,
+      sleepShape: null,
     });
   });
   return { objects, moments: [], momentCount: 0 };
@@ -121,6 +171,7 @@ function bringBack(state: PhysicsObjectsState, step: { terrain: TerrainGrid; now
   for (const object of state.objects) {
     if (object.goneUntil === null || step.now < object.goneUntil) continue;
     Object.assign(object, { ...object.home, vx: 0, vy: 0, angle: 0, goneUntil: null });
+    wakeObject(object);
     if (objectHitsAt(step.terrain, object, { x: 0, y: 0 })) freeStuckObject(object, step.terrain);
     addMoment(state, object, { kind: "back", soundId: "respawn", atSeconds: step.now });
   }
@@ -167,8 +218,10 @@ function moveAll(
   const { terrain, tunables, dt, now } = args;
   const stuck = new Set<PhysicsObject>();
   for (const object of objects) {
+    if (staysAsleep(object, terrain)) continue;
     const { impact, stuck: wedged } = stepObjectMotion(object, { terrain, tunables, dt });
     if (wedged) stuck.add(object);
+    else settle(object, { terrain, dt });
     const strength = bounceStrength(impact, tunables);
     if (strength === null || now - lastBounceAt(state, object) < BOUNCE_GAP_SECONDS) continue;
     addMoment(state, object, {
