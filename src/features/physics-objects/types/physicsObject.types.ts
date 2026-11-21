@@ -38,6 +38,10 @@ export interface PhysicsObject {
   chilledAt: number;
   /** A moving part's speed it kept on leaving the part, taken off when it lands on one again. */
   heldCarry: Vec2 | null;
+  /** Seconds it has rested on the ground almost still (it falls asleep after `SLEEP_AFTER_SECONDS`). */
+  restSeconds: number;
+  /** The terrain shape version under it when it fell asleep, or null while awake. */
+  sleepShape: number | null;
 }
 
 /**

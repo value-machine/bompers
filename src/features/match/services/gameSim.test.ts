@@ -913,8 +913,23 @@ const SHIPPED_LEVELS = readdirSync("public/levels").map(loadLevel);
 const DIVE_HOLD_STEPS = 30;
 
 /** The level with player 2 settled on spawn `index`, player 1 parked in a corner. */
+const freshGames = new Map<LevelDefinition, KnockGame>();
+/**
+ * A new game on `level`: built once per level (rasterising the terrain is most of the sweep's
+ * cost), then deep-copied for each spawn run, so the sweep stays inside the test timeout as
+ * levels are added.
+ */
+const freshGame = (level: LevelDefinition): KnockGame => {
+  let built = freshGames.get(level);
+  if (!built) {
+    built = createGameState({ level, tunables: DEFAULT_GAME_TUNABLES });
+    freshGames.set(level, built);
+  }
+  return structuredClone(built);
+};
+
 const standOnSpawn = (level: LevelDefinition, index: number): KnockGame | null => {
-  const game = createGameState({ level, tunables: DEFAULT_GAME_TUNABLES });
+  const game = freshGame(level);
   stepGame(game, keys(), dt);
   Object.assign(game.players[1]!, { ...level.spawns[index]!, vx: 0, vy: 0 });
   const corner = { x: level.bounds.x + 10, y: level.bounds.y + 10, vx: 0, vy: 0 };
@@ -944,14 +959,27 @@ const victimEliminatedBy = (game: KnockGame): string | null => {
   return event?.type === "playerEliminated" ? event.cause : null;
 };
 
-/** Furthest the victim got sideways in 3.5 s, or null when it left the map. */
+/** Steps the victim must stand still (not moved at all) to count as settled: 0.25 s. */
+const SETTLED_STEPS = Math.round(0.25 / dt);
+
+/**
+ * Furthest the victim got sideways in 3.5 s, or null when it left the map. A victim that stood
+ * still for `SETTLED_STEPS` after the attack's first second has stopped for good (nothing in
+ * these levels moves a resting blob except a moving part, which keeps it moving), so the sweep
+ * stops there: the sweep over every shipped spawn stays inside the test timeout as levels are added.
+ */
 function carryAfter(game: KnockGame, attack: (step: number) => void): number | null {
-  const startX = game.players[1]!.x;
+  const victim = game.players[1]!;
+  const startX = victim.x;
   let carry = 0;
+  let still = 0;
   for (let i = 0; i < 3.5 / dt; i += 1) {
+    const before = { x: victim.x, y: victim.y };
     attack(i);
     if (victimEliminatedBy(game)) return null;
-    carry = Math.max(carry, Math.abs(game.players[1]!.x - startX));
+    carry = Math.max(carry, Math.abs(victim.x - startX));
+    still = victim.x === before.x && victim.y === before.y ? still + 1 : 0;
+    if (i * dt > 1 && still >= SETTLED_STEPS) break;
   }
   return carry;
 }

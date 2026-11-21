@@ -11,6 +11,7 @@ export {
   objectsInPlay,
   popObject,
   stepPhysicsObjects,
+  wakeObject,
   type StepPhysicsObjectsArgs,
 } from "@/features/physics-objects/services/physicsObjects";
 export type { ObjectBlast } from "@/features/physics-objects/services/objectContacts";

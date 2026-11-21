@@ -1,3 +1,5 @@
+import { inkColor, type InkLayer } from "@/shared/utils/debugInk";
+
 /**
  * Outline widths (DESIGN_LANGUAGE § 3, line style E). The design numbers are at the mockup's
  * reference blob (R = 30); the game blob is R ≈ 13.2 (height 28), so world widths scale by
@@ -40,3 +42,19 @@ export function outlineWidth(kind: OutlineKind, zoom: number): OutlineWidth {
   const step = Math.round(Math.log(px / z) / STEP);
   return { width: Math.exp(step * STEP), step };
 }
+
+/**
+ * The ink line style (DESIGN_LANGUAGE § 3, line style E): stroked at twice the visible `width`
+ * under the fill, so only the outer half shows, in ink with round joins. The one style for the
+ * silhouette of blobs and physics objects (ball-outline lap; first step of the backlog task "One
+ * width and join source for props, blobs and effects": the other props and effects still set
+ * their own).
+ */
+export const inkStroke = (
+  width: number,
+  layer: InkLayer = "other"
+): { width: number; color: number; join: "round" } => ({
+  width: width * 2,
+  color: inkColor(layer),
+  join: "round",
+});

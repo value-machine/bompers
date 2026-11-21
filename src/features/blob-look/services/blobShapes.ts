@@ -2,7 +2,7 @@ import { Container, FillGradient, Graphics } from "pixi.js";
 import { GAME_PALETTE, weaponLook } from "@/shared/config/gamePalette";
 import { traceEmblem } from "@/shared/services/emblemRenderer";
 import { traceWeaponTube } from "@/shared/services/weaponTubeRenderer";
-import { inkColor } from "@/shared/utils/debugInk";
+import { inkStroke } from "@/shared/utils/outlineWidth";
 import { playerEmblemShape } from "@/shared/utils/playerEmblem";
 import { weaponTubeParts, type WeaponTubeParts } from "@/shared/utils/weaponTube";
 import type { WeaponItemId } from "@/shared/types/weaponItems.types";
@@ -157,28 +157,25 @@ function bodyGradient(slot: number): FillGradient {
 export const helmetCentreY = (m: BlobMetrics): number =>
   (m.helmet.top + m.helmet.rim) / 2 + 3 * m.u;
 
-const inkStroke = (width: number) => ({
-  width: width * 2,
-  color: inkColor("blobs"),
-  join: "round" as const,
-});
+/** The shared ink line in the blobs' debug layer. */
+const blobInk = (width: number) => inkStroke(width, "blobs");
 
 /** Ink pass of the body (the helmet has its own, so it can wobble on its spring). */
 export const drawBodyInk = (
   g: Graphics,
   m: BlobMetrics,
   look: { width: number; outline?: readonly ShapePoint[] }
-): Graphics => bodyPath(g.clear(), m, look.outline).stroke(inkStroke(look.width));
+): Graphics => bodyPath(g.clear(), m, look.outline).stroke(blobInk(look.width));
 
 export const drawHelmetInk = (g: Graphics, m: BlobMetrics, width: number): Graphics =>
-  helmetPath(g.clear(), m).stroke(inkStroke(width));
+  helmetPath(g.clear(), m).stroke(blobInk(width));
 
 export const drawFootInk = (g: Graphics, m: BlobMetrics, width: number): Graphics =>
-  footPath(g.clear(), m).stroke(inkStroke(width));
+  footPath(g.clear(), m).stroke(blobInk(width));
 
 /** Ink pass of a weapon's helmet tube (DESIGN_LANGUAGE § 9: the silhouette names the weapon). */
 export const drawTubeInk = (g: Graphics, tube: WeaponTubeParts, width: number): Graphics =>
-  traceWeaponTube(g.clear(), tube.parts).stroke(inkStroke(width));
+  traceWeaponTube(g.clear(), tube.parts).stroke(blobInk(width));
 
 /** Fill pass of the body: the gradient egg. */
 export const drawBodyFill = (
