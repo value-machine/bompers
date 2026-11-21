@@ -908,7 +908,16 @@ describe("level routes — Bobsled Run needs the roll", () => {
  * level into its middle. Player 1 is the attacker (parked in a corner for the rocket).
  */
 type KnockGame = ReturnType<typeof createGameState>;
-const SHIPPED_LEVELS = readdirSync("public/levels").map(loadLevel);
+/**
+ * Every shipped level's geometry, without its physics objects: this sweep compares how far a
+ * headbutt and a rocket push a standing blob, and a ball next to a spawn would block one slide
+ * or catch the rocket instead (physics-objects lap). Terrain objects (trees) stay.
+ */
+const withoutPhysicsObjects = (level: LevelDefinition): LevelDefinition => ({
+  ...level,
+  objects: level.objects?.filter((object) => object.terrainIndices.length > 0),
+});
+const SHIPPED_LEVELS = readdirSync("public/levels").map(loadLevel).map(withoutPhysicsObjects);
 /** Fire held this long starts the dive (a grounded headbutt: wind-up, then travel). */
 const DIVE_HOLD_STEPS = 30;
 
@@ -1257,6 +1266,25 @@ describe("gameSim — physics objects", () => {
     const [ramp, , , riding] = state.physicsObjects.objects;
     expect(ramp!.x).toBeGreaterThan(300);
     expect(riding!.y).toBeLessThan(560);
+  });
+
+  it("should run the Ball Playground with all 26 balls in play and half of them asleep when left alone", () => {
+    const text = readFileSync(
+      path.join(process.cwd(), "public/levels/ball-playground.html"),
+      "utf8"
+    );
+    const parsed = parseLevelFile(text);
+    if (!parsed.ok) throw new Error("ball-playground did not import");
+    expect(parsed.warnings).toEqual([]);
+    const state = createGameState({ level: parsed.level, tunables: DEFAULT_GAME_TUNABLES });
+    stepFor(state, 4);
+    const balls = state.physicsObjects.objects;
+    expect(balls).toHaveLength(26);
+    // None placed inside terrain or another ball (that would pop it), none fell out.
+    expect(state.physicsObjects.moments.filter((moment) => moment.kind === "pop")).toEqual([]);
+    expect(balls.every((ball) => ball.goneUntil === null)).toBe(true);
+    // Resting balls sleep (the riding ones and those still rolling or rocking stay awake).
+    expect(balls.filter((ball) => ball.sleepShape !== null).length).toBeGreaterThanOrEqual(13);
   });
 
   it("should spawn the level's ball and keep it resting on the floor when the match runs", () => {

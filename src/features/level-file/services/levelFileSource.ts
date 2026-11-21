@@ -21,6 +21,7 @@ export const BUILT_IN_LEVEL_FILES = [
   "slush-bowl.html",
   "tree-grove.html",
   "beach-court.html",
+  "ball-playground.html",
 ] as const;
 
 /** Served URL of a built-in level file. */
