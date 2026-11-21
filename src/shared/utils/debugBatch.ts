@@ -54,32 +54,51 @@ const label = (element: BatchElement): string =>
 /** Positions farther than this from the origin (world units) are garbage, not geometry. */
 const FAR = 100_000;
 
+interface PackedElement {
+  element: BatchElement;
+  buffer: Uint16Array | Uint32Array;
+  index: number;
+  offset: number;
+}
+
+/** The first index the element wrote outside its own vertices, or null. */
+function indexOutside(at: PackedElement): number | null {
+  const top = at.offset + at.element.attributeSize;
+  for (let i = at.index; i < at.index + at.element.indexSize; i += 1) {
+    const v = at.buffer[i] ?? -1;
+    if (v < at.offset || v >= top) return v;
+  }
+  return null;
+}
+
+const sane = (x: number, y: number): boolean =>
+  Number.isFinite(x) && Number.isFinite(y) && Math.abs(x) <= FAR && Math.abs(y) <= FAR;
+
+/** The first of the element's vertices at a NaN or absurd position, or null. */
+function farVertex(batcher: PatchedBatcher, at: PackedElement): number | null {
+  const f32 = batcher.attributeBuffer.float32View;
+  const top = at.offset + at.element.attributeSize;
+  for (let v = at.offset; v < top; v += 1) {
+    const x = f32[v * batcher.vertexSize] ?? Number.NaN;
+    const y = f32[v * batcher.vertexSize + 1] ?? Number.NaN;
+    if (!sane(x, y)) return v - at.offset;
+  }
+  return null;
+}
+
 /**
  * What the GPU will draw for one element: every index it wrote stays inside its own vertices,
  * and every one of its vertex positions is a finite, sane number.
  */
-function checkElement(
-  batcher: PatchedBatcher,
-  at: { element: BatchElement; buffer: Uint16Array | Uint32Array; index: number; offset: number }
-): void {
-  const { element, buffer, index, offset } = at;
-  const top = offset + element.attributeSize;
-  for (let i = index; i < index + element.indexSize; i += 1) {
-    const v = buffer[i] ?? -1;
-    if (v < offset || v >= top) {
-      report("index outside element", { element: label(element), index: v, own: [offset, top] });
-      return;
-    }
+function checkElement(batcher: PatchedBatcher, at: PackedElement): void {
+  const outside = indexOutside(at);
+  if (outside !== null) {
+    const own = [at.offset, at.offset + at.element.attributeSize];
+    report("index outside element", { element: label(at.element), index: outside, own });
+    return;
   }
-  const f32 = batcher.attributeBuffer.float32View;
-  for (let v = offset; v < top; v += 1) {
-    const x = f32[v * batcher.vertexSize] ?? Number.NaN;
-    const y = f32[v * batcher.vertexSize + 1] ?? Number.NaN;
-    if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > FAR || Math.abs(y) > FAR) {
-      report("far vertex", { element: label(element), vertex: v - offset, x, y });
-      return;
-    }
-  }
+  const far = farVertex(batcher, at);
+  if (far !== null) report("far vertex", { element: label(at.element), vertex: far });
 }
 
 function patch(): void {
@@ -114,13 +133,11 @@ function patch(): void {
   };
   proto.packIndex = function patchedPackIndex(
     this: PatchedBatcher,
-    element: BatchElement,
-    buffer: Uint16Array | Uint32Array,
-    index: number,
-    offset: number
+    ...args: Parameters<PatchedBatcher["packIndex"]>
   ) {
     counts.pack += 1;
-    packIndex.call(this, element, buffer, index, offset);
+    packIndex.apply(this, args);
+    const [element, buffer, index, offset] = args;
     checkElement(this, { element, buffer, index, offset });
     const top = offset + element.attributeSize;
     if (top > counts.maxVertex) {
