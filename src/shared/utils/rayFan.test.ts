@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PosedField, SampleField } from "@/shared/types/sampleFront.types";
+import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import { castRayFan } from "@/shared/utils/rayFan";
 
 const CELL = 4;
@@ -75,5 +76,42 @@ describe("ray fan bodies (crouch-sink D4)", () => {
 
   it("should still hit a lowered body when the ray runs along its lower half", () => {
     expect(hits(150 - 6, 16.8)).toBe(true);
+  });
+});
+
+describe("freeze ray's frost fan (freeze-ray-spread D1)", () => {
+  // A floor whose top is at y = 124 (sample row 31), the helmet 24 units above it.
+  const floor = (): PosedField[] => [{ field: field(100, 50, (_cx, cy) => cy >= 31) }];
+  const ray = DEFAULT_GAME_TUNABLES.combat.freezeRay;
+  const aimDown = (degrees: number) => ({
+    x: Math.cos((degrees * Math.PI) / 180),
+    y: Math.sin((degrees * Math.PI) / 180),
+  });
+
+  it("should land its low rays at the feet and reach far with its top ray when aimed at the floor in front", () => {
+    const { rays } = castRayFan({
+      fields: floor(),
+      bodies: [],
+      origin: { x: 40, y: 100 },
+      aim: aimDown(32),
+      shape: ray,
+    });
+    const ahead = rays.map((hit) => hit.end.x - 40);
+    expect(rays).toHaveLength(7);
+    expect(Math.min(...ahead)).toBeLessThan(25);
+    expect(Math.max(...ahead)).toBeGreaterThan(90);
+    expect(rays.every((hit) => hit.sample !== null)).toBe(true);
+  });
+
+  it("should reach a blob only once however many rays touch it", () => {
+    const blob = { x: 120, y: 120, width: 28, height: 28 };
+    const hits = castRayFan({
+      fields: [{ field: field(100, 50, () => false) }],
+      bodies: [blob],
+      origin: { x: 40, y: 106 },
+      aim: { x: 1, y: 0 },
+      shape: ray,
+    });
+    expect(hits.bodies.size).toBe(1);
   });
 });

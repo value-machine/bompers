@@ -23,42 +23,44 @@ const beam = (aimX: 1 | -1): FreezeRayBeam => ({
 const points = (flat: readonly number[]): { x: number; y: number }[] =>
   Array.from({ length: flat.length / 2 }, (_, i) => ({ x: flat[i * 2]!, y: flat[i * 2 + 1]! }));
 
-describe("iceShapes — cold breath (ice-element D9)", () => {
-  it("should start thin at the emitter and be widest by the head when fully grown", () => {
+describe("iceShapes — cold breath as a frost fan (freeze-ray-spread D1)", () => {
+  it("should start thin at the emitter and run through every ray's own end when fully grown", () => {
     const shape = breathShape(beam(1), { timeSeconds: 0, grow: 1 });
-    const neck = points(shape.neck);
-    const half = neck.length / 2;
-    const widthAt = (i: number): number => Math.abs(neck[i]!.y - neck[neck.length - 1 - i]!.y);
-    expect(neck[0]!.x).toBeCloseTo(100 + ICE_LOOK.breath.emitterReach, 5);
-    expect(widthAt(0)).toBeLessThan(widthAt(half - 1));
+    const outline = points(shape.neck);
+    const first = outline[0]!;
+    const last = outline[outline.length - 1]!;
+    expect(first.x).toBeCloseTo(100 + ICE_LOOK.breath.emitterReach, 5);
+    expect(Math.abs(first.y - last.y)).toBeCloseTo(ICE_LOOK.breath.neckStart * 2, 5);
+    expect(outline.slice(1, -1)).toEqual(beam(1).ends);
   });
 
-  it("should put its head near the end of the middle ray so it lands where the ice does", () => {
-    const shape = breathShape(beam(1), { timeSeconds: 0, grow: 1 });
-    expect(shape.head.x).toBeGreaterThan(100 + 180 * 0.85);
-    expect(shape.head.x).toBeLessThan(100 + 180);
-    expect(shape.lobes).toHaveLength(ICE_LOOK.breath.lobes + 1);
+  it("should end each ray where the sim's ray ended when aimed at the floor in front", () => {
+    const floor: FreezeRayBeam = {
+      ...beam(1),
+      ends: [
+        { x: 140, y: 120 },
+        { x: 190, y: 120 },
+        { x: 280, y: 110 },
+      ],
+    };
+    const outline = points(breathShape(floor, { timeSeconds: 0, grow: 1 }).neck).slice(1, -1);
+    expect(outline).toEqual(floor.ends);
   });
 
-  it("should hide the neck's end corners inside the head whatever the lobes are doing", () => {
-    for (const timeSeconds of [0, 0.37, 1.1, 2.9]) {
-      const shape = breathShape(beam(1), { timeSeconds, grow: 1 });
-      const neck = points(shape.neck);
-      const half = neck.length / 2;
-      for (const corner of [neck[half - 1]!, neck[half]!]) {
-        const covered = shape.lobes.some(
-          (lobe) => Math.hypot(corner.x - lobe.x, corner.y - lobe.y) < lobe.r
-        );
-        expect(covered).toBe(true);
-      }
+  it("should put a frost puff on every ray's end and rolling lobes only where a ray landed", () => {
+    const shape = breathShape(
+      { ...beam(1), touched: [false, true, false] },
+      { timeSeconds: 0, grow: 1 }
+    );
+    expect(shape.lobes).toHaveLength(3 + ICE_LOOK.breath.puffLobes);
+    for (const end of beam(1).ends) {
+      expect(shape.lobes.some((lobe) => lobe.x === end.x && lobe.y === end.y)).toBe(true);
     }
   });
 
-  it("should lift toward the top of the screen whichever way the ray points", () => {
-    for (const aimX of [1, -1] as const) {
-      const shape = breathShape(beam(aimX), { timeSeconds: 0, grow: 1 });
-      expect(shape.head.y).toBeLessThan(100);
-    }
+  it("should keep its head on the middle ray's end so the release lets go where the ice is", () => {
+    const shape = breathShape(beam(-1), { timeSeconds: 0, grow: 1 });
+    expect(shape.head).toEqual(beam(-1).ends[1]);
   });
 
   it("should be shorter while it grows in", () => {

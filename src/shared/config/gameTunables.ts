@@ -283,15 +283,16 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       push: 900,
     },
     // Freeze ray (ice-element D1): 3 s of charge like the torch, a beam of about six blob widths
-    // (180 units) and a third of the torch's push. Frost cone (freeze-ray buff D): ±7° on 5 rays
-    // (was ±3° on 3), about 44 units across at its end, so a dodging blob stays in it.
+    // (180 units) and a third of the torch's push. Frost fan (owner, freeze-ray-spread D1): ±20° on
+    // 7 rays (was ±7° on 5), each to its own impact: aimed at the floor in front, the low rays
+    // land at the feet and the top ray still reaches about 100 units ahead.
     freezeRay: {
       ammo: 3,
       fireCooldown: 0,
       recoil: 0,
       length: 180,
-      halfAngleDegrees: 7,
-      rays: 5,
+      halfAngleDegrees: 20,
+      rays: 7,
       push: 300,
     },
     // Beam clash (beam-clash D1): beams of reacting elements end each other where they come

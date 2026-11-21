@@ -7,8 +7,9 @@ import type { FreezeRayBeam } from "@/features/ice/types/ice.types";
  * ice-element D4: "the same shape as a burning shape could also be a frozen shape";
  * element-overlay-shape D1). Here: the gloss streaks on it, at fixed places, the slippery cue of
  * DESIGN_LANGUAGE § 2.
- * The freeze ray is "Cold breath" (owner, ice-element D9): the torch's twin in ice colours, a
- * thin neck that billows into a rolling cloud where it lands, with snow specks drifting down.
+ * The freeze ray is "Cold breath" (owner, ice-element D9) drawn as the "Frost fan" (owner,
+ * freeze-ray-spread D1): one wide spray from the emitter whose edge runs through every ray's own
+ * end, a frost puff where each ray lands, and snow specks drifting down.
  */
 export const ICE_LOOK = {
   /** One block in this many carries a gloss streak. */
@@ -22,22 +23,20 @@ export const ICE_LOOK = {
     /** Seconds to grow in, and for the head to let go after release (juice windows, as the torch). */
     growSeconds: 0.12,
     releaseSeconds: 0.3,
-    /** Half-width of the neck at the emitter, and what it adds by the head, world units. */
+    /** Half-width of the spray at the emitter, world units. */
     neckStart: 1.4,
-    neckFlare: 5.5,
-    /** How far the neck's upper side lifts by the head, world units (cold mist billows up a bit). */
-    neckLift: 3,
-    /** Where the head sits along the breath (0 emitter … 1 end). */
-    headAt: 0.93,
-    /** The head's lobes: how many, their radius, the ring they roll on, turns per second. */
-    lobes: 6,
-    lobeRadius: 6.5,
-    lobeRing: 5.5,
-    rollHz: 0.4,
-    /** How much wider than the neck's end the head's round heart is, world units. */
-    heartMargin: 3,
-    /** The lighter inside as a share of the outer shape. */
+    /** The lighter inside: how far toward each ray's end it reaches, and its width at the emitter. */
     innerShare: 0.55,
+    innerReach: 0.8,
+    /**
+     * The frost puff at each ray's end: a round heart (it rounds the fan's corner there), plus
+     * `puffLobes` lobes rolling on a ring where the ray lands on something; turns per second.
+     */
+    puffRadius: 4.5,
+    puffLobes: 3,
+    puffRing: 3,
+    lobeRadius: 3.2,
+    rollHz: 0.4,
     /** Snow specks: how many, how far they fall, their radius, falls per second. */
     specks: 6,
     speckFall: 22,
@@ -89,61 +88,77 @@ export interface Disc {
   r: number;
 }
 
-/** One freeze ray as a cold breath: a neck (outer and lighter inside), a rolling head, specks. */
+/** One freeze ray as a frost fan: the spray (outer and lighter inside), frost puffs, specks. */
 export interface BreathShape {
-  /** The neck's outline: from the emitter out along the upper side and back along the lower. */
+  /** The spray's outline: from the emitter out through every ray's end and back. */
   neck: number[];
-  /** The lighter inside of the neck. */
+  /** The lighter inside of the spray. */
   neckInner: number[];
-  /** The head: a round heart that covers the neck's end, then the lobes rolling around it. */
+  /** The frost puffs: a heart at every ray's end, and rolling lobes where a ray lands. */
   lobes: Disc[];
-  /** Snow specks drifting down under the breath. */
+  /** Snow specks drifting down under the spray. */
   specks: Disc[];
-  /** Centre and radius of the head, kept for the release puff. */
+  /** End and puff radius of the middle ray, kept for the release puff. */
   head: Vec2;
   headRadius: number;
 }
 
 const TAU = Math.PI * 2;
-const NECK_STEPS = 10;
 
-/** The breath's frame: emitter point, unit aim and normal, and its length to the middle ray's end. */
+/** The spray's frame: emitter point, the unit aim of the middle ray, each ray's grown end. */
 function breathFrame(beam: FreezeRayBeam, grow: number) {
   const look = ICE_LOOK.breath;
-  const first = beam.ends[0] ?? beam.origin;
-  const last = beam.ends[beam.ends.length - 1] ?? beam.origin;
-  const mid = { x: (first.x + last.x) / 2, y: (first.y + last.y) / 2 };
-  const full = Math.hypot(mid.x - beam.origin.x, mid.y - beam.origin.y) || 1;
-  const aim = { x: (mid.x - beam.origin.x) / full, y: (mid.y - beam.origin.y) / full };
+  const middle = beam.ends[Math.floor(beam.ends.length / 2)] ?? beam.origin;
+  const full = Math.hypot(middle.x - beam.origin.x, middle.y - beam.origin.y) || 1;
+  const aim = { x: (middle.x - beam.origin.x) / full, y: (middle.y - beam.origin.y) / full };
   const reach = Math.min(look.emitterReach, full * 0.5);
   const start = { x: beam.origin.x + aim.x * reach, y: beam.origin.y + aim.y * reach };
-  // The upper side is the normal that points up on screen (y down), whichever way the aim goes.
-  const side = aim.x >= 0 ? 1 : -1;
-  const up = { x: aim.y * side, y: -aim.x * side };
-  return { start, aim, up, length: (full - reach) * Math.min(1, Math.max(0, grow)) };
+  const k = Math.min(1, Math.max(0, grow));
+  // A ray that ends before the emitter (a wall at the dish) ends at the emitter.
+  const ends = beam.ends.map((end) => {
+    const along = (end.x - start.x) * aim.x + (end.y - start.y) * aim.y;
+    if (along <= 0) return start;
+    return { x: start.x + (end.x - start.x) * k, y: start.y + (end.y - start.y) * k };
+  });
+  return { start, aim, ends, middle: Math.floor(beam.ends.length / 2) };
 }
 
 type BreathFrame = ReturnType<typeof breathFrame>;
 
-/** A point `d` (0 … 1) along the breath, `lift` world units toward its upper side. */
-const breathPoint = (f: BreathFrame, d: number, lift: number): Vec2 => ({
-  x: f.start.x + f.aim.x * f.length * d + f.up.x * lift,
-  y: f.start.y + f.aim.y * f.length * d + f.up.y * lift,
-});
+/** The spray as a polygon: `width` either side of the emitter, out through each ray's end. */
+function sprayPolygon(f: BreathFrame, look: { width: number; reach: number }): number[] {
+  const n = { x: -f.aim.y, y: f.aim.x };
+  const at = (end: Vec2): Vec2 => ({
+    x: f.start.x + (end.x - f.start.x) * look.reach,
+    y: f.start.y + (end.y - f.start.y) * look.reach,
+  });
+  const points = [
+    { x: f.start.x - n.x * look.width, y: f.start.y - n.y * look.width },
+    ...f.ends.map(at),
+    { x: f.start.x + n.x * look.width, y: f.start.y + n.y * look.width },
+  ];
+  return points.flatMap((p) => [p.x, p.y]);
+}
 
-/** The neck as a polygon: thin at the emitter, flaring and lifting toward the head. */
-function neckPolygon(f: BreathFrame, share: number): number[] {
+/** The frost puff at one ray's end: its heart, and rolling lobes when the ray landed. */
+function puffAt(end: Vec2, opts: { landed: boolean; scale: number; turn: number; i: number }) {
   const look = ICE_LOOK.breath;
-  const half = (d: number): number => (look.neckStart + look.neckFlare * d * d) * share;
-  const steps = Array.from({ length: NECK_STEPS + 1 }, (_, i) => (i / NECK_STEPS) * look.headAt);
-  const upper = steps.map((d) => breathPoint(f, d, half(d) + look.neckLift * d * d));
-  const lower = steps.map((d) => breathPoint(f, d, -half(d) + look.neckLift * d * d)).reverse();
-  return [...upper, ...lower].flatMap((p) => [p.x, p.y]);
+  const heart = { x: end.x, y: end.y, r: look.puffRadius * opts.scale };
+  if (!opts.landed) return [heart];
+  const lobes = Array.from({ length: look.puffLobes }, (_, j) => {
+    const a = opts.turn + opts.i * 1.7 + (j * TAU) / look.puffLobes;
+    return {
+      x: end.x + Math.cos(a) * look.puffRing * opts.scale,
+      y: end.y + Math.sin(a) * look.puffRing * 0.7 * opts.scale,
+      r: look.lobeRadius * opts.scale,
+    };
+  });
+  return [heart, ...lobes];
 }
 
 /**
- * One freeze ray as a cold breath. `grow` (0 … 1) is how far it has grown in since it started.
- * It follows the middle ray the sim cast, so it lands where the ice does.
+ * One freeze ray as a frost fan. `grow` (0 … 1) is how far it has grown in since it started.
+ * Every ray the sim cast is drawn to its own end, so the spray lands where the ice does.
  */
 export function breathShape(
   beam: FreezeRayBeam,
@@ -151,26 +166,16 @@ export function breathShape(
 ): BreathShape {
   const look = ICE_LOOK.breath;
   const f = breathFrame(beam, at.grow);
-  const head = breathPoint(f, look.headAt, look.neckLift * look.headAt * look.headAt);
   const scale = Math.min(1, Math.max(0.2, at.grow));
   const turn = at.timeSeconds * TAU * look.rollHz + beam.slot;
-  const rolling = Array.from({ length: look.lobes }, (_, i) => {
-    const a = turn + (i * TAU) / look.lobes;
-    const pulse = 1 + 0.15 * Math.sin(at.timeSeconds * 5 + i * 2);
-    return {
-      x: head.x + Math.cos(a) * look.lobeRing * scale,
-      y: head.y + Math.sin(a) * look.lobeRing * 0.7 * scale,
-      r: look.lobeRadius * scale * pulse,
-    };
-  });
-  // A round heart behind the lobes, wider than the neck's end: the neck's square end and its
-  // corners always sit inside the cloud, whatever the lobes are doing (owner, 2026-11-18).
-  const neckEnd = look.neckStart + look.neckFlare * look.headAt * look.headAt;
-  const heart = { x: head.x, y: head.y, r: (neckEnd + look.heartMargin) * scale };
-  const lobes = [heart, ...rolling];
+  const lobes = f.ends.flatMap((end, i) =>
+    puffAt(end, { landed: beam.touched[i] ?? false, scale, turn, i })
+  );
+  const head = f.ends[f.middle] ?? f.start;
   const specks = Array.from({ length: look.specks }, (_, i) => {
     const fall = (at.timeSeconds * look.speckHz + i / look.specks) % 1;
-    const p = breathPoint(f, 0.3 + (0.6 * i) / look.specks, 0);
+    const d = 0.3 + (0.6 * i) / look.specks;
+    const p = { x: f.start.x + (head.x - f.start.x) * d, y: f.start.y + (head.y - f.start.y) * d };
     return {
       x: p.x + Math.sin(i * 3 + at.timeSeconds * 2) * 2,
       y: p.y + 3 + fall * look.speckFall,
@@ -178,12 +183,12 @@ export function breathShape(
     };
   });
   return {
-    neck: neckPolygon(f, 1),
-    neckInner: neckPolygon(f, look.innerShare),
+    neck: sprayPolygon(f, { width: look.neckStart, reach: 1 }),
+    neckInner: sprayPolygon(f, { width: look.neckStart * look.innerShare, reach: look.innerReach }),
     lobes,
     specks,
     head,
-    headRadius: (look.lobeRing + look.lobeRadius) * scale,
+    headRadius: (look.puffRing + look.puffRadius) * scale,
   };
 }
 
