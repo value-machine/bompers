@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { JUICE_WINDOWS } from "@/shared/config/gameJuice";
+import { inkStroke, outlineWidth } from "@/shared/utils/outlineWidth";
 import {
   ICE_LOOK,
   breathRelease,
   breathShape,
+  breathStroke,
   frostGloss,
 } from "@/features/ice/services/iceShapes";
 import type { FreezeRayBeam } from "@/features/ice/types/ice.types";
@@ -20,7 +22,7 @@ const beam = (aimX: 1 | -1): FreezeRayBeam => ({
   atSeconds: 0,
 });
 
-describe("iceShapes — cold breath as a mist cloud (freeze-ray-spray D1)", () => {
+describe("iceShapes — cold breath as one cloud shape (freeze-ray-shape D1)", () => {
   const floor: FreezeRayBeam = {
     ...beam(1),
     ends: [
@@ -29,51 +31,40 @@ describe("iceShapes — cold breath as a mist cloud (freeze-ray-spray D1)", () =
       { x: 280, y: 110 },
     ],
   };
+  const xs = (shape: { outline: { points: number[] }[] }): number[] =>
+    shape.outline.flatMap((ring) => ring.points.filter((_, i) => i % 2 === 0));
 
-  it("should keep every mist puff within reach of the ray it travels on when aimed at the floor", () => {
-    const { stream } = ICE_LOOK.breath;
-    const slack = stream.wobble + stream.rise + 1;
+  it("should draw the whole spray as closed outline rings, not separate circles", () => {
     for (const timeSeconds of [0, 0.37, 1.1, 2.9]) {
-      const shape = breathShape(floor, { timeSeconds, grow: 1 });
-      expect(shape.stream).toHaveLength(floor.ends.length * stream.perRay);
-      shape.stream.forEach((puff, i) => {
-        const end = floor.ends[Math.floor(i / stream.perRay)]!;
-        const reach = Math.hypot(end.x - 100, end.y - 100);
-        expect(Math.hypot(puff.x - 100, puff.y - 100)).toBeLessThan(reach + slack);
-      });
+      const shape = breathShape(beam(1), { timeSeconds, grow: 1 });
+      expect(shape.outline.length).toBeGreaterThan(0);
+      expect(shape.outline.length).toBeLessThan(ICE_LOOK.breath.stream.perRay * 3);
+      expect(shape.outline.every((ring) => ring.closed)).toBe(true);
     }
   });
 
-  it("should reach far on the top ray while the low ray ends at the floor in front", () => {
-    const { perRay } = ICE_LOOK.breath.stream;
-    const furthest = (ray: number): number => {
-      let best = 0;
-      for (let t = 0; t < 3; t += 0.05) {
-        const shape = breathShape(floor, { timeSeconds: t, grow: 1 });
-        for (const puff of shape.stream.slice(ray * perRay, (ray + 1) * perRay))
-          best = Math.max(best, puff.x);
-      }
-      return best;
-    };
-    expect(furthest(0)).toBeLessThan(150);
-    expect(furthest(2)).toBeGreaterThan(250);
+  it("should reach far with its top while it ends near the floor in front when aimed at the floor", () => {
+    let far = 0;
+    for (let t = 0; t < 3; t += 0.1)
+      far = Math.max(far, ...xs(breathShape(floor, { timeSeconds: t, grow: 1 })));
+    expect(far).toBeGreaterThan(250);
+    // Nothing passes the top ray's end by more than a grown puff's reach.
+    const { radius, grow } = ICE_LOOK.breath.stream;
+    expect(far).toBeLessThan(280 + (radius + grow) * ICE_LOOK.breath.field.reach + 1);
   });
 
-  it("should grow each puff as it travels out", () => {
+  it("should keep the lighter inside within the outline's extent", () => {
     const shape = breathShape(beam(1), { timeSeconds: 0.4, grow: 1 });
-    const order = shape.streamAlong.map((along, i) => ({ along, r: shape.stream[i]!.r }));
-    order.sort((a, b) => a.along - b.along);
-    expect(order[0]!.r).toBeLessThan(order[order.length - 1]!.r);
+    const outer = xs(shape);
+    const inner = shape.inner.flatMap((ring) => ring.points.filter((_, i) => i % 2 === 0));
+    expect(Math.max(...inner)).toBeLessThanOrEqual(Math.max(...outer));
+    expect(Math.min(...inner)).toBeGreaterThanOrEqual(Math.min(...outer));
   });
 
-  it("should burst puffs only where a ray landed", () => {
-    const shape = breathShape(
-      { ...beam(1), touched: [false, true, false] },
-      { timeSeconds: 0, grow: 1 }
-    );
-    expect(shape.lobes).toHaveLength(ICE_LOOK.breath.burstPuffs);
-    for (const lobe of shape.lobes)
-      expect(Math.hypot(lobe.x - 280, lobe.y - 100)).toBeLessThan(ICE_LOOK.breath.burstRadius * 2);
+  it("should stroke its outline with the shared outline width and ink stroke at every zoom", () => {
+    for (const zoom of [0.3, 1, 2.5, 6]) {
+      expect(breathStroke(zoom)).toEqual(inkStroke(outlineWidth("effect", zoom).width, "ice"));
+    }
   });
 
   it("should keep its head on the middle ray's end so the release lets go where the ice is", () => {

@@ -2,6 +2,7 @@ import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { inkColor } from "@/shared/utils/debugInk";
+import type { OutlineRing } from "@/shared/utils/contourRings";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
 import {
   EMPTY_CELL,
@@ -19,6 +20,7 @@ import {
   ICE_LOOK,
   breathRelease,
   breathShape,
+  breathStroke,
   frostGloss,
   type BreathShape,
   type Disc,
@@ -186,20 +188,27 @@ function discs(g: Graphics, list: readonly Disc[], look: { grow?: number; scale?
   return list.length > 0;
 }
 
-/** One breath: every puff in ink first (one outline round the cloud), then ice, then the lighter inside. */
-function drawBreath(g: Graphics, shape: BreathShape, ink: number): void {
-  const look = ICE_LOOK.breath;
-  const inner = shape.stream.filter((_, i) => (shape.streamAlong[i] ?? 1) < look.innerUntil);
-  discs(g, shape.stream, { grow: ink });
-  discs(g, shape.lobes, { grow: ink });
-  discs(g, shape.specks, { grow: ink * 0.6 });
-  g.fill(INK);
-  discs(g, shape.stream, {});
-  discs(g, shape.lobes, {});
-  g.fill(COLORS.body);
-  discs(g, inner, { scale: look.innerShare });
-  discs(g, shape.lobes, { scale: look.innerShare });
-  g.fill(COLORS.lip);
+/** Adds each ring as a polygon to the pending shapes; returns whether there was any. */
+function rings(g: Graphics, list: readonly OutlineRing[]): boolean {
+  for (const ring of list) g.poly(ring.points, ring.closed);
+  return list.length > 0;
+}
+
+/**
+ * One breath: its single outline in the shared ink stroke (twice the outline width, under the
+ * fill, so one band of the same width shows everywhere), then the ice fill, the lighter inside
+ * and the specks.
+ */
+function drawBreath(
+  g: Graphics,
+  shape: BreathShape,
+  look: { ink: number; stroke: ReturnType<typeof breathStroke> }
+): void {
+  const { ink } = look;
+  if (rings(g, shape.outline)) g.stroke(look.stroke);
+  if (discs(g, shape.specks, { grow: ink * 0.6 })) g.fill(INK);
+  if (rings(g, shape.outline)) g.fill(COLORS.body);
+  if (rings(g, shape.inner)) g.fill(COLORS.lip);
   if (discs(g, shape.specks, {})) g.fill(COLORS.gloss);
 }
 
@@ -222,7 +231,7 @@ function drawBreaths(view: IceView, frame: IceFrame, ink: number): Set<number> {
       head: shape.head,
       radius: shape.headRadius,
     });
-    drawBreath(view.beams, shape, ink);
+    drawBreath(view.beams, shape, { ink, stroke: breathStroke(frame.zoom) });
   }
   return on;
 }
@@ -240,7 +249,7 @@ function drawReleases(view: IceView, frame: IceFrame, look: { ink: number; on: S
     const puffs = breathRelease(memo, k);
     if (discs(g, puffs, { grow: look.ink })) g.fill(INK);
     if (discs(g, puffs, {})) g.fill(COLORS.body);
-    if (discs(g, puffs, { scale: ICE_LOOK.breath.innerShare })) g.fill(COLORS.lip);
+    if (discs(g, puffs, { scale: ICE_LOOK.breath.releaseInner })) g.fill(COLORS.lip);
   }
 }
 
