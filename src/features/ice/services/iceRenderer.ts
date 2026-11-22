@@ -186,19 +186,19 @@ function discs(g: Graphics, list: readonly Disc[], look: { grow?: number; scale?
   return list.length > 0;
 }
 
-/** One breath: everything in ink, then the ice body, the lighter inside and the white specks. */
+/** One breath: every puff in ink first (one outline round the cloud), then ice, then the lighter inside. */
 function drawBreath(g: Graphics, shape: BreathShape, ink: number): void {
-  g.poly(shape.neck)
-    .fill(INK)
-    .stroke({ width: ink * 2, color: INK, join: "round" });
+  const look = ICE_LOOK.breath;
+  const inner = shape.stream.filter((_, i) => (shape.streamAlong[i] ?? 1) < look.innerUntil);
+  discs(g, shape.stream, { grow: ink });
   discs(g, shape.lobes, { grow: ink });
   discs(g, shape.specks, { grow: ink * 0.6 });
   g.fill(INK);
-  g.poly(shape.neck);
+  discs(g, shape.stream, {});
   discs(g, shape.lobes, {});
   g.fill(COLORS.body);
-  g.poly(shape.neckInner);
-  discs(g, shape.lobes, { scale: ICE_LOOK.breath.innerShare });
+  discs(g, inner, { scale: look.innerShare });
+  discs(g, shape.lobes, { scale: look.innerShare });
   g.fill(COLORS.lip);
   if (discs(g, shape.specks, {})) g.fill(COLORS.gloss);
 }
