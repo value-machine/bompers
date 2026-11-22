@@ -30,16 +30,18 @@ export const ICE_LOOK = {
     releaseSeconds: 0.3,
     /** The merged shape: its grid, how far a puff's bump reaches, and the fill and inner levels. */
     field: { cell: 4, reach: 2 },
-    fillLevel: 0.45,
+    fillLevel: 0.35,
     innerLevel: 1.3,
     /** The release puffs' lighter inside as a share of each puff. */
     releaseInner: 0.55,
     /** Where a ray lands: this many burst puffs of this radius rolling around its end. */
-    burstPuffs: 3,
+    burstPuffs: 5,
     burstRadius: 7,
     rollHz: 0.4,
     /** The mist puffs pouring along every ray (`sprayStream`). */
-    stream: { perRay: 7, speed: 110, startAt: 8, radius: 2, grow: 6.5, wobble: 4, rise: 5 },
+    // Dense (owner, freeze-ray-dense, 2026-11-22: "way denser"): 16 fat puffs per ray at a lower
+    // fill level, so neighbours melt into one solid body instead of a chain of blobs.
+    stream: { perRay: 16, speed: 110, startAt: 8, radius: 3.5, grow: 7, wobble: 3, rise: 4 },
     /** Snow specks: how many, how far they fall, their radius, falls per second. */
     specks: 6,
     speckFall: 22,
