@@ -1,4 +1,7 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
+import type { OutlineRing } from "@/shared/utils/contourRings";
+import { inkStroke, outlineWidth } from "@/shared/utils/outlineWidth";
+import { puffFieldRings } from "@/shared/utils/puffField";
 import { sprayStream } from "@/shared/utils/sprayStream";
 import type { FreezeRayBeam } from "@/features/ice/types/ice.types";
 
@@ -8,10 +11,10 @@ import type { FreezeRayBeam } from "@/features/ice/types/ice.types";
  * ice-element D4: "the same shape as a burning shape could also be a frozen shape";
  * element-overlay-shape D1). Here: the gloss streaks on it, at fixed places, the slippery cue of
  * DESIGN_LANGUAGE § 2.
- * The freeze ray is "Cold breath" (owner, ice-element D9) drawn as the "Mist cloud" (owner,
- * freeze-ray-spray D1): no solid body; overlapping mist puffs pour out along every ray the sim
- * cast to that ray's own end (`sprayStream`), growing as they travel, under one ink outline,
- * and burst into rolling puffs where a ray lands.
+ * The freeze ray is "Cold breath" (owner, ice-element D9) drawn as the "Cloud shape" (owner,
+ * freeze-ray-shape D1): mist puffs pour out along every ray the sim cast to that ray's own end
+ * (`sprayStream`), growing as they travel, and burst where a ray lands; they melt into ONE shape
+ * (`puffFieldRings`) whose outline morphs as they flow, drawn with the shared ink stroke.
  */
 export const ICE_LOOK = {
   /** One block in this many carries a gloss streak. */
@@ -25,9 +28,12 @@ export const ICE_LOOK = {
     /** Seconds to grow in, and for the head to let go after release (juice windows, as the torch). */
     growSeconds: 0.12,
     releaseSeconds: 0.3,
-    /** The lighter inside of the mist as a share of each puff, and how far out it shows (0 … 1). */
-    innerShare: 0.55,
-    innerUntil: 0.8,
+    /** The merged shape: its grid, how far a puff's bump reaches, and the fill and inner levels. */
+    field: { cell: 4, reach: 2 },
+    fillLevel: 0.45,
+    innerLevel: 1.3,
+    /** The release puffs' lighter inside as a share of each puff. */
+    releaseInner: 0.55,
     /** Where a ray lands: this many burst puffs of this radius rolling around its end. */
     burstPuffs: 3,
     burstRadius: 7,
@@ -85,14 +91,20 @@ export interface Disc {
   r: number;
 }
 
-/** One freeze ray as a mist cloud: mist puffs along the rays, bursts where they land, specks. */
+/**
+ * The ink line of the spray's outline at a camera zoom: the shared outline width of an effect
+ * (`outlineWidth`, the role the ice, the torch and the effects use) in the shared ink stroke
+ * (`inkStroke`), so the band is one width everywhere and follows the zoom clamp.
+ */
+export const breathStroke = (zoom: number): ReturnType<typeof inkStroke> =>
+  inkStroke(outlineWidth("effect", zoom).width, "ice");
+
+/** One freeze ray as a cloud shape: the merged mist's outline rings, its lighter inside, specks. */
 export interface BreathShape {
-  /** Mist puffs pouring along every ray to its own end, the inner ones first out. */
-  stream: Disc[];
-  /** How far each stream puff is along its ray (0 … 1), by index into `stream`. */
-  streamAlong: number[];
-  /** The burst puffs where rays landed. */
-  lobes: Disc[];
+  /** The edge of the whole spray at the fill level: filled with ice and stroked in ink. */
+  outline: OutlineRing[];
+  /** The lighter inside, a higher level of the same field (no stroke). */
+  inner: OutlineRing[];
   /** Snow specks drifting down under the spray. */
   specks: Disc[];
   /** End of the middle ray and the burst radius there, kept for the release puff. */
@@ -164,18 +176,15 @@ export function breathShape(
       r: look.speckRadius * (1 - fall) + 0.3,
     };
   });
-  const puffs = sprayStream(
+  const stream = sprayStream(
     { origin: beam.origin, ends: f.ends },
     { timeSeconds: t, look: look.stream }
-  );
-  return {
-    stream: puffs.map((puff) => ({ x: puff.x, y: puff.y, r: puff.r * scale })),
-    streamAlong: puffs.map((puff) => puff.along),
-    lobes: bursts(f, beam, { t, scale }),
-    specks,
-    head,
-    headRadius: look.burstRadius * scale,
-  };
+  ).map((puff) => ({ x: puff.x, y: puff.y, r: puff.r * scale }));
+  const [outline = [], inner = []] = puffFieldRings([...stream, ...bursts(f, beam, { t, scale })], {
+    look: look.field,
+    levels: [look.fillLevel, look.innerLevel],
+  });
+  return { outline, inner, specks, head, headRadius: look.burstRadius * scale };
 }
 
 /** The head of a breath that just stopped: a few puffs that rise and shrink over `k` (0 … 1). */
