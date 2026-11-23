@@ -70,6 +70,7 @@ const createFighter = (player: PlayerState, tunables: GameTunables): FighterStat
   prevFire: false,
   attackCooldown: 0,
   spraying: false,
+  sprayRecoilLeft: tunables.combat.sprayRecoil.airBudget,
   lastHitBySlot: null,
   lastHitAt: 0,
 });

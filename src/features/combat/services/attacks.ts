@@ -59,6 +59,11 @@ export interface StepAttacksOptions {
   dt: number;
   unarmedAttack?: UnarmedAttackHook;
   sprayAttack?: SprayAttackHook;
+  /**
+   * Sprayers the spray's recoil does not move (match: a seated driver, a diving blob;
+   * spray-recoil D4). Omitted: every sprayer feels it.
+   */
+  steadyShooter?: (shooter: PlayerState) => boolean;
 }
 
 /** Below this much fuel (seconds) a spray weapon counts as empty: float drain never hits 0 exactly. */
@@ -78,10 +83,39 @@ function firePress(press: UnarmedFirePress, unarmedAttack: UnarmedAttackHook | u
   fighter.attackCooldown = weaponTunables(ctx.tunables, weapon.itemId).fireCooldown;
 }
 
+/** Velocity `delta` added along `dir` (−1 / 1), but only up to `cap` units / s along it. */
+const pushUpTo = (velocity: number, delta: number, cap: number): number => {
+  const dir = Math.sign(delta);
+  return dir * Math.min(Math.abs(delta), Math.max(0, cap - velocity * dir));
+};
+
+/**
+ * Spray recoil (owner, spray-recoil D1–D4), the one mechanism for every spray weapon: while fire
+ * is held the holder is thrust opposite the aim at the weapon's `recoil` (units / s²) — the
+ * held counterpart of a rocket's per-shot kick. Aimed down it lifts the blob a little, aimed
+ * sideways it pushes it back. Two shared limits keep it a hop, never flight: the speed it may
+ * add between two touches of the ground (`sprayRecoil.airBudget`, refilled while grounded), and
+ * a sideways cap under run speed (`maxSideSpeed`). Takes effect in the next step's controller.
+ */
+function sprayRecoil(step: Omit<SprayStep, "reach">): void {
+  const { ctx, attacker: shooter, fighter } = step;
+  const limits = ctx.tunables.combat.sprayRecoil;
+  const thrust = weaponTunables(ctx.tunables, step.itemId).recoil;
+  const aim = weaponAim(shooter);
+  const aimLength = Math.hypot(aim.x, aim.y);
+  const kick = Math.min(thrust * step.dt, fighter.sprayRecoilLeft);
+  if (aimLength === 0 || kick <= 0) return;
+  const dx = pushUpTo(shooter.vx, (-aim.x / aimLength) * kick, limits.maxSideSpeed);
+  const dy = (-aim.y / aimLength) * kick;
+  shooter.vx += dx;
+  shooter.vy += dy;
+  fighter.sprayRecoilLeft -= Math.hypot(dx, dy);
+}
+
 /** A held spray weapon: spray this step and drain its fuel; emit the start cue on the first step. */
 function spray(
   step: Omit<SprayStep, "itemId" | "reach"> & { reach: number | undefined },
-  sprayAttack: SprayAttackHook | undefined
+  options: StepAttacksOptions
 ): void {
   const { ctx, attacker, fighter } = step;
   const weapon = fighter.weapon;
@@ -94,7 +128,8 @@ function spray(
     emitCombatEvent(ctx.combat, cue, ctx.timeSeconds);
   }
   fighter.spraying = true;
-  sprayAttack?.({ ...step, itemId, reach });
+  options.sprayAttack?.({ ...step, itemId, reach });
+  if (!options.steadyShooter?.(attacker)) sprayRecoil({ ...step, itemId });
   weapon.ammo -= step.dt;
   if (weapon.ammo <= EMPTY_FUEL) fighter.weapon = null;
 }
@@ -146,8 +181,12 @@ function attack(press: UnarmedFirePress, frame: AttackFrame): void {
   const isNewPress = pressed && !fighter.prevFire;
   fighter.prevFire = pressed;
   fighter.attackCooldown = Math.max(0, fighter.attackCooldown - options.dt);
+  // The spray recoil's air budget refills on the ground, sprayed or not (spray-recoil D2).
+  if (press.attacker.grounded) {
+    fighter.sprayRecoilLeft = press.ctx.tunables.combat.sprayRecoil.airBudget;
+  }
   const sprays = spraysNow(fighter, pressed);
-  if (sprays) spray({ ...press, dt: options.dt, reach: frame.reach }, options.sprayAttack);
+  if (sprays) spray({ ...press, dt: options.dt, reach: frame.reach }, options);
   fighter.spraying = sprays && fighter.weapon !== null;
   // The weapon's fire cooldown only holds its own next shot: once the last rocket is gone an
   // unarmed press dives at once (dash-feel lap; it was dropped for up to 0.7 s).

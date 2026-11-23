@@ -935,6 +935,9 @@ function stepPlay(state: GameState, rawInputs: PlayerInputs, dt: number): void {
       if (itemId !== "freeze-ray") torchBlobs(state, attacker, sprayTorch(state.fire, spray));
       else sprayFreezeRay(state.ice, { ...spray, canChill: (blob) => canChill(state, blob) });
     },
+    // The kart owns a seated driver's motion and the dive its diver's: spray recoil moves
+    // neither (spray-recoil D4).
+    steadyShooter: (shooter) => seated.has(shooter.id) || isDiving(state, shooter),
   });
   // The karts read their drivers' stick and jump (the inputs before the seat took them).
   stepElements(state, { players, contacts, inputs: iced, dt });
