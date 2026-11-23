@@ -32,6 +32,11 @@ export interface FighterState {
   attackCooldown: number;
   /** A spray weapon (the torch) sprayed on the previous step (start edge for its sound). */
   spraying: boolean;
+  /**
+   * Speed (units / s) a spray's recoil may still add before the feet touch the ground again
+   * (spray-recoil D2, `combat.sprayRecoil.airBudget`; refilled while grounded).
+   */
+  sprayRecoilLeft: number;
   /** Who hit this player last and when (sim seconds), for elimination credit. */
   lastHitBySlot: number | null;
   lastHitAt: number;

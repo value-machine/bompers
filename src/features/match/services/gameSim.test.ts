@@ -481,9 +481,16 @@ describe("gameSim — moving parts squeeze and crush (owner D13, change round on
 
 describe("gameSim — beam clash (beam-clash D1, the steam wall)", () => {
   const C = DEFAULT_GAME_TUNABLES.combat;
-  /** Two blobs 90 units apart, facing each other and holding fire for a second. */
+  /**
+   * Two blobs 90 units apart, facing each other and holding fire for a second. Spray recoil is
+   * off so the blobs hold their spots (with it, each slides back out of reach; spray-recoil D1).
+   */
   const sprayHeadOn = (left: "torch" | "freeze-ray", right: "torch" | "freeze-ray") => {
-    const state = stepFor(newGame(), 3);
+    const steady = {
+      ...DEFAULT_GAME_TUNABLES,
+      combat: { ...C, torch: { ...C.torch, recoil: 0 }, freezeRay: { ...C.freezeRay, recoil: 0 } },
+    };
+    const state = stepFor(createGameState({ level, tunables: steady }), 3);
     const [a, b] = [state.players[0]!, state.players[1]!];
     a.x = 300;
     b.x = 390;

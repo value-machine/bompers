@@ -555,6 +555,86 @@ describe("combat — spray weapons (torch, fire-spread b1)", () => {
   });
 });
 
+describe("combat — spray recoil (spray-recoil D1–D4)", () => {
+  const R = C.sprayRecoil;
+  const SPRAYS = ["torch", "freeze-ray"] as const;
+  /** Point-blank rocket jump from standing, without the shot's own recoil (blast-power D3). */
+  const rocketJumpHeight = (C.blast.pushPerPower * C.rocket.power) ** 2 / (2 * G);
+  const armSpray = (world: World, itemId: (typeof SPRAYS)[number]): void => {
+    world.combat.fighters.get("p0")!.weapon = { itemId, ammo: 3 };
+  };
+  /** Highest rise above the floor while holding the spray straight down for `seconds`. */
+  const riseSprayingDown = (itemId: (typeof SPRAYS)[number], seconds = 1): number => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    armSpray(world, itemId);
+    let top = FLOOR_Y;
+    for (let i = 0; i < Math.round(seconds / dt); i += 1) {
+      // Down on the keyboard also crouches on the ground: the lift must work through it.
+      world.step([{ aimX: 0, aimY: 1, crouch: true, fire: true }]);
+      top = Math.min(top, world.players[0]!.y);
+    }
+    return FLOOR_Y - top;
+  };
+
+  it.each(SPRAYS)(
+    "should lift the holder a little but far below a rocket jump when the %s sprays down for 1 s",
+    (itemId) => {
+      const rise = riseSprayingDown(itemId);
+      expect(rise).toBeGreaterThan(P.height);
+      expect(rise).toBeLessThan(rocketJumpHeight / 4);
+      // Holding it for the whole fuel climbs no higher: it hops, it never flies.
+      expect(riseSprayingDown(itemId, 3)).toBeCloseTo(rise, 6);
+    }
+  );
+
+  it("should lift the torch and the freeze ray the same when both share the recoil mechanism", () => {
+    expect(C.torch.recoil).toBe(C.freezeRay.recoil);
+    expect(riseSprayingDown("torch")).toBeCloseTo(riseSprayingDown("freeze-ray"), 6);
+  });
+
+  it.each(SPRAYS)("should push the holder back when the %s sprays sideways", (itemId) => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    armSpray(world, itemId);
+    world.step([{ aimX: 1, aimY: 0, fire: true }], 120);
+    expect(world.players[0]!.x).toBeLessThan(200 - 10);
+    expect(world.players[0]!.vx).toBeGreaterThanOrEqual(-R.maxSideSpeed);
+  });
+
+  it("should cap the lift at the air budget and the sideways push at the side cap when airborne", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    armSpray(world, "torch");
+    const holder = world.players[0]!;
+    holder.grounded = false;
+    const sprayFor = (aimX: number, aimY: number): void => {
+      holder.aimX = aimX;
+      holder.aimY = aimY;
+      for (let i = 0; i < 240; i += 1) {
+        stepAttacks(world.ctx(), [{ ...EMPTY_PLAYER_INPUT, connected: true, fire: true }], { dt });
+      }
+    };
+    sprayFor(1, 0);
+    expect(holder.vx).toBeCloseTo(-R.maxSideSpeed, 6);
+    expect(holder.vy).toBe(0);
+    sprayFor(0, 1);
+    expect(holder.vy).toBeCloseTo(-(R.airBudget - R.maxSideSpeed), 6);
+    expect(world.combat.fighters.get("p0")!.sprayRecoilLeft).toBeCloseTo(0, 6);
+  });
+
+  it("should not move a steady shooter (a seated driver or a diver)", () => {
+    const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
+    armSpray(world, "freeze-ray");
+    const holder = world.players[0]!;
+    holder.aimX = 0;
+    holder.aimY = 1;
+    stepAttacks(world.ctx(), [{ ...EMPTY_PLAYER_INPUT, connected: true, fire: true }], {
+      dt,
+      steadyShooter: () => true,
+    });
+    expect(holder.vy).toBe(0);
+    expect(holder.vx).toBe(0);
+  });
+});
+
 describe("combat — unarmed fire", () => {
   it("should call the unarmed-attack hook once per press only while the player is unarmed", () => {
     const world = createWorld({ at: [{ x: 200, y: FLOOR_Y }] });
