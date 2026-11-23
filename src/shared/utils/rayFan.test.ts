@@ -97,9 +97,14 @@ describe("freeze ray's frost fan (freeze-ray-spread D1)", () => {
       shape: ray,
     });
     const ahead = rays.map((hit) => hit.end.x - 40);
-    expect(rays).toHaveLength(7);
-    expect(Math.min(...ahead)).toBeLessThan(25);
-    expect(Math.max(...ahead)).toBeGreaterThan(90);
+    // Where the outer rays meet the floor 24 units down, from the tunable's half-angle.
+    const rad = (degrees: number): number => (degrees * Math.PI) / 180;
+    const low = 24 / Math.tan(rad(32 + ray.halfAngleDegrees));
+    const top = 24 / Math.tan(rad(32 - ray.halfAngleDegrees));
+    expect(rays).toHaveLength(ray.rays);
+    expect(Math.min(...ahead)).toBeLessThan(low + 4);
+    expect(Math.max(...ahead)).toBeGreaterThan(top - 4);
+    expect(Math.max(...ahead)).toBeGreaterThan(2 * Math.min(...ahead));
     expect(rays.every((hit) => hit.sample !== null)).toBe(true);
   });
 

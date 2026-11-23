@@ -85,6 +85,28 @@ describe("iceShapes — the freeze ray's puffs as one cloud shape (freeze-ray-pa
     }
   });
 
+  it("should thin out toward the end of its reach instead of stopping dead", () => {
+    const widthAt = (u: number): number => {
+      const stream = createSprayStream();
+      stream.puffs.push({
+        x: 100 + RAY.length * u,
+        y: 100,
+        dx: 1,
+        dy: 0,
+        travelled: RAY.length * u,
+      });
+      const outer = breathShape({ slot: 0, stream }, at(0)).outline.flatMap((ring) =>
+        ring.points.filter((_, i) => i % 2 === 0)
+      );
+      return outer.length ? Math.max(...outer) - Math.min(...outer) : 0;
+    };
+    // Growing until the fade starts, then smaller step by step, and gone at the very end.
+    expect(widthAt(0.5)).toBeGreaterThan(widthAt(0.75));
+    expect(widthAt(0.75)).toBeGreaterThan(widthAt(0.9));
+    expect(widthAt(0.99)).toBeLessThan(widthAt(0.5) * 0.2);
+    expect(widthAt(1)).toBe(0);
+  });
+
   it("should draw nothing when no puff is in flight", () => {
     const shape = breathShape({ slot: 0, stream: createSprayStream() }, at(0));
     expect(shape.outline).toEqual([]);
