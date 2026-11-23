@@ -131,3 +131,37 @@ export function starPoints(points: number, outer: number, inner: number): number
   }
   return path;
 }
+
+/** One cubic Bézier sampled at `t` (0..1) along one axis. */
+const cubic = ([a, b, c, d]: readonly [number, number, number, number], t: number): number => {
+  const u = 1 - t;
+  return u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
+};
+
+/** The heart outline (owner, health-pickups D2) as two Béziers, tip down, before fitting. */
+const HEART_CURVES = [
+  [0, 0.9, -1.25, 0.05, -0.95, -0.95, 0, -0.38],
+  [0, -0.38, 0.95, -0.95, 1.25, 0.05, 0, 0.9],
+] as const;
+
+/**
+ * Flat [x, y, …] path of the game's heart (health pickup, HUD and over-head health hearts, lost
+ * chunks), fitted to a `w` × `h` box centred on 0,0, tip down. A chubby heart with a shallow notch,
+ * so it still reads at the over-head bar's few pixels. `segments` points per lobe.
+ */
+export function heartPoints(w: number, h: number, segments = 10): number[] {
+  const raw: Vec2[] = [];
+  for (const [x0, y0, x1, y1, x2, y2, x3, y3] of HEART_CURVES) {
+    for (let i = 0; i < segments; i += 1) {
+      const t = i / segments;
+      raw.push({ x: cubic([x0, x1, x2, x3], t), y: cubic([y0, y1, y2, y3], t) });
+    }
+  }
+  const xs = raw.map((p) => p.x);
+  const ys = raw.map((p) => p.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const sx = w / (Math.max(...xs) - minX);
+  const sy = h / (Math.max(...ys) - minY);
+  return raw.flatMap((p) => [(p.x - minX) * sx - w / 2, (p.y - minY) * sy - h / 2]);
+}

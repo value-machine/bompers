@@ -39,6 +39,7 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     dropHeight: 600,
     size: 22,
     diveRefill: { respawnSeconds: 2.5, size: 30 },
+    health: { respawnSeconds: 12, size: 30, heal: 1 },
   },
   player: {
     width: 28,

@@ -16,11 +16,6 @@ import type {
   PickupBurst,
   PointOrb,
 } from "@/features/collectibles/types/collectibles.types";
-import {
-  createDiveRefillLayer,
-  syncDiveRefillLayer,
-  type DiveRefillLayer,
-} from "@/features/collectibles/services/diveRefillRenderer";
 
 /**
  * Collectibles layers; the match renderer places them (DESIGN_LANGUAGE § 5): `shadows` (4,
@@ -33,8 +28,6 @@ import {
 export interface CollectiblesView extends CrateLayers {
   orbs: Container;
   orbSprites: Map<string, Container>;
-  /** Headbutt resets (layer 5, beside the orbs): `diveRefillRenderer.ts`. */
-  refills: DiveRefillLayer;
   /** Taken orbs and crates bursting (layer 5, over the pickups). */
   bursts: Container;
   burstSprites: Map<string, Container>;
@@ -49,7 +42,6 @@ export function createCollectiblesView(): CollectiblesView {
     crateSprites: new Map(),
     orbs: new Container({ label: "collectibles" }),
     orbSprites: new Map(),
-    refills: createDiveRefillLayer(),
     bursts: new Container({ label: "pickup-bursts" }),
     burstSprites: new Map(),
   };
@@ -215,8 +207,6 @@ export interface CollectiblesFrame {
   size: number;
   /** Weapon-crate box, world units. */
   crateSize: number;
-  /** Headbutt reset touch box and respawn time (`collectibles.diveRefill` tunables). */
-  diveRefill: { size: number; respawnSeconds: number };
   /** Pickup juice timings and poses (`feel.pickup`). */
   feel: PickupFeel;
   /** Terrain the crate shadows fall on. */
@@ -227,7 +217,7 @@ export interface CollectiblesFrame {
   zoom: number;
 }
 
-/** Matches the layers to the current crates, orbs, resets and bursts. Call once per rendered frame. */
+/** Matches the layers to the current crates, orbs and bursts. Call once per rendered frame. */
 export function syncCollectiblesView(view: CollectiblesView, frame: CollectiblesFrame): void {
   const width = outlineWidth("prop", frame.zoom);
   const { feel } = frame;
@@ -237,13 +227,6 @@ export function syncCollectiblesView(view: CollectiblesView, frame: Collectibles
     outline: width,
     terrain: frame.terrain,
     feel,
-  });
-  syncDiveRefillLayer(view.refills, {
-    refills: frame.collectibles.diveRefills,
-    size: frame.diveRefill.size,
-    respawnSeconds: frame.diveRefill.respawnSeconds,
-    outline: width,
-    nowMs: frame.nowMs,
   });
   syncDisplayById(view.orbSprites, view.orbs, {
     list: frame.collectibles.orbs,

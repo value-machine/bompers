@@ -143,6 +143,8 @@ export const CONTENT_CATALOG: ContentCatalog = {
     "point-orb": { id: "point-orb", label: "Point orb", use: "collectible" },
     // Placed, not dropped: gives a spent dive its charge back mid-flight (headbutt-reset D1).
     "dive-reset": { id: "dive-reset", label: "Headbutt reset", use: "collectible" },
+    // Placed, not dropped: gives a hurt player one chunk back (health-pickups D3).
+    health: { id: "health", label: "Health pickup", use: "collectible" },
   },
 };
 

@@ -1,5 +1,6 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE, terrainSwatch } from "@/shared/config/gamePalette";
+import { drawInkHeart } from "@/shared/services/heartRenderer";
 import { inkColor } from "@/shared/utils/debugInk";
 import { starPoints } from "@/shared/utils/shapeGeometry";
 import { syncDisplayById } from "@/shared/utils/displaySync";
@@ -87,17 +88,24 @@ const drawBlock = (width: number): Container =>
     .circle(0, 0, BLOCK_RADIUS)
     .stroke({ width: width * 1.5, color: GAME_PALETTE.hud.caption });
 
-/** A lost health chunk (hurt-feedback D1): the over-head pip's shape, big, in the victim's colour. */
-const CHUNK = { w: 11 * DESIGN_SCALE, h: 9 * DESIGN_SCALE, speed: 220, gravity: 1100, spin: 7 };
+/**
+ * A lost health chunk (hurt-feedback D1): the over-head heart (health-pickups D2), big, in the
+ * victim's colour. Sized like the earlier chunk pill (11 × 9 design units).
+ */
+const CHUNK = { w: 11 * DESIGN_SCALE, h: 10 * DESIGN_SCALE, speed: 220, gravity: 1100, spin: 7 };
 const drawChunks = (event: EventOf<"playerHit">, width: number): Container => {
   const root = new Container();
   const color = GAME_PALETTE.players[event.victimSlot % GAME_PALETTE.players.length]!;
   for (let i = 0; i < event.damage; i += 1) {
     root.addChild(
-      new Graphics()
-        .roundRect(-CHUNK.w / 2, -CHUNK.h / 2, CHUNK.w, CHUNK.h, CHUNK.h * 0.3)
-        .fill(color)
-        .stroke(inkStroke(width))
+      drawInkHeart(new Graphics(), {
+        x: 0,
+        y: 0,
+        w: CHUNK.w,
+        h: CHUNK.h,
+        fill: color,
+        outline: width,
+      })
     );
   }
   return root;

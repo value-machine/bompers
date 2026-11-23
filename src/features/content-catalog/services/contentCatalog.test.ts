@@ -34,6 +34,7 @@ describe("contentCatalog", () => {
   it("should give each item's point role and null when the ID is not an item", () => {
     expect(itemUseOf("rocket-launcher")).toBe("drop");
     expect(itemUseOf("dive-reset")).toBe("collectible");
+    expect(itemUseOf("health")).toBe("collectible");
     expect(itemUseOf("stone")).toBeNull();
     expect(itemUseOf("toString")).toBeNull();
   });
@@ -59,6 +60,7 @@ describe("contentCatalog", () => {
       "freeze-ray",
       "point-orb",
       "dive-reset",
+      "health",
     ]);
     // The material × element table (mover-materials D1; rules from blast-power D5).
     expect(Object.fromEntries(exported.material.map((m) => [m.id, m.reactions]))).toEqual({

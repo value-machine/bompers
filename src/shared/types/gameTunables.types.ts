@@ -61,6 +61,18 @@ export interface GameTunables {
       /** Touch box (square), world units. */
       size: number;
     };
+    /**
+     * Health pickup (catalog item `health`): a fixed pickup on its collectible point that gives a
+     * hurt player chunks back, never above `combat.maxHealth` (health-pickups D3, D4).
+     */
+    health: {
+      /** Seconds a taken pickup stays gone before it is back on its point. */
+      respawnSeconds: number;
+      /** Touch box (square), world units. */
+      size: number;
+      /** Chunks one pickup gives back. */
+      heal: number;
+    };
   };
   /** Player avatar: size, movement feel (GDD § 2) and render squash (DESIGN_LANGUAGE § 6). */
   player: {

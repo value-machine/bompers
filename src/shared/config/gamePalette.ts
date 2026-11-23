@@ -89,6 +89,11 @@ export const GAME_PALETTE = {
   pickupDust: 0xf3eadb,
   /** Headbutt reset: aqua jelly bubble with a cream headbutt glyph (DESIGN_LANGUAGE § 1 Effects). */
   diveRefill: 0x5fe0ff,
+  /**
+   * Health pickup: a hard cherry candy heart with a cream plus (owner, health-pickups D1). `glow`
+   * is the lighter cherry where light shows through the candy; never a player hue.
+   */
+  healthPickup: { body: 0xe8285a, glow: 0xff7f9e, plus: 0xfff4e2 },
   /** HUD cards (DESIGN_LANGUAGE § 7): card fill, caption text, timer numerals. */
   hud: { card: 0xfffaf0, caption: 0x8a7a99, timer: 0xffd43b },
   sky: { top: 0x8fd6ff, bottom: 0xfff1cf },

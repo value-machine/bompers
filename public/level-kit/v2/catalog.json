@@ -303,6 +303,11 @@
       "id": "dive-reset",
       "label": "Headbutt reset",
       "use": "collectible"
+    },
+    {
+      "id": "health",
+      "label": "Health pickup",
+      "use": "collectible"
     }
   ],
   "object": [

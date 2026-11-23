@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shapeContains, shapeSignedDistance } from "@/shared/utils/shapeGeometry";
+import { heartPoints, shapeContains, shapeSignedDistance } from "@/shared/utils/shapeGeometry";
 
 const square = {
   type: "polygon" as const,
@@ -57,5 +57,26 @@ describe("shapeSignedDistance", () => {
   it("should measure to the nearest polygon edge with the sign from the non-zero rule", () => {
     expect(shapeSignedDistance(square, { x: 5, y: 2 })).toBeCloseTo(2);
     expect(shapeSignedDistance(square, { x: 13, y: 14 })).toBeCloseTo(-5);
+  });
+});
+
+describe("heartPoints", () => {
+  it("should fit the heart to its box centred on 0,0 when given a size", () => {
+    const path = heartPoints(20, 16);
+    const xs = path.filter((_, i) => i % 2 === 0);
+    const ys = path.filter((_, i) => i % 2 === 1);
+    expect(Math.min(...xs)).toBeCloseTo(-10);
+    expect(Math.max(...xs)).toBeCloseTo(10);
+    expect(Math.min(...ys)).toBeCloseTo(-8);
+    expect(Math.max(...ys)).toBeCloseTo(8);
+  });
+
+  it("should put the tip at the bottom centre and the notch above the middle when drawn", () => {
+    const path = heartPoints(20, 16);
+    expect(path[0]).toBeCloseTo(0);
+    expect(path[1]).toBeCloseTo(8);
+    const notch = path.length / 2;
+    expect(path[notch]).toBeCloseTo(0);
+    expect(path[notch + 1]!).toBeLessThan(0);
   });
 });

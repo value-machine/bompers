@@ -1,6 +1,7 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { GAME_PALETTE, weaponLook } from "@/shared/config/gamePalette";
 import { traceEmblem } from "@/shared/services/emblemRenderer";
+import { drawInkHeart } from "@/shared/services/heartRenderer";
 import { GAME_FONT_FAMILY } from "@/shared/utils/gameFont";
 import { playerEmblemShape } from "@/shared/utils/playerEmblem";
 import { pillRow } from "@/shared/utils/pillRow";
@@ -10,7 +11,7 @@ import { roundResultLabel } from "@/features/match/services/matchRules";
 
 /**
  * Screen-space HUD (DESIGN_LANGUAGE § 7): a timer card centred at the top, one player card per
- * joined slot (P1–P2 left, P3–P4 right) with emblem chip, health chunks (a lost chunk pops out),
+ * joined slot (P1–P2 left, P3–P4 right) with emblem chip, health hearts (a lost one pops out, a healed one pops in),
  * the held weapon's ammo pills in its accent colour, and score, and the round-result banner. All colours are fixed canvas colours from the palette,
  * never UI theme tokens: the canvas looks the same in light and dark mode (match-rules D7).
  * Text is Fredoka; the session waits for the font before creating this view (visual-pass D5).
@@ -25,8 +26,10 @@ export interface HudView {
 interface PlayerCard {
   root: Container;
   pips: Graphics;
-  /** The chunk that was just lost, popping out (scale 1.3 → 0). */
+  /** The hearts that just changed: lost ones pop out (1.3 → 0), healed ones pop in (1.3 → 1). */
   pop: Container;
+  /** Whether the last pop was a heal. */
+  popGain: boolean;
   poppedAt: number;
   score: Text;
   /** Score last shown and when it last went up (the score pop, pickup-juice D1). */
@@ -42,7 +45,8 @@ interface PlayerCard {
 const DESIGN_WIDTH = 1280;
 const CARD = { w: 228, h: 86, radius: 18, gap: 12, margin: 16, top: 12, tilt: 0.026 };
 const TIMER = { w: 140, h: 70, radius: 18, warnSeconds: 10 };
-const PIP = { w: 22, h: 20, radius: 7, gap: 4, x: 70, y: 40, popSeconds: 0.15 };
+/** Health hearts (health-pickups D2): box, gap, position, pop and ink outline (screen px). */
+const PIP = { w: 22, h: 20, gap: 4, x: 70, y: 40, popSeconds: 0.15, outline: 1.5 };
 /** The score number pops when it goes up: scale 1.35 → 1 over the `squash` window (pickup-juice D1). */
 const SCORE_POP = { seconds: 0.15, scale: 1.35 };
 /** Ammo row under the health chunks (weapon-visuals D3): same pills, weapon accent, health-row width. */
@@ -95,8 +99,8 @@ function createPlayerCard(slot: number): PlayerCard {
   label.position.set(PIP.x, 10);
   const { score, caption } = drawScore();
   const pips = new Graphics();
-  // One popping chunk per health point lost (hurt-feedback D1: a back hit shows two).
-  const pop = new Container({ label: "chunk-pop" });
+  // One popping heart per health point lost or healed (hurt-feedback D1: a back hit shows two).
+  const pop = new Container({ label: "heart-pop" });
   pop.visible = false;
   const card = new Graphics()
     .roundRect(0, 0, CARD.w, CARD.h, CARD.radius)
@@ -110,6 +114,7 @@ function createPlayerCard(slot: number): PlayerCard {
     root,
     pips,
     pop,
+    popGain: false,
     poppedAt: -Infinity,
     score,
     scoreShown: 0,
@@ -157,19 +162,34 @@ interface PipsLook {
   timeSeconds: number;
 }
 
-/** Redraws the health chunks only when health or the chunk count changed; a loss starts the pop. */
+/** One health heart (health-pickups D2) in a pip's box, centred on 0,0. */
+const pipHeart = (fill: number): Graphics =>
+  drawInkHeart(new Graphics(), { x: 0, y: 0, w: PIP.w, h: PIP.h, fill, outline: PIP.outline });
+
+/**
+ * The hearts that just changed pop (hurt-feedback D1, health-pickups D6): a lost one in the
+ * player's colour pops out (1.3 → 0) over the grey heart; a healed one pops in (1.3 → 1).
+ */
+function startPop(
+  card: PlayerCard,
+  args: { from: number; to: number; slot: number; at: number }
+): void {
+  for (const old of card.pop.removeChildren()) old.destroy();
+  const [low, high] = args.from < args.to ? [args.from, args.to] : [args.to, args.from];
+  for (let i = low; i < high; i += 1) {
+    const heart = pipHeart(slotColor(args.slot));
+    heart.position.set(PIP.x + i * (PIP.w + PIP.gap) + PIP.w / 2, PIP.y + PIP.h / 2);
+    card.pop.addChild(heart);
+  }
+  card.popGain = args.to > args.from;
+  card.poppedAt = args.at;
+}
+
+/** Redraws the health hearts only when health or the count changed; a change starts the pop. */
 function drawPips(card: PlayerCard, { slot, health, max, timeSeconds }: PipsLook): void {
   if (card.shown.health === health && card.shown.max === max) return;
-  if (card.shown.max === max && health < card.shown.health && health >= 0) {
-    for (const old of card.pop.removeChildren()) old.destroy();
-    for (let i = health; i < card.shown.health; i += 1) {
-      const chunk = new Graphics()
-        .roundRect(-PIP.w / 2, -PIP.h / 2, PIP.w, PIP.h, PIP.radius)
-        .fill(slotColor(slot));
-      chunk.position.set(PIP.x + i * (PIP.w + PIP.gap) + PIP.w / 2, PIP.y + PIP.h / 2);
-      card.pop.addChild(chunk);
-    }
-    card.poppedAt = timeSeconds;
+  if (card.shown.max === max && card.shown.health >= 0 && health >= 0) {
+    startPop(card, { from: card.shown.health, to: health, slot, at: timeSeconds });
   }
   card.shown = { health, max };
   card.pips.clear();
@@ -179,9 +199,14 @@ function drawPips(card: PlayerCard, { slot, health, max, timeSeconds }: PipsLook
     width: healthRowWidth(max),
     gap: PIP.gap,
   })) {
-    card.pips
-      .roundRect(PIP.x + pill.x, PIP.y, pill.w, PIP.h, PIP.radius)
-      .fill(pill.filled ? slotColor(slot) : GAME_PALETTE.healthLost);
+    drawInkHeart(card.pips, {
+      x: PIP.x + pill.x + pill.w / 2,
+      y: PIP.y + PIP.h / 2,
+      w: pill.w,
+      h: PIP.h,
+      fill: pill.filled ? slotColor(slot) : GAME_PALETTE.healthLost,
+      outline: PIP.outline,
+    });
   }
 }
 
@@ -200,7 +225,8 @@ function syncPop(card: PlayerCard, timeSeconds: number): void {
   const t = (timeSeconds - card.poppedAt) / PIP.popSeconds;
   card.pop.visible = t >= 0 && t < 1;
   if (!card.pop.visible) return;
-  for (const chunk of card.pop.children) chunk.scale.set(1.3 * (1 - t));
+  const scale = card.popGain ? 1 + 0.3 * (1 - t) : 1.3 * (1 - t);
+  for (const heart of card.pop.children) heart.scale.set(scale);
 }
 
 function createTimer(): HudView["timer"] {

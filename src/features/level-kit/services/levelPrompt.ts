@@ -137,6 +137,7 @@ function renderCoordinates({ cell }: PromptContext): string {
 function renderRoles(ctx: PromptContext): string {
   const { catalog, tunables } = ctx;
   const respawn = tunables.collectibles.diveRefill.respawnSeconds;
+  const health = tunables.collectibles.health;
   const lift = spawnLift(tunables);
   return [
     "## 3. Roles (`data-role`)",
@@ -148,9 +149,11 @@ function renderRoles(ctx: PromptContext): string {
     objectRoleRow(),
     `| \`spawn\` | \`<circle>\` | ≥ ${RECOMMENDED_SPAWNS} | Player start (the centre counts, \`r="${POINT_RADIUS.spawn}"\`). Inside bounds, never inside terrain, centre ~\`${lift}\` above a solid surface, not over a pit. \`fill="${PREVIEW_FILLS.spawn}"\`. |`,
     `| \`drop\` | \`<circle>\` | ≥ 1 | Weapon crates fall from here (\`r="${POINT_RADIUS.drop}"\`); place high up. The game picks each crate's weapon. \`fill="${PREVIEW_FILLS.drop}"\`. |`,
-    `| \`collectible\` | \`<circle>\` | ≥ 0 | A pickup point (\`r="${POINT_RADIUS.collectible}"\`), \`data-item\` = one collectible item (§ 4). \`point-orb\`: point orbs fall from the sky onto it. \`dive-reset\`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns ${respawn} s after use) — hang them in the air between platforms and off edges for headbutt chains. \`fill="${PREVIEW_FILLS.collectible}"\`. |`,
+    `| \`collectible\` | \`<circle>\` | ≥ 0 | A pickup point (\`r="${POINT_RADIUS.collectible}"\`), \`data-item\` = one collectible item (§ 4). \`point-orb\`: point orbs fall from the sky onto it. \`dive-reset\`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns ${respawn} s after use) — hang them in the air between platforms and off edges for headbutt chains. \`health\`: a health pickup (a candy heart) sits there; a hurt player who touches it gets ${health.heal} health chunk back, never above full, and a player at full health passes through and leaves it (it returns ${health.respawnSeconds} s after use) — put a few where fights happen or at the end of a risky route, never on a spawn. \`fill="${PREVIEW_FILLS.collectible}"\`. |`,
     "",
     `Collectible items: ${codeList(itemIds(catalog, "collectible"))}.`,
+    "",
+    `Example, a health pickup floating ~30 above a ledge: \`<circle data-role="collectible" data-item="health" cx="640" cy="330" r="${POINT_RADIUS.collectible}" fill="${PREVIEW_FILLS.collectible}"/>\``,
   ].join("\n");
 }
 

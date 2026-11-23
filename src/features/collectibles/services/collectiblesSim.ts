@@ -4,7 +4,6 @@ import type { LevelCollectible } from "@/features/level/api/levelApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
 import { fallSpeed, firstToucher, tickDropTimer } from "@/features/collectibles/services/skyDrops";
 import { createWeaponCratesState } from "@/features/collectibles/services/weaponCrates";
-import { createDiveRefills } from "@/features/collectibles/services/diveRefills";
 import type {
   CollectiblesState,
   OrbCollected,
@@ -22,14 +21,9 @@ import type {
  */
 export const POINT_ORB_ITEM = "point-orb";
 
-/** `points`: the level's collectible points; the headbutt resets are placed on them at once. */
-export function createCollectiblesState(
-  tunables: GameTunables,
-  points: readonly LevelCollectible[] = []
-): CollectiblesState {
+export function createCollectiblesState(tunables: GameTunables): CollectiblesState {
   return {
     orbs: [],
-    diveRefills: createDiveRefills(points),
     spawnTimer: tunables.collectibles.firstDelaySeconds,
     nextPointIndex: 0,
     nextId: 1,

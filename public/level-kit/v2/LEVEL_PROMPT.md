@@ -69,9 +69,11 @@ Root attributes:
 | `object` | `<rect>` | ≥ 0 | A ready-made object built inside the rect (§ 3 Objects): `data-kind` (`tree`, `ball`, `kart`), optional `data-variant`, `data-seed`. A terrain object is solid ground made of catalog materials; a physics object (a ball, a kart) moves. `fill="#5f8f3e"`. |
 | `spawn` | `<circle>` | ≥ 4 | Player start (the centre counts, `r="14"`). Inside bounds, never inside terrain, centre ~`24` above a solid surface, not over a pit. `fill="#3f8f5f"`. |
 | `drop` | `<circle>` | ≥ 1 | Weapon crates fall from here (`r="12"`); place high up. The game picks each crate's weapon. `fill="#c94f7c"`. |
-| `collectible` | `<circle>` | ≥ 0 | A pickup point (`r="10"`), `data-item` = one collectible item (§ 4). `point-orb`: point orbs fall from the sky onto it. `dive-reset`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns 2.5 s after use) — hang them in the air between platforms and off edges for headbutt chains. `fill="#e0b62c"`. |
+| `collectible` | `<circle>` | ≥ 0 | A pickup point (`r="10"`), `data-item` = one collectible item (§ 4). `point-orb`: point orbs fall from the sky onto it. `dive-reset`: a headbutt reset floats there; a player who spent their headbutt in the air gets it back by flying through it (it returns 2.5 s after use) — hang them in the air between platforms and off edges for headbutt chains. `health`: a health pickup (a candy heart) sits there; a hurt player who touches it gets 1 health chunk back, never above full, and a player at full health passes through and leaves it (it returns 12 s after use) — put a few where fights happen or at the end of a risky route, never on a spawn. `fill="#e0b62c"`. |
 
-Collectible items: `point-orb`, `dive-reset`.
+Collectible items: `point-orb`, `dive-reset`, `health`.
+
+Example, a health pickup floating ~30 above a ledge: `<circle data-role="collectible" data-item="health" cx="640" cy="330" r="10" fill="#e0b62c"/>`
 
 ### Moving parts (optional)
 
@@ -142,7 +144,7 @@ Reference content **by ID only**; IDs are lowercase-kebab. Unknown IDs fall back
 - `data-color` (looks; any colour on any material, names only, no hex) — use the hex as that shape's `fill`: `plum` `#5a3f7a`, `slate` `#4f6178`, `cardboard` `#c99a62`, `clay` `#c4673f`, `moss` `#5f8f3e`, `mint` `#3aa889`, `frost` `#a8cfe6`, `rose` `#c95a86`, `bark` `#7a5233`.
 - `data-effect`: `none`, `dust-burst`.
 - `data-sound`: `none`, `thud`, `crumble`, `thwap`, `clink`, `jump`, `land`, `tumble-bounce`, `dive-launch`, `dive-impact`, `hit`, `elimination`, `rocket-fire`, `explosion`, `pickup`, `respawn`, `round-start`, `round-end`, `torch-start`, `torch-loop`, `fire-crackle`, `burn-out`, `catch-fire`, `steam-hiss`, `freeze-start`, `freeze-loop`, `thaw`, `freeze-solid`, `ice-crack`, `ice-shatter`, `orb-collect`, `kart-idle`, `kart-drive`.
-- `data-item` (collectible): `point-orb`, `dive-reset`; default `point-orb`.
+- `data-item` (collectible): `point-orb`, `dive-reset`, `health`; default `point-orb`.
 - `data-behavior`: none yet — leave it out.
 
 ## 5. Player physics & jump metrics (at `data-gravity="1"`)

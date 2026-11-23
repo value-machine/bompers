@@ -7,6 +7,7 @@ import {
   syncContactShadows,
   type ContactShadowLayer,
 } from "@/shared/utils/contactShadowLayer";
+import { drawInkHeart } from "@/shared/services/heartRenderer";
 import { inkColor } from "@/shared/utils/debugInk";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 import { DESIGN_SCALE, outlineWidth } from "@/shared/utils/outlineWidth";
@@ -40,13 +41,19 @@ export interface CombatView {
 
 interface HealthBar {
   pips: Graphics;
-  shown: number;
-  /** Sim time the bar last lost health (its pop), seconds. */
+  /** `health:outlineStep` last drawn. */
+  shown: string;
+  health: number;
+  /** Sim time the bar last lost or gained health (its pop), seconds. */
   poppedAt: number;
 }
 
-const PIP = { w: 6, h: 5, gap: 2, lift: 10 };
-/** The over-head bar pops this big on a loss and settles back (hurt-feedback D1). */
+/**
+ * Over-head health hearts (health-pickups D2), world units. `minPx`: a heart is never drawn
+ * narrower than this on screen, so the row still reads as hearts when the camera zooms out.
+ */
+const PIP = { w: 7, h: 6.5, gap: 1.5, lift: 10, minPx: 9 };
+/** The over-head bar pops this big on a loss or a heal and settles back (hurt-feedback D1). */
 const BAR_POP_SCALE = 2;
 const S = DESIGN_SCALE;
 /** Rocket length (mockup 25 + nose) for its contact shadow. */
@@ -189,16 +196,23 @@ interface PipsLook {
   health: number;
   slot: number;
   max: number;
+  /** Visible outline width in the row's own units. */
+  outline: number;
 }
 
-function drawPips(pips: Graphics, { health, slot, max }: PipsLook): void {
+/** The row of hearts, top-centre on 0,0; the outline is the zoom-clamped prop width. */
+function drawPips(pips: Graphics, { health, slot, max, outline }: PipsLook): void {
   const total = max * PIP.w + (max - 1) * PIP.gap;
   pips.clear();
   for (let i = 0; i < max; i += 1) {
-    pips
-      .roundRect(-total / 2 + i * (PIP.w + PIP.gap), 0, PIP.w, PIP.h, 2)
-      .fill(i < health ? slotColor(slot) : GAME_PALETTE.healthLost)
-      .stroke(ink(1.2));
+    drawInkHeart(pips, {
+      x: -total / 2 + i * (PIP.w + PIP.gap) + PIP.w / 2,
+      y: PIP.h / 2,
+      w: PIP.w,
+      h: PIP.h,
+      fill: i < health ? slotColor(slot) : GAME_PALETTE.healthLost,
+      outline,
+    });
   }
 }
 
@@ -206,26 +220,43 @@ function drawPips(pips: Graphics, { health, slot, max }: PipsLook): void {
 function healthBarFor(view: CombatView, playerId: string): HealthBar {
   const existing = view.health.get(playerId);
   if (existing) return existing;
-  const bar = { pips: new Graphics(), shown: -1, poppedAt: Number.NEGATIVE_INFINITY };
+  const bar = { pips: new Graphics(), shown: "", health: -1, poppedAt: Number.NEGATIVE_INFINITY };
   view.health.set(playerId, bar);
   view.overlay.addChild(bar.pips);
   return bar;
 }
 
+/** How much the row is enlarged so a heart stays `PIP.minPx` wide on screen when zoomed out. */
+const barZoomScale = (zoom: number): number =>
+  Math.max(1, PIP.minPx / (PIP.w * (zoom > 0 && Number.isFinite(zoom) ? zoom : 1)));
+
+/** Redraws a bar when its health or outline step changed; a loss or a heal starts the pop. */
+function redrawBar(bar: HealthBar, look: PipsLook & { key: string; timeSeconds: number }): void {
+  if (bar.shown === look.key) return;
+  // A loss pops; so does a heal, but not the refill when an eliminated blob respawns.
+  const healed = look.health > bar.health && bar.health > 0;
+  if (look.health < bar.health || healed) bar.poppedAt = look.timeSeconds;
+  drawPips(bar.pips, look);
+  bar.shown = look.key;
+  bar.health = look.health;
+}
+
 function syncPlayerExtras(view: CombatView, frame: CombatFrame): void {
-  const { combat, players, maxHealth } = frame;
+  const { combat, players, maxHealth, timeSeconds } = frame;
+  const grow = barZoomScale(frame.zoom);
+  // Outline at the row's on-screen size, so it is the shared prop width after the enlargement.
+  const outline = outlineWidth("prop", frame.zoom * grow);
   for (const player of players) {
     const fighter = combat.fighters.get(player.id);
     if (!fighter) continue;
     const bar = healthBarFor(view, player.id);
-    if (bar.shown !== fighter.health) {
-      if (fighter.health < bar.shown) bar.poppedAt = frame.timeSeconds;
-      drawPips(bar.pips, { health: fighter.health, slot: player.slot, max: maxHealth });
-    }
-    bar.shown = fighter.health;
+    const { health, slot } = { health: fighter.health, slot: player.slot };
+    const key = `${health}:${outline.step}`;
+    redrawBar(bar, { health, slot, max: maxHealth, outline: outline.width, key, timeSeconds });
     bar.pips.visible = !fighter.eliminated;
-    bar.pips.position.set(player.x, player.y - player.height - PIP.lift - PIP.h);
-    bar.pips.scale.set(barPopScale((frame.timeSeconds - bar.poppedAt) / frame.hurt.barPopSeconds));
+    bar.pips.position.set(player.x, player.y - player.height - PIP.lift - PIP.h * grow);
+    const pop = barPopScale((timeSeconds - bar.poppedAt) / frame.hurt.barPopSeconds);
+    bar.pips.scale.set(pop * grow);
   }
 }
 

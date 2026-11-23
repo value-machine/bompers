@@ -30,6 +30,7 @@ const player = (slot: number, patch: Partial<SoundPlayerSnapshot> = {}): SoundPl
   speed: 0,
   terrainHitSpeed: 0,
   diveRefillCount: 0,
+  healCount: 0,
   diveDeniedCount: 0,
   orbCount: 0,
   catchFireCount: 0,
@@ -263,6 +264,11 @@ describe("readSoundCues — headbutt reset", () => {
   it("should play the pickup sound pitched by the collector when a player takes a headbutt reset", () => {
     const frame = snapshot({ players: [player(0), player(1, { diveRefillCount: 1 })] });
     expect(cuesAfter(frame)).toEqual([{ soundId: "pickup", slot: 1, gain: 1 }]);
+  });
+
+  it("should play the pickup sound pitched by the collector when a player takes a health pickup", () => {
+    const frame = snapshot({ players: [player(0, { healCount: 1 }), player(1)] });
+    expect(cuesAfter(frame)).toEqual([{ soundId: "pickup", slot: 0, gain: 1 }]);
   });
 });
 

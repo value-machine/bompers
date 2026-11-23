@@ -1,9 +1,13 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
-import { easeOutQuad, popInScale } from "@/shared/utils/easing";
-import { syncDisplayById } from "@/shared/utils/displaySync";
+import { easeOutQuad } from "@/shared/utils/easing";
 import type { OutlineWidth } from "@/shared/utils/outlineWidth";
-import type { DiveRefillPickup } from "@/features/collectibles/types/collectibles.types";
+import {
+  fixedPickupBob,
+  fixedPickupPhase,
+  type PlaceFixedPickupArgs,
+} from "@/features/fixed-pickups/services/fixedPickupPhase";
+import type { FixedPickup } from "@/features/fixed-pickups/types/fixedPickups.types";
 
 /**
  * Headbutt reset look (owner, dive-reset-bubble: option C "Jelly bubble"; DESIGN_LANGUAGE § 1
@@ -28,43 +32,12 @@ export const DIVE_REFILL_LOOK = {
   regrow: { from: 0.2, to: 0.95, fillAlpha: 0.4, inkAlpha: 0.35 },
 } as const;
 
-export type DiveRefillPhase =
-  | { kind: "present"; popIn: number }
-  | { kind: "popping"; t: number }
-  | { kind: "regrowing"; grow: number };
-
-/** Which state the bubble is drawn in, from the pickup's sim timers. */
-export function diveRefillPhase(
-  refill: DiveRefillPickup,
-  args: { respawnSeconds: number }
-): DiveRefillPhase {
-  const { popInSeconds, popSeconds, regrow } = DIVE_REFILL_LOOK;
-  if (refill.respawnTimer === 0) {
-    return { kind: "present", popIn: popInScale(refill.presentSeconds / popInSeconds) };
-  }
-  const since = args.respawnSeconds - refill.respawnTimer;
-  if (since < popSeconds) return { kind: "popping", t: Math.max(0, since / popSeconds) };
-  const span = Math.max(1e-6, args.respawnSeconds - popSeconds);
-  const t = Math.min(1, (since - popSeconds) / span);
-  return { kind: "regrowing", grow: regrow.from + (regrow.to - regrow.from) * easeOutQuad(t) };
-}
-
 /** Idle wobble pose; each point is offset so neighbours do not wobble in step. */
 export function diveRefillWobble(nowMs: number, pointIndex: number): { sx: number; sy: number } {
   const { amount, periodMs } = DIVE_REFILL_LOOK.wobble;
   const k = 1 + amount * Math.sin(((nowMs + pointIndex * 250) / periodMs) * Math.PI * 2);
   return { sx: k, sy: 1 / k };
 }
-
-export interface DiveRefillLayer {
-  container: Container;
-  sprites: Map<string, Container>;
-}
-
-export const createDiveRefillLayer = (): DiveRefillLayer => ({
-  container: new Container({ label: "dive-refills" }),
-  sprites: new Map(),
-});
 
 interface RefillSprite extends Container {
   bubble: Container;
@@ -113,7 +86,8 @@ function drawBubble(r: number, outline: OutlineWidth): Container {
   return bubble;
 }
 
-function drawRefill(size: number, outline: OutlineWidth): RefillSprite {
+/** The bubble, its pop (ring + droplets) and the regrowing ghost; children: ghost, pop, bubble. */
+export function drawDiveRefill(size: number, outline: OutlineWidth): Container {
   const r = size * DIVE_REFILL_LOOK.radiusFraction;
   const { fillAlpha, inkAlpha } = DIVE_REFILL_LOOK.regrow;
   const ghost = new Graphics()
@@ -152,43 +126,25 @@ function placePop(sprite: RefillSprite, t: number): void {
   });
 }
 
-function placeRefill(sprite: RefillSprite, refill: DiveRefillPickup, args: PlaceArgs): void {
-  const phase = diveRefillPhase(refill, args);
+export function placeDiveRefill(
+  container: Container,
+  pickup: FixedPickup,
+  args: PlaceFixedPickupArgs
+): void {
+  const sprite = container as RefillSprite;
+  const phase = fixedPickupPhase(pickup, { ...args, timing: DIVE_REFILL_LOOK });
   sprite.bubble.visible = phase.kind === "present";
   sprite.pop.visible = phase.kind === "popping";
   sprite.ghost.visible = phase.kind === "regrowing";
-  const { amplitude, periodMs } = DIVE_REFILL_LOOK.bob;
-  const bobPhase = ((args.nowMs + refill.pointIndex * 250) / periodMs) * Math.PI * 2;
-  const bob = phase.kind === "present" ? Math.sin(bobPhase) * amplitude : 0;
-  sprite.position.set(refill.x, refill.y + bob);
+  const bob =
+    phase.kind === "present" ? fixedPickupBob(DIVE_REFILL_LOOK.bob, { ...args, ...pickup }) : 0;
+  sprite.position.set(pickup.x, pickup.y + bob);
   if (phase.kind === "present") {
-    const { sx, sy } = diveRefillWobble(args.nowMs, refill.pointIndex);
+    const { sx, sy } = diveRefillWobble(args.nowMs, pickup.pointIndex);
     sprite.bubble.scale.set(sx * phase.popIn, sy * phase.popIn);
   } else if (phase.kind === "popping") {
     placePop(sprite, phase.t);
   } else {
     sprite.ghost.scale.set(phase.grow);
   }
-}
-
-interface PlaceArgs {
-  respawnSeconds: number;
-  nowMs: number;
-}
-
-export interface DiveRefillFrame extends PlaceArgs {
-  refills: readonly DiveRefillPickup[];
-  /** Touch box, world units. */
-  size: number;
-  outline: OutlineWidth;
-}
-
-/** Matches the layer to the level's headbutt resets. Call once per rendered frame. */
-export function syncDiveRefillLayer(layer: DiveRefillLayer, frame: DiveRefillFrame): void {
-  syncDisplayById(layer.sprites, layer.container, {
-    list: frame.refills,
-    key: (refill) => `${refill.pointIndex}:${frame.outline.step}`,
-    create: () => drawRefill(frame.size, frame.outline),
-    place: (sprite, refill) => placeRefill(sprite as RefillSprite, refill, frame),
-  });
 }

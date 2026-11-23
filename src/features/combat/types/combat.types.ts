@@ -186,6 +186,8 @@ export interface CombatState {
    * `ice.blob.shatterDamage`); combat only reads it.
    */
   bonusDamage: Map<number, number>;
+  /** Heals per player id over the match (monotonic; the health pickup sound, health-pickups D5). */
+  healCounts: Record<string, number>;
   nextSeq: number;
   nextEntityId: number;
 }

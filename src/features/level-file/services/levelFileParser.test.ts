@@ -141,6 +141,13 @@ describe("parseLevelFile — kit files", () => {
     expect(items.filter((id) => id === "dive-reset")).toHaveLength(3);
   });
 
+  it("should give Ball Playground 4 health pickups when imported", () => {
+    const playground = BUILT_INS.find((built) => built.id === "ball-playground")!;
+    const { level: def } = okLevel(parseLevelFile(playground.text));
+    const items = def.collectibles.map((point) => point.itemId);
+    expect(items.filter((id) => id === "health")).toHaveLength(4);
+  });
+
   it("should give the fire test level cardboard to burn, four spawns and only torches when imported", () => {
     const { level: def, warnings } = okLevel(parseLevelFile(FIRE_TEST));
     expect(warnings).toEqual([]);
