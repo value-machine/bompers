@@ -75,7 +75,7 @@ export function soundWorldOf(state: GameState): SoundWorldSnapshot {
   return {
     timeSeconds: state.timeSeconds,
     torchSlots: fire.sprays.map((spray) => spray.slot),
-    freezeSlots: ice.rays.map((ray) => ray.slot),
+    freezeSlots: ice.sprays.filter((spray) => spray.held).map((spray) => spray.slot),
     burningSamples: burningCount(fire),
     burningBlobs: state.blobFire.blobs.size,
     thawedSamples: thawedCount(ice),

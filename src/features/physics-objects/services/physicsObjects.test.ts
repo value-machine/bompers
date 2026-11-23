@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createSprayStream } from "@/shared/utils/sprayParticles";
 import { DEFAULT_GAME_TUNABLES } from "@/shared/config/gameTunables";
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { LevelDefinition } from "@/features/level/api/levelApi";
@@ -212,16 +213,12 @@ describe("physicsObjects — fire, frost and popping", () => {
 
   it("should freeze whole after half a second of freeze ray, slide without turning, and break on a blast", () => {
     const w = world();
-    const ray = {
-      slot: 0,
-      origin: { x: 400, y: FLOOR - R },
-      ends: [{ x: 600, y: FLOOR - R }],
-      touched: [false],
-      atSeconds: 0,
-    };
-    w.args.ice.rays = [ray];
+    // A freeze-ray puff sitting on the ball (the cold travels with the puffs).
+    const stream = createSprayStream();
+    stream.puffs.push({ x: w.ball().x, y: w.ball().y, dx: 1, dy: 0, travelled: 60 });
+    w.args.ice.sprays = [{ slot: 0, stream, held: true, heldAt: 0, reach: 180 }];
     w.run(0.55);
-    w.args.ice.rays = [];
+    w.args.ice.sprays = [];
     expect(w.ball().state.kind).toBe("frozen");
     w.ball().vx = 300;
     const angle = w.ball().angle;

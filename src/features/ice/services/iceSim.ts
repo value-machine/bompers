@@ -36,7 +36,7 @@ export function createIceState(terrain: TerrainGrid): IceState {
   return {
     feeds: new Map(),
     grounds: bodyGrids(terrain).map(createGroundIce),
-    rays: [],
+    sprays: [],
     blobs: new Map(),
     blobGraceUntil: new Map(),
     blobMoments: [],
@@ -73,7 +73,6 @@ function feedOf(ice: IceState, grid: TerrainGrid, key: number): ColdFeed {
   if (known) return known;
   const feed: ColdFeed = {
     front: createSampleFront(grid.widthCells * grid.heightCells),
-    seedKey: -1,
     budget: 0,
     fedAt: -Infinity,
   };
@@ -82,11 +81,10 @@ function feedOf(ice: IceState, grid: TerrainGrid, key: number): ColdFeed {
 }
 
 /** Starts the feed's distances over from the samples the beam touches now. */
-function reseed(feed: ColdFeed, touched: readonly number[], key: number): void {
+function reseed(feed: ColdFeed, touched: readonly number[]): void {
   feed.front.arriveAt.fill(Infinity);
   feed.front.heapIndex.length = 0;
   feed.front.heapTime.length = 0;
-  feed.seedKey = key;
   for (const index of touched) queueArrival(feed.front, index, 0);
 }
 
@@ -117,14 +115,16 @@ const stepIceArea = (step: ColdStep): number =>
   step.tunables.ice.freezeAreaPerSecond * step.dt * (step.share ?? 1);
 
 /**
- * Marks a feed as fed this step. A beam that moved, or came back after a pause, counts its
- * distances from where it touches now; after a pause the unspent ice is dropped.
+ * Marks a feed as fed this step. A beam that moved to ground its front has not reached, or came
+ * back after a pause, counts its distances from where it touches now; after a pause the unspent
+ * ice is dropped. While any touched sample is already in the front's reach the front carries on,
+ * so puffs landing all over one patch (freeze-ray-particles D1) grow it instead of restarting it.
  */
 function fedThisStep(feed: ColdFeed, touched: readonly number[], step: ColdStep): ColdFeed {
-  const key = Math.min(...touched);
   const paused = step.now - feed.fedAt > step.dt * 1.5;
   if (paused) feed.budget = 0;
-  if (paused || feed.seedKey !== key) reseed(feed, touched, key);
+  const reached = touched.some((index) => (feed.front.arriveAt[index] ?? Infinity) < Infinity);
+  if (paused || !reached) reseed(feed, touched);
   feed.fedAt = step.now;
   return feed;
 }
@@ -191,8 +191,6 @@ export const thawedCount = (ice: IceState): number =>
 
 /** Advances the ice to sim time `now` (after this step's freeze rays): what is due thaws. */
 export function stepIce(ice: IceState, terrain: TerrainGrid, frame: { now: number }): void {
-  // Beams not renewed this step have stopped (the ray is held before this step runs).
-  ice.rays = ice.rays.filter((beam) => beam.atSeconds >= frame.now);
   bodyGrids(terrain).forEach((grid, body) => {
     const ground = ice.grounds[body];
     if (ground) thawDue(ground, grid, frame.now);

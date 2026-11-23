@@ -53,6 +53,10 @@ const rayReaches = (
   beam: { origin: Vec2; ends: readonly Vec2[] }
 ): boolean => beam.ends.some((end) => segmentDistance(object, beam.origin, end) <= object.radius);
 
+/** Whether a freeze-ray puff in flight is inside the object (the cold travels with the puffs). */
+const puffReaches = (object: PhysicsObject, puffs: readonly Vec2[]): boolean =>
+  puffs.some((puff) => Math.hypot(puff.x - object.x, puff.y - object.y) <= object.radius);
+
 const burns = (object: PhysicsObject): boolean => object.body.burnSeconds !== null;
 
 function light(
@@ -122,9 +126,9 @@ function lightBlobs(args: ObjectElementsArgs): void {
   }
 }
 
-/** Chill drains after `chillHoldSeconds` without beam; true when a freeze ray reaches it now. */
+/** Chill drains after `chillHoldSeconds` without puffs; true when a freeze-ray puff reaches it now. */
 function underRay(object: PhysicsObject, args: ObjectElementsArgs): boolean {
-  if (args.ice.rays.some((ray) => rayReaches(object, ray))) {
+  if (args.ice.sprays.some((spray) => puffReaches(object, spray.stream.puffs))) {
     object.chilledAt = args.now;
     return true;
   }

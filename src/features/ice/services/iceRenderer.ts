@@ -1,6 +1,5 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE } from "@/shared/config/gamePalette";
-import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import { inkColor } from "@/shared/utils/debugInk";
 import type { OutlineRing } from "@/shared/utils/contourRings";
 import { outlineWidth } from "@/shared/utils/outlineWidth";
@@ -17,8 +16,6 @@ import {
   type TerrainGrid,
 } from "@/features/arena/api/arenaApi";
 import {
-  ICE_LOOK,
-  breathRelease,
   breathShape,
   breathStroke,
   frostGloss,
@@ -54,8 +51,6 @@ export interface IceView {
   /** Ice blocks around frozen blobs and their moments, under the rays. */
   blocks: Graphics;
   beams: Graphics;
-  /** Per ray slot: when its breath started and where its head last was (grow-in, release puff). */
-  breaths: Map<number, BreathMemo>;
 }
 
 /** The frozen ground of one body. */
@@ -71,13 +66,6 @@ interface FrostView {
   frostShapeVersion: number;
 }
 
-interface BreathMemo {
-  startedAt: number;
-  lastSeenAt: number;
-  head: Vec2;
-  radius: number;
-}
-
 export interface IceFrame {
   ice: IceState;
   terrain: TerrainGrid;
@@ -85,6 +73,8 @@ export interface IceFrame {
   players: readonly PlayerState[];
   /** `ice.blob` tunables (how full the chill is, how long a moment shows). */
   blob: GameTunables["ice"]["blob"];
+  /** `combat.freezeRay` tunables (a puff's reach, how long a burst shows). */
+  freezeRay: GameTunables["combat"]["freezeRay"];
   /** Render clock, ms (the breath's roll and specks only). */
   nowMs: number;
   /** Sim time, seconds (when a breath started and stopped). */
@@ -95,8 +85,6 @@ export interface IceFrame {
 
 const COLORS = GAME_PALETTE.ice;
 const INK = inkColor("ice");
-/** A breath missing for longer than this has stopped (its next start grows in again). */
-const BREATH_GAP_SECONDS = 0.1;
 
 /** One body's frost layers; a moving part's sit in its rest pose inside a pose layer. */
 function createFrostView(mover: MoverBody | undefined): FrostView {
@@ -119,7 +107,7 @@ export function createIceView(): IceView {
   const beamLayer = new Container({ label: "freeze-ray" });
   const blocks = new Graphics({ label: "ice-blocks" });
   beamLayer.addChild(blocks, beams);
-  return { terrainLayer, beamLayer, blocks, grounds: [], beams, breaths: new Map() };
+  return { terrainLayer, beamLayer, blocks, grounds: [], beams };
 }
 
 /** The frost view of body `body`, made the first time that body is drawn. */
@@ -212,44 +200,16 @@ function drawBreath(
   if (discs(g, shape.specks, {})) g.fill(COLORS.gloss);
 }
 
-/** Draws the live breaths and remembers each one's start and head. Returns the breathing slots. */
-function drawBreaths(view: IceView, frame: IceFrame, ink: number): Set<number> {
-  const on = new Set<number>();
-  for (const beam of frame.ice.rays) {
-    on.add(beam.slot);
-    const known = view.breaths.get(beam.slot);
-    const fresh = !known || frame.timeSeconds - known.lastSeenAt > BREATH_GAP_SECONDS;
-    const startedAt = fresh ? frame.timeSeconds : known.startedAt;
-    const shape = breathShape(beam, {
-      timeSeconds: frame.nowMs / 1000,
-      // Starts a fifth grown, so the first frame already shows a breath.
-      grow: 0.2 + (0.8 * (frame.timeSeconds - startedAt)) / ICE_LOOK.breath.growSeconds,
+/** Draws every freeze ray's puffs in flight, held or let go (the sim's own particles). */
+function drawSprays(view: IceView, frame: IceFrame, ink: number): void {
+  const stroke = breathStroke(frame.zoom);
+  for (const spray of frame.ice.sprays) {
+    const shape = breathShape(spray, {
+      timeSeconds: frame.timeSeconds,
+      length: frame.freezeRay.length,
+      burstSeconds: frame.freezeRay.burstSeconds,
     });
-    view.breaths.set(beam.slot, {
-      startedAt,
-      lastSeenAt: frame.timeSeconds,
-      head: shape.head,
-      radius: shape.headRadius,
-    });
-    drawBreath(view.beams, shape, { ink, stroke: breathStroke(frame.zoom) });
-  }
-  return on;
-}
-
-/** A breath that just stopped: its head lets go as a few puffs that rise and shrink. */
-function drawReleases(view: IceView, frame: IceFrame, look: { ink: number; on: Set<number> }) {
-  const g = view.beams;
-  for (const [slot, memo] of view.breaths) {
-    if (look.on.has(slot)) continue;
-    const k = (frame.timeSeconds - memo.lastSeenAt) / ICE_LOOK.breath.releaseSeconds;
-    if (k < 0 || k >= 1) {
-      view.breaths.delete(slot);
-      continue;
-    }
-    const puffs = breathRelease(memo, k);
-    if (discs(g, puffs, { grow: look.ink })) g.fill(INK);
-    if (discs(g, puffs, {})) g.fill(COLORS.body);
-    if (discs(g, puffs, { scale: ICE_LOOK.breath.releaseInner })) g.fill(COLORS.lip);
+    drawBreath(view.beams, shape, { ink, stroke });
   }
 }
 
@@ -272,6 +232,5 @@ export function syncIceView(view: IceView, frame: IceFrame): void {
     ink,
   });
   view.beams.clear();
-  const on = drawBreaths(view, frame, ink);
-  drawReleases(view, frame, { ink, on });
+  drawSprays(view, frame, ink);
 }
