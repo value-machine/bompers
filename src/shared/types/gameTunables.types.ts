@@ -477,6 +477,7 @@ export interface GameTunables {
     torch: {
       ammo: number;
       fireCooldown: number;
+      /** Thrust on the holder while spraying, opposite the aim, units / s² (`sprayRecoil`). */
       recoil: number;
       /** Cone length from the helmet, world units. */
       length: number;
@@ -496,6 +497,7 @@ export interface GameTunables {
     freezeRay: {
       ammo: number;
       fireCooldown: number;
+      /** Thrust on the holder while spraying, opposite the aim, units / s² (`sprayRecoil`). */
       recoil: number;
       /** Beam length from the helmet, world units. */
       length: number;
@@ -505,6 +507,14 @@ export interface GameTunables {
       rays: number;
       /** Acceleration on a blob inside the beam, along the aim, units / s². */
       push: number;
+      /**
+       * The cold travels (owner, freeze-ray-particles D1): puffs per second while held, their
+       * speed (units / s), the most in flight per holder, and how long a landed puff's burst shows.
+       */
+      puffRate: number;
+      puffSpeed: number;
+      puffCap: number;
+      burstSeconds: number;
     };
     /**
      * Where two held beams of reacting elements meet (owner, beam-clash D1, the "Steam wall";
@@ -513,6 +523,23 @@ export interface GameTunables {
     beamClash: {
       /** How close two beams must come to count as touching, world units. */
       thickness: number;
+    };
+    /**
+     * Spray recoil (owner, spray-recoil D1–D3): while a spray weapon is held, its `recoil` is a
+     * thrust (units / s²) on the holder opposite the aim. These limits are shared by every spray
+     * weapon so the push stays a hop, never flight.
+     */
+    sprayRecoil: {
+      /**
+       * Speed (units / s) the thrust may add between two touches of the ground; refilled while
+       * grounded. Caps the lift: a spray straight down hops, it never hovers.
+       */
+      airBudget: number;
+      /**
+       * Sideways speed (units / s) up to which the thrust still pushes along the push; below run
+       * speed so it never outruns walking.
+       */
+      maxSideSpeed: number;
     };
     /**
      * One blast power P (0–100, each weapon's `power`) drives everything an explosion does, in

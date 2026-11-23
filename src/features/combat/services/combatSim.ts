@@ -37,6 +37,8 @@ export interface StepCombatArgs {
   unarmedAttack?: UnarmedAttackHook;
   /** Held spray weapons (the fire feature's torch). Omitted: spraying only drains fuel. */
   sprayAttack?: SprayAttackHook;
+  /** Sprayers the spray recoil does not move (a seated driver, a diver). Omitted: none. */
+  steadyShooter?: (shooter: PlayerState) => boolean;
   /** Round bodies rockets explode on (physics objects). Omitted: none. */
   roundBodies?: readonly { center: Vec2; radius: number }[];
 }
@@ -58,6 +60,7 @@ export function stepCombat(args: StepCombatArgs): void {
     dt,
     unarmedAttack: args.unarmedAttack,
     sprayAttack: args.sprayAttack,
+    steadyShooter: args.steadyShooter,
   });
   stepRockets(ctx, dt);
 }

@@ -448,6 +448,7 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     terrain: state.arena.terrain,
     players: inPlay,
     blob: state.tunables.ice.blob,
+    freezeRay: state.tunables.combat.freezeRay,
     nowMs,
     timeSeconds: state.timeSeconds,
     zoom,

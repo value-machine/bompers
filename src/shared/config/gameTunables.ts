@@ -273,11 +273,12 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       craterShape: "round",
     },
     // Torch (blast-power D8): 3 s of fuel, a cone of ~3 blob widths (84 units) and ±18°, a light
-    // push (900 u/s² ≈ a third of the ground accel), no recoil and no cooldown (it is held).
+    // push (900 u/s² ≈ a third of the ground accel) and no cooldown (it is held). Recoil is a
+    // thrust while held (spray-recoil D1, limits in `sprayRecoil`).
     torch: {
       ammo: 3,
       fireCooldown: 0,
-      recoil: 0,
+      recoil: 3200,
       length: 84,
       halfAngleDegrees: 18,
       rays: 7,
@@ -290,15 +291,28 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     freezeRay: {
       ammo: 3,
       fireCooldown: 0,
-      recoil: 0,
+      recoil: 3200,
       length: 180,
       halfAngleDegrees: 20,
       rays: 7,
       push: 300,
+      // The cold travels (owner, freeze-ray-particles D1): puffs fly at 600 u/s, so the full reach
+      // takes 0.3 s and a blob 60 units away is reached in 0.1 s (snappy, yet a turn bends the
+      // spray). 400 puffs a second keep ~120 in flight, the cloud's density; at most 160 per holder.
+      puffRate: 400,
+      puffSpeed: 600,
+      puffCap: 160,
+      burstSeconds: 0.15,
     },
     // Beam clash (beam-clash D1): beams of reacting elements end each other where they come
     // within one sample of touching.
     beamClash: { thickness: 4 },
+    // Spray recoil (owner, spray-recoil D1–D3): the sprays' `recoil` thrust (3200 u/s² ≈ 2.3 ×
+    // gravity, just above ground decel 3000 so a sideways spray on the ground slides back
+    // slowly) may add 500 u/s per air time. Straight down from standing: thrust 0.16 s, apex
+    // ≈ 50 units (a fifth of a full jump, ~1/8 of a rocket jump), then it lands and hops again.
+    // Sideways it pushes only up to 240 u/s, under run speed (340).
+    sprayRecoil: { airBudget: 500, maxSideSpeed: 240 },
     // Chosen so power 50 (the rocket) keeps the pre-power blast: push 1080, reach 64, crater 34 on
     // toughness 1 (blast-power D3, D10). Blast alone from standing: ≈ 1080² / 2800 ≈ 415 units;
     // with the recoil (1080 + 200) ≈ 585, well above a full jump (≈ 250).

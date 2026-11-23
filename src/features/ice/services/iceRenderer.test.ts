@@ -40,6 +40,7 @@ function frozenPart() {
     terrain,
     players: [],
     blob: DEFAULT_GAME_TUNABLES.ice.blob,
+    freezeRay: DEFAULT_GAME_TUNABLES.combat.freezeRay,
     nowMs: 0,
     timeSeconds: 0,
     zoom: 1,
