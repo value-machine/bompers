@@ -1,5 +1,6 @@
 import type { Vec2 } from "@/shared/types/gameGeometry.types";
 import type { SampleFront } from "@/shared/types/sampleFront.types";
+import type { SprayParticleStream } from "@/shared/types/sprayParticles.types";
 
 /**
  * Frozen ground (owner, ice-element D1–D8): the cold flows out from where a freeze ray touches
@@ -15,8 +16,8 @@ export interface IceState {
    * terrain, then each moving part's own field.
    */
   grounds: GroundIce[];
-  /** The freeze rays of the last step, for the renderer. */
-  rays: FreezeRayBeam[];
+  /** Every freeze ray's puffs in flight, held or let go (freeze-ray-particles D1). */
+  sprays: FreezeSpray[];
   /** Blobs gathering chill or frozen in a block, by player id (ice-frozen-blobs D1, D3). */
   blobs: Map<string, IceBlob>;
   /** Sim time until which a blob whose block just ended gathers no chill, by player id. */
@@ -77,22 +78,23 @@ export interface IceBlobMoment {
 export interface ColdFeed {
   /** Distance through solid ground from the touched samples; restarted when the beam moves. */
   front: SampleFront;
-  /** Which samples the front was started from (the lowest touched index). */
-  seedKey: number;
   /** Ice not yet placed, in samples (fractions carry over to the next step). */
   budget: number;
   /** Sim time of the last step the beam touched ground. */
   fedAt: number;
 }
 
-/** One freeze ray this step: the helmet it comes from and where each of its rays ended. */
-export interface FreezeRayBeam {
+/**
+ * One holder's freeze-ray puffs (owner, freeze-ray-particles D1, "Cold travels"): they keep
+ * flying after the ray is let go, until each lands or runs out of reach.
+ */
+export interface FreezeSpray {
   slot: number;
-  origin: Vec2;
-  /** End of each ray (first terrain met, or full length). */
-  ends: Vec2[];
-  /** Whether each ray ended on terrain. */
-  touched: boolean[];
-  /** Sim time of the step it was held in. */
-  atSeconds: number;
+  stream: SprayParticleStream;
+  /** Whether the ray was held this step (the loop sound, the spray start). */
+  held: boolean;
+  /** Sim time of the last step it was held. */
+  heldAt: number;
+  /** How far its puffs may fly this step (shorter in a beam clash). */
+  reach: number;
 }

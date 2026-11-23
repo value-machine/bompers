@@ -68,8 +68,11 @@ const sampleAt = ({ field, toLocal }: PosedField, p: Vec2): number | null => {
   return (field.cells[index] ?? 0) === 0 ? null : index;
 };
 
-/** The first field that is solid at `p`, with the sample there. */
-function solidAt(fields: readonly PosedField[], p: Vec2): { sample: number; body: number } | null {
+/** The first field that is solid at `p`, with the sample there (also the spray particles' stop). */
+export function solidAt(
+  fields: readonly PosedField[],
+  p: Vec2
+): { sample: number; body: number } | null {
   for (let body = 0; body < fields.length; body += 1) {
     const posed = fields[body];
     const sample = posed ? sampleAt(posed, p) : null;
@@ -82,7 +85,10 @@ function solidAt(fields: readonly PosedField[], p: Vec2): { sample: number; body
  * A body whose hit shape holds `p`: its box (width × hit height) with fully rounded corners, which
  * is a circle for a square body and a low, wide pill for a crouched one.
  */
-const bodyAt = <Body extends RayFanBody>(cast: RayFanCast<Body>, p: Vec2): Body | undefined =>
+export const bodyAt = <Body extends RayFanBody>(
+  cast: Pick<RayFanCast<Body>, "bodies" | "hitHeight">,
+  p: Vec2
+): Body | undefined =>
   cast.bodies.find((body) => {
     const h = cast.hitHeight?.(body) ?? body.height;
     const box = {

@@ -1,10 +1,5 @@
 /** Public seam of the ice feature: frozen ground on the terrain field, the freeze ray, the ice layers. */
-export type {
-  FreezeRayBeam,
-  IceBlob,
-  IceBlobMoment,
-  IceState,
-} from "@/features/ice/types/ice.types";
+export type { FreezeSpray, IceBlob, IceBlobMoment, IceState } from "@/features/ice/types/ice.types";
 export {
   chillBlob,
   chillSlow,
@@ -24,7 +19,11 @@ export {
   stepIce,
   thawedCount,
 } from "@/features/ice/services/iceSim";
-export { sprayFreezeRay, type FreezeRayArgs } from "@/features/ice/services/freezeRay";
+export {
+  sprayFreezeRay,
+  stepFreezeSprays,
+  type FreezeRayArgs,
+} from "@/features/ice/services/freezeRay";
 export {
   createIceView,
   syncIceView,
