@@ -392,6 +392,15 @@ function puffScene(gap: number | null) {
 const chillOf = (ice: IceState, player: PlayerState | null): number =>
   (player && ice.blobs.get(player.id)?.chill) ?? 0;
 
+/** Where the fan's edges meet the floor ahead of the holder, from the tunable's half-angle. */
+function fanEdgesOnFloor(holder: PlayerState, aim: number): { low: number; top: number } {
+  const helmet = helmetPoint(holder);
+  const drop = FLOOR - helmet.y;
+  const half = (RAY.halfAngleDegrees * Math.PI) / 180;
+  const ahead = helmet.x - holder.x;
+  return { low: ahead + drop / Math.tan(aim + half), top: ahead + drop / Math.tan(aim - half) };
+}
+
 describe("freeze ray — the cold travels with its puffs (freeze-ray-particles D1)", () => {
   it("should land the low puffs at the feet and the top puffs far ahead when aimed at the floor in front", () => {
     const { ice, holder, hold } = puffScene(null);
@@ -403,8 +412,10 @@ describe("freeze ray — the cold travels with its puffs (freeze-ray-particles D
       hold();
       for (const burst of ice.sprays[0]!.stream.bursts) landed.push(burst.x - holder.x);
     }
-    expect(Math.min(...landed)).toBeLessThan(25);
-    expect(Math.max(...landed)).toBeGreaterThan(90);
+    const { low, top } = fanEdgesOnFloor(holder, a);
+    expect(Math.min(...landed)).toBeLessThan(low + 6);
+    expect(Math.max(...landed)).toBeGreaterThan(top * 0.85);
+    expect(Math.max(...landed)).toBeGreaterThan(2 * Math.min(...landed));
   });
 
   it("should reach a blob only after the puffs' flight time", () => {

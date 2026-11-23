@@ -36,7 +36,9 @@ export const ICE_LOOK = {
     /** A puff's radius as it leaves, what it adds by its full reach, and where it starts to fade. */
     puffRadius: 3.5,
     puffGrow: 7,
-    fadeFrom: 0.85,
+    // Thins out over the last 45 % of the reach (owner, 2026-11-23: the end was "a full stop",
+    // "a little bit sudden"), eased, so the tail tapers into wisps.
+    fadeFrom: 0.55,
     /** Where a puff lands: this many burst puffs of this radius roll around it while it shows. */
     burstPuffs: 5,
     burstRadius: 7,
@@ -121,7 +123,9 @@ function puffDisc(puff: SprayPuff, length: number): Disc | null {
   const look = ICE_LOOK.breath;
   if (puff.travelled < look.emitterReach) return null;
   const u = Math.min(1, puff.travelled / length);
-  const fade = u > look.fadeFrom ? (1 - u) / (1 - look.fadeFrom) : 1;
+  const k = Math.max(0, (u - look.fadeFrom) / (1 - look.fadeFrom));
+  // Smooth ease-out to nothing: no kink where the fade starts, no pop where it ends.
+  const fade = 1 - k * k * (3 - 2 * k);
   return { x: puff.x, y: puff.y, r: (look.puffRadius + look.puffGrow * u) * fade };
 }
 
@@ -134,7 +138,8 @@ function burstDiscs(
   const turn = at.t * TAU * look.rollHz + at.slot;
   return bursts.flatMap((burst, i) => {
     const k = Math.min(1, Math.max(0, (at.t - burst.at) / at.seconds));
-    const r = look.burstRadius * (1 - 0.5 * k);
+    // Shrinks to nothing as the burst ends, so a landed puff never pops out of view.
+    const r = look.burstRadius * (1 - k);
     return Array.from({ length: look.burstPuffs }, (_, j) => {
       const a = turn + i * 1.7 + (j * TAU) / look.burstPuffs;
       return {

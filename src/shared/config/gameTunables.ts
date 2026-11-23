@@ -285,14 +285,14 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     },
     // Freeze ray (ice-element D1): 3 s of charge like the torch, a beam of about six blob widths
     // (180 units) and a third of the torch's push. Frost fan (owner, freeze-ray-spread D1): ±20° on
-    // 7 rays (was ±7° on 5), each to its own impact: aimed at the floor in front, the low rays
-    // land at the feet and the top ray still reaches about 100 units ahead.
+    // 7 rays (was ±7° on 5), each to its own impact. 30 % narrower since (owner, 2026-11-23: "the
+    // cone should be about 30% smaller"): ±14°, the same reach.
     freezeRay: {
       ammo: 3,
       fireCooldown: 0,
       recoil: 3200,
       length: 180,
-      halfAngleDegrees: 20,
+      halfAngleDegrees: 14,
       rays: 7,
       push: 300,
       // The cold travels (owner, freeze-ray-particles D1): puffs fly at 600 u/s, so the full reach
