@@ -92,6 +92,7 @@ Link the preview kit in `<head>` (works offline without it):
 | item | `freeze-ray` | Freeze ray | use: drop |
 | item | `point-orb` | Point orb | use: collectible, default for collectible |
 | item | `dive-reset` | Headbutt reset | use: collectible |
+| item | `health` | Health pickup | use: collectible |
 | object | `tree` / `oak` | Round oak | height 96–480, width 0.6–1.2 × height, default variant |
 | object | `tree` / `pine` | Pine | height 96–480, width 0.35–0.75 × height |
 | object | `tree` / `snowy-pine` | Snowy pine | height 96–480, width 0.35–0.75 × height |

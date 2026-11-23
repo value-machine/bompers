@@ -2,8 +2,6 @@
 export type {
   CollectiblesState,
   CrateStepResult,
-  DiveRefillCollected,
-  DiveRefillPickup,
   OrbCollected,
   PointOrb,
   WeaponCrate,
@@ -15,11 +13,8 @@ export {
   stepCollectibles,
   type StepCollectiblesArgs,
 } from "@/features/collectibles/services/collectiblesSim";
-export {
-  DIVE_REFILL_ITEM,
-  stepDiveRefills,
-  type StepDiveRefillsArgs,
-} from "@/features/collectibles/services/diveRefills";
+/** The touch test every pickup shares (sky drops here, fixed pickups in `fixed-pickups`). */
+export { firstToucher } from "@/features/collectibles/services/skyDrops";
 export {
   stepWeaponCrates,
   type StepWeaponCratesArgs,

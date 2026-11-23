@@ -64,34 +64,8 @@ export interface PickupBurst {
   ageSeconds: number;
 }
 
-/**
- * A headbutt reset (catalog item `dive-reset`): a fixed dive-refill pickup on its collectible
- * point. Only a player whose dive charge is spent can take it (the match filters who is passed
- * in); it is then gone for `collectibles.diveRefill.respawnSeconds` (headbutt-reset D2, D3).
- */
-export interface DiveRefillPickup {
-  /** Index into the level's collectibles. */
-  pointIndex: number;
-  /** Centre, world units (the authored point). */
-  x: number;
-  y: number;
-  /** Seconds until it is back; 0 = present. */
-  respawnTimer: number;
-  /** Seconds since it last appeared (the render pop-in); counts only while present. */
-  presentSeconds: number;
-}
-
-/** A headbutt reset a player took this step: `match` refills that player's dive. */
-export interface DiveRefillCollected {
-  slot: number;
-  x: number;
-  y: number;
-}
-
 export interface CollectiblesState {
   orbs: PointOrb[];
-  /** Headbutt resets, one per `dive-reset` collectible point, from the match start. */
-  diveRefills: DiveRefillPickup[];
   crates: WeaponCratesState;
   /** Taken orbs and crates bursting (render only, aged once per step by `stepCollectibles`). */
   bursts: PickupBurst[];

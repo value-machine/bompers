@@ -66,6 +66,11 @@ import {
   type CollectiblesView,
 } from "@/features/collectibles/api/collectiblesApi";
 import {
+  createFixedPickupsView,
+  syncFixedPickupsView,
+  type FixedPickupsView,
+} from "@/features/fixed-pickups/api/fixedPickupsApi";
+import {
   createDiveView,
   diveBlobPoses,
   syncDiveView,
@@ -107,7 +112,8 @@ const createElementViews = () => ({
  *   ├─ world   (camera transform; world units)
  *   │  ├─ terrain   (arena: solid slabs, breakable tiles)
  *   │  ├─ contact shadows: weapon crates (collectibles), rockets (combat), players (player)
- *   │  ├─ weapon crates, headbutt resets, point orbs (collectibles)
+ *   │  ├─ weapon crates (collectibles), headbutt resets and health pickups (fixed-pickups),
+ *   │  │  point orbs and pickup bursts (collectibles)
  *   │  ├─ physics objects: balls with their shadows, flames, frost, pop rings (physics-objects)
  *   │  ├─ effects (debris, explosions, rocket-hit pops, blocked rings, lost chunks — effects)
  *   │  ├─ knockouts (goo droplets, loose helmets and tubes — knockout; its goo stains sit right above the terrain)
@@ -140,6 +146,7 @@ export interface GameRenderer {
   /** Knockout simulation (render-only): flying blobs, goo, loose pieces. */
   knockout: KnockoutWorld;
   collectibles: CollectiblesView;
+  fixedPickups: FixedPickupsView;
   dive: DiveView;
   fire: FireView;
   blobFire: BlobFireView;
@@ -163,7 +170,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
   const combat = createCombatView();
   const effects = createEffectsView();
   const knockouts = createKnockoutView();
-  const collectibles = createCollectiblesView();
+  const [collectibles, fixedPickups] = [createCollectiblesView(), createFixedPickupsView()];
   const dive = createDiveView();
   const { fire, blobFire, ice } = createElementViews();
   const [physicsObjects, karts] = [createPhysicsObjectsView(), createKartsView()];
@@ -178,7 +185,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     combat.shadows.container,
     players.shadows,
     collectibles.crates,
-    collectibles.refills.container,
+    fixedPickups.container,
     collectibles.orbs,
     collectibles.bursts,
     physicsObjects.container,
@@ -209,6 +216,7 @@ export function createGameRenderer(app: Application, state: GameState): GameRend
     knockouts,
     knockout: createKnockoutWorld(),
     collectibles,
+    fixedPickups,
     dive,
     fire,
     blobFire,
@@ -409,6 +417,26 @@ function addKnockoutBlob(
   blobs.overlays.set(id, { rotation: 0, sx: 1 + (squash.sx - 1) * k, sy: 1 + (squash.sy - 1) * k });
 }
 
+/** Sky drops (orbs, crates, bursts) and the pickups fixed on the level's points. */
+function syncPickupLayers(renderer: GameRenderer, state: GameState, frame: LayerFrame): void {
+  const { nowMs, zoom } = frame;
+  syncCollectiblesView(renderer.collectibles, {
+    collectibles: state.collectibles,
+    size: state.tunables.collectibles.size,
+    crateSize: state.tunables.combat.drops.size,
+    feel: state.tunables.feel.pickup,
+    terrain: state.arena.terrain,
+    nowMs,
+    zoom,
+  });
+  syncFixedPickupsView(renderer.fixedPickups, {
+    pickups: state.fixedPickups,
+    tunables: state.tunables,
+    nowMs,
+    zoom,
+  });
+}
+
 /** Syncs every world-space layer to the state. */
 function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerFrame): void {
   const { inPlay, nowMs, zoom } = frame;
@@ -480,16 +508,7 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     zoom,
     springTravel: state.tunables.karts.springTravel,
   });
-  syncCollectiblesView(renderer.collectibles, {
-    collectibles: state.collectibles,
-    size: state.tunables.collectibles.size,
-    crateSize: state.tunables.combat.drops.size,
-    diveRefill: state.tunables.collectibles.diveRefill,
-    feel: state.tunables.feel.pickup,
-    terrain: state.arena.terrain,
-    nowMs,
-    zoom,
-  });
+  syncPickupLayers(renderer, state, frame);
   syncCombatView(renderer.combat, {
     combat: state.combat,
     players: frame.inPlay,

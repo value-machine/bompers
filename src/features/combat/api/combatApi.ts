@@ -37,6 +37,7 @@ export {
   type HitResult,
   type HitWorld,
   eliminateFighter,
+  healFighter,
   reportPartSound,
   isFighterEliminated,
   respawnFighter,

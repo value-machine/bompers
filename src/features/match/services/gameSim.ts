@@ -29,6 +29,7 @@ import {
   applyHit,
   eliminateFighter,
   type EliminateArgs,
+  healFighter,
   reportPartSound,
   createCombatState,
   reportTerrainDestroyed,
@@ -82,10 +83,15 @@ import {
 import {
   createCollectiblesState,
   stepCollectibles,
-  stepDiveRefills,
   stepWeaponCrates,
   type CollectiblesState,
 } from "@/features/collectibles/api/collectiblesApi";
+import {
+  createFixedPickups,
+  stepFixedPickups,
+  type FixedPickup,
+  type FixedPickupItem,
+} from "@/features/fixed-pickups/api/fixedPickupsApi";
 import {
   createPlayer,
   escapeSolid,
@@ -153,8 +159,10 @@ import {
  *   3a. stepWeaponCrates — collectibles feature: weapon crates drop, fall, land and get taken;
  *                        combat's `takeWeaponPickups` arms the collector
  *   3b. stepDives      — dive feature: the unarmed attack; its hits go through combat's `applyHit`
- *   4. stepHeadbuttResets — collectibles feature: a player with a spent dive touching a headbutt
- *                        reset takes it; the dive feature's `refillDive` gives the charge back
+ *   4. stepFixedPickupTakes — fixed-pickups feature: a player with a spent dive touching a
+ *                        headbutt reset takes it (the dive feature's `refillDive` gives the charge
+ *                        back); a hurt player touching a health pickup takes it (combat's
+ *                        `healFighter` gives a chunk back, never above max)
  *   4. stepCollectibles — collectibles feature: point orbs fall from the sky; touching one scores
  *   5. stepMatchRules  — out of the kill zone → elimination; scoring; eliminated players wait
  *                        `respawnDelaySeconds`, then respawn at the spawn farthest from opponents
@@ -213,6 +221,8 @@ export interface GameState {
   karts: KartsState;
   /** Sky drops: point orbs falling onto the collectible points, weapon crates from the drop points. */
   collectibles: CollectiblesState;
+  /** Pickups fixed on the level's points from the start: headbutt resets, health pickups. */
+  fixedPickups: FixedPickup[];
   /** Scores and the respawn queue. */
   rules: MatchRulesState;
   round: MatchRoundState;
@@ -261,7 +271,8 @@ export function createGameState({ level, tunables }: CreateGameStateArgs): GameS
     dive: createDiveState(),
     physicsObjects,
     karts,
-    collectibles: createCollectiblesState(matchTunables, normalized.level.collectibles),
+    collectibles: createCollectiblesState(matchTunables),
+    fixedPickups: createFixedPickups(normalized.level.collectibles),
     rules: createMatchRulesState(matchTunables.match.maxPlayers),
     round: {
       phase: "playing",
@@ -683,21 +694,41 @@ function stepCratePickups(state: GameState, dt: number): void {
   takeWeaponPickups({ combat: state.combat, players, tunables, timeSeconds }, pickups);
 }
 
+/** A player may take a fixed pickup only when it does something for them. */
+function canTakeFixedPickup(
+  state: GameState,
+  itemId: FixedPickupItem,
+  player: PlayerState
+): boolean {
+  if (itemId === "dive-reset") return isDiveSpent(state.dive, player);
+  const fighter = state.combat.fighters.get(player.id);
+  // No fighter yet means never hit: full health.
+  return !!fighter && !fighter.eliminated && fighter.health < state.tunables.combat.maxHealth;
+}
+
 /**
- * Step 4 (before the orbs): headbutt resets. Only players in play whose dive charge is spent may
- * take one (headbutt-reset D2); taking it refills their dive mid-flight.
+ * Step 4 (before the orbs): fixed pickups. A headbutt reset goes only to a player whose dive
+ * charge is spent and refills it mid-flight (headbutt-reset D2); a health pickup goes only to a
+ * hurt player and gives `collectibles.health.heal` chunks back (health-pickups D3). A player who
+ * can't use one flies through it and it stays.
  */
-function stepHeadbuttResets(state: GameState, dt: number): void {
-  const spent = playersInPlay(state).filter((player) => isDiveSpent(state.dive, player));
-  const taken = stepDiveRefills({
-    refills: state.collectibles.diveRefills,
-    players: spent,
+function stepFixedPickupTakes(state: GameState, dt: number): void {
+  const players = playersInPlay(state);
+  const taken = stepFixedPickups({
+    pickups: state.fixedPickups,
+    players,
+    canTake: (itemId, player) => canTakeFixedPickup(state, itemId, player),
     tunables: state.tunables,
     dt,
   });
-  for (const { slot } of taken) {
-    const player = spent.find((candidate) => candidate.slot === slot);
-    if (player) refillDive(state.dive, player);
+  for (const { itemId, slot } of taken) {
+    const player = players.find((candidate) => candidate.slot === slot);
+    if (!player) continue;
+    if (itemId === "dive-reset") refillDive(state.dive, player);
+    else {
+      const chunks = state.tunables.collectibles.health.heal;
+      healFighter(state.combat, player, { chunks, tunables: state.tunables });
+    }
   }
 }
 
@@ -930,7 +961,7 @@ function stepPlay(state: GameState, rawInputs: PlayerInputs, dt: number): void {
   stepElements(state, { players, contacts, inputs: iced, dt });
   stepCratePickups(state, dt);
   stepDivesAndBlocks(state, { players, contacts, inputs, dt });
-  stepHeadbuttResets(state, dt);
+  stepFixedPickupTakes(state, dt);
   const collected = stepCollectibles({
     collectibles: state.collectibles,
     points: level.collectibles,

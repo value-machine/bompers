@@ -124,6 +124,7 @@ export function soundSnapshotOf(
         terrainHitSpeed: Math.max(player.terrainHitSpeedX, player.terrainHitSpeedY),
         ...diveCounts(state, player.id),
         orbCount: state.collectibles.orbCounts[player.slot] ?? 0,
+        healCount: state.combat.healCounts[player.id] ?? 0,
         catchFireCount: state.blobFire.caughtCounts[player.id] ?? 0,
         iceDouseCount: state.blobFire.dousedCounts[player.id] ?? 0,
         ...iceBlockCounts(state, player.id),

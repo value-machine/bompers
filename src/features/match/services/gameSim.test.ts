@@ -271,7 +271,7 @@ describe("gameSim — headbutt reset", () => {
       tunables: DEFAULT_GAME_TUNABLES,
     });
     stepFor(state, 1);
-    return { state, player: state.players[0]!, refill: state.collectibles.diveRefills[0]! };
+    return { state, player: state.players[0]!, refill: state.fixedPickups[0]! };
   };
 
   it("should leave the pickup in place when a player who still holds the charge flies through it", () => {
@@ -291,6 +291,37 @@ describe("gameSim — headbutt reset", () => {
     expect(refill.respawnTimer).toBeGreaterThan(0);
     expect(state.dive.motions[player.id]!.charged).toBe(true);
     expect(state.dive.refillCounts[player.id]).toBe(1);
+  });
+});
+
+describe("gameSim — health pickup (health-pickups D3)", () => {
+  /** One player standing at x 100; a health pickup sits at (100, 120). */
+  const gameWithHealth = () => {
+    const state = createGameState({
+      level: { ...level, collectibles: [{ at: { x: 100, y: 120 }, itemId: "health" }] },
+      tunables: DEFAULT_GAME_TUNABLES,
+    });
+    stepFor(state, 1);
+    const player = state.players[0]!;
+    player.y = 130;
+    player.grounded = false;
+    return { state, player, pickup: state.fixedPickups[0]! };
+  };
+  const { maxHealth } = DEFAULT_GAME_TUNABLES.combat;
+
+  it("should leave the pickup in place when a player at full health touches it", () => {
+    const { state, pickup } = gameWithHealth();
+    stepGame(state, keys(), dt);
+    expect(pickup.respawnTimer).toBe(0);
+  });
+
+  it("should give one chunk back and count the heal when a hurt player touches it", () => {
+    const { state, player, pickup } = gameWithHealth();
+    state.combat.fighters.get(player.id)!.health = maxHealth - 2;
+    stepGame(state, keys(), dt);
+    expect(pickup.respawnTimer).toBeGreaterThan(0);
+    expect(state.combat.fighters.get(player.id)!.health).toBe(maxHealth - 1);
+    expect(state.combat.healCounts[player.id]).toBe(1);
   });
 });
 

@@ -38,6 +38,7 @@ export function createCombatState(): CombatState {
     events: [],
     beamClashes: [],
     bonusDamage: new Map(),
+    healCounts: {},
     nextSeq: 1,
     nextEntityId: 1,
   };
@@ -156,6 +157,23 @@ export function respawnFighter(
   fighter.weapon = null;
   fighter.attackCooldown = 0;
   fighter.lastHitBySlot = null;
+}
+
+/**
+ * Gives a hurt player `chunks` back, never above `combat.maxHealth` (health-pickups D3). Returns
+ * whether any health came back; only then does the heal count (the pickup sound) go up.
+ */
+export function healFighter(
+  combat: CombatState,
+  player: PlayerState,
+  args: { chunks: number; tunables: GameTunables }
+): boolean {
+  const fighter = fighterFor(combat, player, args.tunables);
+  const max = args.tunables.combat.maxHealth;
+  if (fighter.eliminated || fighter.health >= max) return false;
+  fighter.health = Math.min(max, fighter.health + args.chunks);
+  combat.healCounts[player.id] = (combat.healCounts[player.id] ?? 0) + 1;
+  return true;
 }
 
 // ── Hits ─────────────────────────────────────────────────────────────────────

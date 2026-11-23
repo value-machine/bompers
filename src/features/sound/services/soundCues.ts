@@ -265,6 +265,8 @@ const PLAYER_RULES: readonly [
   ["respawn", (p, n) => n.inPlay && !p.inPlay, () => 1],
   // A headbutt reset reuses the pickup sound, pitched by the collector (headbutt-reset D5).
   ["pickup", (p, n) => n.diveRefillCount > p.diveRefillCount, () => 1],
+  // A health pickup too: the fixed pickups share one take (health-pickups D5).
+  ["pickup", (p, n) => n.healCount > p.healCount, () => 1],
   // Taking a point orb: its own chime, pitched by the collector (pickup-juice D8).
   ["orb-collect", (p, n) => n.orbCount > p.orbCount, () => 1],
   // A blob catching fire, and ice putting it out with steam (owner picks, element-sounds lap).

@@ -36,3 +36,4 @@ Seams for later work:
 - A crush (`playerEliminated`, cause `crush`) kicks a heavy-tier shake, the back-hit size, since a crush has no hit of its own (moving-parts B3).
 - A `playerHit` flagged `bonus` (a shattered ice block, freeze-ray buff B) reads as hard: back-hit shake, flash and hit-stop (heavy tier).
 - Getting hurt (owner, hurt-feedback D1, 2026-11-20): a `playerHit` with `damage` 0 (a crouched hit) is blocked — no flash, shake, hit-stop or pop, a grey ring instead. A hit that takes chunks throws one chunk in the victim's colour per damage point (`feel.hurt.chunkSeconds`) and drives the hurt pose (`hurtPose.ts`: squash wide springing back, eyes shut) that the match lays over the blob's other overlays.
+- The lost chunks are hearts (owner, health-pickups D2): the shared `drawInkHeart` with the shared ink line, so they match the HUD and over-head hearts.

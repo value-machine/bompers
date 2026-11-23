@@ -48,6 +48,8 @@ export interface SoundPlayerSnapshot {
   orbCount: number;
   /** Headbutt resets taken over the match (monotonic). */
   diveRefillCount: number;
+  /** Health pickups taken over the match (monotonic; health-pickups D5). */
+  healCount: number;
   /** Dash presses the dive could not take over the match (monotonic; dash-feel lap). */
   diveDeniedCount: number;
   /** Times caught fire / put out by ice over the match (monotonic; fire-burn D7). */
