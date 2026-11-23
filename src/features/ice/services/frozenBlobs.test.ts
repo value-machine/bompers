@@ -19,7 +19,7 @@ import {
   frozenBlobPoses,
   shardTriangle,
 } from "@/features/ice/services/blobIceRenderer";
-import { sprayFreezeRay } from "@/features/ice/services/freezeRay";
+import { sprayFreezeRay, stepFreezeSprays } from "@/features/ice/services/freezeRay";
 import {
   chillSlow,
   CRACK_HOP_SECONDS,
@@ -31,6 +31,7 @@ import {
   stepFrozenBlobs,
 } from "@/features/ice/services/frozenBlobs";
 import { createIceState } from "@/features/ice/services/iceSim";
+import type { IceState } from "@/features/ice/types/ice.types";
 
 const TUNABLES = DEFAULT_GAME_TUNABLES;
 const B = TUNABLES.ice.blob;
@@ -62,14 +63,27 @@ function scene(floor = "stone") {
   const victim = createPlayer(1, { x: 260, y: FLOOR }, TUNABLES);
   const players = [holder, victim];
   const world = { time: 0 };
+  const once = (ray: boolean, canChill?: (player: PlayerState) => boolean) => {
+    const now = world.time;
+    if (ray)
+      sprayFreezeRay(ice, { terrain, players, holder, tunables: TUNABLES, now, dt, canChill });
+    stepFrozenBlobs(ice, { players, now, dt, tunables: TUNABLES });
+    world.time += dt;
+  };
+  let arrived = false;
+  /**
+   * `seconds` of the scene, with or without the ray held. The cold travels (freeze-ray-particles
+   * D1): the first time the ray is held, it sprays until its puffs first reach the victim, and
+   * that step counts as the first of `seconds`, so `seconds` is time spent in the cold.
+   */
   const step = (seconds: number, ray: boolean, canChill?: (player: PlayerState) => boolean) => {
-    for (let i = 0; i < Math.round(seconds / dt); i += 1) {
-      const now = world.time;
-      if (ray)
-        sprayFreezeRay(ice, { terrain, players, holder, tunables: TUNABLES, now, dt, canChill });
-      stepFrozenBlobs(ice, { players, now, dt, tunables: TUNABLES });
-      world.time += dt;
+    let steps = Math.round(seconds / dt);
+    if (ray && !arrived) {
+      arrived = true;
+      for (let i = 0; i < 60 && !ice.blobs.has(victim.id); i += 1) once(true, canChill);
+      if (ice.blobs.has(victim.id)) steps -= 1;
     }
+    for (let i = 0; i < steps; i += 1) once(ray, canChill);
   };
   /** The sim's inputs for one step with the victim's jump held or not. */
   const press = (jump: boolean): PlayerInputs => {
@@ -322,8 +336,9 @@ describe("freeze ray on moving parts (mover-materials lap 1)", () => {
 
   it("should end the ray on the part and not chill or push the blob behind it when a part is in the beam", () => {
     const { terrain, part, ice, victim, spray } = partScene();
-    spray();
-    for (const end of ice.rays[0]!.ends) expect(end.x).toBeLessThanOrEqual(228 + 4);
+    // The cold travels: hold the ray long enough for its puffs to reach the part (32 units).
+    for (let i = 0; i < 10; i += 1) spray();
+    for (const puff of ice.sprays[0]!.stream.puffs) expect(puff.x).toBeLessThanOrEqual(228 + 4);
     expect(victim.vx).toBe(0);
     expect(ice.blobs.has(victim.id)).toBe(false);
     // The cold lands on the part the beam touches (iceSim.test.ts), not on the ground behind it.
@@ -334,8 +349,117 @@ describe("freeze ray on moving parts (mover-materials lap 1)", () => {
   it("should reach the blob when the part has moved out of the beam", () => {
     const { part, ice, victim, spray } = partScene();
     part.pose = { dx: 0, dy: -120, angle: 0 };
-    spray();
+    // The cold travels: a few steps for the puffs to fly the 60 units to the blob.
+    for (let i = 0; i < 10; i += 1) spray();
     expect(victim.vx).toBeGreaterThan(0);
     expect(ice.blobs.has(victim.id)).toBe(true);
+  });
+});
+
+// The cold travels with the puffs (freeze-ray-particles D1). Kept here with the other freeze-ray
+// tests: the ice feature's services folder is at its file budget.
+const RAY = TUNABLES.combat.freezeRay;
+
+/** A holder at x 200 and, when asked, a victim `gap` units to its right, on a stone floor. */
+function puffScene(gap: number | null) {
+  const terrain = buildTerrainFromLevel(level);
+  const ice = createIceState(terrain);
+  const holder = createPlayer(0, { x: 200, y: FLOOR }, TUNABLES);
+  holder.aimX = 1;
+  holder.aimY = 0;
+  const victim = gap === null ? null : createPlayer(1, { x: 200 + gap, y: FLOOR }, TUNABLES);
+  const players: PlayerState[] = victim ? [holder, victim] : [holder];
+  const clock = { now: 0 };
+  const hold = (reach?: number) => {
+    sprayFreezeRay(ice, {
+      terrain,
+      players,
+      holder,
+      tunables: TUNABLES,
+      now: clock.now,
+      dt,
+      reach,
+    });
+    clock.now += dt;
+  };
+  const letGo = () => {
+    stepFreezeSprays(ice, { terrain, players, tunables: TUNABLES, now: clock.now, dt });
+    clock.now += dt;
+  };
+  return { terrain, ice, holder, victim, hold, letGo };
+}
+
+const chillOf = (ice: IceState, player: PlayerState | null): number =>
+  (player && ice.blobs.get(player.id)?.chill) ?? 0;
+
+describe("freeze ray — the cold travels with its puffs (freeze-ray-particles D1)", () => {
+  it("should land the low puffs at the feet and the top puffs far ahead when aimed at the floor in front", () => {
+    const { ice, holder, hold } = puffScene(null);
+    const a = (32 * Math.PI) / 180;
+    holder.aimX = Math.cos(a);
+    holder.aimY = Math.sin(a);
+    const landed: number[] = [];
+    for (let i = 0; i < 60; i += 1) {
+      hold();
+      for (const burst of ice.sprays[0]!.stream.bursts) landed.push(burst.x - holder.x);
+    }
+    expect(Math.min(...landed)).toBeLessThan(25);
+    expect(Math.max(...landed)).toBeGreaterThan(90);
+  });
+
+  it("should reach a blob only after the puffs' flight time", () => {
+    const { ice, victim, hold } = puffScene(60);
+    hold();
+    expect(chillOf(ice, victim)).toBe(0);
+    // 60 units at the puff speed, plus a step or two of slack.
+    for (let i = 0; i < Math.ceil(60 / RAY.puffSpeed / dt) + 2; i += 1) hold();
+    expect(chillOf(ice, victim)).toBeGreaterThan(0);
+  });
+
+  it("should chill a blob once per step however many puffs pass through it", () => {
+    const { ice, victim, hold } = puffScene(60);
+    for (let i = 0; i < 60 && chillOf(ice, victim) === 0; i += 1) hold();
+    const start = chillOf(ice, victim);
+    const steps = 20;
+    for (let i = 0; i < steps; i += 1) hold();
+    // Many puffs are in the blob every step, but each step adds one step of chill.
+    expect(chillOf(ice, victim) - start).toBeCloseTo(steps * dt, 6);
+  });
+
+  it("should push the blob along the puffs and never push its holder", () => {
+    const { holder, victim, hold } = puffScene(60);
+    for (let i = 0; i < 30; i += 1) hold();
+    expect(victim!.vx).toBeGreaterThan(0);
+    expect(holder.vx).toBe(0);
+  });
+
+  it("should stop its puffs at the beam clash reach so nothing gets past the meeting point", () => {
+    const { ice, victim, hold } = puffScene(60);
+    for (let i = 0; i < 60; i += 1) {
+      hold(30);
+      for (const puff of ice.sprays[0]!.stream.puffs)
+        expect(puff.travelled).toBeLessThanOrEqual(30);
+    }
+    expect(chillOf(ice, victim)).toBe(0);
+  });
+
+  it("should keep flying and chilling after the ray is let go, then empty", () => {
+    const { ice, victim, hold, letGo } = puffScene(60);
+    // Let go before the first puffs arrive: they are still on their way.
+    for (let i = 0; i < 3; i += 1) hold();
+    expect(chillOf(ice, victim)).toBe(0);
+    for (let i = 0; i < 20; i += 1) letGo();
+    expect(chillOf(ice, victim)).toBeGreaterThan(0);
+    expect(ice.sprays[0]?.held ?? false).toBe(false);
+    for (let i = 0; i < 120; i += 1) letGo();
+    expect(ice.sprays).toEqual([]);
+  });
+
+  it("should freeze the ground where the puffs land", () => {
+    const { terrain, holder, hold } = puffScene(null);
+    holder.aimX = Math.cos(Math.PI / 4);
+    holder.aimY = Math.sin(Math.PI / 4);
+    for (let i = 0; i < 60; i += 1) hold();
+    expect(terrain.frozen.some((flag) => flag !== 0)).toBe(true);
   });
 });

@@ -495,6 +495,14 @@ export interface GameTunables {
       rays: number;
       /** Acceleration on a blob inside the beam, along the aim, units / s². */
       push: number;
+      /**
+       * The cold travels (owner, freeze-ray-particles D1): puffs per second while held, their
+       * speed (units / s), the most in flight per holder, and how long a landed puff's burst shows.
+       */
+      puffRate: number;
+      puffSpeed: number;
+      puffCap: number;
+      burstSeconds: number;
     };
     /**
      * Where two held beams of reacting elements meet (owner, beam-clash D1, the "Steam wall";

@@ -54,6 +54,7 @@ import {
   isIced,
   releaseBlob,
   sprayFreezeRay,
+  stepFreezeSprays,
   stepFrozenBlobs,
   stepIce,
   type IceState,
@@ -126,7 +127,8 @@ import {
  *   3. stepCombat      — combat feature: rockets, blasts (damage, impulse, clearCrater);
  *                        unarmed fire goes through its `unarmedAttack` hook to the dive, a held
  *                        torch through its `sprayAttack` hook to the fire feature's `sprayTorch`,
- *                        a held freeze ray to the ice feature's `sprayFreezeRay`
+ *                        a held freeze ray to the ice feature's `sprayFreezeRay` (it emits
+ *                        puffs); then `stepFreezeSprays` flies the puffs of rays let go
  *   3g. stepPhysicsObjects — physics-objects feature: balls come back, move, bump blobs and each
  *                        other, take this step's blasts, torch, freeze ray and burning ground
  *                        (whole object), pop when stuck, burnt through or out of the kill zone.
@@ -849,6 +851,14 @@ interface ContactStep {
  */
 function stepElements(state: GameState, step: ContactStep & { inputs: PlayerInputs }): void {
   const { tunables, timeSeconds } = state;
+  // Puffs of freeze rays let go this step or earlier fly on, land and chill (freeze-ray-particles
+  // D1); the objects then read every ray's puffs.
+  const flight = { terrain: state.arena.terrain, tunables, now: timeSeconds, dt: step.dt };
+  stepFreezeSprays(state.ice, {
+    ...flight,
+    players: step.players,
+    canChill: (blob) => canChill(state, blob),
+  });
   stepObjects(state, step);
   stepIce(state.ice, state.arena.terrain, { now: timeSeconds });
   stepFrozenBlobs(state.ice, { players: step.players, now: timeSeconds, dt: step.dt, tunables });

@@ -295,6 +295,13 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
       halfAngleDegrees: 20,
       rays: 7,
       push: 300,
+      // The cold travels (owner, freeze-ray-particles D1): puffs fly at 600 u/s, so the full reach
+      // takes 0.3 s and a blob 60 units away is reached in 0.1 s (snappy, yet a turn bends the
+      // spray). 400 puffs a second keep ~120 in flight, the cloud's density; at most 160 per holder.
+      puffRate: 400,
+      puffSpeed: 600,
+      puffCap: 160,
+      burstSeconds: 0.15,
     },
     // Beam clash (beam-clash D1): beams of reacting elements end each other where they come
     // within one sample of touching.
