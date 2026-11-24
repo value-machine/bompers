@@ -2,6 +2,7 @@ import { Container, Graphics } from "pixi.js";
 import { GAME_PALETTE, terrainSwatch } from "@/shared/config/gamePalette";
 import { drawInkHeart } from "@/shared/services/heartRenderer";
 import { inkColor } from "@/shared/utils/debugInk";
+import { flyOffAlpha, flyOffPose, hashNoise } from "@/shared/utils/flyOff";
 import { starPoints } from "@/shared/utils/shapeGeometry";
 import { syncDisplayById } from "@/shared/utils/displaySync";
 import { DESIGN_SCALE, outlineWidth } from "@/shared/utils/outlineWidth";
@@ -92,7 +93,7 @@ const drawBlock = (width: number): Container =>
  * A lost health chunk (hurt-feedback D1): the over-head heart (health-pickups D2), big, in the
  * victim's colour. Sized like the earlier chunk pill (11 × 9 design units).
  */
-const CHUNK = { w: 11 * DESIGN_SCALE, h: 10 * DESIGN_SCALE, speed: 220, gravity: 1100, spin: 7 };
+const CHUNK = { w: 11 * DESIGN_SCALE, h: 10 * DESIGN_SCALE };
 const drawChunks = (event: EventOf<"playerHit">, width: number): Container => {
   const root = new Container();
   const color = GAME_PALETTE.players[event.victimSlot % GAME_PALETTE.players.length]!;
@@ -111,7 +112,7 @@ const drawChunks = (event: EventOf<"playerHit">, width: number): Container => {
   return root;
 };
 
-/** Pops each chunk up and out of the hit, falling and spinning; fades over the last third. */
+/** Pops each chunk up and out of the hit, falling and spinning (shared `flyOff`). */
 function placeChunks(
   root: Container,
   event: EventOf<"playerHit">,
@@ -119,23 +120,17 @@ function placeChunks(
 ): void {
   const { age } = at;
   root.position.set(event.x, event.y);
-  root.alpha = Math.min(1, 3 * (1 - age / at.seconds));
-  const middle = (root.children.length - 1) / 2;
-  root.children.forEach((piece, i) => {
-    const angle = -Math.PI / 2 + (i - middle) * 0.7 + (noise(event.seq, i) - 0.5) * 0.6;
-    piece.position.set(
-      Math.cos(angle) * CHUNK.speed * age,
-      Math.sin(angle) * CHUNK.speed * age + 0.5 * CHUNK.gravity * age * age
-    );
-    piece.rotation = (noise(event.seq, i + 7) - 0.5) * CHUNK.spin * age * 2;
+  root.alpha = flyOffAlpha(age, at.seconds);
+  const count = root.children.length;
+  root.children.forEach((piece, index) => {
+    const pose = flyOffPose({ index, count, age, seed: event.seq });
+    piece.position.set(pose.x, pose.y);
+    piece.rotation = pose.rotation;
   });
 }
 
 /** Deterministic 0..1 noise from an event seq and a piece index (no RNG in render). */
-const noise = (seq: number, i: number): number => {
-  const x = Math.sin(seq * 12.9898 + i * 78.233) * 43758.5453;
-  return x - Math.floor(x);
-};
+const noise = hashNoise;
 
 /** 5–8 cell-coloured squares with a grid-line edge (DESIGN_LANGUAGE § 6 Explosion debris). */
 function drawDebris(event: EventOf<"terrainDestroyed">): Container {
