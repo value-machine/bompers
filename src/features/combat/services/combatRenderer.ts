@@ -10,6 +10,7 @@ import {
 import { drawInkHeart } from "@/shared/services/heartRenderer";
 import { inkColor } from "@/shared/utils/debugInk";
 import { syncDisplayById } from "@/shared/utils/displaySync";
+import { flyOffAlpha, flyOffPose } from "@/shared/utils/flyOff";
 import { DESIGN_SCALE, outlineWidth } from "@/shared/utils/outlineWidth";
 import { surfaceBelow, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
@@ -46,7 +47,27 @@ interface HealthBar {
   health: number;
   /** Sim time the bar last lost or gained health (its pop), seconds. */
   poppedAt: number;
+  /** As last drawn in play: the player's slot, the zoom enlargement and the outline width. */
+  slot: number;
+  grow: number;
+  outline: number;
+  /** The death playing after a knockout, or null. */
+  death: BarDeath | null;
 }
+
+/** A dying bar: the empty row's pieces, the full hearts popping out, when it started. */
+interface BarDeath {
+  root: Container;
+  pieces: Container;
+  pops: Container;
+  /** Sim time of the knockout, seconds. */
+  at: number;
+  /** Each piece's place in the row. */
+  rest: { x: number; y: number }[];
+}
+
+/** The pop of the hearts still full when a blob is knocked out (GAME_JUICE `squash` window). */
+const BAR_DEATH = { popSeconds: 0.15 };
 
 /**
  * Over-head health hearts (health-pickups D2), world units. `minPx`: a heart is never drawn
@@ -220,7 +241,16 @@ function drawPips(pips: Graphics, { health, slot, max, outline }: PipsLook): voi
 function healthBarFor(view: CombatView, playerId: string): HealthBar {
   const existing = view.health.get(playerId);
   if (existing) return existing;
-  const bar = { pips: new Graphics(), shown: "", health: -1, poppedAt: Number.NEGATIVE_INFINITY };
+  const bar: HealthBar = {
+    pips: new Graphics(),
+    shown: "",
+    health: -1,
+    poppedAt: Number.NEGATIVE_INFINITY,
+    slot: 0,
+    grow: 1,
+    outline: 1,
+    death: null,
+  };
   view.health.set(playerId, bar);
   view.overlay.addChild(bar.pips);
   return bar;
@@ -241,13 +271,94 @@ function redrawBar(bar: HealthBar, look: PipsLook & { key: string; timeSeconds: 
   bar.health = look.health;
 }
 
+/** One over-head heart centred on 0,0. */
+const barHeart = (fill: number, outline: number): Graphics =>
+  drawInkHeart(new Graphics(), { x: 0, y: 0, w: PIP.w, h: PIP.h, fill, outline });
+
+/** The dying row: every heart as an empty piece, and the ones still full as popping hearts. */
+function drawDeathHearts(bar: HealthBar, max: number): { pieces: Container; pops: Container } {
+  const total = max * PIP.w + (max - 1) * PIP.gap;
+  const pieces = new Container();
+  const pops = new Container();
+  for (let i = 0; i < max; i += 1) {
+    const x = -total / 2 + i * (PIP.w + PIP.gap) + PIP.w / 2;
+    pieces.addChild(barHeart(GAME_PALETTE.healthLost, bar.outline)).position.set(x, PIP.h / 2);
+    if (i >= bar.health) continue;
+    pops.addChild(barHeart(slotColor(bar.slot), bar.outline)).position.set(x, PIP.h / 2);
+  }
+  return { pieces, pops };
+}
+
 /**
- * A knocked-out blob leaves the players in play: its bar hides until the respawn instead of
- * staying frozen where the blob was hit (owner, death-health-bar).
+ * The bar's death on a knockout (owner, death-health-bar D1: option C "Pop and scatter"): built
+ * where the bar was, the hearts that were still full pop out (1.3 → 0, `squash` window), then the
+ * empty row is knocked loose and flies up and away like the hurt chunks (shared `flyOff`).
  */
-function hideBarsOutOfPlay(view: CombatView, players: readonly PlayerState[]): void {
-  const inPlay = new Set(players.map((player) => player.id));
-  for (const [id, bar] of view.health) if (!inPlay.has(id)) bar.pips.visible = false;
+function startBarDeath(view: CombatView, bar: HealthBar, look: { max: number; at: number }): void {
+  const root = new Container({ label: "health-bar-death" });
+  root.position.copyFrom(bar.pips.position);
+  root.scale.set(bar.grow);
+  const { pieces, pops } = drawDeathHearts(bar, look.max);
+  root.addChild(pieces, pops);
+  view.overlay.addChild(root);
+  bar.death?.root.destroy({ children: true });
+  bar.death = {
+    root,
+    pieces,
+    pops,
+    at: look.at,
+    rest: pieces.children.map((p) => p.position.clone()),
+  };
+}
+
+/** Places a dying bar `age` seconds in; false once it is over (then it is destroyed). */
+function placeBarDeath(
+  death: BarDeath,
+  at: { age: number; flySeconds: number; seed: number }
+): boolean {
+  const { age } = at;
+  if (age >= BAR_DEATH.popSeconds + at.flySeconds) {
+    death.root.destroy({ children: true });
+    return false;
+  }
+  const popT = age / BAR_DEATH.popSeconds;
+  death.pops.visible = popT < 1;
+  for (const pop of death.pops.children) pop.scale.set(1.3 * Math.max(0, 1 - popT));
+  const fly = Math.max(0, age - BAR_DEATH.popSeconds);
+  const count = death.pieces.children.length;
+  death.pieces.alpha = flyOffAlpha(fly, at.flySeconds);
+  death.pieces.children.forEach((piece, index) => {
+    const pose = flyOffPose({ index, count, age: fly, seed: at.seed });
+    const rest = death.rest[index]!;
+    // The pose is in world units; the row is drawn enlarged by `root.scale`.
+    piece.position.set(rest.x + pose.x / death.root.scale.x, rest.y + pose.y / death.root.scale.y);
+    piece.rotation = pose.rotation;
+  });
+  return true;
+}
+
+/**
+ * A knocked-out blob leaves the players in play (owner, death-health-bar): its bar hides from the
+ * knockout until the respawn, instead of staying frozen where the blob was hit, and plays its
+ * death once where it was.
+ */
+function syncBarsOutOfPlay(view: CombatView, frame: CombatFrame): void {
+  const inPlay = new Set(
+    frame.players
+      .filter((player) => !frame.combat.fighters.get(player.id)?.eliminated)
+      .map((player) => player.id)
+  );
+  for (const [id, bar] of view.health) {
+    if (inPlay.has(id)) continue;
+    if (bar.pips.visible) startBarDeath(view, bar, { max: frame.maxHealth, at: frame.timeSeconds });
+    bar.pips.visible = false;
+  }
+  for (const bar of view.health.values()) {
+    if (!bar.death) continue;
+    const age = frame.timeSeconds - bar.death.at;
+    const args = { age, flySeconds: frame.hurt.chunkSeconds, seed: bar.slot + 1 };
+    if (!placeBarDeath(bar.death, args)) bar.death = null;
+  }
 }
 
 function syncPlayerExtras(view: CombatView, frame: CombatFrame): void {
@@ -255,15 +366,15 @@ function syncPlayerExtras(view: CombatView, frame: CombatFrame): void {
   const grow = barZoomScale(frame.zoom);
   // Outline at the row's on-screen size, so it is the shared prop width after the enlargement.
   const outline = outlineWidth("prop", frame.zoom * grow);
-  hideBarsOutOfPlay(view, players);
+  syncBarsOutOfPlay(view, frame);
   for (const player of players) {
     const fighter = combat.fighters.get(player.id);
-    if (!fighter) continue;
+    if (!fighter || fighter.eliminated) continue;
     const bar = healthBarFor(view, player.id);
     const { health, slot } = { health: fighter.health, slot: player.slot };
     const key = `${health}:${outline.step}`;
     redrawBar(bar, { health, slot, max: maxHealth, outline: outline.width, key, timeSeconds });
-    bar.pips.visible = !fighter.eliminated;
+    Object.assign(bar, { slot, grow, outline: outline.width }).pips.visible = true;
     bar.pips.position.set(player.x, player.y - player.height - PIP.lift - PIP.h * grow);
     const pop = barPopScale((timeSeconds - bar.poppedAt) / frame.hurt.barPopSeconds);
     bar.pips.scale.set(pop * grow);
@@ -355,7 +466,8 @@ export interface CombatFrame {
   timeSeconds: number;
   maxHealth: number;
   /** The hurt feedback's bar pop and low-health settings (`feel.hurt`). */
-  hurt: Pick<GameTunables["feel"]["hurt"], "barPopSeconds" | "lowHealth">;
+  /** The hurt feedback's bar pop, chunk flight (the bar's death) and low-health settings. */
+  hurt: Pick<GameTunables["feel"]["hurt"], "barPopSeconds" | "chunkSeconds" | "lowHealth">;
   /** Terrain the contact shadows fall on. */
   terrain: TerrainGrid;
   /** Camera zoom (screen px per world unit) for the outline width clamp. */
