@@ -14,7 +14,7 @@ import type { DiveHit, DiveMotion, DiveState, DiveTrigger } from "@/features/div
 import { applyHit, type CombatState } from "@/features/combat/api/combatApi";
 import { directHitPush } from "@/shared/utils/blastPower";
 import { magnetDirection } from "@/features/dive/services/diveMagnet";
-import { reachContacts } from "@/features/dive/services/diveReach";
+import { resolveReachContacts } from "@/features/dive/services/diveReach";
 
 /**
  * Dive headbutt system (sim step 3b, after players, body contacts and combat). Unarmed fire
@@ -547,7 +547,7 @@ function settleHit(strike: Strike, strikers: ReadonlySet<string>, args: StepDive
 /** Turns this step's body contacts into hits. Both sides of a clash are judged before either moves. */
 function resolveHits(args: StepDivesArgs): DiveHit[] {
   // Touches, plus near passes inside the dash hit reach when it is above the body width (option A).
-  const contacts = [...args.contacts, ...reachContacts(args)];
+  const contacts = [...args.contacts, ...resolveReachContacts(args)];
   const strikes = contacts.flatMap((contact) => strikesIn(contact, args));
   const strikers = new Set(strikes.map((strike) => strike.attacker.id));
   // Ricochets first, pushes second: in a clash both divers end up with the same velocity.
