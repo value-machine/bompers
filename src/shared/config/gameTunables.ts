@@ -236,9 +236,10 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     maxHealth: 4,
     killCreditSeconds: 4,
     eventRetentionSeconds: 1,
-    // Body hits from behind hurt more; explosions stay exactly 1 chunk from any side (GDD § 3).
+    // Every hit takes 1 chunk from any side. A bash from behind took 2 until the owner's call
+    // "Always 1 heart" (bash-one-heart lap); the zone still picks the hurt feel (heavy from behind).
     hitDamage: {
-      contact: { front: 1, back: 2 },
+      contact: { front: 1, back: 1 },
       blast: { front: 1, back: 1 },
       burn: { front: 1, back: 1 },
     },

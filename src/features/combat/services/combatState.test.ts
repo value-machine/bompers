@@ -159,7 +159,12 @@ describe("hits — applyHit", () => {
 
 describe("hits — crouch", () => {
   it("should halve the damage rounded down when the victim crouches", () => {
-    const { world, victim } = createHitWorld();
+    // No default hit takes 2 chunks since bash-one-heart; the rule is checked on a 2-chunk table.
+    const twoChunks: GameTunables = {
+      ...DEFAULT_GAME_TUNABLES,
+      combat: { ...C, hitDamage: { ...C.hitDamage, contact: { front: 1, back: 2 } } },
+    };
+    const { world, victim } = createHitWorld(twoChunks);
     victim.crouching = true;
     expect(applyHit(world, dive(1))).toMatchObject({ landed: true, damage: 1 });
     expect(healthOf(world)).toBe(C.maxHealth - 1);
