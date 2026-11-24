@@ -14,6 +14,7 @@ export {
 } from "@/features/player/services/playerController";
 export {
   resolveBodyContacts,
+  respondToBodyContact,
   type BodyContact,
   type ResolveBodyContactsArgs,
 } from "@/features/player/services/bodyCollision";

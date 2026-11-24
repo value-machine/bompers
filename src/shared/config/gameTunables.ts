@@ -188,9 +188,11 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     // Aim magnetism (owner pick B): a hit needs centres within 28 units, so 16-way snapping (up to
     // 11.25° off) and a target moving > ~105 u/s sideways during wind-up + travel used to miss.
     // Two independent switches (owner: try B first, then A, or both):
-    // B on/off = `magnet.enabled`; A = `hitReach` (28 = touch only, today; the demo tried 48).
+    // B on/off = `magnet.enabled`; A = `hitReach` (28 = touch only). Both on since the owner
+    // found hits still too hard with B alone (dive-reach lap): a travelling dive strikes a centre
+    // within 48 units, the options-page value. A normal bump is untouched (touch only).
     magnet: { enabled: true, coneDegrees: 15, range: 260 },
-    hitReach: 28,
+    hitReach: 48,
   },
   // Fire on the field: 13 units / s, burn 7.5 s (owner tuning, fire-clusters D5: "way slower";
   // blast-power D6 started at 40 units / s and 1.5 s). The burning band is speed × burn ≈ 98 units deep.
@@ -234,9 +236,10 @@ export const DEFAULT_GAME_TUNABLES: GameTunables = {
     maxHealth: 4,
     killCreditSeconds: 4,
     eventRetentionSeconds: 1,
-    // Body hits from behind hurt more; explosions stay exactly 1 chunk from any side (GDD § 3).
+    // Every hit takes 1 chunk from any side. A bash from behind took 2 until the owner's call
+    // "Always 1 heart" (bash-one-heart lap); the zone still picks the hurt feel (heavy from behind).
     hitDamage: {
-      contact: { front: 1, back: 2 },
+      contact: { front: 1, back: 1 },
       blast: { front: 1, back: 1 },
       burn: { front: 1, back: 1 },
     },

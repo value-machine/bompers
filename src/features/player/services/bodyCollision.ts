@@ -69,8 +69,15 @@ function separate(contact: BodyContact, overlap: number, terrain: ContactArgs): 
   moveAxis(b, { axis: "y", delta: normal.y * overlap * bShare }, terrain);
 }
 
-/** Applies the equal-mass response and records each blob's velocity change along the normal. */
-function respond(contact: BodyContact, tunables: GameTunables["bodyCollision"]): void {
+/**
+ * Applies the equal-mass response and records each blob's velocity change along the normal.
+ * Exported so a strike from a distance (the dive's hit reach) exchanges momentum exactly like a
+ * touch would: velocities only, positions stay.
+ */
+export function respondToBodyContact(
+  contact: BodyContact,
+  tunables: GameTunables["bodyCollision"]
+): void {
   const { a, b, normal } = contact;
   const closing = contact.aApproachSpeed + contact.bApproachSpeed;
   if (closing <= 0) return;
@@ -123,7 +130,7 @@ export function resolveBodyContacts(args: ResolveBodyContactsArgs): BodyContact[
       const found = contactBetween(players[i]!, players[k]!);
       if (!found) continue;
       const { overlap, ...contact } = found;
-      respond(contact, tunables.bodyCollision);
+      respondToBodyContact(contact, tunables.bodyCollision);
       separate(contact, overlap, { terrain, slope: tunables.player.slope });
       contacts.push(contact);
     }

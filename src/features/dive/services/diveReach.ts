@@ -1,14 +1,20 @@
 import type { GameTunables } from "@/shared/types/gameTunables.types";
-import type { BodyContact, PlayerState } from "@/features/player/api/playerApi";
+import {
+  respondToBodyContact,
+  type BodyContact,
+  type PlayerState,
+} from "@/features/player/api/playerApi";
 import type { DiveState } from "@/features/dive/types/dive.types";
 
 /**
- * Dash hit reach (option A, dash-aim lap; owner: "try B first, then the bigger hit box, or
- * both"). A headbutt normally lands on a body contact: centres within one body width (28 units).
- * With `dive.hitReach` above that, a travelling dasher also strikes a blob whose centre is within
- * the reach without touching it. Each such pair becomes a `BodyContact` with no momentum exchange
- * (nothing collided), so the strike's own push is the whole knockback. At or below the body width
- * this adds nothing: today's touch-only hits. Pure; the dive sim calls it once per step.
+ * Dive hit reach (option A, dash-aim lap; on since the dive-reach lap). A headbutt normally lands
+ * on a body contact: centres within one body width (28 units). With `dive.hitReach` above that, a
+ * travelling dive also strikes a blob whose centre is within the reach before they touch: the
+ * pair becomes a `BodyContact` and gets the body collision's own momentum exchange
+ * (`respondToBodyContact`, velocities only), so a strike from 48 units plays out exactly like the
+ * touch it replaces (a head-on clash still reflects both). Only pairs that will strike get one: a
+ * dive gliding past without closing in shoves nobody. At or below the body width this adds
+ * nothing (touch only), and without a travelling dive a bump is never touched by it.
  */
 export interface ReachContactsArgs {
   dive: DiveState;
@@ -26,7 +32,7 @@ const travelling = (dive: DiveState, player: PlayerState): boolean =>
 const touching = (contacts: readonly BodyContact[], a: PlayerState, b: PlayerState): boolean =>
   contacts.some((c) => (c.a === a && c.b === b) || (c.a === b && c.b === a));
 
-/** A contact for a pair whose centres are `distance` apart along `normal` (a → b). */
+/** A contact for a pair whose centres are `distance` apart (a → b), before any response. */
 function reachContact(a: PlayerState, b: PlayerState, distance: number): BodyContact {
   const normal = { x: (b.x - a.x) / distance, y: (centerY(b) - centerY(a)) / distance };
   return {
@@ -41,19 +47,34 @@ function reachContact(a: PlayerState, b: PlayerState, distance: number): BodyCon
   };
 }
 
-/** Pairs within the dash hit reach (one of them travelling) that are not already touching. */
-export function reachContacts(args: ReachContactsArgs): BodyContact[] {
-  const { dive, players, contacts, tunables } = args;
-  const reach = tunables.dive.hitReach;
+/** A travelling side closes in fast enough to strike (the dive's own hit test). */
+function strikes(contact: BodyContact, args: ReachContactsArgs): boolean {
+  const { dive, tunables } = args;
+  const min = tunables.dive.minHitSpeed;
+  return (
+    (travelling(dive, contact.a) && contact.aApproachSpeed >= min) ||
+    (travelling(dive, contact.b) && contact.bApproachSpeed >= min)
+  );
+}
+
+/**
+ * Pairs inside the dive hit reach that will strike and are not already touching, with the body
+ * collision's momentum exchange applied to them. Mutates those players' velocities.
+ */
+export function resolveReachContacts(args: ReachContactsArgs): BodyContact[] {
+  const { players, contacts, tunables } = args;
   const found: BodyContact[] = [];
   players.forEach((a, i) => {
     for (const b of players.slice(i + 1)) {
-      if (!travelling(dive, a) && !travelling(dive, b)) continue;
+      if (!travelling(args.dive, a) && !travelling(args.dive, b)) continue;
       const distance = Math.hypot(b.x - a.x, centerY(b) - centerY(a));
       const touchDistance = (a.width + b.width) / 2;
-      if (distance <= touchDistance || distance > reach) continue;
-      if (!touching(contacts, a, b)) found.push(reachContact(a, b, distance));
+      if (distance <= touchDistance || distance > tunables.dive.hitReach) continue;
+      if (touching(contacts, a, b)) continue;
+      const contact = reachContact(a, b, distance);
+      if (strikes(contact, args)) found.push(contact);
     }
   });
+  for (const contact of found) respondToBodyContact(contact, tunables.bodyCollision);
   return found;
 }

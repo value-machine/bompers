@@ -22,6 +22,7 @@ import {
   resetDive,
   stepDives,
 } from "@/features/dive/services/diveSim";
+import { resolveReachContacts } from "@/features/dive/services/diveReach";
 import type { DiveHit, DivePhase } from "@/features/dive/types/dive.types";
 
 // Cell size 8. Floor top y = 320. Thin wall (one cell) x 600–608, y 0–320. Open sky elsewhere.
@@ -658,8 +659,8 @@ describe("dash aim magnetism (dash-aim lap, owner pick B)", () => {
     ...T,
     dive: { ...D, hitReach, magnet: { ...D.magnet, enabled: magnet } },
   });
-  /** Today's dash: no magnet, touch-only reach. */
-  const NO_MAGNET = withAim(false, D.hitReach);
+  /** The dash before any aim assist: no magnet, touch-only reach (the body width). */
+  const NO_MAGNET = withAim(false, T.player.width);
 
   interface DashCase {
     /** Target (standing on the floor) offset from the dasher, feet to feet; y is down. */
@@ -713,9 +714,10 @@ describe("dash aim magnetism (dash-aim lap, owner pick B)", () => {
     { offset: { x: 176, y: 37 }, aim: { aimX: 1 } },
   ];
 
-  it("should be today's touch-only dash with the shipped defaults for the hit reach", () => {
+  it("should ship the magnet and the 48-unit dive reach together (A+B, dive-reach lap)", () => {
     expect(D.magnet.enabled).toBe(true);
-    expect(D.hitReach).toBe(T.player.width);
+    expect(D.hitReach).toBe(48);
+    expect(DEMO_CASES.map((c) => dashAt(c))).toEqual([true, true, true]);
   });
 
   it("should land all three demo cases when the magnet and a 48-unit hit reach are both on (A+B)", () => {
@@ -729,7 +731,7 @@ describe("dash aim magnetism (dash-aim lap, owner pick B)", () => {
   });
 
   it("should not strike from a distance when the reach is the body width", () => {
-    const sim = createSim([100, 100 + 176]);
+    const sim = createSim([100, 100 + 176], withAim(false, T.player.width));
     sim.step([{ fire: true, aimX: 1 }]);
     const target = sim.players[1]!;
     for (let i = 0; i < frames(D.windupSeconds + D.travelSeconds); i += 1) {
@@ -763,5 +765,90 @@ describe("dash aim magnetism (dash-aim lap, owner pick B)", () => {
       sim.step([{ aimX: 1 }]);
     }
     expect(sim.players[0]!.vy).toBe(0);
+  });
+});
+
+describe("dive hit damage and reach (dive-reach-and-double-hit lap)", () => {
+  const MAX = T.combat.maxHealth;
+
+  /** One dash at a standing victim 100 units right; steps a full second after the press. */
+  const dashOnce = (victimFacing: -1 | 1) => {
+    const sim = createSim([100, 200]);
+    const victim = sim.players[1]!;
+    victim.facing = victimFacing;
+    sim.step([{ fire: true, aimX: 1 }]);
+    for (let i = 0; i < HZ; i += 1) {
+      victim.facing = victimFacing;
+      sim.step([{ aimX: 1 }]);
+    }
+    return { hits: sim.hits, health: sim.healthOf(victim) };
+  };
+
+  it("should take exactly one front chunk once when a dive hits a victim facing the attacker", () => {
+    const { hits, health } = dashOnce(-1);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.zone).toBe("front");
+    expect(health).toBe(MAX - CONTACT.front);
+  });
+
+  it("should take exactly one heart once when the victim faces away (owner: a bash is always 1 heart)", () => {
+    const { hits, health } = dashOnce(1);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.zone).toBe("back");
+    expect(hits[0]!.damage).toBe(1);
+    expect(health).toBe(MAX - 1);
+  });
+
+  it("should never hit twice in one dive when the dive passes inside the reach and then touches", () => {
+    const sim = createSim([100, 200]);
+    sim.players[1]!.facing = -1;
+    sim.step([{ fire: true, aimX: 1 }]);
+    while (sim.phaseOf(sim.players[0]!) !== "idle" || sim.hits.length === 0)
+      sim.step([{ aimX: 1 }]);
+    sim.step([{ aimX: 1 }], HZ);
+    expect(sim.hits).toHaveLength(1);
+  });
+
+  /** A dash along the floor past a blob held `above` units over the dash line; magnet off. */
+  const nearPass = (above: number, hitReach: number): number => {
+    const sim = createSim([100, 220], {
+      ...T,
+      dive: { ...D, hitReach, magnet: { ...D.magnet, enabled: false } },
+    });
+    const target = sim.players[1]!;
+    const hold = () => Object.assign(target, { y: FLOOR_Y - above, vx: 0, vy: 0 });
+    hold();
+    sim.step([{ fire: true, aimX: 1 }]);
+    for (let i = 0; i < frames(D.windupSeconds + D.travelSeconds); i += 1) {
+      hold();
+      sim.step([{ aimX: 1 }]);
+    }
+    return sim.hits.length;
+  };
+
+  it("should land a near pass 40 units off the dash line that the touch-only reach missed", () => {
+    expect(nearPass(40, T.player.width)).toBe(0);
+    expect(nearPass(40, D.hitReach)).toBe(1);
+  });
+
+  it("should leave a bump without a dive harmless at any distance inside the dive reach", () => {
+    const sim = createSim([100, 140]);
+    sim.step([{ moveX: 1 }, { moveX: -1 }], HZ);
+    expect(sim.hits).toHaveLength(0);
+    expect(sim.healthOf(sim.players[1]!)).toBe(MAX);
+    expect(
+      resolveReachContacts({ dive: sim.dive, players: sim.players, contacts: [], tunables: T })
+    ).toHaveLength(0);
+  });
+
+  it("should shove nobody when a dive passes inside the reach while moving away", () => {
+    const sim = createSim([100, 140]);
+    const [dasher, other] = sim.players as [PlayerState, PlayerState];
+    sim.dive.motions[dasher.id] = { ...sim.dive.motions[dasher.id]!, phase: "travel" };
+    Object.assign(dasher, { vx: -D.launchSpeed, vy: 0 });
+    Object.assign(other, { vx: 0, vy: 0 });
+    const args = { dive: sim.dive, players: sim.players, contacts: [], tunables: T };
+    expect(resolveReachContacts(args)).toHaveLength(0);
+    expect([dasher.vx, other.vx]).toEqual([-D.launchSpeed, 0]);
   });
 });
