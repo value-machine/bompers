@@ -241,11 +241,21 @@ function redrawBar(bar: HealthBar, look: PipsLook & { key: string; timeSeconds: 
   bar.health = look.health;
 }
 
+/**
+ * A knocked-out blob leaves the players in play: its bar hides until the respawn instead of
+ * staying frozen where the blob was hit (owner, death-health-bar).
+ */
+function hideBarsOutOfPlay(view: CombatView, players: readonly PlayerState[]): void {
+  const inPlay = new Set(players.map((player) => player.id));
+  for (const [id, bar] of view.health) if (!inPlay.has(id)) bar.pips.visible = false;
+}
+
 function syncPlayerExtras(view: CombatView, frame: CombatFrame): void {
   const { combat, players, maxHealth, timeSeconds } = frame;
   const grow = barZoomScale(frame.zoom);
   // Outline at the row's on-screen size, so it is the shared prop width after the enlargement.
   const outline = outlineWidth("prop", frame.zoom * grow);
+  hideBarsOutOfPlay(view, players);
   for (const player of players) {
     const fighter = combat.fighters.get(player.id);
     if (!fighter) continue;
