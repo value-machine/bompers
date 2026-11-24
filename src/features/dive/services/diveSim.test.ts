@@ -791,11 +791,12 @@ describe("dive hit damage and reach (dive-reach-and-double-hit lap)", () => {
     expect(health).toBe(MAX - CONTACT.front);
   });
 
-  it("should take the back-hit amount once when the victim faces away (also a blob's default facing)", () => {
+  it("should take exactly one heart once when the victim faces away (owner: a bash is always 1 heart)", () => {
     const { hits, health } = dashOnce(1);
     expect(hits).toHaveLength(1);
     expect(hits[0]!.zone).toBe("back");
-    expect(health).toBe(MAX - CONTACT.back);
+    expect(hits[0]!.damage).toBe(1);
+    expect(health).toBe(MAX - 1);
   });
 
   it("should never hit twice in one dive when the dive passes inside the reach and then touches", () => {
