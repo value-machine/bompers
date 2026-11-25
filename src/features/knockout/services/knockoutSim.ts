@@ -489,6 +489,25 @@ export const knockoutBodies = (world: KnockoutWorld, tunables: KnockoutTunables)
     ...(phase === "pancake" && { pancake: { nx: squeeze?.nx ?? 1, ny: squeeze?.ny ?? 0 } }),
   }));
 
+/**
+ * Where each knocked-out blob's head is now, by slot (owner, death-bar-follow D1): the top of the
+ * flying, squashing or crushed body while it exists, then the top of its loose helmet until the
+ * respawn. The match hands it to combat so the dying health hearts ride the head. A slot with
+ * neither (fell off the arena) is absent.
+ */
+export function knockoutHeadPoints(world: KnockoutWorld): Map<number, { x: number; y: number }> {
+  const heads = new Map<number, { x: number; y: number }>();
+  for (const piece of world.pieces) {
+    if (piece.kind !== "helmet") continue;
+    heads.set(piece.slot, { x: piece.body.x, y: piece.body.y - piece.body.radius });
+  }
+  // A body still in flight wins over a helmet left from an earlier knockout of the same slot.
+  for (const { slot, body } of world.knockouts) {
+    heads.set(slot, { x: body.x, y: body.y - body.height });
+  }
+  return heads;
+}
+
 /** Pieces blink at 8 Hz (like spawn protection) for their last `blinkSeconds`. */
 export function pieceAlpha(piece: KnockoutPiece, blinkSeconds: number): number {
   if (piece.lifeSeconds - piece.age > blinkSeconds) return 1;
