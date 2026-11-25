@@ -25,6 +25,7 @@ import {
   createKnockoutWorld,
   CRUSH_PANCAKE,
   knockoutBodies,
+  knockoutHeadPoints,
   noteKnockoutEvents,
   stepKnockouts,
   syncKnockoutView,
@@ -518,6 +519,7 @@ function syncWorldLayers(renderer: GameRenderer, state: GameState, frame: LayerF
     hurt: state.tunables.feel.hurt,
     terrain: state.arena.terrain,
     zoom,
+    knockoutHeads: knockoutHeadPoints(renderer.knockout),
   });
   syncEffectsView(renderer.effects, {
     events: state.combat.events,

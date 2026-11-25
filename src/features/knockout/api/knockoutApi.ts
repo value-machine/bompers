@@ -3,6 +3,7 @@ export {
   createKnockoutWorld,
   CRUSH_PANCAKE,
   knockoutBodies,
+  knockoutHeadPoints,
   noteKnockoutEvents,
   stepKnockouts,
   type NoteKnockoutsArgs,

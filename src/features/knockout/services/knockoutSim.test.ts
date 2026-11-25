@@ -9,6 +9,7 @@ import {
   createKnockoutWorld,
   CRUSH_PANCAKE,
   knockoutBodies,
+  knockoutHeadPoints,
   noteKnockoutEvents,
   pieceAlpha,
   stepKnockouts,
@@ -127,6 +128,33 @@ describe("knockout — flight ends", () => {
     run(world, T.flungMaxSeconds + T.squash.seconds + 2 / 60, sky);
     expect(world.knockouts).toEqual([]);
     expect(world.droplets).toHaveLength(T.droplets.count);
+  });
+});
+
+describe("knockout — head point (death-bar-follow D1)", () => {
+  it("should follow the flying body's head when the blob is flung", () => {
+    const world = knockedOut(eliminated({ vx: 300, vy: -400 }));
+    const start = knockoutHeadPoints(world).get(1)!;
+    run(world, 0.1, sky);
+    const body = world.knockouts[0]!.body;
+    const later = knockoutHeadPoints(world).get(1)!;
+    expect(later).toEqual({ x: body.x, y: body.y - body.height });
+    expect(later.x).toBeGreaterThan(start.x + 20);
+  });
+
+  it("should move on to the loose helmet once the blob has burst", () => {
+    const world = knockedOut(eliminated({ overkill: true, vx: 200 }));
+    run(world, T.squash.seconds + 0.2, sky);
+    expect(world.knockouts).toEqual([]);
+    const helmet = world.pieces.find((piece) => piece.kind === "helmet")!;
+    expect(knockoutHeadPoints(world).get(1)).toEqual({
+      x: helmet.body.x,
+      y: helmet.body.y - helmet.body.radius,
+    });
+  });
+
+  it("should have no head point for a slot that was never knocked out", () => {
+    expect(knockoutHeadPoints(createKnockoutWorld()).has(1)).toBe(false);
   });
 });
 

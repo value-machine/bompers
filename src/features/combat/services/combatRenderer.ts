@@ -10,7 +10,7 @@ import {
 import { drawInkHeart } from "@/shared/services/heartRenderer";
 import { inkColor } from "@/shared/utils/debugInk";
 import { syncDisplayById } from "@/shared/utils/displaySync";
-import { flyOffAlpha, flyOffPose } from "@/shared/utils/flyOff";
+import { capCarry, flyOffAlpha, flyOffPose } from "@/shared/utils/flyOff";
 import { DESIGN_SCALE, outlineWidth } from "@/shared/utils/outlineWidth";
 import { surfaceBelow, type TerrainGrid } from "@/features/arena/api/arenaApi";
 import type { PlayerState } from "@/features/player/api/playerApi";
@@ -64,6 +64,8 @@ interface BarDeath {
   at: number;
   /** Each piece's place in the row. */
   rest: { x: number; y: number }[];
+  /** The body's velocity at the knockout, capped; the hearts fly off with it. */
+  carry: { vx: number; vy: number };
 }
 
 /** The pop of the hearts still full when a blob is knocked out (GAME_JUICE `squash` window). */
@@ -294,7 +296,11 @@ function drawDeathHearts(bar: HealthBar, max: number): { pieces: Container; pops
  * where the bar was, the hearts that were still full pop out (1.3 → 0, `squash` window), then the
  * empty row is knocked loose and flies up and away like the hurt chunks (shared `flyOff`).
  */
-function startBarDeath(view: CombatView, bar: HealthBar, look: { max: number; at: number }): void {
+function startBarDeath(
+  view: CombatView,
+  bar: HealthBar,
+  look: { max: number; at: number; carry: { vx: number; vy: number } }
+): void {
   const root = new Container({ label: "health-bar-death" });
   root.position.copyFrom(bar.pips.position);
   root.scale.set(bar.grow);
@@ -308,6 +314,7 @@ function startBarDeath(view: CombatView, bar: HealthBar, look: { max: number; at
     pops,
     at: look.at,
     rest: pieces.children.map((p) => p.position.clone()),
+    carry: capCarry(look.carry),
   };
 }
 
@@ -328,7 +335,7 @@ function placeBarDeath(
   const count = death.pieces.children.length;
   death.pieces.alpha = flyOffAlpha(fly, at.flySeconds);
   death.pieces.children.forEach((piece, index) => {
-    const pose = flyOffPose({ index, count, age: fly, seed: at.seed });
+    const pose = flyOffPose({ index, count, age: fly, seed: at.seed, carry: death.carry });
     const rest = death.rest[index]!;
     // The pose is in world units; the row is drawn enlarged by `root.scale`.
     piece.position.set(rest.x + pose.x / death.root.scale.x, rest.y + pose.y / death.root.scale.y);
@@ -342,6 +349,30 @@ function placeBarDeath(
  * knockout until the respawn, instead of staying frozen where the blob was hit, and plays its
  * death once where it was.
  */
+/** The victim's velocity right after the lethal hit (its newest knockout event); still if none. */
+function knockoutVelocity(combat: CombatState, slot: number): { vx: number; vy: number } {
+  for (let i = combat.events.length - 1; i >= 0; i -= 1) {
+    const event = combat.events[i]!;
+    if (event.type === "playerEliminated" && event.victimSlot === slot) {
+      return { vx: event.vx, vy: event.vy };
+    }
+  }
+  return { vx: 0, vy: 0 };
+}
+
+/**
+ * Until the hearts are knocked loose, the dying row rides the knocked-out blob's head (owner,
+ * death-bar-follow D1) as it flies, squashes or is crushed, then on its loose helmet. Each heart
+ * then launches from where the head is at that moment and flies on by itself.
+ */
+function rideHead(
+  bar: HealthBar,
+  at: { head: { x: number; y: number } | undefined; age: number }
+): void {
+  if (!bar.death || !at.head || at.age >= BAR_DEATH.popSeconds) return;
+  bar.death.root.position.set(at.head.x, at.head.y - PIP.lift - PIP.h * bar.grow);
+}
+
 function syncBarsOutOfPlay(view: CombatView, frame: CombatFrame): void {
   const inPlay = new Set(
     frame.players
@@ -350,12 +381,16 @@ function syncBarsOutOfPlay(view: CombatView, frame: CombatFrame): void {
   );
   for (const [id, bar] of view.health) {
     if (inPlay.has(id)) continue;
-    if (bar.pips.visible) startBarDeath(view, bar, { max: frame.maxHealth, at: frame.timeSeconds });
+    if (bar.pips.visible) {
+      const carry = knockoutVelocity(frame.combat, bar.slot);
+      startBarDeath(view, bar, { max: frame.maxHealth, at: frame.timeSeconds, carry });
+    }
     bar.pips.visible = false;
   }
   for (const bar of view.health.values()) {
     if (!bar.death) continue;
     const age = frame.timeSeconds - bar.death.at;
+    rideHead(bar, { head: frame.knockoutHeads.get(bar.slot), age });
     const args = { age, flySeconds: frame.hurt.chunkSeconds, seed: bar.slot + 1 };
     if (!placeBarDeath(bar.death, args)) bar.death = null;
   }
@@ -465,13 +500,17 @@ export interface CombatFrame {
   /** Sim time of the state being drawn, seconds. */
   timeSeconds: number;
   maxHealth: number;
-  /** The hurt feedback's bar pop and low-health settings (`feel.hurt`). */
   /** The hurt feedback's bar pop, chunk flight (the bar's death) and low-health settings. */
   hurt: Pick<GameTunables["feel"]["hurt"], "barPopSeconds" | "chunkSeconds" | "lowHealth">;
   /** Terrain the contact shadows fall on. */
   terrain: TerrainGrid;
   /** Camera zoom (screen px per world unit) for the outline width clamp. */
   zoom: number;
+  /**
+   * Where each knocked-out blob's head is now, by slot (the knockout's `knockoutHeadPoints`):
+   * the dying health hearts ride it. A slot without one keeps its hearts where they were.
+   */
+  knockoutHeads: ReadonlyMap<number, { x: number; y: number }>;
 }
 
 /** Matches the combat layers to the state. Call once per rendered frame. */
